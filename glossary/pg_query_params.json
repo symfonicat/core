@@ -1,0 +1,144 @@
+{
+    "php_function": "pg_query_params",
+    "zend_function": "pg_query_params",
+    "source_file": ".c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "query",
+            "macro": "Z_PARAM_STRING",
+            "arguments": [
+                "query",
+                "query_len"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING(query, query_len)"
+        },
+        {
+            "name": "pv_param_arr",
+            "macro": "Z_PARAM_ARRAY",
+            "arguments": [
+                "pv_param_arr"
+            ],
+            "type": "HashTable",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY(pv_param_arr)"
+        }
+    ],
+    "includes": [
+        "stdlib.h",
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "ext/standard/info.h",
+        "zend_smart_str.h",
+        "ext/pcre/php_pcre.h",
+        "php_pgsql.h",
+        "php_globals.h",
+        "zend_exceptions.h",
+        "zend_attributes.h",
+        "php_network.h",
+        "pgsql_arginfo.h"
+    ],
+    "body": "zval *pgsql_link = NULL;\n\tzval *pv_param_arr, *tmp;\n\tchar *query;\n\tsize_t query_len;\n\tint leftover = 0;\n\tint num_params = 0;\n\tchar **params = NULL;\n\tpgsql_link_handle *link;\n\tPGconn *pgsql;\n\tPGresult *pgsql_result;\n\tExecStatusType status;\n\tpgsql_result_handle *pg_result;\n\n\tif (ZEND_NUM_ARGS() == 2) {\n\t\tZEND_PARSE_PARAMETERS_START(2, 2)\n\t\t\tZ_PARAM_STRING(query, query_len)\n\t\t\tZ_PARAM_ARRAY(pv_param_arr)\n\t\tZEND_PARSE_PARAMETERS_END();\n\n\t\tlink = FETCH_DEFAULT_LINK();\n\t\tCHECK_DEFAULT_LINK(link);\n\t} else {\n\t\tZEND_PARSE_PARAMETERS_START(3, 3)\n\t\t\tZ_PARAM_OBJECT_OF_CLASS(pgsql_link, pgsql_link_ce)\n\t\t\tZ_PARAM_STRING(query, query_len)\n\t\t\tZ_PARAM_ARRAY(pv_param_arr)\n\t\tZEND_PARSE_PARAMETERS_END();\n\n\t\tlink = Z_PGSQL_LINK_P(pgsql_link);\n\t\tCHECK_PGSQL_LINK(link);\n\t}\n\n\tpgsql = link->conn;\n\n\tif (PQsetnonblocking(pgsql, 0)) {\n\t\tphp_error_docref(NULL, E_NOTICE,\"Cannot set connection to blocking mode\");\n\t\tRETURN_FALSE;\n\t}\n\twhile ((pgsql_result = PQgetResult(pgsql))) {\n\t\tPQclear(pgsql_result);\n\t\tleftover = 1;\n\t}\n\tif (leftover) {\n\t\tphp_error_docref(NULL, E_NOTICE, \"Found results on this connection. Use pg_get_result() to get these results first\");\n\t}\n\n\tnum_params = zend_hash_num_elements(Z_ARRVAL_P(pv_param_arr));\n\tif (num_params > 0) {\n\t\tint i = 0;\n\t\tparams = (char **)safe_emalloc(sizeof(char *), num_params, 0);\n\n\t\tZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(pv_param_arr), tmp) {\n\t\t\tZVAL_DEREF(tmp);\n\t\t\tif (Z_TYPE_P(tmp) == IS_NULL) {\n\t\t\t\tparams[i] = NULL;\n\t\t\t} else {\n\t\t\t\tzend_string *param_str = zval_try_get_string(tmp);\n\t\t\t\tif (!param_str) {\n\t\t\t\t\t_php_pgsql_free_params(params, i);\n\t\t\t\t\tRETURN_THROWS();\n\t\t\t\t}\n\t\t\t\tparams[i] = estrndup(ZSTR_VAL(param_str), ZSTR_LEN(param_str));\n\t\t\t\tzend_string_release(param_str);\n\t\t\t}\n\t\t\ti++;\n\t\t} ZEND_HASH_FOREACH_END();\n\t}\n\n\tpgsql_result = PQexecParams(pgsql, query, num_params,\n\t\t\t\t\tNULL, (const char * const *)params, NULL, NULL, 0);\n\tif ((PGG(auto_reset_persistent) & 2) && PQstatus(pgsql) != CONNECTION_OK) {\n\t\tPQclear(pgsql_result);\n\t\tPQreset(pgsql);\n\t\tpgsql_result = PQexecParams(pgsql, query, num_params,\n\t\t\t\t\t\tNULL, (const char * const *)params, NULL, NULL, 0);\n\t}\n\n\tif (pgsql_result) {\n\t\tstatus = PQresultStatus(pgsql_result);\n\t} else {\n\t\tstatus = (ExecStatusType) PQstatus(pgsql);\n\t}\n\n\t_php_pgsql_free_params(params, num_params);\n\n\tswitch (status) {\n\t\tcase PGRES_EMPTY_QUERY:\n\t\tcase PGRES_BAD_RESPONSE:\n\t\tcase PGRES_NONFATAL_ERROR:\n\t\tcase PGRES_FATAL_ERROR:\n\t\t\tPHP_PQ_ERROR(\"Query failed: %s\", pgsql);\n\t\t\tPQclear(pgsql_result);\n\t\t\tRETURN_FALSE;\n\t\t\tbreak;\n\t\tcase PGRES_COMMAND_OK: /* successful command that did not return rows */\n\t\tdefault:\n\t\t\tif (pgsql_result) {\n\t\t\t\tobject_init_ex(return_value, pgsql_result_ce);\n\t\t\t\tpg_result = Z_PGSQL_RESULT_P(return_value);\n\t\t\t\tpg_result->conn = pgsql;\n\t\t\t\tpg_result->result = pgsql_result;\n\t\t\t\tpg_result->row = 0;\n\t\t\t} else {\n\t\t\t\tPQclear(pgsql_result);\n\t\t\t\tRETURN_FALSE;\n\t\t\t}\n\t\t\tbreak;\n\t}",
+    "semantic": "successful command that did not return rows",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STRING",
+            "Z_PARAM_ARRAY",
+            "ZEND_PARSE_PARAMETERS_END",
+            "Z_PARAM_OBJECT_OF_CLASS",
+            "RETURN_FALSE",
+            "ZEND_HASH_FOREACH_VAL",
+            "ZVAL_DEREF",
+            "RETURN_THROWS",
+            "ZSTR_VAL",
+            "ZSTR_LEN",
+            "ZEND_HASH_FOREACH_END"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "php_error_docref",
+            "zend_hash_num_elements",
+            "zval_try_get_string",
+            "zend_string_release"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common pg_query_params inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 9,
+    "purpose": "successful command that did not return rows",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "pg_connect",
+        "pg_connect_poll",
+        "pg_pconnect",
+        "pg_close",
+        "pg_dbname",
+        "pg_last_error",
+        "pg_options",
+        "pg_port",
+        "pg_tty",
+        "pg_host",
+        "pg_version",
+        "pg_jit"
+    ]
+}

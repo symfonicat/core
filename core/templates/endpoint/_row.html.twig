@@ -1,0 +1,72 @@
+<tr id="endpoint_{{ endpoint.id }}" class="btn-row">
+    <td class="fw-semibold">
+        {{ endpoint.id }}
+        &nbsp;
+        &nbsp;
+    </td>
+    <td>
+        {% if endpoint.enforce is null %}
+            <i class="fa fa-fw fa-times"></i>
+        {% elseif endpoint.enforce == 'domain' %}
+            <b>{{ endpoint.domain ? endpoint.domain.tld : '' }}</b>
+        {% elseif endpoint.enforce == 'subdomain' %}
+            <b>{{ endpoint.subdomain ? endpoint.subdomain.affix : '' }}{% if endpoint.domain %} ({{ endpoint.domain.tld }}){% endif %}</b>
+        {% else %}
+            <i class="fa fa-fw fa-times"></i>
+        {% endif %}
+    </td>
+    <td class="fw-semibold">
+        {% if endpoint.arguments is not empty %}
+            <code>/{{ endpoint.arguments|join('/') }}</code>
+        {% else %}
+            <i class="fa fa-fw fa-times"></i>
+        {% endif %}
+    </td>
+    <td>
+        {% if endpoint.catch %}
+            <i class="fa fa-check"></i>
+        {% else %}
+            <i class="fa fa-times"></i>
+        {% endif %}
+    </td>
+    <td><code>{{ endpoint.parcel ? endpoint.parcel.id : '' }}</code></td>
+    <td>
+        {% for middleware in endpoint.middlewares %}
+            <div><code>{{ middleware.id }}</code></div>
+        {% else %}
+            <i class="fa fa-fw fa-times"></i>
+        {% endfor %}
+    </td>
+    <td>
+        {% set groups = {} %}
+        {% for module in endpoint.modules %}
+            {% set parts = (module.id | split('/')) %}
+            {% set tail = parts | last %}
+            {% set groupKey = module.package ? (module.vendor ~ '/' ~ module.package) : module.vendor %}
+            {% if groups[groupKey] is defined %}
+                {% set groups = groups | merge({ (groupKey): groups[groupKey] | merge([tail]) }) %}
+            {% else %}
+                {% set groups = groups | merge({ (groupKey): [tail] }) %}
+            {% endif %}
+        {% else %}
+            {% set groups = {} %}
+        {% endfor %}
+
+        {% if groups is empty %}
+            <i class="fa fa-fw fa-times"></i>
+        {% else %}
+            {% for g, tails in groups %}
+                <b>{{ g }}:</b>&nbsp;&nbsp;<code>{{ tails | join(', ') }}</code>{% if not loop.last %}<br />{% endif %}
+            {% endfor %}
+        {% endif %}
+    </td>
+
+    <td class="text-end btn-cell">
+        <div class="btn-group btn-group-sm">
+            <a href="{{ path('symfonicat_endpoint_edit', { id: endpoint.id }) }}" class="btn btn-sm btn-warning">
+                <i class="fa fa-pencil">&nbsp;</i>
+            </a>
+            {{ include('@symfonicat/endpoint/_delete_form.html.twig') }}
+        </div>
+    </td>
+</tr>

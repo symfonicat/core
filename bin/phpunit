@@ -1,0 +1,9 @@
+#!/bin/sh
+
+set -eu
+
+if command -v frankenphp >/dev/null 2>&1; then
+    exec frankenphp php-cli "$(dirname "$0")/../vendor/phpunit/phpunit/phpunit" "$@"
+fi
+
+exec php "$(dirname "$0")/../vendor/phpunit/phpunit/phpunit" "$@"

@@ -1,0 +1,182 @@
+{
+    "php_function": "extract",
+    "zend_function": "extract",
+    "source_file": "ray.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "var_array_param",
+            "macro": "Z_PARAM_ARRAY_EX2",
+            "arguments": [
+                "var_array_param",
+                "0",
+                "1",
+                "0"
+            ],
+            "type": "HashTable",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY_EX2(var_array_param, 0, 1, 0)"
+        },
+        {
+            "name": "extract_type",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "extract_type"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(extract_type)"
+        },
+        {
+            "name": "prefix",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "prefix"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(prefix)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "php_ini.h",
+        "stdarg.h",
+        "stdlib.h",
+        "math.h",
+        "time.h",
+        "string.h",
+        "zend_globals.h",
+        "zend_interfaces.h",
+        "php_array.h",
+        "basic_functions.h",
+        "php_string.h",
+        "php_math.h",
+        "zend_smart_str.h",
+        "zend_bitset.h",
+        "zend_exceptions.h",
+        "ext/random/php_random.h",
+        "zend_frameless_function.h"
+    ],
+    "body": "zval *var_array_param;\n\tzend_long extract_refs;\n\tzend_long extract_type = PHP_EXTR_OVERWRITE;\n\tzend_string *prefix = NULL;\n\tzend_long count;\n\tzend_array *symbol_table;\n\n\tZEND_PARSE_PARAMETERS_START(1, 3)\n\t\tZ_PARAM_ARRAY_EX2(var_array_param, 0, 1, 0)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_LONG(extract_type)\n\t\tZ_PARAM_STR(prefix)\n\tZEND_PARSE_PARAMETERS_END();\n\n\textract_refs = (extract_type & PHP_EXTR_REFS);\n\tif (extract_refs) {\n\t\tSEPARATE_ARRAY(var_array_param);\n\t}\n\textract_type &= 0xff;\n\n\tif (extract_type < PHP_EXTR_OVERWRITE || extract_type > PHP_EXTR_IF_EXISTS) {\n\t\tzend_argument_value_error(2, \"must be a valid extract type\");\n\t\tRETURN_THROWS();\n\t}\n\n\tif (extract_type > PHP_EXTR_SKIP && extract_type <= PHP_EXTR_PREFIX_IF_EXISTS && ZEND_NUM_ARGS() < 3) {\n\t\tzend_argument_value_error(3, \"is required when using this extract type\");\n\t\tRETURN_THROWS();\n\t}\n\n\tif (prefix) {\n\t\tif (ZSTR_LEN(prefix) && !php_valid_var_name(ZSTR_VAL(prefix), ZSTR_LEN(prefix))) {\n\t\t\tzend_argument_value_error(3, \"must be a valid identifier\");\n\t\t\tRETURN_THROWS();\n\t\t}\n\t}\n\n\tif (zend_forbid_dynamic_call() == FAILURE) {\n\t\treturn;\n\t}\n\n\tsymbol_table = zend_rebuild_symbol_table();\n\tZEND_ASSERT(symbol_table && \"A symbol table should always be available here\");\n\n\tif (extract_refs) {\n\t\tswitch (extract_type) {\n\t\t\tcase PHP_EXTR_IF_EXISTS:\n\t\t\t\tcount = php_extract_ref_if_exists(Z_ARRVAL_P(var_array_param), symbol_table);\n\t\t\t\tbreak;\n\t\t\tcase PHP_EXTR_OVERWRITE:\n\t\t\t\tcount = php_extract_ref_overwrite(Z_ARRVAL_P(var_array_param), symbol_table);\n\t\t\t\tbreak;\n\t\t\tcase PHP_EXTR_PREFIX_IF_EXISTS:\n\t\t\t\tcount = php_extract_ref_prefix_if_exists(Z_ARRVAL_P(var_array_param), symbol_table, prefix);\n\t\t\t\tbreak;\n\t\t\tcase PHP_EXTR_PREFIX_SAME:\n\t\t\t\tcount = php_extract_ref_prefix_same(Z_ARRVAL_P(var_array_param), symbol_table, prefix);\n\t\t\t\tbreak;\n\t\t\tcase PHP_EXTR_PREFIX_ALL:\n\t\t\t\tcount = php_extract_ref_prefix_all(Z_ARRVAL_P(var_array_param), symbol_table, prefix);\n\t\t\t\tbreak;\n\t\t\tcase PHP_EXTR_PREFIX_INVALID:\n\t\t\t\tcount = php_extract_ref_prefix_invalid(Z_ARRVAL_P(var_array_param), symbol_table, prefix);\n\t\t\t\tbreak;\n\t\t\tdefault:\n\t\t\t\tcount = php_extract_ref_skip(Z_ARRVAL_P(var_array_param), symbol_table);\n\t\t\t\tbreak;\n\t\t}\n\t} else {\n\t\t/* The array might be stored in a local variable that will be overwritten */\n\t\tzval array_copy;\n\t\tZVAL_COPY(&array_copy, var_array_param);\n\t\tswitch (extract_type) {\n\t\t\tcase PHP_EXTR_IF_EXISTS:\n\t\t\t\tcount = php_extract_if_exists(Z_ARRVAL(array_copy), symbol_table);\n\t\t\t\tbreak;\n\t\t\tcase PHP_EXTR_OVERWRITE:\n\t\t\t\tcount = php_extract_overwrite(Z_ARRVAL(array_copy), symbol_table);\n\t\t\t\tbreak;\n\t\t\tcase PHP_EXTR_PREFIX_IF_EXISTS:\n\t\t\t\tcount = php_extract_prefix_if_exists(Z_ARRVAL(array_copy), symbol_table, prefix);\n\t\t\t\tbreak;\n\t\t\tcase PHP_EXTR_PREFIX_SAME:\n\t\t\t\tcount = php_extract_prefix_same(Z_ARRVAL(array_copy), symbol_table, prefix);\n\t\t\t\tbreak;\n\t\t\tcase PHP_EXTR_PREFIX_ALL:\n\t\t\t\tcount = php_extract_prefix_all(Z_ARRVAL(array_copy), symbol_table, prefix);\n\t\t\t\tbreak;\n\t\t\tcase PHP_EXTR_PREFIX_INVALID:\n\t\t\t\tcount = php_extract_prefix_invalid(Z_ARRVAL(array_copy), symbol_table, prefix);\n\t\t\t\tbreak;\n\t\t\tdefault:\n\t\t\t\tcount = php_extract_skip(Z_ARRVAL(array_copy), symbol_table);\n\t\t\t\tbreak;\n\t\t}\n\t\tzval_ptr_dtor(&array_copy);\n\t}\n\n\tRETURN_LONG(count);",
+    "semantic": "The array might be stored in a local variable that will be overwritten",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_ARRAY_EX2",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_LONG",
+            "Z_PARAM_STR",
+            "ZEND_PARSE_PARAMETERS_END",
+            "SEPARATE_ARRAY",
+            "RETURN_THROWS",
+            "ZEND_NUM_ARGS",
+            "ZSTR_LEN",
+            "ZSTR_VAL",
+            "ZEND_ASSERT",
+            "ZVAL_COPY",
+            "RETURN_LONG"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_long",
+            "zend_string",
+            "zend_array"
+        ],
+        "internal_helpers": [
+            "zend_argument_value_error",
+            "php_valid_var_name",
+            "zend_forbid_dynamic_call",
+            "zend_rebuild_symbol_table",
+            "php_extract_ref_if_exists",
+            "php_extract_ref_overwrite",
+            "php_extract_ref_prefix_if_exists",
+            "php_extract_ref_prefix_same",
+            "php_extract_ref_prefix_all",
+            "php_extract_ref_prefix_invalid",
+            "php_extract_ref_skip",
+            "php_extract_if_exists",
+            "php_extract_overwrite",
+            "php_extract_prefix_if_exists",
+            "php_extract_prefix_same",
+            "php_extract_prefix_all",
+            "php_extract_prefix_invalid",
+            "php_extract_skip",
+            "zval_ptr_dtor"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common extract inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 9,
+    "purpose": "The array might be stored in a local variable that will be overwritten",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "krsort",
+        "ksort",
+        "count",
+        "natsort",
+        "natcasesort",
+        "asort",
+        "arsort",
+        "sort",
+        "rsort",
+        "usort",
+        "uasort",
+        "uksort"
+    ]
+}

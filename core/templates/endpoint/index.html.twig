@@ -1,0 +1,33 @@
+{% extends '@symfonicat/base.html.twig' %}
+{% block title %}Endpoints{% endblock %}
+{% block body %}
+
+    <div class="d-flex justify-content-end mb-1">
+        <a href="{{ path('symfonicat_endpoint_create') }}" class="btn btn-sm btn-success">create endpoint</a>
+    </div>
+
+    <table class="table table-sm align-middle">
+        <thead>
+            <tr>
+                <th><i class="fa fa-hashtag"></i></th>
+                <th>enforce</th>
+                <th>arguments</th>
+                <th>catch</th>
+                <th>parcel</th>
+                <th>middlewares</th>
+                <th>modules</th>
+                <th class="text-end">&nbsp;</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for endpoint in endpoints %}
+            {{ include('@symfonicat/endpoint/_row.html.twig') }}
+        {% else %}
+            <tr>
+                <td colspan="8">no records found</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+{% endblock %}

@@ -1,0 +1,123 @@
+{
+    "php_function": "locale_get_keywords",
+    "zend_function": "locale_get_keywords",
+    "source_file": "/locale_methods.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "loc_name",
+            "macro": "Z_PARAM_STRING",
+            "arguments": [
+                "loc_name",
+                "loc_name_len"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING(loc_name, loc_name_len)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "unicode/ustring.h",
+        "unicode/udata.h",
+        "unicode/putil.h",
+        "unicode/ures.h",
+        "php_intl.h",
+        "locale.h",
+        "locale_class.h",
+        "intl_convert.h",
+        "intl_data.h",
+        "zend_API.h",
+        "zend.h",
+        "php.h",
+        "main/php_ini.h",
+        "zend_smart_str.h"
+    ],
+    "body": "UEnumeration*   e        = NULL;\n\tUErrorCode      status   = U_ZERO_ERROR;\n\n\tconst char*\t \tkw_key        = NULL;\n\tint32_t         kw_key_len    = 0;\n\n\tchar*       \t        loc_name        = NULL;\n\tsize_t        \t \tloc_name_len    = 0;\n\n\tintl_error_reset( NULL );\n\n\tZEND_PARSE_PARAMETERS_START(1, 1)\n\t\tZ_PARAM_STRING(loc_name, loc_name_len)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tINTL_CHECK_LOCALE_LEN(strlen(loc_name));\n\n\tif(loc_name_len == 0) {\n\t\tloc_name = (char *)intl_locale_get_default();\n\t}\n\n\t/* Get the keywords */\n\te = uloc_openKeywords( loc_name, &status );\n\tif( e != NULL ) {\n\t\t/*\n\t\tICU expects the buffer to be allocated  before calling the function\n\t\tand so the buffer size has been explicitly specified\n\t\tICU uloc.h #define \tULOC_KEYWORD_AND_VALUES_CAPACITY   100\n\t\thence the kw_value buffer size is 100\n\t\t*/\n\n\t\t/* Traverse it, filling the return array. */\n\t\tarray_init( return_value );\n\n\t\twhile( ( kw_key = uenum_next( e, &kw_key_len, &status ) ) != NULL ){\n\t\t\tint32_t kw_value_len = 100;\n\t\t\tzend_string *kw_value_str = zend_string_alloc(kw_value_len, 0);\n\n\t\t\t/* Get the keyword value for each keyword */\n\t\t\tkw_value_len=uloc_getKeywordValue( loc_name, kw_key, ZSTR_VAL(kw_value_str), kw_value_len, &status );\n\t\t\tif (status == U_BUFFER_OVERFLOW_ERROR) {\n\t\t\t\tstatus = U_ZERO_ERROR;\n\t\t\t\tkw_value_str = zend_string_extend(kw_value_str, kw_value_len, 0);\n\t\t\t\tkw_value_len=uloc_getKeywordValue( loc_name,kw_key, ZSTR_VAL(kw_value_str), kw_value_len+1, &status );\n\t\t\t} else if(!U_FAILURE(status)) {\n\t\t\t\tkw_value_str = zend_string_truncate(kw_value_str, kw_value_len, 0);\n\t\t\t}\n\t\t\tif (U_FAILURE(status)) {\n\t\t\t\tintl_error_set( NULL, U_ILLEGAL_ARGUMENT_ERROR, \"locale_get_keywords: Error encountered while getting the keyword  value for the  keyword\", 0 );\n\t\t\t\tif( kw_value_str){\n\t\t\t\t\tzend_string_efree( kw_value_str );\n\t\t\t\t}\n\t\t\t\tzend_array_destroy(Z_ARR_P(return_value));\n\t\t\t\tRETURN_FALSE;\n\t\t\t}\n\n\t\t\tadd_assoc_str( return_value, (char *)kw_key, kw_value_str);\n\t\t} /* end of while */\n\n\t} /* end of if e!=NULL */\n\n\tuenum_close( e );",
+    "semantic": "Get the keywords",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STRING",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZSTR_VAL",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "zend_string_alloc",
+            "zend_string_extend",
+            "zend_string_truncate",
+            "zend_string_efree",
+            "zend_array_destroy"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common locale_get_keywords inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 6,
+    "purpose": "Get the keywords",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "zif_locale_get_default",
+        "zif_locale_set_default",
+        "locale_get_script",
+        "locale_get_region",
+        "locale_get_primary_language",
+        "locale_get_display_name",
+        "locale_get_display_language",
+        "locale_get_display_script",
+        "locale_get_display_region",
+        "locale_get_display_variant",
+        "locale_canonicalize",
+        "locale_compose"
+    ]
+}

@@ -1,0 +1,102 @@
+{
+    "php_function": "iconv_strpos",
+    "zend_function": "iconv_strpos",
+    "source_file": ".c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "ext/standard/info.h",
+        "main/php_output.h",
+        "SAPI.h",
+        "php_ini.h",
+        "stdlib.h",
+        "errno.h",
+        "php_iconv.h",
+        "iconv.h",
+        "gnu/libc-version.h",
+        "zend_smart_str.h",
+        "ext/standard/base64.h",
+        "ext/standard/quot_print.h",
+        "iconv_arginfo.h"
+    ],
+    "body": "const char *charset = NULL;\n\tsize_t charset_len, haystk_len;\n\tzend_string *haystk;\n\tzend_string *ndl;\n\tzend_long offset = 0;\n\n\tphp_iconv_err_t err;\n\n\tsize_t retval;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"SS|ls!\",\n\t\t&haystk, &ndl,\n\t\t&offset, &charset, &charset_len) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tif (charset == NULL) {\n\t \tcharset = get_internal_encoding();\n\t} else if (charset_len >= ICONV_CSNMAXLEN) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Encoding parameter exceeds the maximum allowed length of %d characters\", ICONV_CSNMAXLEN);\n\t\tRETURN_FALSE;\n\t}\n\n\tif (offset < 0) {\n\t\t/* Convert negative offset (counted from the end of string) */\n\t\terr = _php_iconv_strlen(&haystk_len, ZSTR_VAL(haystk), ZSTR_LEN(haystk), charset);\n\t\tif (err != PHP_ICONV_ERR_SUCCESS) {\n\t\t\t_php_iconv_show_error(err, GENERIC_SUPERSET_NAME, charset);\n\t\t\tRETURN_FALSE;\n\t\t}\n\t\toffset += haystk_len;\n\t\tif (offset < 0) { /* If offset before start */\n\t\t\tzend_argument_value_error(3, \"must be contained in argument #1 ($haystack)\");\n\t\t\tRETURN_THROWS();\n\t\t}\n\t}\n\n\tif (ZSTR_LEN(ndl) < 1) {\n\t\t// TODO: Support empty needles!\n\t\tRETURN_FALSE;\n\t}\n\n\terr = _php_iconv_strpos(\n\t\t&retval, ZSTR_VAL(haystk), ZSTR_LEN(haystk), ZSTR_VAL(ndl), ZSTR_LEN(ndl),\n\t\toffset, charset, /* reverse */ false);\n\t_php_iconv_show_error(err, GENERIC_SUPERSET_NAME, charset);\n\n\tif (err == PHP_ICONV_ERR_SUCCESS && retval != (size_t)-1) {\n\t\tRETVAL_LONG((zend_long)retval);\n\t} else {\n\t\tRETVAL_FALSE;\n\t}",
+    "semantic": "Convert negative offset (counted from the end of string)",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_FALSE",
+            "ZSTR_VAL",
+            "ZSTR_LEN"
+        ],
+        "zend_types": [
+            "zend_string",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "php_error_docref",
+            "zend_argument_value_error"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common iconv_strpos inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "Convert negative offset (counted from the end of string)",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "iconv_strlen",
+        "iconv_substr",
+        "iconv_strrpos",
+        "iconv_mime_encode",
+        "iconv_mime_decode",
+        "iconv_mime_decode_headers",
+        "iconv",
+        "iconv_set_encoding",
+        "iconv_get_encoding"
+    ]
+}

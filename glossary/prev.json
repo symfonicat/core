@@ -1,0 +1,125 @@
+{
+    "php_function": "prev",
+    "zend_function": "prev",
+    "source_file": "ray.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "array_zv",
+            "macro": "Z_PARAM_ARRAY_OR_OBJECT_EX",
+            "arguments": [
+                "array_zv",
+                "0",
+                "1"
+            ],
+            "type": "HashTable",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY_OR_OBJECT_EX(array_zv, 0, 1)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "php_ini.h",
+        "stdarg.h",
+        "stdlib.h",
+        "math.h",
+        "time.h",
+        "string.h",
+        "zend_globals.h",
+        "zend_interfaces.h",
+        "php_array.h",
+        "basic_functions.h",
+        "php_string.h",
+        "php_math.h",
+        "zend_smart_str.h",
+        "zend_bitset.h",
+        "zend_exceptions.h",
+        "ext/random/php_random.h",
+        "zend_frameless_function.h"
+    ],
+    "body": "zval *array_zv;\n\tzval *entry;\n\n\tZEND_PARSE_PARAMETERS_START(1, 1)\n\t\tZ_PARAM_ARRAY_OR_OBJECT_EX(array_zv, 0, 1)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tHashTable *array = get_ht_for_iap(array_zv, /* separate */ true);\n\tif (zend_hash_num_elements(array) == 0) {\n\t\t/* array->nInternalPointer is already 0 if the array is empty, even after removing elements */\n\t\tRETURN_FALSE;\n\t}\n\tzend_hash_move_backwards(array);\n\n\tif (USED_RET()) {\n\t\tif ((entry = zend_hash_get_current_data(array)) == NULL) {\n\t\t\tRETURN_FALSE;\n\t\t}\n\n\t\tif (Z_TYPE_P(entry) == IS_INDIRECT) {\n\t\t\tentry = Z_INDIRECT_P(entry);\n\t\t}\n\n\t\tRETURN_COPY_DEREF(entry);\n\t}",
+    "semantic": "separate",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_ARRAY_OR_OBJECT_EX",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_FALSE",
+            "RETURN_COPY_DEREF"
+        ],
+        "zend_types": [
+            "zval",
+            "HashTable"
+        ],
+        "internal_helpers": [
+            "zend_hash_num_elements",
+            "zend_hash_move_backwards",
+            "zend_hash_get_current_data"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common prev inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "separate",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "krsort",
+        "ksort",
+        "count",
+        "natsort",
+        "natcasesort",
+        "asort",
+        "arsort",
+        "sort",
+        "rsort",
+        "usort",
+        "uasort",
+        "uksort"
+    ]
+}

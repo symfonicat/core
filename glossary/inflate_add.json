@@ -1,0 +1,104 @@
+{
+    "php_function": "inflate_add",
+    "zend_function": "inflate_add",
+    "source_file": "",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "SAPI.h",
+        "php_ini.h",
+        "ext/standard/info.h",
+        "php_zlib.h",
+        "zlib_arginfo.h"
+    ],
+    "body": "zend_string *out;\n\tchar *in_buf;\n\tsize_t in_len, buffer_used = 0, CHUNK_SIZE = 8192;\n\tzval *res;\n\tphp_zlib_context *ctx;\n\tzend_long flush_type = Z_SYNC_FLUSH;\n\tint status;\n\n\tif (SUCCESS != zend_parse_parameters(ZEND_NUM_ARGS(), \"Os|l\", &res, inflate_context_ce, &in_buf, &in_len, &flush_type)) {\n\t\tRETURN_THROWS();\n\t}\n\n\tctx = Z_INFLATE_CONTEXT_P(res);\n\n\tswitch (flush_type) {\n\t\tcase Z_NO_FLUSH:\n\t\tcase Z_PARTIAL_FLUSH:\n\t\tcase Z_SYNC_FLUSH:\n\t\tcase Z_FULL_FLUSH:\n\t\tcase Z_BLOCK:\n\t\tcase Z_FINISH:\n\t\t\tbreak;\n\n\t\tdefault:\n\t\t\tzend_argument_value_error(3, \"must be one of ZLIB_NO_FLUSH, ZLIB_PARTIAL_FLUSH, ZLIB_SYNC_FLUSH, ZLIB_FULL_FLUSH, ZLIB_BLOCK, or ZLIB_FINISH\");\n\t\t\tRETURN_THROWS();\n\t}\n\n\t/* Lazy-resetting the zlib stream so ctx->total_in remains available until the next inflate_add() call. */\n\tif (ctx->status == Z_STREAM_END)\n\t{\n\t\tctx->status = Z_OK;\n\t\tinflateReset(&ctx->Z);\n\t}\n\n\tif (in_len <= 0 && flush_type != Z_FINISH) {\n\t\tRETURN_EMPTY_STRING();\n\t}\n\n\tout = zend_string_alloc((in_len > CHUNK_SIZE) ? in_len : CHUNK_SIZE, 0);\n\tctx->Z.next_in = (Bytef *) in_buf;\n\tctx->Z.next_out = (Bytef *) ZSTR_VAL(out);\n\tctx->Z.avail_in = in_len;\n\tctx->Z.avail_out = ZSTR_LEN(out);\n\n\tdo {\n\t\tstatus = inflate(&ctx->Z, flush_type);\n\t\tbuffer_used = ZSTR_LEN(out) - ctx->Z.avail_out;\n\n\t\tctx->status = status; /* Save status for exposing to userspace */\n\n\t\tswitch (status) {\n\t\t\tcase Z_OK:\n\t\t\t\tif (ctx->Z.avail_out == 0) {\n\t\t\t\t\t/* more output buffer space needed; realloc and try again */\n\t\t\t\t\tout = zend_string_realloc(out, ZSTR_LEN(out) + CHUNK_SIZE, 0);\n\t\t\t\t\tctx->Z.avail_out = CHUNK_SIZE;\n\t\t\t\t\tctx->Z.next_out = (Bytef *) ZSTR_VAL(out) + buffer_used;\n\t\t\t\t\tbreak;\n\t\t\t\t} else {\n\t\t\t\t\tgoto complete;\n\t\t\t\t}\n\t\t\tcase Z_STREAM_END:\n\t\t\t\tgoto complete;\n\t\t\tcase Z_BUF_ERROR:\n\t\t\t\tif (flush_type == Z_FINISH && ctx->Z.avail_out == 0) {\n\t\t\t\t\t/* more output buffer space needed; realloc and try again */\n\t\t\t\t\tout = zend_string_realloc(out, ZSTR_LEN(out) + CHUNK_SIZE, 0);\n\t\t\t\t\tctx->Z.avail_out = CHUNK_SIZE;\n\t\t\t\t\tctx->Z.next_out = (Bytef *) ZSTR_VAL(out) + buffer_used;\n\t\t\t\t\tbreak;\n\t\t\t\t} else {\n\t\t\t\t\t/* No more input data; we're finished */\n\t\t\t\t\tgoto complete;\n\t\t\t\t}\n\t\t\tcase Z_NEED_DICT:\n\t\t\t\tif (ctx->inflateDict) {\n\t\t\t\t\tswitch (inflateSetDictionary(&ctx->Z, (Bytef *) ctx->inflateDict, ctx->inflateDictlen)) {\n\t\t\t\t\t\tcase Z_OK:\n\t\t\t\t\t\t\tefree(ctx->inflateDict);\n\t\t\t\t\t\t\tctx->inflateDict = NULL;\n\t\t\t\t\t\t\tbreak;\n\t\t\t\t\t\tcase Z_DATA_ERROR:\n\t\t\t\t\t\t\tefree(ctx->inflateDict);\n\t\t\t\t\t\t\tctx->inflateDict = NULL;\n\t\t\t\t\t\t\tzend_string_release_ex(out, 0);\n\t\t\t\t\t\t\tphp_error_docref(NULL, E_WARNING, \"Dictionary does not match expected dictionary (incorrect adler32 hash)\");\n\t\t\t\t\t\t\tRETURN_FALSE;\n\t\t\t\t\t\tEMPTY_SWITCH_DEFAULT_CASE()\n\t\t\t\t\t}\n\t\t\t\t\tbreak;\n\t\t\t\t} else {\n\t\t\t\t\tphp_error_docref(NULL, E_WARNING, \"Inflating this data requires a preset dictionary, please specify it in the options array of inflate_init()\");\n\t\t\t\t\tRETURN_FALSE;\n\t\t\t\t}\n\t\t\tdefault:\n\t\t\t\tzend_string_release_ex(out, 0);\n\t\t\t\tphp_error_docref(NULL, E_WARNING, \"%s\", zError(status));\n\t\t\t\tRETURN_FALSE;\n\t\t}\n\t} while (1);\n\ncomplete:\n\tout = zend_string_realloc(out, buffer_used, 0);\n\tZSTR_VAL(out)[buffer_used] = 0;\n\tRETURN_STR(out);",
+    "semantic": "Lazy-resetting the zlib stream so ctx->total_in remains available until the next inflate_add() call.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_EMPTY_STRING",
+            "ZSTR_VAL",
+            "ZSTR_LEN",
+            "RETURN_FALSE",
+            "RETURN_STR"
+        ],
+        "zend_types": [
+            "zend_string",
+            "zval",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "zend_argument_value_error",
+            "zend_string_alloc",
+            "zend_string_realloc",
+            "zend_string_release_ex",
+            "php_error_docref"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common inflate_add inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 9,
+    "purpose": "Lazy-resetting the zlib stream so ctx->total_in remains available until the next inflate_add() call.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "ob_gzhandler",
+        "zlib_get_coding_type",
+        "gzfile",
+        "gzopen",
+        "readgzfile",
+        "name",
+        "name",
+        "inflate_init",
+        "inflate_get_status",
+        "inflate_get_read_len",
+        "deflate_init",
+        "deflate_add"
+    ]
+}

@@ -1,0 +1,36 @@
+{{ form_start(form) }}
+
+<div class="d-flex align-items-start justify-content-between gap-3">
+    <div class="me-auto">
+        {% if form.id is defined %}
+            {{ form_row(form.id) }}
+        {% else %}
+            <h3 class="mb-0">
+                
+                {{ parcel.id }}
+                
+                &nbsp;
+                &nbsp;
+
+                <code>
+                    {{ parcel.path }}
+                </code>
+                
+            </h3>
+        {% endif %}
+    </div>
+    <button class="btn btn-sm btn-success ms-auto">{{ button_label|default('save') }}</button>
+</div>
+<hr />
+
+<div class="row g-3">
+    <div class="col-md-8">
+        {{ include('@symfonicat/env/_env_collection.html.twig', { form: form.env }) }}
+    </div>
+</div>
+
+{% if form._token is defined %}
+    {{ form_widget(form._token) }}
+{% endif %}
+
+{{ form_end(form, { render_rest: false }) }}

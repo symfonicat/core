@@ -1,0 +1,86 @@
+<?php
+
+namespace Symfonicat\Controller\Core;
+
+use Symfonicat\Entity\Domain;
+use Symfonicat\Form\DomainType;
+use Symfonicat\Repository\DomainRepository;
+use Symfonicat\Repository\EnvParentRepository;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Attribute\Route;
+final class DomainController extends AbstractController
+{
+    #[Route('/core/d', name: 'symfonicat_domain_index', methods: ['GET'])]
+    public function index(DomainRepository $domainRepository, EnvParentRepository $envParentRepository): Response
+    {
+        return $this->render('@symfonicat/domain/index.html.twig', [
+            'domains' => $domainRepository->findAll(),
+            'env_parents' => $envParentRepository->findAllOrdered(),
+        ]);
+    }
+
+    #[Route('/core/d/create', name: 'symfonicat_domain_create', methods: ['GET', 'POST'])]
+    public function new(Request $request, EntityManagerInterface $entityManager): Response
+    {
+        $domain = new Domain();
+        $form = $this->createForm(DomainType::class, $domain, [
+            'is_admin' => true,
+        ]);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $entityManager->persist($domain);
+            $entityManager->flush();
+
+            return $this->redirectToRoute('symfonicat_domain_index', [], Response::HTTP_SEE_OTHER);
+        }
+
+        return $this->render('@symfonicat/domain/create.html.twig', [
+            'domain' => $domain,
+            'form' => $form,
+        ]);
+    }
+
+    #[Route('/core/d/{id}/edit', name: 'symfonicat_domain_edit', methods: ['GET', 'POST'], requirements: ['id' => '.+'])]
+    public function edit(Request $request, string $id, DomainRepository $domainRepository, EntityManagerInterface $entityManager): Response
+    {
+        $domain = $domainRepository->find($id);
+        if (!$domain) {
+            throw $this->createNotFoundException(sprintf('Domain "%s" not found.', $id));
+        }
+        $form = $this->createForm(DomainType::class, $domain, [
+            'is_admin' => true,
+        ]);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $entityManager->flush();
+
+            return $this->redirectToRoute('symfonicat_domain_index', [], Response::HTTP_SEE_OTHER);
+        }
+
+        return $this->render('@symfonicat/domain/edit.html.twig', [
+            'domain' => $domain,
+            'form' => $form,
+        ]);
+    }
+
+    #[Route('/core/d/{id}', name: 'symfonicat_domain_delete', methods: ['POST'], requirements: ['id' => '.+'])]
+    public function delete(Request $request, string $id, DomainRepository $domainRepository, EntityManagerInterface $entityManager): Response
+    {
+        $domain = $domainRepository->find($id);
+        if (!$domain) {
+            return $this->redirectToRoute('symfonicat_domain_index', [], Response::HTTP_SEE_OTHER);
+        }
+
+        if ($this->isCsrfTokenValid('delete'.$domain->getId(), $request->getPayload()->getString('_token'))) {
+            $entityManager->remove($domain);
+            $entityManager->flush();
+        }
+
+        return $this->redirectToRoute('symfonicat_domain_index', [], Response::HTTP_SEE_OTHER);
+    }
+}

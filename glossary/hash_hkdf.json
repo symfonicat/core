@@ -1,0 +1,109 @@
+{
+    "php_function": "hash_hkdf",
+    "zend_function": "hash_hkdf",
+    "source_file": "",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "math.h",
+        "php_hash.h",
+        "ext/standard/info.h",
+        "ext/standard/file.h",
+        "ext/standard/php_var.h",
+        "zend_attributes.h",
+        "zend_exceptions.h",
+        "zend_interfaces.h",
+        "zend_smart_str.h",
+        "hash_arginfo.h"
+    ],
+    "body": "zend_string *returnval, *ikm, *algo, *info = NULL, *salt = NULL;\n\tzend_long length = 0;\n\tunsigned char *prk, *digest, *K;\n\tsize_t i;\n\tsize_t rounds;\n\tconst php_hash_ops *ops;\n\tvoid *context;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"SS|lSS\", &algo, &ikm, &length, &info, &salt) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tops = php_hash_fetch_ops(algo);\n\tif (!ops || !ops->is_crypto) {\n\t\tzend_argument_value_error(1, \"must be a valid cryptographic hashing algorithm\");\n\t\tRETURN_THROWS();\n\t}\n\n\tif (ZSTR_LEN(ikm) == 0) {\n\t\tzend_argument_must_not_be_empty_error(2);\n\t\tRETURN_THROWS();\n\t}\n\n\tif (length < 0) {\n\t\tzend_argument_value_error(3, \"must be greater than or equal to 0\");\n\t\tRETURN_THROWS();\n\t} else if (length == 0) {\n\t\tlength = ops->digest_size;\n\t} else if (length > (zend_long) (ops->digest_size * 255)) {\n\t\tzend_argument_value_error(3, \"must be less than or equal to %zd\", ops->digest_size * 255);\n\t\tRETURN_THROWS();\n\t}\n\n\tcontext = php_hash_alloc_context(ops);\n\n\t// Extract\n\tops->hash_init(context, NULL);\n\tK = emalloc(ops->block_size);\n\tphp_hash_hmac_prep_key(K, ops, context,\n\t\t(unsigned char *) (salt ? ZSTR_VAL(salt) : \"\"), salt ? ZSTR_LEN(salt) : 0);\n\n\tprk = emalloc(ops->digest_size);\n\tphp_hash_hmac_round(prk, ops, context, K, (unsigned char *) ZSTR_VAL(ikm), ZSTR_LEN(ikm));\n\tphp_hash_string_xor_char(K, K, 0x6A, ops->block_size);\n\tphp_hash_hmac_round(prk, ops, context, K, prk, ops->digest_size);\n\tZEND_SECURE_ZERO(K, ops->block_size);\n\n\t// Expand\n\treturnval = zend_string_alloc(length, 0);\n\tdigest = emalloc(ops->digest_size);\n\tfor (i = 1, rounds = (length - 1) / ops->digest_size + 1; i <= rounds; i++) {\n\t\t// chr(i)\n\t\tunsigned char c[1];\n\t\tc[0] = (i & 0xFF);\n\n\t\tphp_hash_hmac_prep_key(K, ops, context, prk, ops->digest_size);\n\t\tops->hash_init(context, NULL);\n\t\tops->hash_update(context, K, ops->block_size);\n\n\t\tif (i > 1) {\n\t\t\tops->hash_update(context, digest, ops->digest_size);\n\t\t}\n\n\t\tif (info != NULL && ZSTR_LEN(info) > 0) {\n\t\t\tops->hash_update(context, (unsigned char *) ZSTR_VAL(info), ZSTR_LEN(info));\n\t\t}\n\n\t\tops->hash_update(context, c, 1);\n\t\tops->hash_final(digest, context);\n\t\tphp_hash_string_xor_char(K, K, 0x6A, ops->block_size);\n\t\tphp_hash_hmac_round(digest, ops, context, K, digest, ops->digest_size);\n\t\tmemcpy(\n\t\t\tZSTR_VAL(returnval) + ((i - 1) * ops->digest_size),\n\t\t\tdigest,\n\t\t\t(i == rounds ? length - ((i - 1) * ops->digest_size) : ops->digest_size)\n\t\t);\n\t}\n\n\tZEND_SECURE_ZERO(K, ops->block_size);\n\tZEND_SECURE_ZERO(digest, ops->digest_size);\n\tZEND_SECURE_ZERO(prk, ops->digest_size);\n\tefree(K);\n\tefree(context);\n\tefree(prk);\n\tefree(digest);\n\tZSTR_VAL(returnval)[length] = 0;\n\tRETURN_STR(returnval);",
+    "semantic": "Implements the PHP function hash_hkdf in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "ZSTR_LEN",
+            "ZSTR_VAL",
+            "ZEND_SECURE_ZERO",
+            "RETURN_STR"
+        ],
+        "zend_types": [
+            "zend_string",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "php_hash_fetch_ops",
+            "zend_argument_value_error",
+            "zend_argument_must_not_be_empty_error",
+            "php_hash_alloc_context",
+            "php_hash_hmac_prep_key",
+            "php_hash_hmac_round",
+            "php_hash_string_xor_char",
+            "zend_string_alloc"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common hash_hkdf inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 7,
+    "purpose": "Implements the PHP function hash_hkdf in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "hash",
+        "hash_file",
+        "hash_hmac",
+        "hash_hmac_file",
+        "hash_init",
+        "hash_update",
+        "hash_update_stream",
+        "hash_update_file",
+        "hash_final",
+        "hash_copy",
+        "hash_algos",
+        "hash_hmac_algos"
+    ]
+}

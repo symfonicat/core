@@ -1,0 +1,143 @@
+{
+    "php_function": "grapheme_stripos",
+    "zend_function": "grapheme_stripos",
+    "source_file": "me/grapheme_string.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "haystack",
+            "macro": "Z_PARAM_STRING",
+            "arguments": [
+                "haystack",
+                "haystack_len"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING(haystack, haystack_len)"
+        },
+        {
+            "name": "needle",
+            "macro": "Z_PARAM_STRING",
+            "arguments": [
+                "needle",
+                "needle_len"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING(needle, needle_len)"
+        },
+        {
+            "name": "loffset",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "loffset"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(loffset)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "grapheme.h",
+        "grapheme_util.h",
+        "unicode/utypes.h",
+        "unicode/utf8.h",
+        "unicode/ucol.h",
+        "unicode/ustring.h",
+        "unicode/ubrk.h"
+    ],
+    "body": "char *haystack, *needle;\n\tsize_t haystack_len, needle_len;\n\tconst char *found;\n\tzend_long loffset = 0;\n\tint32_t offset = 0;\n\tzend_long ret_pos;\n\tint is_ascii;\n\n\tZEND_PARSE_PARAMETERS_START(2, 3)\n\t\tZ_PARAM_STRING(haystack, haystack_len)\n\t\tZ_PARAM_STRING(needle, needle_len)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_LONG(loffset)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif ( OUTSIDE_STRING(loffset, haystack_len) ) {\n\t\tzend_argument_value_error(3, \"must be contained in argument #1 ($haystack)\");\n\t\tRETURN_THROWS();\n\t}\n\n\t/* we checked that it will fit: */\n\toffset = (int32_t) loffset;\n\n\t/* the offset is 'grapheme count offset' so it still might be invalid - we'll check it later */\n\n\tis_ascii = ( grapheme_ascii_check((unsigned char*)haystack, haystack_len) >= 0 );\n\n\tif ( is_ascii ) {\n\t\tchar *haystack_dup, *needle_dup;\n\t\tint32_t noffset = offset >= 0 ? offset : (int32_t)haystack_len + offset;\n\t\tneedle_dup = estrndup(needle, needle_len);\n\t\tzend_str_tolower(needle_dup, needle_len);\n\t\thaystack_dup = estrndup(haystack, haystack_len);\n\t\tzend_str_tolower(haystack_dup, haystack_len);\n\n\t\tfound = php_memnstr(haystack_dup + noffset, needle_dup, needle_len, haystack_dup + haystack_len);\n\n\t\tefree(haystack_dup);\n\t\tefree(needle_dup);\n\n\t\tif (found) {\n\t\t\tRETURN_LONG(found - haystack_dup);\n\t\t}\n\n\t\t/* if needle was ascii too, we are all done, otherwise we need to try using Unicode to see what we get */\n\t\tif ( grapheme_ascii_check((unsigned char *)needle, needle_len) >= 0 ) {\n\t\t\tRETURN_FALSE;\n\t\t}\n\t}\n\n\t/* do utf16 part of the strpos */\n\tret_pos = grapheme_strpos_utf16(haystack, haystack_len, needle, needle_len, offset, NULL, 1 /* fIgnoreCase */, 0 /*last */ );\n\n\tif ( ret_pos >= 0 ) {\n\t\tRETURN_LONG(ret_pos);\n\t} else {\n\t\tRETURN_FALSE;\n\t}",
+    "semantic": "we checked that it will fit:",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STRING",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_LONG",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_THROWS",
+            "RETURN_LONG",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_argument_value_error",
+            "zend_str_tolower",
+            "php_memnstr"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common grapheme_stripos inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 6,
+    "purpose": "we checked that it will fit:",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "grapheme_strlen",
+        "grapheme_strpos",
+        "grapheme_strrpos",
+        "grapheme_strripos",
+        "grapheme_substr",
+        "grapheme_strstr",
+        "grapheme_stristr",
+        "grapheme_extract",
+        "grapheme_str_split"
+    ]
+}

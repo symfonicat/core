@@ -1,0 +1,111 @@
+{
+    "php_function": "sha1",
+    "zend_function": "sha1",
+    "source_file": "a1.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "arg",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "arg"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(arg)"
+        },
+        {
+            "name": "raw_output",
+            "macro": "Z_PARAM_BOOL",
+            "arguments": [
+                "raw_output"
+            ],
+            "type": "bool",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_BOOL(raw_output)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "sha1.h",
+        "md5.h"
+    ],
+    "body": "zend_string *arg;\n\tbool raw_output = 0;\n\tPHP_SHA1_CTX context;\n\tunsigned char digest[20];\n\n\tZEND_PARSE_PARAMETERS_START(1, 2)\n\t\tZ_PARAM_STR(arg)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_BOOL(raw_output)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tPHP_SHA1Init(&context);\n\tPHP_SHA1Update(&context, (unsigned char *) ZSTR_VAL(arg), ZSTR_LEN(arg));\n\tPHP_SHA1Final(digest, &context);\n\tif (raw_output) {\n\t\tRETURN_STRINGL((char *) digest, 20);\n\t} else {\n\t\tRETVAL_NEW_STR(zend_string_alloc(40, 0));\n\t\tmake_digest_ex(Z_STRVAL_P(return_value), digest, 20);\n\t}",
+    "semantic": "Implements the PHP function sha1 in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STR",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_BOOL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZSTR_VAL",
+            "ZSTR_LEN",
+            "RETURN_STRINGL"
+        ],
+        "zend_types": [
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "zend_string_alloc"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common sha1 inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 3,
+    "purpose": "Implements the PHP function sha1 in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "sha1_file"
+    ]
+}

@@ -1,0 +1,102 @@
+{
+    "php_function": "odbc_field_name",
+    "zend_function": "odbc_field_name",
+    "source_file": "bc.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_globals.h",
+        "zend_attributes.h",
+        "ext/standard/info.h",
+        "Zend/zend_interfaces.h",
+        "zend_smart_str.h",
+        "php_odbc.h",
+        "php_odbc_includes.h",
+        "php_odbc_utils.h",
+        "fcntl.h",
+        "php_ini.h",
+        "odbc_arginfo.h"
+    ],
+    "body": "odbc_result *result;\n\tzval *pv_res;\n\tzend_long pv_num;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"Ol\", &pv_res, odbc_result_ce, &pv_num) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tresult = Z_ODBC_RESULT_P(pv_res);\n\tCHECK_ODBC_RESULT(result);\n\n\tif (pv_num < 1) {\n\t\tzend_argument_value_error(2, \"must be greater than 0\");\n\t\tRETURN_THROWS();\n\t}\n\n\tif (result->numcols == 0) {\n\t\tphp_error_docref(NULL, E_WARNING, \"No tuples available at this result index\");\n\t\tRETURN_FALSE;\n\t}\n\n\tif (pv_num > result->numcols) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Field index larger than number of fields\");\n\t\tRETURN_FALSE;\n\t}\n\n\tRETURN_STRING(result->values[pv_num - 1].name);",
+    "semantic": "Implements the PHP function odbc_field_name in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_FALSE",
+            "RETURN_STRING"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "zend_argument_value_error",
+            "php_error_docref"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common odbc_field_name inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 4,
+    "purpose": "Implements the PHP function odbc_field_name in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "odbc_close_all",
+        "odbc_binmode",
+        "odbc_longreadlen",
+        "odbc_prepare",
+        "odbc_execute",
+        "odbc_cursor",
+        "odbc_data_source",
+        "odbc_exec",
+        "odbc_fetch_object",
+        "odbc_fetch_array",
+        "odbc_fetch_into",
+        "odbc_fetch_row"
+    ]
+}

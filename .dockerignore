@@ -1,0 +1,17 @@
+.git
+.gitignore
+.phpunit.cache
+vendor/*
+!vendor/*/
+vendor/*/*
+!vendor/*/*/
+vendor/*/*/*
+!vendor/*/*/ext/
+!vendor/*/*/ext/**
+!vendor/*/*/extensions/
+!vendor/*/*/extensions/**
+node_modules/
+var/
+application/*
+!application/.gitkeep
+!application/.gitignore

@@ -1,0 +1,191 @@
+{
+    "php_function": "substr_replace",
+    "zend_function": "substr_replace",
+    "source_file": "ring.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "str_ht",
+            "macro": "Z_PARAM_ARRAY_HT_OR_STR",
+            "arguments": [
+                "str_ht",
+                "str"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY_HT_OR_STR(str_ht, str)"
+        },
+        {
+            "name": "repl_ht",
+            "macro": "Z_PARAM_ARRAY_HT_OR_STR",
+            "arguments": [
+                "repl_ht",
+                "repl_str"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY_HT_OR_STR(repl_ht, repl_str)"
+        },
+        {
+            "name": "from_ht",
+            "macro": "Z_PARAM_ARRAY_HT_OR_LONG",
+            "arguments": [
+                "from_ht",
+                "from_long"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY_HT_OR_LONG(from_ht, from_long)"
+        },
+        {
+            "name": "len_ht",
+            "macro": "Z_PARAM_ARRAY_HT_OR_LONG_OR_NULL",
+            "arguments": [
+                "len_ht",
+                "len_long",
+                "len_is_null"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY_HT_OR_LONG_OR_NULL(len_ht, len_long, len_is_null)"
+        }
+    ],
+    "includes": [
+        "stdio.h",
+        "php.h",
+        "php_string.h",
+        "php_variables.h",
+        "locale.h",
+        "scanf.h",
+        "zend_API.h",
+        "zend_execute.h",
+        "basic_functions.h",
+        "zend_smart_str.h",
+        "Zend/zend_exceptions.h",
+        "TSRM.h",
+        "ext/standard/file.h",
+        "ext/standard/html.h",
+        "ext/random/php_random.h",
+        "emmintrin.h",
+        "Zend/zend_bitset.h",
+        "tmmintrin.h",
+        "arm_neon.h"
+    ],
+    "body": "zend_string *str, *repl_str;\n\tHashTable *str_ht, *repl_ht;\n\tHashTable *from_ht;\n\tzend_long from_long;\n\tHashTable *len_ht = NULL;\n\tzend_long len_long;\n\tbool len_is_null = 1;\n\tzend_long l = 0;\n\tzend_long f;\n\tzend_string *result;\n\tHashPosition from_idx, repl_idx, len_idx;\n\tzval *tmp_str = NULL, *tmp_repl, *tmp_from = NULL, *tmp_len= NULL;\n\n\tZEND_PARSE_PARAMETERS_START(3, 4)\n\t\tZ_PARAM_ARRAY_HT_OR_STR(str_ht, str)\n\t\tZ_PARAM_ARRAY_HT_OR_STR(repl_ht, repl_str)\n\t\tZ_PARAM_ARRAY_HT_OR_LONG(from_ht, from_long)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_ARRAY_HT_OR_LONG_OR_NULL(len_ht, len_long, len_is_null)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (len_is_null) {\n\t\tif (str) {\n\t\t\tl = ZSTR_LEN(str);\n\t\t}\n\t} else if (!len_ht) {\n\t\tl = len_long;\n\t}\n\n\tif (str) {\n\t\tif (from_ht) {\n\t\t\tzend_argument_type_error(3, \"cannot be an array when working on a single string\");\n\t\t\tRETURN_THROWS();\n\t\t}\n\t\tif (len_ht) {\n\t\t\tzend_argument_type_error(4, \"cannot be an array when working on a single string\");\n\t\t\tRETURN_THROWS();\n\t\t}\n\n\t\tf = from_long;\n\n\t\t/* if \"from\" position is negative, count start position from the end\n\t\t * of the string\n\t\t */\n\t\tif (f < 0) {\n\t\t\tf = (zend_long)ZSTR_LEN(str) + f;\n\t\t\tif (f < 0) {\n\t\t\t\tf = 0;\n\t\t\t}\n\t\t} else if ((size_t)f > ZSTR_LEN(str)) {\n\t\t\tf = ZSTR_LEN(str);\n\t\t}\n\t\t/* if \"length\" position is negative, set it to the length\n\t\t * needed to stop that many chars from the end of the string\n\t\t */\n\t\tif (l < 0) {\n\t\t\tl = ((zend_long)ZSTR_LEN(str) - f) + l;\n\t\t\tif (l < 0) {\n\t\t\t\tl = 0;\n\t\t\t}\n\t\t}\n\n\t\tif ((size_t)l > ZSTR_LEN(str)) {\n\t\t\tl = ZSTR_LEN(str);\n\t\t}\n\n\t\tif ((f + l) > (zend_long)ZSTR_LEN(str)) {\n\t\t\tl = ZSTR_LEN(str) - f;\n\t\t}\n\n\t\tzend_string *tmp_repl_str = NULL;\n\t\tif (repl_ht) {\n\t\t\trepl_idx = 0;\n\t\t\tif (HT_IS_PACKED(repl_ht)) {\n\t\t\t\twhile (repl_idx < repl_ht->nNumUsed) {\n\t\t\t\t\ttmp_repl = &repl_ht->arPacked[repl_idx];\n\t\t\t\t\tif (Z_TYPE_P(tmp_repl) != IS_UNDEF) {\n\t\t\t\t\t\tbreak;\n\t\t\t\t\t}\n\t\t\t\t\trepl_idx++;\n\t\t\t\t}\n\t\t\t} else {\n\t\t\t\twhile (repl_idx < repl_ht->nNumUsed) {\n\t\t\t\t\ttmp_repl = &repl_ht->arData[repl_idx].val;\n\t\t\t\t\tif (Z_TYPE_P(tmp_repl) != IS_UNDEF) {\n\t\t\t\t\t\tbreak;\n\t\t\t\t\t}\n\t\t\t\t\trepl_idx++;\n\t\t\t\t}\n\t\t\t}\n\t\t\tif (repl_idx < repl_ht->nNumUsed) {\n\t\t\t\trepl_str = zval_get_tmp_string(tmp_repl, &tmp_repl_str);\n\t\t\t} else {\n\t\t\t\trepl_str = STR_EMPTY_ALLOC();\n\t\t\t}\n\t\t}\n\n\t\tresult = zend_string_safe_alloc(1, ZSTR_LEN(str) - l + ZSTR_LEN(repl_str), 0, 0);\n\n\t\tmemcpy(ZSTR_VAL(result), ZSTR_VAL(str), f);\n\t\tif (ZSTR_LEN(repl_str)) {\n\t\t\tmemcpy((ZSTR_VAL(result) + f), ZSTR_VAL(repl_str), ZSTR_LEN(repl_str));\n\t\t}\n\t\tmemcpy((ZSTR_VAL(result) + f + ZSTR_LEN(repl_str)), ZSTR_VAL(str) + f + l, ZSTR_LEN(str) - f - l);\n\t\tZSTR_VAL(result)[ZSTR_LEN(result)] = '\\0';\n\t\tzend_tmp_string_release(tmp_repl_str);\n\t\tRETURN_NEW_STR(result);\n\t} else { /* str is array of strings */\n\t\tzend_string *str_index = NULL;\n\t\tsize_t result_len;\n\t\tzend_ulong num_index;\n\n\t\t/* TODO\n\t\tif (!len_is_null && from_ht) {\n\t\t\tif (zend_hash_num_elements(from_ht) != zend_hash_num_elements(len_ht)) {\n\t\t\t\tphp_error_docref(NULL, E_WARNING, \"'start' and 'length' should have the same number of elements\");\n\t\t\t\tRETURN_STR_COPY(str);\n\t\t\t}\n\t\t}\n\t\t*/\n\n\t\tarray_init(return_value);\n\n\t\tfrom_idx = len_idx = repl_idx = 0;\n\n\t\tZEND_HASH_FOREACH_KEY_VAL(str_ht, num_index, str_index, tmp_str) {\n\t\t\tzend_string *tmp_orig_str;\n\t\t\tzend_string *orig_str = zval_get_tmp_string(tmp_str, &tmp_orig_str);\n\n\t\t\tif (from_ht) {\n\t\t\t\tif (HT_IS_PACKED(from_ht)) {\n\t\t\t\t\twhile (from_idx < from_ht->nNumUsed) {\n\t\t\t\t\t\ttmp_from = &from_ht->arPacked[from_idx];\n\t\t\t\t\t\tif (Z_TYPE_P(tmp_from) != IS_UNDEF) {\n\t\t\t\t\t\t\tbreak;\n\t\t\t\t\t\t}\n\t\t\t\t\t\tfrom_idx++;\n\t\t\t\t\t}\n\t\t\t\t} else {\n\t\t\t\t\twhile (from_idx < from_ht->nNumUsed) {\n\t\t\t\t\t\ttmp_from = &from_ht->arData[from_idx].val;\n\t\t\t\t\t\tif (Z_TYPE_P(tmp_from) != IS_UNDEF) {\n\t\t\t\t\t\t\tbreak;\n\t\t\t\t\t\t}\n\t\t\t\t\t\tfrom_idx++;\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\tif (from_idx < from_ht->nNumUsed) {\n\t\t\t\t\tf = zval_get_long(tmp_from);\n\n\t\t\t\t\tif (f < 0) {\n\t\t\t\t\t\tf = (zend_long)ZSTR_LEN(orig_str) + f;\n\t\t\t\t\t\tif (f < 0) {\n\t\t\t\t\t\t\tf = 0;\n\t\t\t\t\t\t}\n\t\t\t\t\t} else if (f > (zend_long)ZSTR_LEN(orig_str)) {\n\t\t\t\t\t\tf = ZSTR_LEN(orig_str);\n\t\t\t\t\t}\n\t\t\t\t\tfrom_idx++;\n\t\t\t\t} else {\n\t\t\t\t\tf = 0;\n\t\t\t\t}\n\t\t\t} else {\n\t\t\t\tf = from_long;\n\t\t\t\tif (f < 0) {\n\t\t\t\t\tf = (zend_long)ZSTR_LEN(orig_str) + f;\n\t\t\t\t\tif (f < 0) {\n\t\t\t\t\t\tf = 0;\n\t\t\t\t\t}\n\t\t\t\t} else if (f > (zend_long)ZSTR_LEN(orig_str)) {\n\t\t\t\t\tf = ZSTR_LEN(orig_str);\n\t\t\t\t}\n\t\t\t}\n\n\t\t\tif (len_ht) {\n\t\t\t\tif (HT_IS_PACKED(len_ht)) {\n\t\t\t\t\twhile (len_idx < len_ht->nNumUsed) {\n\t\t\t\t\t\ttmp_len = &len_ht->arPacked[len_idx];\n\t\t\t\t\t\tif (Z_TYPE_P(tmp_len) != IS_UNDEF) {\n\t\t\t\t\t\t\tbreak;\n\t\t\t\t\t\t}\n\t\t\t\t\t\tlen_idx++;\n\t\t\t\t\t}\n\t\t\t\t} else {\n\t\t\t\t\twhile (len_idx < len_ht->nNumUsed) {\n\t\t\t\t\t\ttmp_len = &len_ht->arData[len_idx].val;\n\t\t\t\t\t\tif (Z_TYPE_P(tmp_len) != IS_UNDEF) {\n\t\t\t\t\t\t\tbreak;\n\t\t\t\t\t\t}\n\t\t\t\t\t\tlen_idx++;\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\tif (len_idx < len_ht->nNumUsed) {\n\t\t\t\t\tl = zval_get_long(tmp_len);\n\t\t\t\t\tlen_idx++;\n\t\t\t\t} else {\n\t\t\t\t\tl = ZSTR_LEN(orig_str);\n\t\t\t\t}\n\t\t\t} else if (!len_is_null) {\n\t\t\t\tl = len_long;\n\t\t\t} else {\n\t\t\t\tl = ZSTR_LEN(orig_str);\n\t\t\t}\n\n\t\t\tif (l < 0) {\n\t\t\t\tl = (ZSTR_LEN(orig_str) - f) + l;\n\t\t\t\tif (l < 0) {\n\t\t\t\t\tl = 0;\n\t\t\t\t}\n\t\t\t}\n\n\t\t\tZEND_ASSERT(0 <= f && f <= ZEND_LONG_MAX);\n\t\t\tZEND_ASSERT(0 <= l && l <= ZEND_LONG_MAX);\n\t\t\tif (((size_t) f + l) > ZSTR_LEN(orig_str)) {\n\t\t\t\tl = ZSTR_LEN(orig_str) - f;\n\t\t\t}\n\n\t\t\tresult_len = ZSTR_LEN(orig_str) - l;\n\n\t\t\tif (repl_ht) {\n\t\t\t\tif (HT_IS_PACKED(repl_ht)) {\n\t\t\t\t\twhile (repl_idx < repl_ht->nNumUsed) {\n\t\t\t\t\t\ttmp_repl = &repl_ht->arPacked[repl_idx];\n\t\t\t\t\t\tif (Z_TYPE_P(tmp_repl) != IS_UNDEF) {\n\t\t\t\t\t\t\tbreak;\n\t\t\t\t\t\t}\n\t\t\t\t\t\trepl_idx++;\n\t\t\t\t\t}\n\t\t\t\t} else {\n\t\t\t\t\twhile (repl_idx < repl_ht->nNumUsed) {\n\t\t\t\t\t\ttmp_repl = &repl_ht->arData[repl_idx].val;\n\t\t\t\t\t\tif (Z_TYPE_P(tmp_repl) != IS_UNDEF) {\n\t\t\t\t\t\t\tbreak;\n\t\t\t\t\t\t}\n\t\t\t\t\t\trepl_idx++;\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\tif (repl_idx < repl_ht->nNumUsed) {\n\t\t\t\t\tzend_string *tmp_repl_str;\n\t\t\t\t\tzend_string *repl_str = zval_get_tmp_string(tmp_repl, &tmp_repl_str);\n\n\t\t\t\t\tresult_len += ZSTR_LEN(repl_str);\n\t\t\t\t\trepl_idx++;\n\t\t\t\t\tresult = zend_string_safe_alloc(1, result_len, 0, 0);\n\n\t\t\t\t\tmemcpy(ZSTR_VAL(result), ZSTR_VAL(orig_str), f);\n\t\t\t\t\tmemcpy((ZSTR_VAL(result) + f), ZSTR_VAL(repl_str), ZSTR_LEN(repl_str));\n\t\t\t\t\tmemcpy((ZSTR_VAL(result) + f + ZSTR_LEN(repl_str)), ZSTR_VAL(orig_str) + f + l, ZSTR_LEN(orig_str) - f - l);\n\t\t\t\t\tzend_tmp_string_release(tmp_repl_str);\n\t\t\t\t} else {\n\t\t\t\t\tresult = zend_string_safe_alloc(1, result_len, 0, 0);\n\n\t\t\t\t\tmemcpy(ZSTR_VAL(result), ZSTR_VAL(orig_str), f);\n\t\t\t\t\tmemcpy((ZSTR_VAL(result) + f), ZSTR_VAL(orig_str) + f + l, ZSTR_LEN(orig_str) - f - l);\n\t\t\t\t}\n\t\t\t} else {\n\t\t\t\tresult_len += ZSTR_LEN(repl_str);\n\n\t\t\t\tresult = zend_string_safe_alloc(1, result_len, 0, 0);\n\n\t\t\t\tmemcpy(ZSTR_VAL(result), ZSTR_VAL(orig_str), f);\n\t\t\t\tmemcpy((ZSTR_VAL(result) + f), ZSTR_VAL(repl_str), ZSTR_LEN(repl_str));\n\t\t\t\tmemcpy((ZSTR_VAL(result) + f + ZSTR_LEN(repl_str)), ZSTR_VAL(orig_str) + f + l, ZSTR_LEN(orig_str) - f - l);\n\t\t\t}\n\n\t\t\tZSTR_VAL(result)[ZSTR_LEN(result)] = '\\0';\n\n\t\t\tif (str_index) {\n\t\t\t\tzval tmp;\n\n\t\t\t\tZVAL_NEW_STR(&tmp, result);\n\t\t\t\tzend_symtable_update(Z_ARRVAL_P(return_value), str_index, &tmp);\n\t\t\t} else {\n\t\t\t\tadd_index_str(return_value, num_index, result);\n\t\t\t}\n\n\t\t\tzend_tmp_string_release(tmp_orig_str);\n\t\t} ZEND_HASH_FOREACH_END();\n\t} /* if */",
+    "semantic": "if \"from\" position is negative, count start position from the end of the string",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_ARRAY_HT_OR_STR",
+            "Z_PARAM_ARRAY_HT_OR_LONG",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_ARRAY_HT_OR_LONG_OR_NULL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZSTR_LEN",
+            "RETURN_THROWS",
+            "ZSTR_VAL",
+            "RETURN_NEW_STR",
+            "RETURN_STR_COPY",
+            "ZEND_HASH_FOREACH_KEY_VAL",
+            "ZEND_ASSERT",
+            "ZEND_LONG_MAX",
+            "ZVAL_NEW_STR",
+            "ZEND_HASH_FOREACH_END"
+        ],
+        "zend_types": [
+            "zend_string",
+            "HashTable",
+            "zend_long",
+            "HashPosition",
+            "zval"
+        ],
+        "internal_helpers": [
+            "zend_argument_type_error",
+            "zval_get_tmp_string",
+            "zend_string_safe_alloc",
+            "zend_tmp_string_release",
+            "zend_hash_num_elements",
+            "php_error_docref",
+            "zval_get_long",
+            "zend_symtable_update"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common substr_replace inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 10,
+    "purpose": "if \"from\" position is negative, count start position from the end of the string",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "bin2hex",
+        "hex2bin",
+        "strspn",
+        "strcspn",
+        "nl_langinfo",
+        "strcoll",
+        "trim",
+        "rtrim",
+        "ltrim",
+        "wordwrap",
+        "explode",
+        "implode"
+    ]
+}

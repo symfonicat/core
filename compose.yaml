@@ -1,0 +1,152 @@
+services:
+  npm:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: npm
+    restart: "no"
+    working_dir: /symfonicat
+    entrypoint:
+      - docker-php-entrypoint
+    command:
+      - /bin/sh
+      - -lc
+      - npm ci --no-audit --no-fund && npm run build
+    environment:
+      APP_ENV: ${APP_ENV:-dev}
+      APP_DEBUG: ${APP_DEBUG:-1}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-app}?serverVersion=16&charset=utf8
+      REDIS_URL: redis://redis:6379
+      LOCK_DSN: redis://redis:6379
+      MERCURE_URL: http://php/.well-known/mercure
+      MERCURE_PUBLIC_URL: ${MERCURE_PUBLIC_URL:-/.well-known/mercure}
+      MERCURE_JWT_SECRET: ${MERCURE_JWT_SECRET:-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
+    volumes:
+      - ./:/symfonicat
+      - node_modules:/symfonicat/node_modules
+    depends_on:
+      php:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  php:
+    container_name: php
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: symfonicat-core-php:local
+    restart: unless-stopped
+    working_dir: /symfonicat
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      APP_ENV: ${APP_ENV:-dev}
+      APP_DEBUG: ${APP_DEBUG:-1}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-app}?serverVersion=16&charset=utf8
+      REDIS_URL: redis://redis:6379
+      LOCK_DSN: redis://redis:6379
+      MESSENGER_TRANSPORT_DSN: redis://redis:6379/symfonicat_messages
+      MESSENGER_FAILED_TRANSPORT_DSN: redis://redis:6379/symfonicat_failed_messages
+      MESSENGER_CONSUMER_NAME: php
+      MERCURE_URL: http://php/.well-known/mercure
+      MERCURE_PUBLIC_URL: ${MERCURE_PUBLIC_URL:-/.well-known/mercure}
+      MERCURE_JWT_SECRET: ${MERCURE_JWT_SECRET:-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
+      SYMFONICAT_NATIVE_WATCH: ${SYMFONICAT_NATIVE_WATCH:-0}
+    volumes:
+      - ./:/symfonicat
+      - ./Caddyfile:/etc/frankenphp/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:2019/metrics || exit 1"]
+      interval: 30s
+      timeout: 3s
+      retries: 5
+      start_period: 10m
+
+  messenger-worker:
+    image: symfonicat-core-php:local
+    restart: unless-stopped
+    scale: ${MESSENGER_WORKERS:-8}
+    stop_grace_period: 30s
+    working_dir: /symfonicat
+    healthcheck:
+      disable: true
+    entrypoint:
+      - docker-php-entrypoint
+    command:
+      - /bin/sh
+      - -lc
+      - export MESSENGER_CONSUMER_NAME="$$HOSTNAME" && exec php bin/console messenger:consume async --no-interaction --quiet --time-limit=3600 --memory-limit=256M --failure-limit=10 >/dev/null 2>&1
+    environment:
+      APP_ENV: ${APP_ENV:-dev}
+      APP_DEBUG: ${APP_DEBUG:-1}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-app}?serverVersion=16&charset=utf8
+      REDIS_URL: redis://redis:6379
+      LOCK_DSN: redis://redis:6379
+      MESSENGER_TRANSPORT_DSN: redis://redis:6379/symfonicat_messages
+      MESSENGER_FAILED_TRANSPORT_DSN: redis://redis:6379/symfonicat_failed_messages
+      MERCURE_URL: http://php/.well-known/mercure
+      MERCURE_PUBLIC_URL: ${MERCURE_PUBLIC_URL:-/.well-known/mercure}
+      MERCURE_JWT_SECRET: ${MERCURE_JWT_SECRET:-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
+    volumes:
+      - ./:/symfonicat
+    depends_on:
+      php:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  postgres:
+    container_name: postgres
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-app}
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-app} -d ${POSTGRES_DB:-app}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+
+  redis:
+    container_name: redis
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--loglevel", "nothing"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+      start_period: 3s
+
+volumes:
+  caddy_data:
+  caddy_config:
+  postgres_data:
+  redis_data:
+  node_modules:

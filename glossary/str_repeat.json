@@ -1,0 +1,143 @@
+{
+    "php_function": "str_repeat",
+    "zend_function": "str_repeat",
+    "source_file": "ring.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "input_str",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "input_str"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(input_str)"
+        },
+        {
+            "name": "mult",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "mult"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(mult)"
+        }
+    ],
+    "includes": [
+        "stdio.h",
+        "php.h",
+        "php_string.h",
+        "php_variables.h",
+        "locale.h",
+        "scanf.h",
+        "zend_API.h",
+        "zend_execute.h",
+        "basic_functions.h",
+        "zend_smart_str.h",
+        "Zend/zend_exceptions.h",
+        "TSRM.h",
+        "ext/standard/file.h",
+        "ext/standard/html.h",
+        "ext/random/php_random.h",
+        "emmintrin.h",
+        "Zend/zend_bitset.h",
+        "tmmintrin.h",
+        "arm_neon.h"
+    ],
+    "body": "zend_string\t\t*input_str;\t\t/* Input string */\n\tzend_long \t\tmult;\t\t\t/* Multiplier */\n\tzend_string\t*result;\t\t/* Resulting string */\n\tsize_t\t\tresult_len;\t\t/* Length of the resulting string */\n\n\tZEND_PARSE_PARAMETERS_START(2, 2)\n\t\tZ_PARAM_STR(input_str)\n\t\tZ_PARAM_LONG(mult)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (mult < 0) {\n\t\tzend_argument_value_error(2, \"must be greater than or equal to 0\");\n\t\tRETURN_THROWS();\n\t}\n\n\t/* Don't waste our time if it's empty */\n\t/* ... or if the multiplier is zero */\n\tif (ZSTR_LEN(input_str) == 0 || mult == 0)\n\t\tRETURN_EMPTY_STRING();\n\n\t/* Initialize the result string */\n\tresult = zend_string_safe_alloc(ZSTR_LEN(input_str), mult, 0, 0);\n\tresult_len = ZSTR_LEN(input_str) * mult;\n\tZSTR_COPY_CONCAT_PROPERTIES(result, input_str);\n\n\t/* Heavy optimization for situations where input string is 1 byte long */\n\tif (ZSTR_LEN(input_str) == 1) {\n\t\tmemset(ZSTR_VAL(result), *ZSTR_VAL(input_str), mult);\n\t} else {\n\t\tconst char *s, *ee;\n\t\tchar *e;\n\t\tptrdiff_t l=0;\n\t\tmemcpy(ZSTR_VAL(result), ZSTR_VAL(input_str), ZSTR_LEN(input_str));\n\t\ts = ZSTR_VAL(result);\n\t\te = ZSTR_VAL(result) + ZSTR_LEN(input_str);\n\t\tee = ZSTR_VAL(result) + result_len;\n\n\t\twhile (e<ee) {\n\t\t\tl = (e-s) < (ee-e) ? (e-s) : (ee-e);\n\t\t\tmemmove(e, s, l);\n\t\t\te += l;\n\t\t}\n\t}\n\n\tZSTR_VAL(result)[result_len] = '\\0';\n\n\tRETURN_NEW_STR(result);",
+    "semantic": "Input string",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STR",
+            "Z_PARAM_LONG",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_THROWS",
+            "ZSTR_LEN",
+            "RETURN_EMPTY_STRING",
+            "ZSTR_COPY_CONCAT_PROPERTIES",
+            "ZSTR_VAL",
+            "RETURN_NEW_STR"
+        ],
+        "zend_types": [
+            "zend_string",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_argument_value_error",
+            "zend_string_safe_alloc"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common str_repeat inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "Input string",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "bin2hex",
+        "hex2bin",
+        "strspn",
+        "strcspn",
+        "nl_langinfo",
+        "strcoll",
+        "trim",
+        "rtrim",
+        "ltrim",
+        "wordwrap",
+        "explode",
+        "implode"
+    ]
+}

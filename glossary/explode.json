@@ -1,0 +1,159 @@
+{
+    "php_function": "explode",
+    "zend_function": "explode",
+    "source_file": "ring.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "delim",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "delim"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(delim)"
+        },
+        {
+            "name": "str",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "str"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(str)"
+        },
+        {
+            "name": "limit",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "limit"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(limit)"
+        }
+    ],
+    "includes": [
+        "stdio.h",
+        "php.h",
+        "php_string.h",
+        "php_variables.h",
+        "locale.h",
+        "scanf.h",
+        "zend_API.h",
+        "zend_execute.h",
+        "basic_functions.h",
+        "zend_smart_str.h",
+        "Zend/zend_exceptions.h",
+        "TSRM.h",
+        "ext/standard/file.h",
+        "ext/standard/html.h",
+        "ext/random/php_random.h",
+        "emmintrin.h",
+        "Zend/zend_bitset.h",
+        "tmmintrin.h",
+        "arm_neon.h"
+    ],
+    "body": "zend_string *str, *delim;\n\tzend_long limit = ZEND_LONG_MAX; /* No limit */\n\tzval tmp;\n\n\tZEND_PARSE_PARAMETERS_START(2, 3)\n\t\tZ_PARAM_STR(delim)\n\t\tZ_PARAM_STR(str)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_LONG(limit)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (ZSTR_LEN(delim) == 0) {\n\t\tzend_argument_must_not_be_empty_error(1);\n\t\tRETURN_THROWS();\n\t}\n\n\tarray_init(return_value);\n\n\tif (ZSTR_LEN(str) == 0) {\n\t\tif (limit >= 0) {\n\t\t\tZVAL_EMPTY_STRING(&tmp);\n\t\t\tzend_hash_index_add_new(Z_ARRVAL_P(return_value), 0, &tmp);\n\t\t}\n\t\treturn;\n\t}\n\n\tif (limit > 1) {\n\t\tphp_explode(delim, str, return_value, limit);\n\t} else if (limit < 0) {\n\t\tphp_explode_negative_limit(delim, str, return_value, limit);\n\t} else {\n\t\tZVAL_STR_COPY(&tmp, str);\n\t\tzend_hash_index_add_new(Z_ARRVAL_P(return_value), 0, &tmp);\n\t}",
+    "semantic": "No limit",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_LONG_MAX",
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STR",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_LONG",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZSTR_LEN",
+            "RETURN_THROWS",
+            "ZVAL_EMPTY_STRING",
+            "ZVAL_STR_COPY"
+        ],
+        "zend_types": [
+            "zend_string",
+            "zend_long",
+            "zval"
+        ],
+        "internal_helpers": [
+            "zend_argument_must_not_be_empty_error",
+            "zend_hash_index_add_new",
+            "php_explode",
+            "php_explode_negative_limit"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common explode inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "No limit",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "bin2hex",
+        "hex2bin",
+        "strspn",
+        "strcspn",
+        "nl_langinfo",
+        "strcoll",
+        "trim",
+        "rtrim",
+        "ltrim",
+        "wordwrap",
+        "implode",
+        "strtok"
+    ]
+}

@@ -1,0 +1,235 @@
+{
+    "php_function": "openssl_csr_sign",
+    "zend_function": "openssl_csr_sign",
+    "source_file": "nssl.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "csr_obj",
+            "macro": "Z_PARAM_OBJ_OF_CLASS_OR_STR",
+            "arguments": [
+                "csr_obj",
+                "php_openssl_request_ce",
+                "csr_str"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_OBJ_OF_CLASS_OR_STR(csr_obj, php_openssl_request_ce, csr_str)"
+        },
+        {
+            "name": "cert_obj",
+            "macro": "Z_PARAM_OBJ_OF_CLASS_OR_STR_OR_NULL",
+            "arguments": [
+                "cert_obj",
+                "php_openssl_certificate_ce",
+                "cert_str"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_OBJ_OF_CLASS_OR_STR_OR_NULL(cert_obj, php_openssl_certificate_ce, cert_str)"
+        },
+        {
+            "name": "zpkey",
+            "macro": "Z_PARAM_ZVAL",
+            "arguments": [
+                "zpkey"
+            ],
+            "type": "zval",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": true,
+            "raw": "Z_PARAM_ZVAL(zpkey)"
+        },
+        {
+            "name": "num_days",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "num_days"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(num_days)"
+        },
+        {
+            "name": "args",
+            "macro": "Z_PARAM_ARRAY_OR_NULL",
+            "arguments": [
+                "args"
+            ],
+            "type": "HashTable",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY_OR_NULL(args)"
+        },
+        {
+            "name": "serial",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "serial"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(serial)"
+        },
+        {
+            "name": "serial_hex",
+            "macro": "Z_PARAM_STR_OR_NULL",
+            "arguments": [
+                "serial_hex"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR_OR_NULL(serial_hex)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "php_openssl.h",
+        "zend_attributes.h",
+        "zend_exceptions.h",
+        "ext/standard/file.h",
+        "ext/standard/info.h",
+        "ext/standard/php_fopen_wrappers.h",
+        "ext/standard/md5.h",
+        "ext/standard/base64.h",
+        "openssl/evp.h",
+        "openssl/bn.h",
+        "openssl/rsa.h",
+        "openssl/dsa.h",
+        "openssl/dh.h",
+        "openssl/x509.h",
+        "openssl/x509v3.h",
+        "openssl/crypto.h",
+        "openssl/pem.h",
+        "openssl/err.h",
+        "openssl/conf.h",
+        "openssl/rand.h",
+        "openssl/ssl.h",
+        "openssl/pkcs12.h",
+        "openssl/cms.h",
+        "openssl/core_names.h",
+        "openssl/param_build.h",
+        "openssl/provider.h",
+        "openssl/engine.h",
+        "time.h",
+        "openssl_arginfo.h"
+    ],
+    "body": "X509_REQ *csr;\n\tzend_object *csr_obj;\n\tzend_string *csr_str;\n\n\tphp_openssl_certificate_object *cert_object;\n\tzend_object *cert_obj;\n\tzend_string *cert_str;\n\tzval *zpkey, *args = NULL;\n\tzend_long num_days;\n\tzend_long serial = Z_L(0);\n\tzend_string *serial_hex = NULL;\n\tX509 *cert = NULL, *new_cert = NULL;\n\tEVP_PKEY * key = NULL, *priv_key = NULL;\n\tint i;\n\tbool new_cert_used = false;\n\tstruct php_x509_request req;\n\n\tZEND_PARSE_PARAMETERS_START(4, 7)\n\t\tZ_PARAM_OBJ_OF_CLASS_OR_STR(csr_obj, php_openssl_request_ce, csr_str)\n\t\tZ_PARAM_OBJ_OF_CLASS_OR_STR_OR_NULL(cert_obj, php_openssl_certificate_ce, cert_str)\n\t\tZ_PARAM_ZVAL(zpkey)\n\t\tZ_PARAM_LONG(num_days)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_ARRAY_OR_NULL(args)\n\t\tZ_PARAM_LONG(serial)\n\t\tZ_PARAM_STR_OR_NULL(serial_hex)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tRETVAL_FALSE;\n\n\tcsr = php_openssl_csr_from_param(csr_obj, csr_str, 1);\n\tif (csr == NULL) {\n\t\tphp_error_docref(NULL, E_WARNING, \"X.509 Certificate Signing Request cannot be retrieved\");\n\t\treturn;\n\t}\n\n\tPHP_SSL_REQ_INIT(&req);\n\n\tif (cert_str || cert_obj) {\n\t\tcert = php_openssl_x509_from_param(cert_obj, cert_str, 2);\n\t\tif (cert == NULL) {\n\t\t\tphp_error_docref(NULL, E_WARNING, \"X.509 Certificate cannot be retrieved\");\n\t\t\tgoto cleanup;\n\t\t}\n\t}\n\n\tpriv_key = php_openssl_pkey_from_zval(zpkey, 0, \"\", 0, 3);\n\tif (priv_key == NULL) {\n\t\tif (!EG(exception)) {\n\t\t\tphp_error_docref(NULL, E_WARNING, \"Cannot get private key from parameter 3\");\n\t\t}\n\t\tgoto cleanup;\n\t}\n\tif (cert && !X509_check_private_key(cert, priv_key)) {\n\t\tphp_openssl_store_errors();\n\t\tphp_error_docref(NULL, E_WARNING, \"Private key does not correspond to signing cert\");\n\t\tgoto cleanup;\n\t}\n\n\tif (num_days < 0 || num_days > LONG_MAX / 86400) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Days must be between 0 and %ld\", LONG_MAX / 86400);\n\t\tgoto cleanup;\n\t}\n\n\tif (PHP_SSL_REQ_PARSE(&req, args) == FAILURE) {\n\t\tgoto cleanup;\n\t}\n\t/* Check that the request matches the signature */\n\tkey = X509_REQ_get_pubkey(csr);\n\tif (key == NULL) {\n\t\tphp_openssl_store_errors();\n\t\tphp_error_docref(NULL, E_WARNING, \"Error unpacking public key\");\n\t\tgoto cleanup;\n\t}\n\ti = X509_REQ_verify(csr, key);\n\n\tif (i < 0) {\n\t\tphp_openssl_store_errors();\n\t\tphp_error_docref(NULL, E_WARNING, \"Signature verification problems\");\n\t\tgoto cleanup;\n\t}\n\telse if (i == 0) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Signature did not match the certificate request\");\n\t\tgoto cleanup;\n\t}\n\n\t/* Now we can get on with it */\n\n\tnew_cert = X509_new();\n\tif (new_cert == NULL) {\n\t\tphp_openssl_store_errors();\n\t\tphp_error_docref(NULL, E_WARNING, \"No memory\");\n\t\tgoto cleanup;\n\t}\n\t/* Version 3 cert */\n\tif (!X509_set_version(new_cert, 2)) {\n\t\tgoto cleanup;\n\t}\n\n\tif (serial_hex != NULL) {\n\t\tchar buffer[256];\n\t\tif (ZSTR_LEN(serial_hex) > 200) {\n\t\t\tphp_error_docref(NULL, E_WARNING, \"Error parsing serial number because it is too long\");\n\t\t\tgoto cleanup;\n\t\t}\n\t\tBIO *in = BIO_new_mem_buf(ZSTR_VAL(serial_hex), ZSTR_LEN(serial_hex));\n\t\tif (in == NULL) {\n\t\t\tphp_openssl_store_errors();\n\t\t\tphp_error_docref(NULL, E_WARNING, \"Error parsing serial number because memory allocation failed\");\n\t\t\tgoto cleanup;\n\t\t}\n\t\tint success = a2i_ASN1_INTEGER(in, X509_get_serialNumber(new_cert), buffer, sizeof(buffer));\n\t\tBIO_free(in);\n\t\tif (!success) {\n\t\t\tphp_openssl_store_errors();\n\t\t\tphp_error_docref(NULL, E_WARNING, \"Error parsing serial number\");\n\t\t\tgoto cleanup;\n\t\t}\n\t} else {\n\t\tPHP_OPENSSL_ASN1_INTEGER_set(X509_get_serialNumber(new_cert), serial);\n\t}\n\n\tX509_set_subject_name(new_cert, X509_REQ_get_subject_name(csr));\n\n\tif (cert == NULL) {\n\t\tcert = new_cert;\n\t}\n\tif (!X509_set_issuer_name(new_cert, X509_get_subject_name(cert))) {\n\t\tphp_openssl_store_errors();\n\t\tgoto cleanup;\n\t}\n\tX509_gmtime_adj(X509_getm_notBefore(new_cert), 0);\n\tX509_gmtime_adj(X509_getm_notAfter(new_cert), 60*60*24*num_days);\n\ti = X509_set_pubkey(new_cert, key);\n\tif (!i) {\n\t\tphp_openssl_store_errors();\n\t\tgoto cleanup;\n\t}\n\tif (req.extensions_section) {\n\t\tX509V3_CTX ctx;\n\n\t\tX509V3_set_ctx(&ctx, cert, new_cert, csr, NULL, 0);\n\t\tX509V3_set_nconf(&ctx, req.req_config);\n\t\tif (!X509V3_EXT_add_nconf(req.req_config, &ctx, req.extensions_section, new_cert)) {\n\t\t\tphp_openssl_store_errors();\n\t\t\tgoto cleanup;\n\t\t}\n\t}\n\n\t/* Now sign it */\n\tif (!X509_sign(new_cert, priv_key, req.digest)) {\n\t\tphp_openssl_store_errors();\n\t\tphp_error_docref(NULL, E_WARNING, \"Failed to sign it\");\n\t\tgoto cleanup;\n\t}\n\n\tobject_init_ex(return_value, php_openssl_certificate_ce);\n\tcert_object = Z_OPENSSL_CERTIFICATE_P(return_value);\n\tcert_object->x509 = new_cert;\n\tnew_cert_used = true;\n\ncleanup:\n\n\tif (!new_cert_used && new_cert) {\n\t\tX509_free(new_cert);\n\t}\n\n\tPHP_SSL_REQ_DISPOSE(&req);\n\tEVP_PKEY_free(priv_key);\n\tEVP_PKEY_free(key);\n\tif (csr_str) {\n\t\tX509_REQ_free(csr);\n\t}\n\tif (cert_str && cert && cert != new_cert) {\n\t\tX509_free(cert);\n\t}",
+    "semantic": "Check that the request matches the signature",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_OBJ_OF_CLASS_OR_STR",
+            "Z_PARAM_OBJ_OF_CLASS_OR_STR_OR_NULL",
+            "Z_PARAM_ZVAL",
+            "Z_PARAM_LONG",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_ARRAY_OR_NULL",
+            "Z_PARAM_STR_OR_NULL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZSTR_LEN",
+            "ZSTR_VAL"
+        ],
+        "zend_types": [
+            "zend_object",
+            "zend_string",
+            "zval",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "php_openssl_csr_from_param",
+            "php_error_docref",
+            "php_openssl_x509_from_param",
+            "php_openssl_pkey_from_zval",
+            "php_openssl_store_errors"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common openssl_csr_sign inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 8,
+    "purpose": "Check that the request matches the signature",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "openssl_get_cert_locations",
+        "openssl_x509_export_to_file",
+        "openssl_spki_new",
+        "openssl_spki_verify",
+        "openssl_spki_export",
+        "openssl_spki_export_challenge",
+        "openssl_x509_export",
+        "openssl_x509_fingerprint",
+        "openssl_x509_check_private_key",
+        "openssl_x509_verify",
+        "openssl_x509_parse",
+        "openssl_x509_checkpurpose"
+    ]
+}

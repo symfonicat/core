@@ -1,0 +1,157 @@
+<?php
+
+namespace App\Tests\Integration\Service;
+
+use App\Tests\Support\SymfonicatKernelTestCase;
+use Symfonicat\Service\AdminYaml;
+use Symfony\Component\Yaml\Yaml;
+
+final class AdminYamlTest extends SymfonicatKernelTestCase
+{
+    private string $subdomainDir;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->subdomainDir = sys_get_temp_dir().'/symfonicat_admin_yaml_'.bin2hex(random_bytes(6));
+        mkdir($this->subdomainDir.'/config/packages', 0755, true);
+        file_put_contents($this->subdomainDir.'/config/packages/symfonicat.yaml', <<<'YAML'
+symfonicat: []
+YAML);
+    }
+
+    protected function tearDown(): void
+    {
+        $this->removeDirectory($this->subdomainDir);
+
+        parent::tearDown();
+    }
+
+    public function testDumpWritesAdminUnderSymfonicatAndLoadRestoresRows(): void
+    {
+        $connection = $this->entityManager()->getConnection();
+        $connection->insert('symfonicat_admin', [
+            'id' => 7,
+            'email' => 'admin@example.com',
+            'roles' => json_encode(['ROLE_EDITOR'], JSON_THROW_ON_ERROR),
+            'password' => 'hashed-password',
+            'mfa_secret' => 'totp-secret',
+        ]);
+        $connection->insert('symfonicat_parcel', [
+            'id' => 'core/subdomainparcel',
+            'path' => 'assets/parcel/subdomainparcel',
+            'vendor' => 'core',
+        ]);
+        $connection->insert('symfonicat_domain', [
+            'id' => 'example.com',
+        ]);
+        $connection->insert('symfonicat_subdomain', [
+            'id' => 1,
+            'affix' => 'subdomain1',
+            'parcel_id' => 'core/subdomainparcel',
+            'domain_id' => 'example.com',
+        ]);
+        $connection->insert('symfonicat_middleware', [
+            'id' => 'core/DomainAndSubdomainMiddleware',
+            'class' => 'App\\Middleware\\DomainAndSubdomainMiddleware',
+        ]);
+        $connection->insert('symfonicat_domain_middleware', [
+            'domain_id' => 'example.com',
+            'middleware_id' => 'core/DomainAndSubdomainMiddleware',
+        ]);
+        $connection->insert('symfonicat_subdomain_middleware', [
+            'subdomain_id' => 1,
+            'middleware_id' => 'core/DomainAndSubdomainMiddleware',
+        ]);
+
+        $adminYaml = new AdminYaml($connection, $this->subdomainDir);
+        $dumpCounts = $adminYaml->dump();
+
+        self::assertArrayNotHasKey('symfonicat_admin', $dumpCounts);
+        self::assertSame(1, $dumpCounts['symfonicat_parcel']);
+        self::assertSame(1, $dumpCounts['symfonicat_domain']);
+        self::assertSame(1, $dumpCounts['symfonicat_subdomain']);
+        self::assertSame(1, $dumpCounts['symfonicat_domain_middleware']);
+        self::assertSame(1, $dumpCounts['symfonicat_subdomain_middleware']);
+
+        $config = Yaml::parseFile($this->subdomainDir.'/config/packages/symfonicat.yaml');
+        self::assertArrayNotHasKey('vendors', $config['symfonicat']);
+        self::assertArrayNotHasKey('core', $config['symfonicat']);
+
+        $connection->executeStatement('DELETE FROM symfonicat_admin');
+        $connection->executeStatement('DELETE FROM symfonicat_subdomain');
+        $connection->executeStatement('DELETE FROM symfonicat_domain');
+        $connection->executeStatement('DELETE FROM symfonicat_parcel');
+        $connection->executeStatement('DELETE FROM symfonicat_domain_middleware');
+        $connection->executeStatement('DELETE FROM symfonicat_subdomain_middleware');
+        $connection->executeStatement('DELETE FROM symfonicat_middleware');
+
+        $loadCounts = $adminYaml->load();
+
+        self::assertArrayNotHasKey('symfonicat_admin', $loadCounts);
+        self::assertSame(1, $loadCounts['symfonicat_parcel']);
+        self::assertSame(1, $loadCounts['symfonicat_domain']);
+        self::assertSame(1, $loadCounts['symfonicat_subdomain']);
+        self::assertSame(1, $loadCounts['symfonicat_domain_middleware']);
+        self::assertSame(1, $loadCounts['symfonicat_subdomain_middleware']);
+        self::assertSame('core/subdomainparcel', (string) $connection->fetchOne('SELECT parcel_id FROM symfonicat_subdomain WHERE id = 1'));
+        self::assertSame('example.com', (string) $connection->fetchOne('SELECT domain_id FROM symfonicat_subdomain WHERE id = 1'));
+        self::assertSame('example.com', (string) $connection->fetchOne('SELECT id FROM symfonicat_domain WHERE id = \'example.com\''));
+        self::assertSame('subdomain1', (string) $connection->fetchOne('SELECT affix FROM symfonicat_subdomain WHERE id = 1'));
+        self::assertFalse($connection->fetchOne('SELECT email FROM symfonicat_admin WHERE id = 7'));
+        self::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM symfonicat_parcel'));
+        self::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM symfonicat_domain'));
+        self::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM symfonicat_subdomain'));
+        self::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM symfonicat_domain_middleware'));
+        self::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM symfonicat_subdomain_middleware'));
+    }
+
+    public function testLoadDumpsYamlAfterImportingRows(): void
+    {
+        file_put_contents($this->subdomainDir.'/config/packages/symfonicat.yaml', <<<'YAML'
+# keep this comment if load does not rewrite the file
+symfonicat:
+    symfonicat_admin:
+        -
+            id: 1
+            email: admin@example.com
+    symfonicat_domain:
+        -
+            id: example.com
+YAML);
+
+        $adminYaml = new AdminYaml($this->entityManager()->getConnection(), $this->subdomainDir);
+        $counts = $adminYaml->load();
+
+        self::assertSame(1, $counts['symfonicat_domain']);
+        self::assertSame(1, (int) $this->entityManager()->getConnection()->fetchOne('SELECT COUNT(*) FROM symfonicat_domain'));
+
+        $rewritten = file_get_contents($this->subdomainDir.'/config/packages/symfonicat.yaml');
+        self::assertIsString($rewritten);
+        self::assertStringNotContainsString('keep this comment', $rewritten);
+        self::assertStringNotContainsString('symfonicat_admin', $rewritten);
+    }
+
+    private function removeDirectory(string $directory): void
+    {
+        if (!is_dir($directory)) {
+            return;
+        }
+
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($directory, \FilesystemIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::CHILD_FIRST,
+        );
+
+        foreach ($iterator as $file) {
+            if ($file->isDir()) {
+                rmdir($file->getPathname());
+            } else {
+                unlink($file->getPathname());
+            }
+        }
+
+        rmdir($directory);
+    }
+}

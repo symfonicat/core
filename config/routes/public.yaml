@@ -1,0 +1,9 @@
+symfonicat_public_controllers:
+    resource: ../../core/src/Controller/
+    type: attribute
+    exclude:
+        - ../../core/src/Controller/Core/
+
+symfonicat_app_controllers:
+    resource: ../../src/Controller/
+    type: attribute

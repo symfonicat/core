@@ -1,0 +1,174 @@
+{
+    "php_function": "str_pad",
+    "zend_function": "str_pad",
+    "source_file": "ring.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "input",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "input"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(input)"
+        },
+        {
+            "name": "pad_length",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "pad_length"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(pad_length)"
+        },
+        {
+            "name": "pad_str",
+            "macro": "Z_PARAM_STRING",
+            "arguments": [
+                "pad_str",
+                "pad_str_len"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING(pad_str, pad_str_len)"
+        },
+        {
+            "name": "pad_type_val",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "pad_type_val"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(pad_type_val)"
+        }
+    ],
+    "includes": [
+        "stdio.h",
+        "php.h",
+        "php_string.h",
+        "php_variables.h",
+        "locale.h",
+        "scanf.h",
+        "zend_API.h",
+        "zend_execute.h",
+        "basic_functions.h",
+        "zend_smart_str.h",
+        "Zend/zend_exceptions.h",
+        "TSRM.h",
+        "ext/standard/file.h",
+        "ext/standard/html.h",
+        "ext/random/php_random.h",
+        "emmintrin.h",
+        "Zend/zend_bitset.h",
+        "tmmintrin.h",
+        "arm_neon.h"
+    ],
+    "body": "/* Input arguments */\n\tzend_string *input;\t\t\t\t/* Input string */\n\tzend_long pad_length;\t\t\t/* Length to pad to */\n\n\t/* Helper variables */\n\tsize_t num_pad_chars;\t\t/* Number of padding characters (total - input size) */\n\tchar *pad_str = \" \"; /* Pointer to padding string */\n\tsize_t pad_str_len = 1;\n\tzend_long   pad_type_val = PHP_STR_PAD_RIGHT; /* The padding type value */\n\tsize_t\t   i, left_pad=0, right_pad=0;\n\tzend_string *result = NULL;\t/* Resulting string */\n\n\tZEND_PARSE_PARAMETERS_START(2, 4)\n\t\tZ_PARAM_STR(input)\n\t\tZ_PARAM_LONG(pad_length)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_STRING(pad_str, pad_str_len)\n\t\tZ_PARAM_LONG(pad_type_val)\n\tZEND_PARSE_PARAMETERS_END();\n\n\t/* If resulting string turns out to be shorter than input string,\n\t   we simply copy the input and return. */\n\tif (pad_length < 0  || (size_t)pad_length <= ZSTR_LEN(input)) {\n\t\tRETURN_STR_COPY(input);\n\t}\n\n\tif (pad_str_len == 0) {\n\t\tzend_argument_must_not_be_empty_error(3);\n\t\tRETURN_THROWS();\n\t}\n\n\tif (pad_type_val < PHP_STR_PAD_LEFT || pad_type_val > PHP_STR_PAD_BOTH) {\n\t\tzend_argument_value_error(4, \"must be STR_PAD_LEFT, STR_PAD_RIGHT, or STR_PAD_BOTH\");\n\t\tRETURN_THROWS();\n\t}\n\n\tnum_pad_chars = pad_length - ZSTR_LEN(input);\n\tresult = zend_string_safe_alloc(1, ZSTR_LEN(input), num_pad_chars, 0);\n\tZSTR_LEN(result) = 0;\n\n\t/* We need to figure out the left/right padding lengths. */\n\tswitch (pad_type_val) {\n\t\tcase PHP_STR_PAD_RIGHT:\n\t\t\tleft_pad = 0;\n\t\t\tright_pad = num_pad_chars;\n\t\t\tbreak;\n\n\t\tcase PHP_STR_PAD_LEFT:\n\t\t\tleft_pad = num_pad_chars;\n\t\t\tright_pad = 0;\n\t\t\tbreak;\n\n\t\tcase PHP_STR_PAD_BOTH:\n\t\t\tleft_pad = num_pad_chars / 2;\n\t\t\tright_pad = num_pad_chars - left_pad;\n\t\t\tbreak;\n\t}\n\n\t/* First we pad on the left. */\n\tfor (i = 0; i < left_pad; i++)\n\t\tZSTR_VAL(result)[ZSTR_LEN(result)++] = pad_str[i % pad_str_len];\n\n\t/* Then we copy the input string. */\n\tmemcpy(ZSTR_VAL(result) + ZSTR_LEN(result), ZSTR_VAL(input), ZSTR_LEN(input));\n\tZSTR_LEN(result) += ZSTR_LEN(input);\n\n\t/* Finally, we pad on the right. */\n\tfor (i = 0; i < right_pad; i++)\n\t\tZSTR_VAL(result)[ZSTR_LEN(result)++] = pad_str[i % pad_str_len];\n\n\tZSTR_VAL(result)[ZSTR_LEN(result)] = '\\0';\n\n\tRETURN_NEW_STR(result);",
+    "semantic": "Input arguments",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STR",
+            "Z_PARAM_LONG",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_STRING",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZSTR_LEN",
+            "RETURN_STR_COPY",
+            "RETURN_THROWS",
+            "ZSTR_VAL",
+            "RETURN_NEW_STR"
+        ],
+        "zend_types": [
+            "zend_string",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_argument_must_not_be_empty_error",
+            "zend_argument_value_error",
+            "zend_string_safe_alloc"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common str_pad inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 9,
+    "purpose": "Input arguments",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "bin2hex",
+        "hex2bin",
+        "strspn",
+        "strcspn",
+        "nl_langinfo",
+        "strcoll",
+        "trim",
+        "rtrim",
+        "ltrim",
+        "wordwrap",
+        "explode",
+        "implode"
+    ]
+}

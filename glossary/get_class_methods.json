@@ -1,0 +1,124 @@
+{
+    "php_function": "get_class_methods",
+    "zend_function": "get_class_methods",
+    "source_file": "in_functions.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "ce",
+            "macro": "Z_PARAM_OBJ_OR_CLASS_NAME",
+            "arguments": [
+                "ce"
+            ],
+            "type": "zend_object",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_OBJ_OR_CLASS_NAME(ce)"
+        }
+    ],
+    "includes": [
+        "zend.h",
+        "zend_API.h",
+        "zend_attributes.h",
+        "zend_gc.h",
+        "zend_builtin_functions.h",
+        "zend_constants.h",
+        "zend_ini.h",
+        "zend_interfaces.h",
+        "zend_exceptions.h",
+        "zend_extensions.h",
+        "zend_closures.h",
+        "zend_generators.h",
+        "zend_builtin_functions_arginfo.h",
+        "zend_smart_str.h"
+    ],
+    "body": "zval method_name;\n\tzend_class_entry *ce = NULL;\n\tzend_class_entry *scope;\n\tzend_function *mptr;\n\n\tZEND_PARSE_PARAMETERS_START(1, 1)\n\t\tZ_PARAM_OBJ_OR_CLASS_NAME(ce)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tarray_init(return_value);\n\tscope = zend_get_executed_scope();\n\n\tZEND_HASH_MAP_FOREACH_PTR(&ce->function_table, mptr) {\n\t\tif ((mptr->common.fn_flags & ZEND_ACC_PUBLIC)\n\t\t || (scope &&\n\t\t\t (((mptr->common.fn_flags & ZEND_ACC_PROTECTED) &&\n\t\t\t   zend_check_protected(mptr->common.scope, scope))\n\t\t   || ((mptr->common.fn_flags & ZEND_ACC_PRIVATE) &&\n\t\t\t   scope == mptr->common.scope)))\n\t\t) {\n\t\t\tZVAL_STR_COPY(&method_name, mptr->common.function_name);\n\t\t\tzend_hash_next_index_insert_new(Z_ARRVAL_P(return_value), &method_name);\n\t\t}\n\t} ZEND_HASH_FOREACH_END();",
+    "semantic": "Implements the PHP function get_class_methods in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_OBJ_OR_CLASS_NAME",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZEND_HASH_MAP_FOREACH_PTR",
+            "ZEND_ACC_PUBLIC",
+            "ZEND_ACC_PROTECTED",
+            "ZEND_ACC_PRIVATE",
+            "ZVAL_STR_COPY",
+            "ZEND_HASH_FOREACH_END"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_class_entry",
+            "zend_function"
+        ],
+        "internal_helpers": [
+            "zend_get_executed_scope",
+            "zend_check_protected",
+            "zend_hash_next_index_insert_new"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common get_class_methods inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 4,
+    "purpose": "Implements the PHP function get_class_methods in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "exit",
+        "zend_version",
+        "gc_mem_caches",
+        "gc_collect_cycles",
+        "gc_enabled",
+        "gc_enable",
+        "gc_disable",
+        "gc_status",
+        "func_num_args",
+        "func_get_arg",
+        "func_get_args",
+        "strlen"
+    ]
+}

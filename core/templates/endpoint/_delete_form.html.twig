@@ -1,0 +1,6 @@
+<form method="post" action="{{ path('symfonicat_endpoint_delete', { id: endpoint.id }) }}" class="d-inline-block">
+    <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ endpoint.id) }}">
+    <button class="btn btn-sm btn-danger" onclick="return confirm('Delete endpoint?')">
+        <i class="fa fa-times">&nbsp;</i>
+    </button>
+</form>

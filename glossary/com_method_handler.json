@@ -1,0 +1,86 @@
+{
+    "php_function": "com_method_handler",
+    "zend_function": "com_method_handler",
+    "source_file": "com_handlers.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "ext/standard/info.h",
+        "php_com_dotnet.h",
+        "php_com_dotnet_internal.h",
+        "Zend/zend_exceptions.h"
+    ],
+    "body": "zval *object = getThis();\n\tzend_string *method = EX(func)->common.function_name;\n\tzval *args = NULL;\n\tphp_com_dotnet_object *obj = CDNO_FETCH(object);\n\tint nargs;\n\tVARIANT v;\n\tzend_result ret = FAILURE;\n\n\tif (V_VT(&obj->v) != VT_DISPATCH) {\n\t\tgoto exit;\n\t}\n\n\tnargs = ZEND_NUM_ARGS();\n\n\tif (nargs) {\n\t\targs = (zval *)safe_emalloc(sizeof(zval), nargs, 0);\n\t\tzend_get_parameters_array_ex(nargs, args);\n\t}\n\n\tVariantInit(&v);\n\n\tif (SUCCESS == php_com_do_invoke_byref(obj, (zend_internal_function*)EX(func), DISPATCH_METHOD|DISPATCH_PROPERTYGET, &v, nargs, args)) {\n\t\tret = php_com_zval_from_variant(return_value, &v, obj->code_page);\n\t\tVariantClear(&v);\n\t}\n\n\tif (args) {\n\t\tefree(args);\n\t}\n\nexit:\n\t/* Cleanup trampoline */\n\tZEND_ASSERT(EX(func)->common.fn_flags & ZEND_ACC_CALL_VIA_TRAMPOLINE);\n\tzend_string_release(EX(func)->common.function_name);\n\tzend_free_trampoline(EX(func));\n\tEX(func) = NULL;",
+    "semantic": "Cleanup trampoline",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "ZEND_ASSERT",
+            "ZEND_ACC_CALL_VIA_TRAMPOLINE"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_string",
+            "zend_result"
+        ],
+        "internal_helpers": [
+            "zend_get_parameters_array_ex",
+            "php_com_do_invoke_byref",
+            "php_com_zval_from_variant",
+            "zend_string_release",
+            "zend_free_trampoline"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common com_method_handler inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": false,
+        "uses_zend_string": true,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 4,
+    "purpose": "Cleanup trampoline",
+    "php_version": "8.4.0-dev",
+    "related": []
+}

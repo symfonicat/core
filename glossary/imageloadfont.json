@@ -1,0 +1,126 @@
+{
+    "php_function": "imageloadfont",
+    "zend_function": "imageloadfont",
+    "source_file": "",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "file",
+            "macro": "Z_PARAM_PATH_STR",
+            "arguments": [
+                "file"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_PATH_STR(file)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "ext/standard/head.h",
+        "math.h",
+        "SAPI.h",
+        "php_gd.h",
+        "ext/standard/php_image.h",
+        "ext/standard/info.h",
+        "php_open_temporary_file.h",
+        "php_memory_streams.h",
+        "zend_object_handlers.h",
+        "gd_compat.h",
+        "gd_arginfo.h"
+    ],
+    "body": "zend_string *file;\n\tint hdr_size = sizeof(gdFont) - sizeof(char *);\n\tint body_size, n = 0, b, i, body_size_check;\n\tgdFontPtr font;\n\tphp_stream *stream;\n\n\tZEND_PARSE_PARAMETERS_START(1, 1)\n\t\tZ_PARAM_PATH_STR(file)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tstream = php_stream_open_wrapper(ZSTR_VAL(file), \"rb\", IGNORE_PATH | REPORT_ERRORS, NULL);\n\tif (stream == NULL) {\n\t\tRETURN_FALSE;\n\t}\n\n\t/* Only supports a architecture-dependent binary dump format\n\t * at the moment.\n\t * The file format is like this on machines with 32-byte integers:\n\t *\n\t * byte 0-3:   (int) number of characters in the font\n\t * byte 4-7:   (int) value of first character in the font (often 32, space)\n\t * byte 8-11:  (int) pixel width of each character\n\t * byte 12-15: (int) pixel height of each character\n\t * bytes 16-:  (char) array with character data, one byte per pixel\n\t *                    in each character, for a total of\n\t *                    (nchars*width*height) bytes.\n\t */\n\tfont = (gdFontPtr) emalloc(sizeof(gdFont));\n\tb = 0;\n\twhile (b < hdr_size && (n = php_stream_read(stream, (char*)&font[b], hdr_size - b)) > 0) {\n\t\tb += n;\n\t}\n\n\tif (n <= 0) {\n\t\tefree(font);\n\t\tif (php_stream_eof(stream)) {\n\t\t\tphp_error_docref(NULL, E_WARNING, \"End of file while reading header\");\n\t\t} else {\n\t\t\tphp_error_docref(NULL, E_WARNING, \"Error while reading header\");\n\t\t}\n\t\tphp_stream_close(stream);\n\t\tRETURN_FALSE;\n\t}\n\ti = php_stream_tell(stream);\n\tphp_stream_seek(stream, 0, SEEK_END);\n\tbody_size_check = php_stream_tell(stream) - hdr_size;\n\tphp_stream_seek(stream, i, SEEK_SET);\n\n\tif (overflow2(font->nchars, font->h) || overflow2(font->nchars * font->h, font->w )) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Error reading font, invalid font header\");\n\t\tefree(font);\n\t\tphp_stream_close(stream);\n\t\tRETURN_FALSE;\n\t}\n\n\tbody_size = font->w * font->h * font->nchars;\n\tif (body_size != body_size_check) {\n\t\tfont->w = FLIPWORD(font->w);\n\t\tfont->h = FLIPWORD(font->h);\n\t\tfont->nchars = FLIPWORD(font->nchars);\n\t\tif (overflow2(font->nchars, font->h) || overflow2(font->nchars * font->h, font->w )) {\n\t\t\tphp_error_docref(NULL, E_WARNING, \"Error reading font, invalid font header\");\n\t\t\tefree(font);\n\t\t\tphp_stream_close(stream);\n\t\t\tRETURN_FALSE;\n\t\t}\n\t\tbody_size = font->w * font->h * font->nchars;\n\t}\n\n\tif (body_size != body_size_check) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Error reading font\");\n\t\tefree(font);\n\t\tphp_stream_close(stream);\n\t\tRETURN_FALSE;\n\t}\n\n\tZEND_ASSERT(body_size > 0);\n\tfont->data = emalloc(body_size);\n\tb = 0;\n\twhile (b < body_size && (n = php_stream_read(stream, &font->data[b], body_size - b)) > 0) {\n\t\tb += n;\n\t}\n\n\tif (n <= 0) {\n\t\tefree(font->data);\n\t\tefree(font);\n\t\tif (php_stream_eof(stream)) {\n\t\t\tphp_error_docref(NULL, E_WARNING, \"End of file while reading body\");\n\t\t} else {\n\t\t\tphp_error_docref(NULL, E_WARNING, \"Error while reading body\");\n\t\t}\n\t\tphp_stream_close(stream);\n\t\tRETURN_FALSE;\n\t}\n\tphp_stream_close(stream);\n\n\tobject_init_ex(return_value, gd_font_ce);\n\tphp_gd_font_object_from_zend_object(Z_OBJ_P(return_value))->font = font;",
+    "semantic": "Only supports a architecture-dependent binary dump format at the moment.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_PATH_STR",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZSTR_VAL",
+            "RETURN_FALSE",
+            "ZEND_ASSERT"
+        ],
+        "zend_types": [
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "php_stream_open_wrapper",
+            "php_stream_read",
+            "php_stream_eof",
+            "php_error_docref",
+            "php_stream_close",
+            "php_stream_tell",
+            "php_stream_seek",
+            "php_gd_font_object_from_zend_object"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common imageloadfont inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": true,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid leaving streams open on any early-exit branch."
+    ],
+    "complexity": 9,
+    "purpose": "Only supports a architecture-dependent binary dump format at the moment.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "gd_info",
+        "imagesetstyle",
+        "imagecreatetruecolor",
+        "imageistruecolor",
+        "imagetruecolortopalette",
+        "imagepalettetotruecolor",
+        "imagecolormatch",
+        "imagesetthickness",
+        "imagefilledellipse",
+        "imagefilledarc",
+        "imagealphablending",
+        "imagesavealpha"
+    ]
+}

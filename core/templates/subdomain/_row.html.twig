@@ -1,0 +1,56 @@
+<tr id="subdomain_{{ subdomain.id }}" class="btn-row">
+    <td class="fw-semibold">{{ subdomain.affix }}</td>
+    <td>{% if subdomain.domain %}<code>{{ subdomain.domain.tld }}</code>{% else %}<i class="fa fa-fw fa-times"></i>{% endif %}</td>
+    <td>{% if subdomain.catch %}<i class="fa fa-check"></i>{% else %}<i class="fa fa-fw fa-times"></i>{% endif %}</td>
+    <td>{% if subdomain.parcel %}<code>{{ subdomain.parcel.id }}</code>{% else %}<i class="fa fa-fw fa-times"></i>{% endif %}</td>
+    <td>
+        {% for middleware in subdomain.middlewares %}
+            <div><code>{{ middleware.id }}</code></div>
+        {% else %}
+            <i class="fa fa-fw fa-times"></i>
+        {% endfor %}
+    </td>
+    <td>
+        {% set groups = {} %}
+        {% for module in subdomain.modules %}
+            {% set parts = (module.id | split('/')) %}
+            {% set tail = parts | last %}
+            {% set groupKey = module.package ? (module.vendor ~ '/' ~ module.package) : module.vendor %}
+            {% if groups[groupKey] is defined %}
+                {% set groups = groups | merge({ (groupKey): groups[groupKey] | merge([tail]) }) %}
+            {% else %}
+                {% set groups = groups | merge({ (groupKey): [tail] }) %}
+            {% endif %}
+        {% else %}
+            {% set groups = {} %}
+        {% endfor %}
+
+        {% if groups is empty %}
+            <i class="fa fa-fw fa-times"></i>
+        {% else %}
+            {% for g, tails in groups %}
+                <b>{{ g }}:</b>&nbsp;&nbsp;<code>{{ tails | join(', ') }}</code>{% if not loop.last %}<br />{% endif %}
+            {% endfor %}
+        {% endif %}
+    </td>
+    {% for env_parent in env_parents %}
+        <td>
+            {% set entries = env_parent_entries(subdomain.env, env_parent) %}
+            {% for entry in entries %}
+                <div><code>{{ entry }}</code></div>
+            {% else %}
+                <i class="fa fa-fw fa-times"></i>
+            {% endfor %}
+        </td>
+    {% endfor %}
+    <td class="text-end btn-cell">
+        
+        <div class="btn-group btn-group-sm">
+            <a href="{{ path('symfonicat_subdomain_edit', {'id': subdomain.id}) }}" class="btn btn-sm btn-warning">
+                <i class="fa fa-pencil">&nbsp;</i>
+            </a>
+            {{ include('@symfonicat/subdomain/_delete_form.html.twig') }}
+        </div>
+
+    </td>
+</tr>

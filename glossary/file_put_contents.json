@@ -1,0 +1,195 @@
+{
+    "php_function": "file_put_contents",
+    "zend_function": "file_put_contents",
+    "source_file": "le.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "filename",
+            "macro": "Z_PARAM_PATH",
+            "arguments": [
+                "filename",
+                "filename_len"
+            ],
+            "type": "mixed",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_PATH(filename, filename_len)"
+        },
+        {
+            "name": "data",
+            "macro": "Z_PARAM_ZVAL",
+            "arguments": [
+                "data"
+            ],
+            "type": "zval",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": true,
+            "raw": "Z_PARAM_ZVAL(data)"
+        },
+        {
+            "name": "flags",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "flags"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(flags)"
+        },
+        {
+            "name": "zcontext",
+            "macro": "Z_PARAM_RESOURCE_OR_NULL",
+            "arguments": [
+                "zcontext"
+            ],
+            "type": "zend_resource",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_RESOURCE_OR_NULL(zcontext)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "ext/standard/flock_compat.h",
+        "ext/standard/php_filestat.h",
+        "php_open_temporary_file.h",
+        "ext/standard/basic_functions.h",
+        "php_ini.h",
+        "zend_smart_str.h",
+        "stdio.h",
+        "stdlib.h",
+        "errno.h",
+        "wchar.h",
+        "sys/types.h",
+        "sys/stat.h",
+        "fcntl.h",
+        "php_string.h",
+        "file.h",
+        "fsock.h",
+        "fopen_wrappers.h",
+        "streamsfuncs.h",
+        "scanf.h",
+        "zend_API.h",
+        "file_arginfo.h"
+    ],
+    "body": "php_stream *stream;\n\tchar *filename;\n\tsize_t filename_len;\n\tzval *data;\n\tssize_t numbytes = 0;\n\tzend_long flags = 0;\n\tzval *zcontext = NULL;\n\tphp_stream_context *context = NULL;\n\tphp_stream *srcstream = NULL;\n\tchar mode[3] = \"wb\";\n\n\tZEND_PARSE_PARAMETERS_START(2, 4)\n\t\tZ_PARAM_PATH(filename, filename_len)\n\t\tZ_PARAM_ZVAL(data)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_LONG(flags)\n\t\tZ_PARAM_RESOURCE_OR_NULL(zcontext)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (Z_TYPE_P(data) == IS_RESOURCE) {\n\t\tphp_stream_from_zval(srcstream, data);\n\t}\n\n\tcontext = php_stream_context_from_zval(zcontext, flags & PHP_FILE_NO_DEFAULT_CONTEXT);\n\n\tif (flags & PHP_FILE_APPEND) {\n\t\tmode[0] = 'a';\n\t} else if (flags & LOCK_EX) {\n\t\t/* check to make sure we are dealing with a regular file */\n\t\tif (php_memnstr(filename, \"://\", sizeof(\"://\") - 1, filename + filename_len)) {\n\t\t\tif (strncasecmp(filename, \"file://\", sizeof(\"file://\") - 1)) {\n\t\t\t\tphp_error_docref(NULL, E_WARNING, \"Exclusive locks may only be set for regular files\");\n\t\t\t\tRETURN_FALSE;\n\t\t\t}\n\t\t}\n\t\tmode[0] = 'c';\n\t}\n\tmode[2] = '\\0';\n\n\tstream = php_stream_open_wrapper_ex(filename, mode, ((flags & PHP_FILE_USE_INCLUDE_PATH) ? USE_PATH : 0) | REPORT_ERRORS, NULL, context);\n\tif (stream == NULL) {\n\t\tRETURN_FALSE;\n\t}\n\n\tif ((flags & LOCK_EX) && (!php_stream_supports_lock(stream) || php_stream_lock(stream, LOCK_EX))) {\n\t\tphp_stream_close(stream);\n\t\tphp_error_docref(NULL, E_WARNING, \"Exclusive locks are not supported for this stream\");\n\t\tRETURN_FALSE;\n\t}\n\n\tif (mode[0] == 'c') {\n\t\tphp_stream_truncate_set_size(stream, 0);\n\t}\n\n\tswitch (Z_TYPE_P(data)) {\n\t\tcase IS_RESOURCE: {\n\t\t\tsize_t len;\n\t\t\tif (php_stream_copy_to_stream_ex(srcstream, stream, PHP_STREAM_COPY_ALL, &len) != SUCCESS) {\n\t\t\t\tnumbytes = -1;\n\t\t\t} else {\n\t\t\t\tif (len > ZEND_LONG_MAX) {\n\t\t\t\t\tphp_error_docref(NULL, E_WARNING, \"content truncated from %zu to \" ZEND_LONG_FMT \" bytes\", len, ZEND_LONG_MAX);\n\t\t\t\t\tlen = ZEND_LONG_MAX;\n\t\t\t\t}\n\t\t\t\tnumbytes = len;\n\t\t\t}\n\t\t\tbreak;\n\t\t}\n\t\tcase IS_NULL:\n\t\tcase IS_LONG:\n\t\tcase IS_DOUBLE:\n\t\tcase IS_FALSE:\n\t\tcase IS_TRUE:\n\t\t\tconvert_to_string(data);\n\t\t\tZEND_FALLTHROUGH;\n\t\tcase IS_STRING:\n\t\t\tif (Z_STRLEN_P(data)) {\n\t\t\t\tnumbytes = php_stream_write(stream, Z_STRVAL_P(data), Z_STRLEN_P(data));\n\t\t\t\tif (numbytes != -1 && numbytes != Z_STRLEN_P(data)) {\n\t\t\t\t\tphp_error_docref(NULL, E_WARNING, \"Only %zd of %zd bytes written, possibly out of free disk space\", numbytes, Z_STRLEN_P(data));\n\t\t\t\t\tnumbytes = -1;\n\t\t\t\t}\n\t\t\t}\n\t\t\tbreak;\n\n\t\tcase IS_ARRAY:\n\t\t\tif (zend_hash_num_elements(Z_ARRVAL_P(data))) {\n\t\t\t\tssize_t bytes_written;\n\t\t\t\tzval *tmp;\n\n\t\t\t\tZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(data), tmp) {\n\t\t\t\t\tzend_string *t;\n\t\t\t\t\tzend_string *str = zval_get_tmp_string(tmp, &t);\n\t\t\t\t\tif (ZSTR_LEN(str)) {\n\t\t\t\t\t\tnumbytes += ZSTR_LEN(str);\n\t\t\t\t\t\tbytes_written = php_stream_write(stream, ZSTR_VAL(str), ZSTR_LEN(str));\n\t\t\t\t\t\tif (bytes_written != ZSTR_LEN(str)) {\n\t\t\t\t\t\t\tphp_error_docref(NULL, E_WARNING, \"Failed to write %zd bytes to %s\", ZSTR_LEN(str), filename);\n\t\t\t\t\t\t\tzend_tmp_string_release(t);\n\t\t\t\t\t\t\tnumbytes = -1;\n\t\t\t\t\t\t\tbreak;\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t\tzend_tmp_string_release(t);\n\t\t\t\t} ZEND_HASH_FOREACH_END();\n\t\t\t}\n\t\t\tbreak;\n\n\t\tcase IS_OBJECT:\n\t\t\tif (Z_OBJ_HT_P(data) != NULL) {\n\t\t\t\tzval out;\n\n\t\t\t\tif (zend_std_cast_object_tostring(Z_OBJ_P(data), &out, IS_STRING) == SUCCESS) {\n\t\t\t\t\tnumbytes = php_stream_write(stream, Z_STRVAL(out), Z_STRLEN(out));\n\t\t\t\t\tif (numbytes != -1 && numbytes != Z_STRLEN(out)) {\n\t\t\t\t\t\tphp_error_docref(NULL, E_WARNING, \"Only %zd of %zd bytes written, possibly out of free disk space\", numbytes, Z_STRLEN(out));\n\t\t\t\t\t\tnumbytes = -1;\n\t\t\t\t\t}\n\t\t\t\t\tzval_ptr_dtor_str(&out);\n\t\t\t\t\tbreak;\n\t\t\t\t}\n\t\t\t}\n\t\t\tZEND_FALLTHROUGH;\n\t\tdefault:\n\t\t\tnumbytes = -1;\n\t\t\tbreak;\n\t}\n\tphp_stream_close(stream);\n\n\tif (numbytes < 0) {\n\t\tRETURN_FALSE;\n\t}\n\n\tRETURN_LONG(numbytes);",
+    "semantic": "check to make sure we are dealing with a regular file",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_PATH",
+            "Z_PARAM_ZVAL",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_LONG",
+            "Z_PARAM_RESOURCE_OR_NULL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_FALSE",
+            "ZEND_LONG_MAX",
+            "ZEND_LONG_FMT",
+            "ZEND_FALLTHROUGH",
+            "ZEND_HASH_FOREACH_VAL",
+            "ZSTR_LEN",
+            "ZSTR_VAL",
+            "ZEND_HASH_FOREACH_END",
+            "RETURN_LONG"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_long",
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "php_stream_from_zval",
+            "php_stream_context_from_zval",
+            "php_memnstr",
+            "php_error_docref",
+            "php_stream_open_wrapper_ex",
+            "php_stream_supports_lock",
+            "php_stream_lock",
+            "php_stream_close",
+            "php_stream_truncate_set_size",
+            "php_stream_copy_to_stream_ex",
+            "php_stream_write",
+            "zend_hash_num_elements",
+            "zval_get_tmp_string",
+            "zend_tmp_string_release",
+            "zend_std_cast_object_tostring",
+            "zval_ptr_dtor_str"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common file_put_contents inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 9,
+    "purpose": "check to make sure we are dealing with a regular file",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "flock",
+        "get_meta_tags",
+        "file_get_contents",
+        "file",
+        "tempnam",
+        "tmpfile",
+        "fopen",
+        "popen",
+        "pclose",
+        "fscanf",
+        "mkdir",
+        "rmdir"
+    ]
+}

@@ -1,0 +1,469 @@
+// Symfonicat Bootstrap overrides.
+//
+// This file is loaded after `./variables`, `./variables-dark`, and Bootstrap
+// core, so all package variables, functions, and mixins are available here.
+// Keep token-level theme values in `variables*.scss`; keep generated selector
+// overrides and legacy behavior from `bootstrap_old` here.
+
+body {
+  font-size: inherit;
+}
+
+.btn {
+  display: inline-block;
+  padding: $btn-padding-y $btn-padding-x;
+  font-family: $btn-font-family;
+  @include font-size($btn-font-size);
+  font-weight: $btn-font-weight;
+  line-height: $btn-line-height;
+  color: $gray-100;
+  text-align: center;
+  text-decoration: if($link-decoration == none, null, none);
+  white-space: $btn-white-space;
+  vertical-align: middle;
+  cursor: if($enable-button-pointers, pointer, null);
+  user-select: none;
+  border: 1px solid transparent;
+  @include border-radius($border-radius);
+  @include gradient-bg(transparent);
+  @include box-shadow($btn-box-shadow);
+  @include transition($btn-transition);
+
+  &:hover {
+    text-decoration: if($link-hover-decoration == underline, none, null);
+  }
+
+  &:focus-visible,
+  .btn-check:focus-visible + & {
+    outline: 0;
+  }
+}
+
+@mixin symfonicat-button-variant(
+  $background,
+  $border,
+  $color,
+  $hover-background: if($color == $color-contrast-light, shade-color($background, $btn-hover-bg-shade-amount), tint-color($background, $btn-hover-bg-tint-amount)),
+  $hover-border: if($color == $color-contrast-light, shade-color($border, $btn-hover-border-shade-amount), tint-color($border, $btn-hover-border-tint-amount)),
+  $hover-color: color-contrast($hover-background),
+  $active-background: if($color == $color-contrast-light, shade-color($background, $btn-active-bg-shade-amount), tint-color($background, $btn-active-bg-tint-amount)),
+  $active-border: if($color == $color-contrast-light, shade-color($border, $btn-active-border-shade-amount), tint-color($border, $btn-active-border-tint-amount)),
+  $active-color: color-contrast($active-background),
+  $disabled-background: $background,
+  $disabled-border: $border,
+  $disabled-color: color-contrast($disabled-background)
+) {
+  color: $color;
+  @include gradient-bg($background);
+  border-color: $border;
+
+  &:hover {
+    color: $hover-color;
+    background-color: $hover-background;
+    border-color: $hover-border;
+  }
+
+  .btn-check + &:hover {
+    color: $color;
+    background-color: $background;
+    border-color: $border;
+  }
+
+  &:focus-visible {
+    color: $hover-color;
+    @include gradient-bg($hover-background);
+    border-color: $hover-border;
+    outline: 0;
+
+    $focus-shadow: 0 0 0 #{$btn-focus-width} rgba(mix($color, $border, 15%), .5);
+    @if $enable-shadows {
+      box-shadow: $btn-box-shadow, $focus-shadow;
+    } @else {
+      box-shadow: $focus-shadow;
+    }
+  }
+
+  .btn-check:focus-visible + & {
+    border-color: $hover-border;
+    outline: 0;
+
+    $focus-shadow: 0 0 0 #{$btn-focus-width} rgba(mix($color, $border, 15%), .5);
+    @if $enable-shadows {
+      box-shadow: $btn-box-shadow, $focus-shadow;
+    } @else {
+      box-shadow: $focus-shadow;
+    }
+  }
+
+  .btn-check:checked + &,
+  :not(.btn-check) + &:active,
+  &:first-child:active,
+  &:active,
+  &.active,
+  &.show {
+    color: $active-color;
+    background-color: $active-background;
+    @if $enable-gradients {
+      background-image: none;
+    }
+    border-color: $active-border;
+    box-shadow: $btn-active-box-shadow;
+
+    &:focus-visible {
+      $focus-shadow: 0 0 0 #{$btn-focus-width} rgba(mix($active-color, $active-border, 15%), .5);
+      @if $enable-shadows {
+        box-shadow: $btn-active-box-shadow, $focus-shadow;
+      } @else {
+        box-shadow: $focus-shadow;
+      }
+    }
+  }
+
+  .btn-check:checked:focus-visible + & {
+    $focus-shadow: 0 0 0 #{$btn-focus-width} rgba(mix($active-color, $active-border, 15%), .5);
+    @if $enable-shadows {
+      box-shadow: $btn-active-box-shadow, $focus-shadow;
+    } @else {
+      box-shadow: $focus-shadow;
+    }
+  }
+
+  &:disabled,
+  &.disabled,
+  fieldset:disabled & {
+    color: $disabled-color;
+    pointer-events: none;
+    background-color: $disabled-background;
+    @if $enable-gradients {
+      background-image: none;
+    }
+    border-color: $disabled-border;
+    opacity: $btn-disabled-opacity;
+    @include box-shadow(none);
+  }
+}
+
+@mixin symfonicat-button-outline-variant(
+  $color,
+  $color-hover: color-contrast($color),
+  $active-background: $color,
+  $active-border: $color,
+  $active-color: color-contrast($active-background)
+) {
+  color: $color;
+  background-color: transparent;
+  background-image: none;
+  border-color: $color;
+
+  &:hover {
+    color: $color-hover;
+    background-color: $active-background;
+    border-color: $active-border;
+  }
+
+  &:focus-visible {
+    outline: 0;
+
+    $focus-shadow: 0 0 0 #{$btn-focus-width} rgba($color, .5);
+    @if $enable-shadows {
+      box-shadow: $btn-box-shadow, $focus-shadow;
+    } @else {
+      box-shadow: $focus-shadow;
+    }
+  }
+
+  .btn-check:checked + &,
+  :not(.btn-check) + &:active,
+  &:first-child:active,
+  &:active,
+  &.active,
+  &.show {
+    color: $active-color;
+    background-color: $active-background;
+    @if $enable-gradients {
+      background-image: none;
+    }
+    border-color: $active-border;
+    box-shadow: $btn-active-box-shadow;
+  }
+
+  &:disabled,
+  &.disabled,
+  fieldset:disabled & {
+    color: $color;
+    pointer-events: none;
+    background-color: transparent;
+    background-image: none;
+    border-color: $color;
+    opacity: $btn-disabled-opacity;
+    @include box-shadow(none);
+  }
+}
+
+@mixin symfonicat-button-size($padding-y, $padding-x, $font-size, $border-radius) {
+  padding: $padding-y $padding-x;
+  @include font-size($font-size);
+  @include border-radius($border-radius);
+}
+
+@each $color, $value in $theme-colors {
+  $btn-text-color: if(map-has-key($btn-variant-text-colors, $color), map-get($btn-variant-text-colors, $color), color-contrast($value));
+
+  .btn-#{$color} {
+    $hover-background: null;
+    $hover-border: null;
+    $active-background: null;
+    $active-border: null;
+
+    @if $color == "light" {
+      $hover-background: shade-color($value, $btn-hover-bg-shade-amount);
+      $hover-border: shade-color($value, $btn-hover-border-shade-amount);
+      $active-background: shade-color($value, $btn-active-bg-shade-amount);
+      $active-border: shade-color($value, $btn-active-border-shade-amount);
+    } @else if $color == "dark" {
+      $hover-background: tint-color($value, $btn-hover-bg-tint-amount);
+      $hover-border: tint-color($value, $btn-hover-border-tint-amount);
+      $active-background: tint-color($value, $btn-active-bg-tint-amount);
+      $active-border: tint-color($value, $btn-active-border-tint-amount);
+    } @else {
+      $hover-background: if($btn-text-color == $color-contrast-light, shade-color($value, $btn-hover-bg-shade-amount), tint-color($value, $btn-hover-bg-tint-amount));
+      $hover-border: if($btn-text-color == $color-contrast-light, shade-color($value, $btn-hover-border-shade-amount), tint-color($value, $btn-hover-border-tint-amount));
+      $active-background: if($btn-text-color == $color-contrast-light, shade-color($value, $btn-active-bg-shade-amount), tint-color($value, $btn-active-bg-tint-amount));
+      $active-border: if($btn-text-color == $color-contrast-light, shade-color($value, $btn-active-border-shade-amount), tint-color($value, $btn-active-border-tint-amount));
+    }
+
+    $computed-hover-color: color-contrast($hover-background);
+    $manual-hover-color: if(map-has-key($btn-variant-hover-text-colors, $color), map-get($btn-variant-hover-text-colors, $color), null);
+    $btn-hover-text-color: if($manual-hover-color == null, $computed-hover-color, $manual-hover-color);
+
+    @include symfonicat-button-variant(
+      $value,
+      $value,
+      $btn-text-color,
+      $hover-background: $hover-background,
+      $hover-border: $hover-border,
+      $hover-color: $btn-hover-text-color,
+      $active-background: $active-background,
+      $active-border: $active-border
+    );
+  }
+
+  .btn-outline-#{$color} {
+    @include symfonicat-button-outline-variant($value);
+  }
+}
+
+.btn-link {
+  font-weight: $font-weight-normal;
+  color: $link-color;
+  background-color: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  text-decoration: $link-decoration;
+
+  @if $enable-gradients {
+    background-image: none;
+  }
+
+  &:hover,
+  &:focus-visible {
+    text-decoration: $link-hover-decoration;
+  }
+
+  &:focus-visible {
+    color: $link-color;
+  }
+
+  &:hover {
+    color: $link-hover-color;
+  }
+}
+
+.btn-lg {
+  @include symfonicat-button-size($btn-padding-y-lg, $btn-padding-x-lg, $btn-font-size-lg, $border-radius-lg);
+}
+
+.btn-sm {
+  @include symfonicat-button-size($btn-padding-y-sm, $btn-padding-x-sm, $btn-font-size-sm, $border-radius-sm);
+}
+
+.table {
+  > tbody {
+    vertical-align: middle;
+  }
+
+  > thead {
+    vertical-align: top;
+
+    th {
+      @extend .small;
+      @extend .pt-0;
+      font-weight: bold;
+      color: $gray-500;
+
+      &:hover {
+        cursor: pointer;
+      }
+    }
+  }
+
+  td,
+  th {
+    padding-left: 0;
+    text-align: left;
+    vertical-align: middle !important;
+
+    &:first-of-type {
+      padding-left: 0;
+      text-align: left;
+    }
+
+    &:last-of-type {
+      padding-right: 0;
+      text-align: right;
+
+      &:only-of-type {
+        text-align: left;
+      }
+    }
+  }
+}
+
+.table td.btn-cell {
+  padding: 0;
+  line-height: 1;
+  text-align: right;
+
+  > .btn,
+  > .btn-form,
+  > form.btn {
+    border-radius: 0 !important;
+  }
+
+  > .btn-group,
+  > .btn-group-sm {
+    display: inline-flex;
+    width: auto;
+    height: 100%;
+    border-radius: 0;
+    vertical-align: middle;
+
+    > .btn,
+    > .btn-form,
+    > form.btn {
+      border-radius: 0 !important;
+      flex: 0 1 auto;
+    }
+  }
+}
+
+.table tr.btn-row > td {
+  padding: 0;
+  line-height: 1;
+}
+
+@each $state, $background in $table-variants {
+  .table-#{$state} {
+    $color: $white;
+    $hover-bg: mix($color, $background, percentage($table-hover-bg-factor));
+    $striped-bg: mix($color, $background, percentage($table-striped-bg-factor));
+    $active-bg: mix($color, $background, percentage($table-active-bg-factor));
+    $table-border-color: mix($color, $background, percentage($table-border-factor));
+
+    --#{$prefix}table-color: #{$color};
+    --#{$prefix}table-bg: #{$background};
+    --#{$prefix}table-border-color: #{$table-border-color};
+    --#{$prefix}table-striped-bg: #{$striped-bg};
+    --#{$prefix}table-striped-color: #{$color};
+    --#{$prefix}table-active-bg: #{$active-bg};
+    --#{$prefix}table-active-color: #{$color};
+    --#{$prefix}table-hover-bg: #{$hover-bg};
+    --#{$prefix}table-hover-color: #{$color};
+    color: var(--#{$prefix}table-color);
+    border-color: var(--#{$prefix}table-border-color);
+
+    a {
+      color: $color;
+    }
+  }
+}
+
+.card {
+  .table {
+    > thead th {
+      padding-top: $table-cell-padding-y * 2;
+    }
+
+    > thead th:not(:first-child) {
+      padding-left: 0;
+    }
+
+    > thead th:not(:last-child) {
+      padding-right: 0;
+    }
+
+    > :not(caption) > * > :first-child {
+      padding-left: var(--#{$prefix}card-cap-padding-x) !important;
+    }
+
+    > :not(caption) > * > :last-child {
+      padding-right: var(--#{$prefix}card-cap-padding-x) !important;
+    }
+
+    .btn-row > .btn-cell:last-child {
+      padding-right: 0 !important;
+    }
+  }
+
+  .table-sm {
+    > thead th {
+      padding-top: $table-cell-padding-y-sm * 2;
+    }
+  }
+}
+
+.card-body.brand {
+  padding: 0 !important;
+}
+
+.card-footer {
+  padding-right: 0;
+  padding-left: 0;
+}
+
+.badge {
+  color: $white;
+}
+
+@each $color, $value in $theme-colors {
+  .text-bg-#{$color} {
+    color: $white if($enable-important-utilities, !important, null);
+  }
+}
+
+.form-label {
+  font-weight: $form-label-font-weight;
+}
+
+.form-control,
+.form-select {
+  background-color: $input-bg;
+}
+
+.dropdown-item {
+  &:hover,
+  &:focus {
+    color: $dropdown-link-hover-color;
+    background-color: $dropdown-link-hover-bg;
+  }
+}
+
+.card {
+  background-color: $card-bg;
+}
+
+.list-group {
+  background-color: $list-group-bg;
+  // `bootstrap_old` had `padding-y: $list-group-item-padding-y;` here. That
+  // is not a valid CSS property, so it is documented rather than emitted.
+}

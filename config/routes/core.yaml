@@ -1,0 +1,3 @@
+symfonicat_core:
+    resource: ../../core/src/Controller/Core/
+    type: attribute

@@ -1,0 +1,21 @@
+@import "../bootstrap/scss/functions";
+@import "./variables";
+@import "../bootstrap/scss/bootstrap.scss";
+@import "./overrides";
+
+.spin {
+    animation: spin 20s linear infinite;
+}
+
+@keyframes spin {
+
+  from {
+
+  	transform: rotate(0deg);
+  }
+
+  to {
+
+  	transform: rotate(360deg);
+  }
+}

@@ -1,0 +1,106 @@
+{
+    "php_function": "gethostbynamel",
+    "zend_function": "gethostbynamel",
+    "source_file": "s.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "hostname",
+            "macro": "Z_PARAM_PATH",
+            "arguments": [
+                "hostname",
+                "hostname_len"
+            ],
+            "type": "mixed",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_PATH(hostname, hostname_len)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "php_network.h",
+        "sys/socket.h",
+        "netinet/in.h",
+        "arpa/inet.h",
+        "netdb.h",
+        "arpa/nameser.h",
+        "resolv.h",
+        "dns.h",
+        "php_dns.h"
+    ],
+    "body": "char *hostname;\n\tsize_t hostname_len;\n\tstruct hostent *hp;\n\tstruct in_addr in;\n\tint i;\n\tchar addr4[INET_ADDRSTRLEN];\n\n\tZEND_PARSE_PARAMETERS_START(1, 1)\n\t\tZ_PARAM_PATH(hostname, hostname_len)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (hostname_len > MAXFQDNLEN) {\n\t\t/* name too long, protect from CVE-2015-0235 */\n\t\tphp_error_docref(NULL, E_WARNING, \"Host name cannot be longer than %d characters\", MAXFQDNLEN);\n\t\tRETURN_FALSE;\n\t}\n\n\thp = php_network_gethostbyname(hostname);\n\tif (!hp) {\n\t\tRETURN_FALSE;\n\t}\n\n\tarray_init(return_value);\n\n\tfor (i = 0;; i++) {\n\t\t/* On macos h_addr_list entries may be misaligned. */\n\t\tconst char *ipaddr;\n\t\tstruct in_addr *h_addr_entry; /* Don't call this h_addr, it's a macro! */\n\t\tmemcpy(&h_addr_entry, &hp->h_addr_list[i], sizeof(struct in_addr *));\n\t\tif (!h_addr_entry) {\n\t\t\treturn;\n\t\t}\n\n\t\tin = *h_addr_entry;\n\t\tif (!(ipaddr = inet_ntop(AF_INET, &in, addr4, INET_ADDRSTRLEN))) {\n\t\t\t/* unlikely regarding (too) long hostname and protocols but checking still */\n\t\t\tphp_error_docref(NULL, E_WARNING, \"Host name to ip failed %s\", hostname);\n\t\t\tcontinue;\n\t\t} else {\n\t\t\tadd_next_index_string(return_value, ipaddr);\n\t\t}\n\t}",
+    "semantic": "name too long, protect from CVE-2015-0235",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_PATH",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [],
+        "internal_helpers": [
+            "php_error_docref",
+            "php_network_gethostbyname"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common gethostbynamel inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "name too long, protect from CVE-2015-0235",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "gethostname",
+        "gethostbyaddr",
+        "gethostbyname",
+        "dns_check_record",
+        "dns_get_record",
+        "dns_get_mx"
+    ]
+}

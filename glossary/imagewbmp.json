@@ -1,0 +1,151 @@
+{
+    "php_function": "imagewbmp",
+    "zend_function": "imagewbmp",
+    "source_file": "",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "imgind",
+            "macro": "Z_PARAM_OBJECT_OF_CLASS",
+            "arguments": [
+                "imgind",
+                "gd_image_ce"
+            ],
+            "type": "zend_object",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_OBJECT_OF_CLASS(imgind, gd_image_ce)"
+        },
+        {
+            "name": "to_zval",
+            "macro": "Z_PARAM_ZVAL_OR_NULL",
+            "arguments": [
+                "to_zval"
+            ],
+            "type": "zval",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": true,
+            "raw": "Z_PARAM_ZVAL_OR_NULL(to_zval)"
+        },
+        {
+            "name": "foreground_color",
+            "macro": "Z_PARAM_LONG_OR_NULL",
+            "arguments": [
+                "foreground_color",
+                "foreground_color_is_null"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG_OR_NULL(foreground_color, foreground_color_is_null)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "ext/standard/head.h",
+        "math.h",
+        "SAPI.h",
+        "php_gd.h",
+        "ext/standard/php_image.h",
+        "ext/standard/info.h",
+        "php_open_temporary_file.h",
+        "php_memory_streams.h",
+        "zend_object_handlers.h",
+        "gd_compat.h",
+        "gd_arginfo.h"
+    ],
+    "body": "zval *imgind;\n\tzend_long foreground_color;\n\tbool foreground_color_is_null = true;\n\tgdImagePtr im;\n\tint i;\n\tgdIOCtx *ctx;\n\tzval *to_zval = NULL;\n\n\tZEND_PARSE_PARAMETERS_START(1, 3)\n\t\tZ_PARAM_OBJECT_OF_CLASS(imgind, gd_image_ce)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_ZVAL_OR_NULL(to_zval)\n\t\tZ_PARAM_LONG_OR_NULL(foreground_color, foreground_color_is_null)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tim = php_gd_libgdimageptr_from_zval_p(imgind);\n\n\tctx = create_output_context(to_zval, 2);\n\tif (!ctx) {\n\t\tRETURN_FALSE;\n\t}\n\n\tif (foreground_color_is_null) {\n\t\tfor (i = 0; i < gdImageColorsTotal(im); i++) {\n\t\t\tif (!gdImageRed(im, i) && !gdImageGreen(im, i) && !gdImageBlue(im, i)) {\n\t\t\t\tbreak;\n\t\t\t}\n\t\t}\n\n\t\tforeground_color = i;\n\t}\n\n\tgdImageWBMPCtx(im, foreground_color, ctx);\n\n\tctx->gd_free(ctx);\n\n\tRETURN_TRUE;",
+    "semantic": "Implements the PHP function imagewbmp in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_OBJECT_OF_CLASS",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_ZVAL_OR_NULL",
+            "Z_PARAM_LONG_OR_NULL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_FALSE",
+            "RETURN_TRUE"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "php_gd_libgdimageptr_from_zval_p"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common imagewbmp inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "Implements the PHP function imagewbmp in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "gd_info",
+        "imageloadfont",
+        "imagesetstyle",
+        "imagecreatetruecolor",
+        "imageistruecolor",
+        "imagetruecolortopalette",
+        "imagepalettetotruecolor",
+        "imagecolormatch",
+        "imagesetthickness",
+        "imagefilledellipse",
+        "imagefilledarc",
+        "imagealphablending"
+    ]
+}

@@ -1,0 +1,122 @@
+{
+    "php_function": "nl_langinfo",
+    "zend_function": "nl_langinfo",
+    "source_file": "ring.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "item",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "item"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(item)"
+        }
+    ],
+    "includes": [
+        "stdio.h",
+        "php.h",
+        "php_string.h",
+        "php_variables.h",
+        "locale.h",
+        "scanf.h",
+        "zend_API.h",
+        "zend_execute.h",
+        "basic_functions.h",
+        "zend_smart_str.h",
+        "Zend/zend_exceptions.h",
+        "TSRM.h",
+        "ext/standard/file.h",
+        "ext/standard/html.h",
+        "ext/random/php_random.h",
+        "emmintrin.h",
+        "Zend/zend_bitset.h",
+        "tmmintrin.h",
+        "arm_neon.h"
+    ],
+    "body": "zend_long item;\n\tchar *value;\n\n\tZEND_PARSE_PARAMETERS_START(1, 1)\n\t\tZ_PARAM_LONG(item)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tswitch(item) { /* {{{ */\n#ifdef ABDAY_1\n\t\tcase ABDAY_1:\n\t\tcase ABDAY_2:\n\t\tcase ABDAY_3:\n\t\tcase ABDAY_4:\n\t\tcase ABDAY_5:\n\t\tcase ABDAY_6:\n\t\tcase ABDAY_7:\n#endif\n#ifdef DAY_1\n\t\tcase DAY_1:\n\t\tcase DAY_2:\n\t\tcase DAY_3:\n\t\tcase DAY_4:\n\t\tcase DAY_5:\n\t\tcase DAY_6:\n\t\tcase DAY_7:\n#endif\n#ifdef ABMON_1\n\t\tcase ABMON_1:\n\t\tcase ABMON_2:\n\t\tcase ABMON_3:\n\t\tcase ABMON_4:\n\t\tcase ABMON_5:\n\t\tcase ABMON_6:\n\t\tcase ABMON_7:\n\t\tcase ABMON_8:\n\t\tcase ABMON_9:\n\t\tcase ABMON_10:\n\t\tcase ABMON_11:\n\t\tcase ABMON_12:\n#endif\n#ifdef MON_1\n\t\tcase MON_1:\n\t\tcase MON_2:\n\t\tcase MON_3:\n\t\tcase MON_4:\n\t\tcase MON_5:\n\t\tcase MON_6:\n\t\tcase MON_7:\n\t\tcase MON_8:\n\t\tcase MON_9:\n\t\tcase MON_10:\n\t\tcase MON_11:\n\t\tcase MON_12:\n#endif\n#ifdef AM_STR\n\t\tcase AM_STR:\n#endif\n#ifdef PM_STR\n\t\tcase PM_STR:\n#endif\n#ifdef D_T_FMT\n\t\tcase D_T_FMT:\n#endif\n#ifdef D_FMT\n\t\tcase D_FMT:\n#endif\n#ifdef T_FMT\n\t\tcase T_FMT:\n#endif\n#ifdef T_FMT_AMPM\n\t\tcase T_FMT_AMPM:\n#endif\n#ifdef ERA\n\t\tcase ERA:\n#endif\n#ifdef ERA_YEAR\n\t\tcase ERA_YEAR:\n#endif\n#ifdef ERA_D_T_FMT\n\t\tcase ERA_D_T_FMT:\n#endif\n#ifdef ERA_D_FMT\n\t\tcase ERA_D_FMT:\n#endif\n#ifdef ERA_T_FMT\n\t\tcase ERA_T_FMT:\n#endif\n#ifdef ALT_DIGITS\n\t\tcase ALT_DIGITS:\n#endif\n#ifdef INT_CURR_SYMBOL\n\t\tcase INT_CURR_SYMBOL:\n#endif\n#ifdef CURRENCY_SYMBOL\n\t\tcase CURRENCY_SYMBOL:\n#endif\n#ifdef CRNCYSTR\n\t\tcase CRNCYSTR:\n#endif\n#ifdef MON_DECIMAL_POINT\n\t\tcase MON_DECIMAL_POINT:\n#endif\n#ifdef MON_THOUSANDS_SEP\n\t\tcase MON_THOUSANDS_SEP:\n#endif\n#ifdef MON_GROUPING\n\t\tcase MON_GROUPING:\n#endif\n#ifdef POSITIVE_SIGN\n\t\tcase POSITIVE_SIGN:\n#endif\n#ifdef NEGATIVE_SIGN\n\t\tcase NEGATIVE_SIGN:\n#endif\n#ifdef INT_FRAC_DIGITS\n\t\tcase INT_FRAC_DIGITS:\n#endif\n#ifdef FRAC_DIGITS\n\t\tcase FRAC_DIGITS:\n#endif\n#ifdef P_CS_PRECEDES\n\t\tcase P_CS_PRECEDES:\n#endif\n#ifdef P_SEP_BY_SPACE\n\t\tcase P_SEP_BY_SPACE:\n#endif\n#ifdef N_CS_PRECEDES\n\t\tcase N_CS_PRECEDES:\n#endif\n#ifdef N_SEP_BY_SPACE\n\t\tcase N_SEP_BY_SPACE:\n#endif\n#ifdef P_SIGN_POSN\n\t\tcase P_SIGN_POSN:\n#endif\n#ifdef N_SIGN_POSN\n\t\tcase N_SIGN_POSN:\n#endif\n#ifdef DECIMAL_POINT\n\t\tcase DECIMAL_POINT:\n#elif defined(RADIXCHAR)\n\t\tcase RADIXCHAR:\n#endif\n#ifdef THOUSANDS_SEP\n\t\tcase THOUSANDS_SEP:\n#elif defined(THOUSEP)\n\t\tcase THOUSEP:\n#endif\n#ifdef GROUPING\n\t\tcase GROUPING:\n#endif\n#ifdef YESEXPR\n\t\tcase YESEXPR:\n#endif\n#ifdef NOEXPR\n\t\tcase NOEXPR:\n#endif\n#ifdef YESSTR\n\t\tcase YESSTR:\n#endif\n#ifdef NOSTR\n\t\tcase NOSTR:\n#endif\n#ifdef CODESET\n\t\tcase CODESET:\n#endif\n\t\t\tbreak;\n\t\tdefault:\n\t\t\tphp_error_docref(NULL, E_WARNING, \"Item '\" ZEND_LONG_FMT \"' is not valid\", item);\n\t\t\tRETURN_FALSE;\n\t}\n\t/* }}} */\n\n\tvalue = nl_langinfo(item);\n\tif (value == NULL) {\n\t\tRETURN_FALSE;\n\t} else {\n\t\tRETURN_STRING(value);\n\t}",
+    "semantic": "{{{",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_LONG",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZEND_LONG_FMT",
+            "RETURN_FALSE",
+            "RETURN_STRING"
+        ],
+        "zend_types": [
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "php_error_docref"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common nl_langinfo inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 6,
+    "purpose": "{{{",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "bin2hex",
+        "hex2bin",
+        "strspn",
+        "strcspn",
+        "strcoll",
+        "trim",
+        "rtrim",
+        "ltrim",
+        "wordwrap",
+        "explode",
+        "implode",
+        "strtok"
+    ]
+}

@@ -1,0 +1,141 @@
+{
+    "php_function": "nl2br",
+    "zend_function": "nl2br",
+    "source_file": "ring.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "str",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "str"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(str)"
+        },
+        {
+            "name": "is_xhtml",
+            "macro": "Z_PARAM_BOOL",
+            "arguments": [
+                "is_xhtml"
+            ],
+            "type": "bool",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_BOOL(is_xhtml)"
+        }
+    ],
+    "includes": [
+        "stdio.h",
+        "php.h",
+        "php_string.h",
+        "php_variables.h",
+        "locale.h",
+        "scanf.h",
+        "zend_API.h",
+        "zend_execute.h",
+        "basic_functions.h",
+        "zend_smart_str.h",
+        "Zend/zend_exceptions.h",
+        "TSRM.h",
+        "ext/standard/file.h",
+        "ext/standard/html.h",
+        "ext/random/php_random.h",
+        "emmintrin.h",
+        "Zend/zend_bitset.h",
+        "tmmintrin.h",
+        "arm_neon.h"
+    ],
+    "body": "/* in brief this inserts <br /> or <br> before matched regexp \\n\\r?|\\r\\n? */\n\tconst char\t*tmp, *end;\n\tzend_string *str;\n\tchar *target;\n\tsize_t\trepl_cnt = 0;\n\tbool\tis_xhtml = 1;\n\tzend_string *result;\n\n\tZEND_PARSE_PARAMETERS_START(1, 2)\n\t\tZ_PARAM_STR(str)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_BOOL(is_xhtml)\n\tZEND_PARSE_PARAMETERS_END();\n\n\ttmp = ZSTR_VAL(str);\n\tend = ZSTR_VAL(str) + ZSTR_LEN(str);\n\n\t/* it is really faster to scan twice and allocate mem once instead of scanning once\n\t   and constantly reallocing */\n\twhile (tmp < end) {\n\t\tif (*tmp == '\\r') {\n\t\t\tif (*(tmp+1) == '\\n') {\n\t\t\t\ttmp++;\n\t\t\t}\n\t\t\trepl_cnt++;\n\t\t} else if (*tmp == '\\n') {\n\t\t\tif (*(tmp+1) == '\\r') {\n\t\t\t\ttmp++;\n\t\t\t}\n\t\t\trepl_cnt++;\n\t\t}\n\n\t\ttmp++;\n\t}\n\n\tif (repl_cnt == 0) {\n\t\tRETURN_STR_COPY(str);\n\t}\n\n\t{\n\t\tsize_t repl_len = is_xhtml ? (sizeof(\"<br />\") - 1) : (sizeof(\"<br>\") - 1);\n\n\t\tresult = zend_string_safe_alloc(repl_cnt, repl_len, ZSTR_LEN(str), 0);\n\t\ttarget = ZSTR_VAL(result);\n\t}\n\n\ttmp = ZSTR_VAL(str);\n\twhile (tmp < end) {\n\t\tswitch (*tmp) {\n\t\t\tcase '\\r':\n\t\t\tcase '\\n':\n\t\t\t\t*target++ = '<';\n\t\t\t\t*target++ = 'b';\n\t\t\t\t*target++ = 'r';\n\n\t\t\t\tif (is_xhtml) {\n\t\t\t\t\t*target++ = ' ';\n\t\t\t\t\t*target++ = '/';\n\t\t\t\t}\n\n\t\t\t\t*target++ = '>';\n\n\t\t\t\tif ((*tmp == '\\r' && *(tmp+1) == '\\n') || (*tmp == '\\n' && *(tmp+1) == '\\r')) {\n\t\t\t\t\t*target++ = *tmp++;\n\t\t\t\t}\n\t\t\t\tZEND_FALLTHROUGH;\n\t\t\tdefault:\n\t\t\t\t*target++ = *tmp;\n\t\t}\n\n\t\ttmp++;\n\t}\n\n\t*target = '\\0';\n\n\tRETURN_NEW_STR(result);",
+    "semantic": "in brief this inserts <br /> or <br> before matched regexp \\n\\r?|\\r\\n?",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STR",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_BOOL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZSTR_VAL",
+            "ZSTR_LEN",
+            "RETURN_STR_COPY",
+            "ZEND_FALLTHROUGH",
+            "RETURN_NEW_STR"
+        ],
+        "zend_types": [
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "zend_string_safe_alloc"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common nl2br inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 8,
+    "purpose": "in brief this inserts <br /> or <br> before matched regexp \\n\\r?|\\r\\n?",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "bin2hex",
+        "hex2bin",
+        "strspn",
+        "strcspn",
+        "nl_langinfo",
+        "strcoll",
+        "trim",
+        "rtrim",
+        "ltrim",
+        "wordwrap",
+        "explode",
+        "implode"
+    ]
+}

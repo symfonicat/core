@@ -1,0 +1,101 @@
+{
+    "php_function": "mb_split",
+    "zend_function": "mb_split",
+    "source_file": "p_mbregex.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "libmbfl/config.h",
+        "php.h",
+        "php_ini.h",
+        "zend_smart_str.h",
+        "ext/standard/info.h",
+        "php_mbregex.h",
+        "mbstring.h",
+        "libmbfl/filters/mbfilter_utf8.h",
+        "php_onig_compat.h",
+        "oniguruma.h"
+    ],
+    "body": "char *arg_pattern;\n\tsize_t arg_pattern_len;\n\tphp_mb_regex_t *re;\n\tOnigRegion *regs = NULL;\n\tchar *string;\n\tOnigUChar *pos, *chunk_pos;\n\tsize_t string_len;\n\n\tint err;\n\tzend_long count = -1;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"ss|l\", &arg_pattern, &arg_pattern_len, &string, &string_len, &count) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tif (count > 0) {\n\t\tcount--;\n\t}\n\n\tif (!php_mb_check_encoding(string, string_len, php_mb_regex_get_mbctype_encoding())) {\n\t\tRETURN_FALSE;\n\t}\n\n\t/* create regex pattern buffer */\n\tif ((re = php_mbregex_compile_pattern(arg_pattern, arg_pattern_len, MBREX(regex_default_options), MBREX(regex_default_syntax))) == NULL) {\n\t\tRETURN_FALSE;\n\t}\n\n\tarray_init(return_value);\n\n\tchunk_pos = pos = (OnigUChar *)string;\n\terr = 0;\n\tregs = onig_region_new();\n\t/* churn through str, generating array entries as we go */\n\twhile (count != 0 && (size_t)(pos - (OnigUChar *)string) < string_len) {\n\t\tsize_t beg, end;\n\t\terr = _php_mb_onig_search(re, (OnigUChar *)string, (OnigUChar *)(string + string_len), pos, (OnigUChar *)(string + string_len), regs, 0);\n\t\tif (err < 0) {\n\t\t\tbreak;\n\t\t}\n\t\tbeg = regs->beg[0], end = regs->end[0];\n\t\t/* add it to the array */\n\t\tif ((size_t)(pos - (OnigUChar *)string) < end) {\n\t\t\tif (beg < string_len && beg >= (size_t)(chunk_pos - (OnigUChar *)string)) {\n\t\t\t\tadd_next_index_stringl(return_value, (char *)chunk_pos, ((OnigUChar *)(string + beg) - chunk_pos));\n\t\t\t\t--count;\n\t\t\t} else {\n\t\t\t\terr = -2;\n\t\t\t\tbreak;\n\t\t\t}\n\t\t\t/* point at our new starting point */\n\t\t\tchunk_pos = pos = (OnigUChar *)string + end;\n\t\t} else {\n\t\t\tpos++;\n\t\t}\n\t\tonig_region_free(regs, 0);\n\t}\n\n\tonig_region_free(regs, 1);\n\n\t/* see if we encountered an error */\n\t// ToDo investigate if this can actually/should happen ...\n\tif (err <= -2) {\n\t\tOnigUChar err_str[ONIG_MAX_ERROR_MESSAGE_LEN];\n\t\tonig_error_code_to_str(err_str, err);\n\t\tphp_error_docref(NULL, E_WARNING, \"mbregex search failure in mbsplit(): %s\", err_str);\n\t\tzend_array_destroy(Z_ARR_P(return_value));\n\t\tRETURN_FALSE;\n\t}\n\n\t/* otherwise we just have one last element to add to the array */\n\tif ((OnigUChar *)(string + string_len) > chunk_pos) {\n\t\tsize_t n = ((OnigUChar *)(string + string_len) - chunk_pos);\n\t\tadd_next_index_stringl(return_value, (char *)chunk_pos, n);\n\t} else {\n\t\tadd_next_index_stringl(return_value, \"\", 0);\n\t}",
+    "semantic": "create regex pattern buffer",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "php_mb_check_encoding",
+            "php_mb_regex_get_mbctype_encoding",
+            "php_mbregex_compile_pattern",
+            "php_error_docref",
+            "zend_array_destroy"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common mb_split inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 6,
+    "purpose": "create regex pattern buffer",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "mb_regex_encoding",
+        "mb_ereg",
+        "mb_eregi",
+        "mb_ereg_replace",
+        "mb_eregi_replace",
+        "mb_ereg_replace_callback",
+        "mb_ereg_match",
+        "mb_ereg_search",
+        "mb_ereg_search_pos",
+        "mb_ereg_search_regs",
+        "mb_ereg_search_init",
+        "mb_ereg_search_getregs"
+    ]
+}

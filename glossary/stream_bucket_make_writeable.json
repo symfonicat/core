@@ -1,0 +1,109 @@
+{
+    "php_function": "stream_bucket_make_writeable",
+    "zend_function": "stream_bucket_make_writeable",
+    "source_file": "er_filters.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "zbrigade",
+            "macro": "Z_PARAM_RESOURCE",
+            "arguments": [
+                "zbrigade"
+            ],
+            "type": "zend_resource",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_RESOURCE(zbrigade)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "php_globals.h",
+        "ext/standard/basic_functions.h",
+        "ext/standard/file.h",
+        "ext/standard/user_filters_arginfo.h"
+    ],
+    "body": "zval *zbrigade, zbucket;\n\tphp_stream_bucket_brigade *brigade;\n\tphp_stream_bucket *bucket;\n\n\tZEND_PARSE_PARAMETERS_START(1, 1)\n\t\tZ_PARAM_RESOURCE(zbrigade)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif ((brigade = (php_stream_bucket_brigade*)zend_fetch_resource(\n\t\t\t\t\tZ_RES_P(zbrigade), PHP_STREAM_BRIGADE_RES_NAME, le_bucket_brigade)) == NULL) {\n\t\tRETURN_THROWS();\n\t}\n\n\tif (brigade->head && (bucket = php_stream_bucket_make_writeable(brigade->head))) {\n\t\tZVAL_RES(&zbucket, zend_register_resource(bucket, le_bucket));\n\t\tobject_init_ex(return_value, stream_bucket_class_entry);\n\t\tzend_update_property(Z_OBJCE_P(return_value), Z_OBJ_P(return_value), ZEND_STRL(\"bucket\"), &zbucket);\n\t\t/* add_property_zval increments the refcount which is unwanted here */\n\t\tzval_ptr_dtor(&zbucket);\n\t\tzend_update_property_stringl(Z_OBJCE_P(return_value), Z_OBJ_P(return_value), ZEND_STRL(\"data\"), bucket->buf, bucket->buflen);\n\t\tzend_update_property_long(Z_OBJCE_P(return_value), Z_OBJ_P(return_value), ZEND_STRL(\"datalen\"), bucket->buflen);\n\t\tzend_update_property_long(Z_OBJCE_P(return_value), Z_OBJ_P(return_value), ZEND_STRL(\"dataLength\"), bucket->buflen);\n\t} else {\n\t\tZVAL_NULL(return_value);\n\t}",
+    "semantic": "add_property_zval increments the refcount which is unwanted here",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_RESOURCE",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_THROWS",
+            "ZVAL_RES",
+            "ZEND_STRL",
+            "ZVAL_NULL"
+        ],
+        "zend_types": [
+            "zval"
+        ],
+        "internal_helpers": [
+            "zend_fetch_resource",
+            "php_stream_bucket_make_writeable",
+            "zend_register_resource",
+            "zend_update_property",
+            "zval_ptr_dtor",
+            "zend_update_property_stringl",
+            "zend_update_property_long"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common stream_bucket_make_writeable inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 5,
+    "purpose": "add_property_zval increments the refcount which is unwanted here",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "stream_bucket_prepend",
+        "stream_bucket_append",
+        "stream_bucket_new",
+        "stream_get_filters",
+        "stream_filter_register"
+    ]
+}

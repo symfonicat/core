@@ -1,0 +1,97 @@
+{
+    "php_function": "ldap_sasl_bind",
+    "zend_function": "ldap_sasl_bind",
+    "source_file": "",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "Zend/zend_attributes.h",
+        "stddef.h",
+        "ext/standard/dl.h",
+        "php_ldap.h",
+        "string.h",
+        "config.w32.h",
+        "ext/standard/info.h",
+        "sasl/sasl.h",
+        "ldap_arginfo.h"
+    ],
+    "body": "zval *link;\n\tldap_linkdata *ld;\n\tchar *binddn = NULL;\n\tchar *passwd = NULL;\n\tchar *sasl_mech = NULL;\n\tchar *sasl_realm = NULL;\n\tchar *sasl_authz_id = NULL;\n\tchar *sasl_authc_id = NULL;\n\tchar *props = NULL;\n\tsize_t rc, dn_len, passwd_len, mech_len, realm_len, authc_id_len, authz_id_len, props_len;\n\tphp_ldap_bictx *ctx;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"O|s!s!s!s!s!s!s!\", &link, ldap_link_ce, &binddn, &dn_len, &passwd, &passwd_len, &sasl_mech, &mech_len, &sasl_realm, &realm_len, &sasl_authc_id, &authc_id_len, &sasl_authz_id, &authz_id_len, &props, &props_len) != SUCCESS) {\n\t\tRETURN_THROWS();\n\t}\n\n\tld = Z_LDAP_LINK_P(link);\n\tVERIFY_LDAP_LINK_CONNECTED(ld);\n\n\tctx = _php_sasl_setdefs(ld->link, sasl_mech, sasl_realm, sasl_authc_id, passwd, sasl_authz_id);\n\n\tif (props) {\n\t\tldap_set_option(ld->link, LDAP_OPT_X_SASL_SECPROPS, props);\n\t}\n\n\trc = ldap_sasl_interactive_bind_s(ld->link, binddn, ctx->mech, NULL, NULL, LDAP_SASL_QUIET, _php_sasl_interact, ctx);\n\tif (rc != LDAP_SUCCESS) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Unable to bind to server: %s\", ldap_err2string(rc));\n\t\tRETVAL_FALSE;\n\t} else {\n\t\tRETVAL_TRUE;\n\t}\n\t_php_sasl_freedefs(ctx);",
+    "semantic": "Implements the PHP function ldap_sasl_bind in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS"
+        ],
+        "zend_types": [
+            "zval"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "php_error_docref"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common ldap_sasl_bind inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 3,
+    "purpose": "Implements the PHP function ldap_sasl_bind in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "ldap_connect",
+        "ldap_connect_wallet",
+        "ldap_bind",
+        "ldap_bind_ext",
+        "ldap_unbind",
+        "ldap_read",
+        "ldap_list",
+        "ldap_search",
+        "ldap_free_result",
+        "ldap_count_entries",
+        "ldap_first_entry",
+        "ldap_next_entry"
+    ]
+}

@@ -1,0 +1,120 @@
+{
+    "php_function": "posix_getrlimit",
+    "zend_function": "posix_getrlimit",
+    "source_file": ".c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "res",
+            "macro": "Z_PARAM_LONG_OR_NULL",
+            "arguments": [
+                "res",
+                "res_is_null"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG_OR_NULL(res, res_is_null)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "unistd.h",
+        "ext/standard/info.h",
+        "php_posix.h",
+        "sys/time.h",
+        "sys/resource.h",
+        "sys/utsname.h",
+        "sys/types.h",
+        "sys/stat.h",
+        "signal.h",
+        "sys/times.h",
+        "errno.h",
+        "grp.h",
+        "pwd.h",
+        "posix_arginfo.h"
+    ],
+    "body": "const struct limitlist *l = NULL;\n\tzend_long res;\n\tbool res_is_null = true;\n\n\tZEND_PARSE_PARAMETERS_START(0, 1)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_LONG_OR_NULL(res, res_is_null)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (res_is_null) {\n\t\tarray_init(return_value);\n\n\t\tfor (l=limits; l->name; l++) {\n\t\t\tif (posix_addlimit(l->limit, l->name, return_value) == FAILURE) {\n\t\t\t\tzend_array_destroy(Z_ARR_P(return_value));\n\t\t\t\tRETURN_FALSE;\n\t\t\t}\n\t\t}\n\t} else {\n\t\tstruct rlimit rl;\n\t\tint result = getrlimit(res, &rl);\n\t\tif (result < 0) {\n\t\t\tPOSIX_G(last_error) = errno;\n\t\t\tRETURN_FALSE;\n\t\t}\n\n\t\tarray_init(return_value);\n\t\tif (rl.rlim_cur == RLIM_INFINITY) {\n\t\t\tadd_next_index_stringl(return_value, UNLIMITED_STRING, sizeof(UNLIMITED_STRING)-1);\n\t\t} else {\n\t\t\tadd_next_index_long(return_value, rl.rlim_cur);\n\t\t}\n\n\t\tif (rl.rlim_max == RLIM_INFINITY) {\n\t\t\tadd_next_index_stringl(return_value, UNLIMITED_STRING, sizeof(UNLIMITED_STRING)-1);\n\t\t} else {\n\t\t\tadd_next_index_long(return_value, rl.rlim_max);\n\t\t}\n\t}",
+    "semantic": "Implements the PHP function posix_getrlimit in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_LONG_OR_NULL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_array_destroy"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common posix_getrlimit inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "Implements the PHP function posix_getrlimit in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "posix_kill",
+        "posix_getpid",
+        "posix_getppid",
+        "posix_getuid",
+        "posix_getgid",
+        "posix_geteuid",
+        "posix_getegid",
+        "posix_setuid",
+        "posix_setgid",
+        "posix_seteuid",
+        "posix_setegid",
+        "posix_getgroups"
+    ]
+}

@@ -1,0 +1,144 @@
+{
+    "php_function": "iptcembed",
+    "zend_function": "iptcembed",
+    "source_file": "tc.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "iptcdata",
+            "macro": "Z_PARAM_STRING",
+            "arguments": [
+                "iptcdata",
+                "iptcdata_len"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING(iptcdata, iptcdata_len)"
+        },
+        {
+            "name": "jpeg_file",
+            "macro": "Z_PARAM_PATH",
+            "arguments": [
+                "jpeg_file",
+                "jpeg_file_len"
+            ],
+            "type": "mixed",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_PATH(jpeg_file, jpeg_file_len)"
+        },
+        {
+            "name": "spool",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "spool"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(spool)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "ext/standard/head.h",
+        "sys/stat.h",
+        "stdint.h"
+    ],
+    "body": "char *iptcdata, *jpeg_file;\n\tsize_t iptcdata_len, jpeg_file_len;\n\tzend_long spool = 0;\n\tFILE *fp;\n\tunsigned int marker, done = 0;\n\tsize_t inx;\n\tzend_string *spoolbuf = NULL;\n\tunsigned char *poi = NULL;\n\tzend_stat_t sb = {0};\n\tbool written = 0;\n\n\tZEND_PARSE_PARAMETERS_START(2, 3)\n\t\tZ_PARAM_STRING(iptcdata, iptcdata_len)\n\t\tZ_PARAM_PATH(jpeg_file, jpeg_file_len)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_LONG(spool)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (php_check_open_basedir(jpeg_file)) {\n\t\tRETURN_FALSE;\n\t}\n\n\tif (iptcdata_len >= SIZE_MAX - sizeof(psheader) - 1025) {\n\t\tzend_argument_value_error(1, \"is too large\");\n\t\tRETURN_THROWS();\n\t}\n\n\tif ((fp = VCWD_FOPEN(jpeg_file, \"rb\")) == 0) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Unable to open %s\", jpeg_file);\n\t\tRETURN_FALSE;\n\t}\n\n\tif (spool < 2) {\n\t\tif (zend_fstat(fileno(fp), &sb) != 0) {\n\t\t\tRETURN_FALSE;\n\t\t}\n\n\t\tspoolbuf = zend_string_safe_alloc(1, iptcdata_len + sizeof(psheader) + 1024 + 1, sb.st_size, 0);\n\t\tpoi = (unsigned char*)ZSTR_VAL(spoolbuf);\n\t\tmemset(poi, 0, iptcdata_len + sizeof(psheader) + sb.st_size + 1024 + 1);\n\t}\n\n\tif (php_iptc_get1(fp, spool, poi?&poi:0) != 0xFF) {\n\t\tfclose(fp);\n\t\tif (spoolbuf) {\n\t\t\tzend_string_efree(spoolbuf);\n\t\t}\n\t\tRETURN_FALSE;\n\t}\n\n\tif (php_iptc_get1(fp, spool, poi?&poi:0) != 0xD8) {\n\t\tfclose(fp);\n\t\tif (spoolbuf) {\n\t\t\tzend_string_efree(spoolbuf);\n\t\t}\n\t\tRETURN_FALSE;\n\t}\n\n\twhile (!done) {\n\t\tmarker = php_iptc_next_marker(fp, spool, poi?&poi:0);\n\n\t\tif (marker == M_EOI) { /* EOF */\n\t\t\tbreak;\n\t\t} else if (marker != M_APP13) {\n\t\t\tphp_iptc_put1(fp, spool, (unsigned char)marker, poi?&poi:0);\n\t\t}\n\n\t\tswitch (marker) {\n\t\t\tcase M_APP13:\n\t\t\t\t/* we are going to write a new APP13 marker, so don't output the old one */\n\t\t\t\tphp_iptc_skip_variable(fp, 0, 0);\n\t\t\t\tfgetc(fp); /* skip already copied 0xFF byte */\n\t\t\t\tphp_iptc_read_remaining(fp, spool, poi?&poi:0);\n\t\t\t\tdone = 1;\n\t\t\t\tbreak;\n\n\t\t\tcase M_APP0:\n\t\t\t\t/* APP0 is in each and every JPEG, so when we hit APP0 we insert our new APP13! */\n\t\t\tcase M_APP1:\n\t\t\t\tif (written) {\n\t\t\t\t\t/* don't try to write the data twice */\n\t\t\t\t\tbreak;\n\t\t\t\t}\n\t\t\t\twritten = 1;\n\n\t\t\t\tphp_iptc_skip_variable(fp, spool, poi?&poi:0);\n\n\t\t\t\tif (iptcdata_len & 1) {\n\t\t\t\t\tiptcdata_len++; /* make the length even */\n\t\t\t\t}\n\n\t\t\t\tpsheader[ 2 ] = (char) ((iptcdata_len+28)>>8);\n\t\t\t\tpsheader[ 3 ] = (iptcdata_len+28)&0xff;\n\n\t\t\t\tfor (inx = 0; inx < 28; inx++) {\n\t\t\t\t\tphp_iptc_put1(fp, spool, psheader[inx], poi?&poi:0);\n\t\t\t\t}\n\n\t\t\t\tphp_iptc_put1(fp, spool, (unsigned char)(iptcdata_len>>8), poi?&poi:0);\n\t\t\t\tphp_iptc_put1(fp, spool, (unsigned char)(iptcdata_len&0xff), poi?&poi:0);\n\n\t\t\t\tfor (inx = 0; inx < iptcdata_len; inx++) {\n\t\t\t\t\tphp_iptc_put1(fp, spool, iptcdata[inx], poi?&poi:0);\n\t\t\t\t}\n\t\t\t\tbreak;\n\n\t\t\tcase M_SOS:\n\t\t\t\t/* we hit data, no more marker-inserting can be done! */\n\t\t\t\tphp_iptc_read_remaining(fp, spool, poi?&poi:0);\n\t\t\t\tdone = 1;\n\t\t\t\tbreak;\n\n\t\t\tdefault:\n\t\t\t\tphp_iptc_skip_variable(fp, spool, poi?&poi:0);\n\t\t\t\tbreak;\n\t\t}\n\t}\n\n\tfclose(fp);\n\n\tif (spool < 2) {\n\t\tspoolbuf = zend_string_truncate(spoolbuf, poi - (unsigned char*)ZSTR_VAL(spoolbuf), 0);\n\t\tRETURN_NEW_STR(spoolbuf);\n\t} else {\n\t\tRETURN_TRUE;\n\t}",
+    "semantic": "EOF",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STRING",
+            "Z_PARAM_PATH",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_LONG",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_FALSE",
+            "RETURN_THROWS",
+            "ZSTR_VAL",
+            "RETURN_NEW_STR",
+            "RETURN_TRUE"
+        ],
+        "zend_types": [
+            "zend_long",
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "php_check_open_basedir",
+            "zend_argument_value_error",
+            "php_error_docref",
+            "zend_fstat",
+            "zend_string_safe_alloc",
+            "php_iptc_get1",
+            "zend_string_efree",
+            "php_iptc_next_marker",
+            "php_iptc_put1",
+            "php_iptc_skip_variable",
+            "php_iptc_read_remaining",
+            "zend_string_truncate"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common iptcembed inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 10,
+    "purpose": "EOF",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "iptcparse"
+    ]
+}

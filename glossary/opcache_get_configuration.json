@@ -1,0 +1,98 @@
+{
+    "php_function": "opcache_get_configuration",
+    "zend_function": "opcache_get_configuration",
+    "source_file": "d_accelerator_module.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "time.h",
+        "php.h",
+        "ZendAccelerator.h",
+        "zend_API.h",
+        "zend_closures.h",
+        "zend_shared_alloc.h",
+        "zend_accelerator_blacklist.h",
+        "php_ini.h",
+        "SAPI.h",
+        "zend_virtual_cwd.h",
+        "ext/standard/info.h",
+        "ext/standard/php_filestat.h",
+        "ext/date/php_date.h",
+        "opcache_arginfo.h",
+        "jit/zend_jit.h"
+    ],
+    "body": "zval directives, version, blacklist;\n\n\tif (zend_parse_parameters_none() == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tif (!validate_api_restriction()) {\n\t\tRETURN_FALSE;\n\t}\n\n\tarray_init(return_value);\n\n\t/* directives */\n\tarray_init(&directives);\n\tadd_assoc_bool(&directives, \"opcache.enable\",              ZCG(enabled));\n\tadd_assoc_bool(&directives, \"opcache.enable_cli\",          ZCG(accel_directives).enable_cli);\n\tadd_assoc_bool(&directives, \"opcache.use_cwd\",             ZCG(accel_directives).use_cwd);\n\tadd_assoc_bool(&directives, \"opcache.validate_timestamps\", ZCG(accel_directives).validate_timestamps);\n\tadd_assoc_bool(&directives, \"opcache.validate_permission\", ZCG(accel_directives).validate_permission);\n#ifndef ZEND_WIN32\n\tadd_assoc_bool(&directives, \"opcache.validate_root\",       ZCG(accel_directives).validate_root);\n#endif\n\tadd_assoc_bool(&directives, \"opcache.dups_fix\",            ZCG(accel_directives).ignore_dups);\n\tadd_assoc_bool(&directives, \"opcache.revalidate_path\",     ZCG(accel_directives).revalidate_path);\n\n\tadd_assoc_long(&directives,   \"opcache.log_verbosity_level\",    ZCG(accel_directives).log_verbosity_level);\n\tadd_assoc_long(&directives,\t \"opcache.memory_consumption\",     ZCG(accel_directives).memory_consumption);\n\tadd_assoc_long(&directives,\t \"opcache.interned_strings_buffer\",ZCG(accel_directives).interned_strings_buffer);\n\tadd_assoc_long(&directives, \t \"opcache.max_accelerated_files\",  ZCG(accel_directives).max_accelerated_files);\n\tadd_assoc_double(&directives, \"opcache.max_wasted_percentage\",  ZCG(accel_directives).max_wasted_percentage);\n\tadd_assoc_long(&directives, \t \"opcache.force_restart_timeout\",  ZCG(accel_directives).force_restart_timeout);\n\tadd_assoc_long(&directives, \t \"opcache.revalidate_freq\",        ZCG(accel_directives).revalidate_freq);\n\tadd_assoc_string(&directives, \"opcache.preferred_memory_model\", STRING_NOT_NULL(ZCG(accel_directives).memory_model));\n\tadd_assoc_string(&directives, \"opcache.blacklist_filename\",     STRING_NOT_NULL(ZCG(accel_directives).user_blacklist_filename));\n\tadd_assoc_long(&directives,   \"opcache.max_file_size\",          ZCG(accel_directives).max_file_size);\n\tadd_assoc_string(&directives, \"opcache.error_log\",              STRING_NOT_NULL(ZCG(accel_directives).error_log));\n\n\tadd_assoc_bool(&directives,   \"opcache.protect_memory\",         ZCG(accel_directives).protect_memory);\n\tadd_assoc_bool(&directives,   \"opcache.save_comments\",          ZCG(accel_directives).save_comments);\n\tadd_assoc_bool(&directives,   \"opcache.record_warnings\",        ZCG(accel_directives).record_warnings);\n\tadd_assoc_bool(&directives,   \"opcache.enable_file_override\",   ZCG(accel_directives).file_override_enabled);\n\tadd_assoc_long(&directives, \t \"opcache.optimization_level\",     ZCG(accel_directives).optimization_level);\n\n#ifndef ZEND_WIN32\n\tadd_assoc_string(&directives, \"opcache.lockfile_path\",          STRING_NOT_NULL(ZCG(accel_directives).lockfile_path));\n#else\n\tadd_assoc_string(&directives, \"opcache.mmap_base\",              STRING_NOT_NULL(ZCG(accel_directives).mmap_base));\n#endif\n\n\tadd_assoc_string(&directives, \"opcache.file_cache\",                    ZCG(accel_directives).file_cache ? ZCG(accel_directives).file_cache : \"\");\n\tadd_assoc_bool(&directives,   \"opcache.file_cache_only\",               ZCG(accel_directives).file_cache_only);\n\tadd_assoc_bool(&directives,   \"opcache.file_cache_consistency_checks\", ZCG(accel_directives).file_cache_consistency_checks);\n#if ENABLE_FILE_CACHE_FALLBACK\n\tadd_assoc_bool(&directives,   \"opcache.file_cache_fallback\",           ZCG(accel_directives).file_cache_fallback);\n#endif\n\n\tadd_assoc_long(&directives,   \"opcache.file_update_protection\",  ZCG(accel_directives).file_update_protection);\n\tadd_assoc_long(&directives,   \"opcache.opt_debug_level\",         ZCG(accel_directives).opt_debug_level);\n\tadd_assoc_string(&directives, \"opcache.restrict_api\",            STRING_NOT_NULL(ZCG(accel_directives).restrict_api));\n#ifdef HAVE_HUGE_CODE_PAGES\n\tadd_assoc_bool(&directives,   \"opcache.huge_code_pages\",         ZCG(accel_directives).huge_code_pages);\n#endif\n\tadd_assoc_string(&directives, \"opcache.preload\", STRING_NOT_NULL(ZCG(accel_directives).preload));\n#ifndef ZEND_WIN32\n\tadd_assoc_string(&directives, \"opcache.preload_user\", STRING_NOT_NULL(ZCG(accel_directives).preload_user));\n#endif\n#ifdef ZEND_WIN32\n\tadd_assoc_string(&directives, \"opcache.cache_id\", STRING_NOT_NULL(ZCG(accel_directives).cache_id));\n#endif\n#ifdef HAVE_JIT\n\tadd_assoc_string(&directives, \"opcache.jit\", JIT_G(options));\n\tadd_assoc_long(&directives,   \"opcache.jit_buffer_size\", JIT_G(buffer_size));\n\tadd_assoc_long(&directives,   \"opcache.jit_debug\", JIT_G(debug));\n\tadd_assoc_long(&directives,   \"opcache.jit_bisect_limit\", JIT_G(bisect_limit));\n\tadd_assoc_long(&directives,   \"opcache.jit_blacklist_root_trace\", JIT_G(blacklist_root_trace));\n\tadd_assoc_long(&directives,   \"opcache.jit_blacklist_side_trace\", JIT_G(blacklist_side_trace));\n\tadd_assoc_long(&directives,   \"opcache.jit_hot_func\", JIT_G(hot_func));\n\tadd_assoc_long(&directives,   \"opcache.jit_hot_loop\", JIT_G(hot_loop));\n\tadd_assoc_long(&directives,   \"opcache.jit_hot_return\", JIT_G(hot_return));\n\tadd_assoc_long(&directives,   \"opcache.jit_hot_side_exit\", JIT_G(hot_side_exit));\n\tadd_assoc_long(&directives,   \"opcache.jit_max_exit_counters\", JIT_G(max_exit_counters));\n\tadd_assoc_long(&directives,   \"opcache.jit_max_loop_unrolls\", JIT_G(max_loop_unrolls));\n\tadd_assoc_long(&directives,   \"opcache.jit_max_polymorphic_calls\", JIT_G(max_polymorphic_calls));\n\tadd_assoc_long(&directives,   \"opcache.jit_max_recursive_calls\", JIT_G(max_recursive_calls));\n\tadd_assoc_long(&directives,   \"opcache.jit_max_recursive_returns\", JIT_G(max_recursive_returns));\n\tadd_assoc_long(&directives,   \"opcache.jit_max_root_traces\", JIT_G(max_root_traces));\n\tadd_assoc_long(&directives,   \"opcache.jit_max_side_traces\", JIT_G(max_side_traces));\n\tadd_assoc_long(&directives,   \"opcache.jit_prof_threshold\", JIT_G(prof_threshold));\n\tadd_assoc_long(&directives,   \"opcache.jit_max_trace_length\", JIT_G(max_trace_length));\n#endif\n\n\tadd_assoc_zval(return_value, \"directives\", &directives);\n\n\t/*version */\n\tarray_init(&version);\n\tadd_assoc_string(&version, \"version\", PHP_VERSION);\n\tadd_assoc_string(&version, \"opcache_product_name\", ACCELERATOR_PRODUCT_NAME);\n\tadd_assoc_zval(return_value, \"version\", &version);\n\n\t/* blacklist */\n\tarray_init(&blacklist);\n\tzend_accel_blacklist_apply(&accel_blacklist, add_blacklist_path, &blacklist);\n\tadd_assoc_zval(return_value, \"blacklist\", &blacklist);",
+    "semantic": "directives",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "RETURN_THROWS",
+            "RETURN_FALSE",
+            "ZEND_WIN32"
+        ],
+        "zend_types": [
+            "zval"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters_none",
+            "zend_accel_blacklist_apply"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common opcache_get_configuration inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "directives",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "accel_file_exists",
+        "accel_is_file",
+        "accel_is_readable",
+        "opcache_get_status",
+        "opcache_reset",
+        "opcache_invalidate",
+        "opcache_jit_blacklist",
+        "opcache_compile_file",
+        "opcache_is_script_cached"
+    ]
+}

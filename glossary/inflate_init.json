@@ -1,0 +1,102 @@
+{
+    "php_function": "inflate_init",
+    "zend_function": "inflate_init",
+    "source_file": "",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "SAPI.h",
+        "php_ini.h",
+        "ext/standard/info.h",
+        "php_zlib.h",
+        "zlib_arginfo.h"
+    ],
+    "body": "php_zlib_context *ctx;\n\tzend_long encoding, window = 15;\n\tchar *dict = NULL;\n\tsize_t dictlen = 0;\n\tHashTable *options = NULL;\n\tzval *option_buffer;\n\n\tif (SUCCESS != zend_parse_parameters(ZEND_NUM_ARGS(), \"l|H\", &encoding, &options)) {\n\t\tRETURN_THROWS();\n\t}\n\n\tif (options && (option_buffer = zend_hash_str_find(options, ZEND_STRL(\"window\"))) != NULL) {\n\t\twindow = zval_get_long(option_buffer);\n\t}\n\tif (window < 8 || window > 15) {\n\t\tzend_value_error(\"zlib window size (logarithm) (\" ZEND_LONG_FMT \") must be within 8..15\", window);\n\t\tRETURN_THROWS();\n\t}\n\n\tif (!zlib_create_dictionary_string(options, &dict, &dictlen)) {\n\t\tRETURN_THROWS();\n\t}\n\n\tswitch (encoding) {\n\t\tcase PHP_ZLIB_ENCODING_RAW:\n\t\tcase PHP_ZLIB_ENCODING_GZIP:\n\t\tcase PHP_ZLIB_ENCODING_DEFLATE:\n\t\t\tbreak;\n\t\tdefault:\n\t\t\tzend_value_error(\"Encoding mode must be ZLIB_ENCODING_RAW, ZLIB_ENCODING_GZIP or ZLIB_ENCODING_DEFLATE\");\n\t\t\tRETURN_THROWS();\n\t}\n\n\tobject_init_ex(return_value, inflate_context_ce);\n\tctx = Z_INFLATE_CONTEXT_P(return_value);\n\n\tctx->Z.zalloc = php_zlib_alloc;\n\tctx->Z.zfree = php_zlib_free;\n\tctx->inflateDict = dict;\n\tctx->inflateDictlen = dictlen;\n\tctx->status = Z_OK;\n\n\tif (encoding < 0) {\n\t\tencoding += 15 - window;\n\t} else {\n\t\tencoding -= 15 - window;\n\t}\n\n\tif (inflateInit2(&ctx->Z, encoding) != Z_OK) {\n\t\tzval_ptr_dtor(return_value);\n\t\tphp_error_docref(NULL, E_WARNING, \"Failed allocating zlib.inflate context\");\n\t\tRETURN_FALSE;\n\t}\n\n\tif (encoding == PHP_ZLIB_ENCODING_RAW && dictlen > 0) {\n\t\tswitch (inflateSetDictionary(&ctx->Z, (Bytef *) ctx->inflateDict, ctx->inflateDictlen)) {\n\t\t\tcase Z_OK:\n\t\t\t\tefree(ctx->inflateDict);\n\t\t\t\tctx->inflateDict = NULL;\n\t\t\t\tbreak;\n\t\t\tcase Z_DATA_ERROR:\n\t\t\t\tphp_error_docref(NULL, E_WARNING, \"Dictionary does not match expected dictionary (incorrect adler32 hash)\");\n\t\t\t\tefree(ctx->inflateDict);\n\t\t\t\tctx->inflateDict = NULL;\n\t\t\t\tbreak;\n\t\t\tEMPTY_SWITCH_DEFAULT_CASE()\n\t\t}\n\t}",
+    "semantic": "Implements the PHP function inflate_init in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "ZEND_STRL",
+            "ZEND_LONG_FMT",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zend_long",
+            "HashTable",
+            "zval"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "zend_hash_str_find",
+            "zval_get_long",
+            "zend_value_error",
+            "zval_ptr_dtor",
+            "php_error_docref"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common inflate_init inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 7,
+    "purpose": "Implements the PHP function inflate_init in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "ob_gzhandler",
+        "zlib_get_coding_type",
+        "gzfile",
+        "gzopen",
+        "readgzfile",
+        "name",
+        "name",
+        "inflate_add",
+        "inflate_get_status",
+        "inflate_get_read_len",
+        "deflate_init",
+        "deflate_add"
+    ]
+}

@@ -1,0 +1,86 @@
+{
+    "php_function": "numfmt_parse",
+    "zend_function": "numfmt_parse",
+    "source_file": "ter/formatter_parse.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php_intl.h",
+        "unicode/ustring.h",
+        "locale.h",
+        "formatter_class.h",
+        "formatter_format.h",
+        "intl_convert.h"
+    ],
+    "body": "zend_long type = FORMAT_TYPE_DOUBLE;\n\tUChar* sstr = NULL;\n\tint32_t sstr_len = 0;\n\tchar* str = NULL;\n\tsize_t str_len;\n\tint32_t val32, position = 0;\n\tint64_t val64;\n\tdouble val_double;\n\tint32_t* position_p = NULL;\n\tzval *zposition = NULL;\n\tchar *oldlocale;\n\tFORMATTER_METHOD_INIT_VARS;\n\n\t/* Parse parameters. */\n\tif (zend_parse_method_parameters( ZEND_NUM_ARGS(), getThis(), \"Os|lz!\",\n\t\t&object, NumberFormatter_ce_ptr,  &str, &str_len, &type, &zposition ) == FAILURE )\n\t{\n\t\tRETURN_THROWS();\n\t}\n\n\tif (zposition) {\n\t\tposition = (int32_t) zval_get_long(zposition);\n\t\tposition_p = &position;\n\t}\n\n\t/* Fetch the object. */\n\tFORMATTER_METHOD_FETCH_OBJECT;\n\n\t/* Convert given string to UTF-16. */\n\tintl_convert_utf8_to_utf16(&sstr, &sstr_len, str, str_len, &INTL_DATA_ERROR_CODE(nfo));\n\tINTL_METHOD_CHECK_STATUS( nfo, \"String conversion to UTF-16 failed\" );\n\n#if ICU_LOCALE_BUG && defined(LC_NUMERIC)\n\t/* need to copy here since setlocale may change it later */\n\toldlocale = estrdup(setlocale(LC_NUMERIC, NULL));\n\tsetlocale(LC_NUMERIC, \"C\");\n#endif\n\n\tswitch(type) {\n\t\tcase FORMAT_TYPE_INT32:\n\t\t\tval32 = unum_parse(FORMATTER_OBJECT(nfo), sstr, sstr_len, position_p, &INTL_DATA_ERROR_CODE(nfo));\n\t\t\tRETVAL_LONG(val32);\n\t\t\tbreak;\n\t\tcase FORMAT_TYPE_INT64:\n\t\t\tval64 = unum_parseInt64(FORMATTER_OBJECT(nfo), sstr, sstr_len, position_p, &INTL_DATA_ERROR_CODE(nfo));\n\t\t\tif(val64 > ZEND_LONG_MAX || val64 < ZEND_LONG_MIN) {\n\t\t\t\tRETVAL_DOUBLE(val64);\n\t\t\t} else {\n\t\t\t\tRETVAL_LONG((zend_long)val64);\n\t\t\t}\n\t\t\tbreak;\n\t\tcase FORMAT_TYPE_DOUBLE:\n\t\t\tval_double = unum_parseDouble(FORMATTER_OBJECT(nfo), sstr, sstr_len, position_p, &INTL_DATA_ERROR_CODE(nfo));\n\t\t\tRETVAL_DOUBLE(val_double);\n\t\t\tbreak;\n\t\tcase FORMAT_TYPE_CURRENCY:\n\t\t\tif (getThis()) {\n\t\t\t\tconst char *space;\n\t\t\t\tconst char *class_name = get_active_class_name(&space);\n\t\t\t\tzend_argument_value_error(2, \"cannot be NumberFormatter::TYPE_CURRENCY constant, \"\n\t\t\t\t\t\"use %s%sparseCurrency() method instead\", class_name, space);\n\t\t\t} else {\n\t\t\t\tzend_argument_value_error(3, \"cannot be NumberFormatter::TYPE_CURRENCY constant, use numfmt_parse_currency() function instead\");\n\t\t\t}\n\t\t\tgoto cleanup;\n\t\tdefault:\n\t\t\tzend_argument_value_error(hasThis() ? 2 : 3, \"must be a NumberFormatter::TYPE_* constant\");\n\t\t\tgoto cleanup;\n\t}\n\n\tif (zposition) {\n\t\tZEND_TRY_ASSIGN_REF_LONG(zposition, position);\n\t}\n\ncleanup:\n\n#if ICU_LOCALE_BUG && defined(LC_NUMERIC)\n\tsetlocale(LC_NUMERIC, oldlocale);\n\tefree(oldlocale);\n#endif\n\n\tif (sstr) {\n\t\tefree(sstr);\n\t}\n\n\tINTL_METHOD_CHECK_STATUS( nfo, \"Number parsing failed\" );",
+    "semantic": "Parse parameters.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "ZEND_LONG_MAX",
+            "ZEND_LONG_MIN",
+            "ZEND_TRY_ASSIGN_REF_LONG"
+        ],
+        "zend_types": [
+            "zend_long",
+            "zval"
+        ],
+        "internal_helpers": [
+            "zend_parse_method_parameters",
+            "zval_get_long",
+            "zend_argument_value_error"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common numfmt_parse inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "Parse parameters.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "numfmt_parse_currency"
+    ]
+}

@@ -1,0 +1,123 @@
+{
+    "php_function": "openssl_digest",
+    "zend_function": "openssl_digest",
+    "source_file": "nssl.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "php_openssl.h",
+        "zend_attributes.h",
+        "zend_exceptions.h",
+        "ext/standard/file.h",
+        "ext/standard/info.h",
+        "ext/standard/php_fopen_wrappers.h",
+        "ext/standard/md5.h",
+        "ext/standard/base64.h",
+        "openssl/evp.h",
+        "openssl/bn.h",
+        "openssl/rsa.h",
+        "openssl/dsa.h",
+        "openssl/dh.h",
+        "openssl/x509.h",
+        "openssl/x509v3.h",
+        "openssl/crypto.h",
+        "openssl/pem.h",
+        "openssl/err.h",
+        "openssl/conf.h",
+        "openssl/rand.h",
+        "openssl/ssl.h",
+        "openssl/pkcs12.h",
+        "openssl/cms.h",
+        "openssl/core_names.h",
+        "openssl/param_build.h",
+        "openssl/provider.h",
+        "openssl/engine.h",
+        "time.h",
+        "openssl_arginfo.h"
+    ],
+    "body": "bool raw_output = 0;\n\tchar *data, *method;\n\tsize_t data_len, method_len;\n\tconst EVP_MD *mdtype;\n\tEVP_MD_CTX *md_ctx;\n\tunsigned int siglen;\n\tzend_string *sigbuf;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"ss|b\", &data, &data_len, &method, &method_len, &raw_output) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\tmdtype = EVP_get_digestbyname(method);\n\tif (!mdtype) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Unknown digest algorithm\");\n\t\tRETURN_FALSE;\n\t}\n\n\tsiglen = EVP_MD_size(mdtype);\n\tsigbuf = zend_string_alloc(siglen, 0);\n\n\tmd_ctx = EVP_MD_CTX_create();\n\tif (EVP_DigestInit(md_ctx, mdtype) &&\n\t\t\tEVP_DigestUpdate(md_ctx, (unsigned char *)data, data_len) &&\n\t\t\tEVP_DigestFinal (md_ctx, (unsigned char *)ZSTR_VAL(sigbuf), &siglen)) {\n\t\tif (raw_output) {\n\t\t\tZSTR_VAL(sigbuf)[siglen] = '\\0';\n\t\t\tZSTR_LEN(sigbuf) = siglen;\n\t\t\tRETVAL_STR(sigbuf);\n\t\t} else {\n\t\t\tint digest_str_len = siglen * 2;\n\t\t\tzend_string *digest_str = zend_string_alloc(digest_str_len, 0);\n\n\t\t\tmake_digest_ex(ZSTR_VAL(digest_str), (unsigned char*)ZSTR_VAL(sigbuf), siglen);\n\t\t\tZSTR_VAL(digest_str)[digest_str_len] = '\\0';\n\t\t\tzend_string_release_ex(sigbuf, 0);\n\t\t\tRETVAL_NEW_STR(digest_str);\n\t\t}\n\t} else {\n\t\tphp_openssl_store_errors();\n\t\tzend_string_release_ex(sigbuf, 0);\n\t\tRETVAL_FALSE;\n\t}\n\n\tEVP_MD_CTX_destroy(md_ctx);",
+    "semantic": "Implements the PHP function openssl_digest in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_FALSE",
+            "ZSTR_VAL",
+            "ZSTR_LEN"
+        ],
+        "zend_types": [
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "php_error_docref",
+            "zend_string_alloc",
+            "zend_string_release_ex",
+            "php_openssl_store_errors"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common openssl_digest inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 4,
+    "purpose": "Implements the PHP function openssl_digest in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "openssl_get_cert_locations",
+        "openssl_x509_export_to_file",
+        "openssl_spki_new",
+        "openssl_spki_verify",
+        "openssl_spki_export",
+        "openssl_spki_export_challenge",
+        "openssl_x509_export",
+        "openssl_x509_fingerprint",
+        "openssl_x509_check_private_key",
+        "openssl_x509_verify",
+        "openssl_x509_parse",
+        "openssl_x509_checkpurpose"
+    ]
+}

@@ -1,0 +1,93 @@
+{
+    "php_function": "sodium_crypto_kx_client_session_keys",
+    "zend_function": "sodium_crypto_kx_client_session_keys",
+    "source_file": "odium.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "php.h",
+        "ext/standard/info.h",
+        "php_libsodium.h",
+        "zend_attributes.h",
+        "zend_exceptions.h",
+        "sodium.h",
+        "stdint.h",
+        "string.h",
+        "libsodium_arginfo.h"
+    ],
+    "body": "crypto_generichash_state h;\n\tunsigned char  q[crypto_scalarmult_BYTES];\n\tunsigned char *keypair;\n\tunsigned char *client_sk;\n\tunsigned char *client_pk;\n\tunsigned char *server_pk;\n\tunsigned char  session_keys[2 * crypto_kx_SESSIONKEYBYTES];\n\tsize_t         keypair_len;\n\tsize_t         server_pk_len;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"ss\",\n\t\t\t\t\t\t\t\t\t&keypair, &keypair_len,\n\t\t\t\t\t\t\t\t\t&server_pk, &server_pk_len) == FAILURE) {\n\t\tsodium_remove_param_values_from_backtrace(EG(exception));\n\t\tRETURN_THROWS();\n\t}\n\tif (keypair_len != crypto_kx_SECRETKEYBYTES + crypto_kx_PUBLICKEYBYTES) {\n\t\tzend_argument_error(sodium_exception_ce, 1, \"must be SODIUM_CRYPTO_KX_KEYPAIRBYTES bytes long\");\n\t\tRETURN_THROWS();\n\t}\n\tif (server_pk_len != crypto_kx_PUBLICKEYBYTES) {\n\t\tzend_argument_error(sodium_exception_ce, 2, \"must be SODIUM_CRYPTO_KX_PUBLICKEYBYTES bytes long\");\n\t\tRETURN_THROWS();\n\t}\n\tclient_sk = &keypair[0];\n\tclient_pk = &keypair[crypto_kx_SECRETKEYBYTES];\n\t(void) sizeof(int[crypto_scalarmult_SCALARBYTES == crypto_kx_PUBLICKEYBYTES ? 1 : -1]);\n\t(void) sizeof(int[crypto_scalarmult_SCALARBYTES == crypto_kx_SECRETKEYBYTES ? 1 : -1]);\n\tif (crypto_scalarmult(q, client_sk, server_pk) != 0) {\n\t\tzend_throw_exception(sodium_exception_ce, \"internal error\", 0);\n\t\tRETURN_THROWS();\n\t}\n\tcrypto_generichash_init(&h, NULL, 0U, 2 * crypto_kx_SESSIONKEYBYTES);\n\tcrypto_generichash_update(&h, q, sizeof q);\n\tsodium_memzero(q, sizeof q);\n\tcrypto_generichash_update(&h, client_pk, crypto_kx_PUBLICKEYBYTES);\n\tcrypto_generichash_update(&h, server_pk, crypto_kx_PUBLICKEYBYTES);\n\tcrypto_generichash_final(&h, session_keys, 2 * crypto_kx_SESSIONKEYBYTES);\n\tsodium_memzero(&h, sizeof h);\n\tarray_init(return_value);\n\tadd_next_index_stringl(return_value,\n\t\t\t\t\t\t   (const char *) session_keys,\n\t\t\t\t\t\t   crypto_kx_SESSIONKEYBYTES);\n\tadd_next_index_stringl(return_value,\n\t\t\t\t\t\t   (const char *) session_keys + crypto_kx_SESSIONKEYBYTES,\n\t\t\t\t\t\t   crypto_kx_SESSIONKEYBYTES);",
+    "semantic": "Implements the PHP function sodium_crypto_kx_client_session_keys in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS"
+        ],
+        "zend_types": [],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "zend_argument_error",
+            "zend_throw_exception"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common sodium_crypto_kx_client_session_keys inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 4,
+    "purpose": "Implements the PHP function sodium_crypto_kx_client_session_keys in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "sodium_memzero",
+        "sodium_increment",
+        "sodium_add",
+        "sodium_memcmp",
+        "sodium_crypto_shorthash",
+        "sodium_crypto_secretbox",
+        "sodium_crypto_secretbox_open",
+        "sodium_crypto_generichash",
+        "sodium_crypto_generichash_init",
+        "sodium_crypto_generichash_update",
+        "sodium_crypto_generichash_final",
+        "sodium_crypto_box_keypair"
+    ]
+}

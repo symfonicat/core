@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+        <link rel="icon" href="{{ symfonicat_asset('favicon.svg') }}" />
+        <title>{% block title %}Symfonicat{% endblock %}</title>
+
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&display=swap" rel="stylesheet">
+
+        <!-- Symfonicat -->
+        <script type="text/javascript">
+            
+            window.env = {{ env_helper() | indent_json(12) }}
+            console.log('[window.env]', window.env)
+            console.log('----------------------')
+
+            window.application = {{ application_helper() | indent_json(12) }}
+            console.log('[window.application]', window.application)
+            console.log('----------------------')
+
+            window.endpoint = {{ endpoint_helper() | indent_json(12) }}
+            console.log('[window.endpoint]', window.endpoint)
+            console.log('----------------------')
+
+            window.request = {{ request_helper() | indent_json(12) }}
+            console.log('[window.request]', window.request)
+            console.log('----------------------')
+
+        </script>
+        <!-- -->
+
+{% block stylesheets -%}
+{{- encore_entry_link_tags('app') | indent_links(8) -}}
+{%- endblock %}
+
+{% block javascripts -%}
+{{- encore_entry_script_tags('app') | indent_scripts(8) -}}
+{%- endblock %}
+
+    </head>
+    <body data-controller="symfony--ux-turbo--turbo-core" data-turbo-suppress-warning>
+        
+        {% block flashes %}
+            {% for message in app.flashes('debug') %}
+            <aside class="alert alert-warning">{{ message }}</aside>
+            {% endfor %}
+        {% endblock %}
+        
+        <aside
+            id="mercure-debug"
+            data-mercure-debug-listener
+            data-controller="symfony--ux-turbo--mercure-turbo-stream"
+            data-symfony--ux-turbo--mercure-turbo-stream-hub-value="{{ absolute_url('/.well-known/mercure') }}"
+            data-symfony--ux-turbo--mercure-turbo-stream-topic-value="mercure-debug"
+            hidden
+            aria-hidden="true"
+        ><!-- -->
+        </aside>
+
+        <header class="d-flex align-items-center gap-3 px-3 py-2 bg-dark text-white">
+            
+            <a href="{{ path('symfonicat_runtime_root') }}" class="text-white text-decoration-none fw-bold">Symfonicat</a>
+            <div class="ms-auto">
+                
+                <a
+                    href="{{ path('symfonicat_core_dashboard') }}"
+                    class="btn btn-sm btn-outline-light{{ active('symfonicat_core*', ' btn-light active') }}"
+                    data-turbo="false"
+                ><!-- -->
+                
+                    core
+                
+                </a>
+            </div>
+        </header>
+
+        <main class="container-fluid bg-dark py-3 text-white min-vh-100">
+            {{ block('flashes') | indent_body(12) }}
+            {{ block('body') | indent_body(12) }}
+        </main>
+
+        <!-- unfortunately not powered by Drupal -->
+        <!-- but fueled by NPM -->
+        <!-- meet Symfonicat -->
+
+    </body>
+</html>

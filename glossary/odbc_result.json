@@ -1,0 +1,146 @@
+{
+    "php_function": "odbc_result",
+    "zend_function": "odbc_result",
+    "source_file": "bc.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "pv_res",
+            "macro": "Z_PARAM_OBJECT_OF_CLASS",
+            "arguments": [
+                "pv_res",
+                "odbc_result_ce"
+            ],
+            "type": "zend_object",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_OBJECT_OF_CLASS(pv_res, odbc_result_ce)"
+        },
+        {
+            "name": "pv_field_str",
+            "macro": "Z_PARAM_STR_OR_LONG",
+            "arguments": [
+                "pv_field_str",
+                "pv_field_long"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR_OR_LONG(pv_field_str, pv_field_long)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_globals.h",
+        "zend_attributes.h",
+        "ext/standard/info.h",
+        "Zend/zend_interfaces.h",
+        "zend_smart_str.h",
+        "php_odbc.h",
+        "php_odbc_includes.h",
+        "php_odbc_utils.h",
+        "fcntl.h",
+        "php_ini.h",
+        "odbc_arginfo.h"
+    ],
+    "body": "char *field;\n\tzend_string *field_str, *pv_field_str;\n\tzend_long pv_field_long;\n\tint field_ind;\n\tSQLSMALLINT sql_c_type = SQL_C_CHAR;\n\todbc_result *result;\n\tint i = 0;\n\tRETCODE rc;\n\tSQLLEN\tfieldsize;\n\tzval *pv_res;\n#ifdef HAVE_SQL_EXTENDED_FETCH\n\tSQLULEN crow;\n\tSQLUSMALLINT RowStatus[1];\n#endif\n\n\tZEND_PARSE_PARAMETERS_START(2, 2)\n\t\tZ_PARAM_OBJECT_OF_CLASS(pv_res, odbc_result_ce)\n\t\tZ_PARAM_STR_OR_LONG(pv_field_str, pv_field_long)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (pv_field_str) {\n\t\tfield = ZSTR_VAL(pv_field_str);\n\t\tfield_ind = -1;\n\t} else {\n\t\tfield = NULL;\n\t\tfield_ind = (int) pv_field_long - 1;\n\t}\n\n\tresult = Z_ODBC_RESULT_P(pv_res);\n\tCHECK_ODBC_RESULT(result);\n\n\tif (result->numcols == 0) {\n\t\tphp_error_docref(NULL, E_WARNING, \"No tuples available at this result index\");\n\t\tRETURN_FALSE;\n\t}\n\n\t/* get field index if the field parameter was a string */\n\tif (field != NULL) {\n\t\tif (result->values == NULL) {\n\t\t\tphp_error_docref(NULL, E_WARNING, \"Result set contains no data\");\n\t\t\tRETURN_FALSE;\n\t\t}\n\n\t\tfor(i = 0; i < result->numcols; i++) {\n\t\t\tif (!strcasecmp(result->values[i].name, field)) {\n\t\t\t\tfield_ind = i;\n\t\t\t\tbreak;\n\t\t\t}\n\t\t}\n\n\t\tif (field_ind < 0) {\n\t\t\tphp_error_docref(NULL, E_WARNING, \"Field %s not found\", field);\n\t\t\tRETURN_FALSE;\n\t\t}\n\t} else {\n\t\t/* check for limits of field_ind if the field parameter was an int */\n\t\tif (field_ind >= result->numcols || field_ind < 0) {\n\t\t\tphp_error_docref(NULL, E_WARNING, \"Field index is larger than the number of fields\");\n\t\t\tRETURN_FALSE;\n\t\t}\n\t}\n\n\tif (result->fetched == 0) {\n\t\t/* User forgot to call odbc_fetch_row(), or wants to reload the results, do it now */\n#ifdef HAVE_SQL_EXTENDED_FETCH\n\t\tif (result->fetch_abs)\n\t\t\trc = SQLExtendedFetch(result->stmt, SQL_FETCH_NEXT, 1, &crow,RowStatus);\n\t\telse\n#endif\n\t\t\trc = SQLFetch(result->stmt);\n\n\t\tif (rc != SQL_SUCCESS && rc != SQL_SUCCESS_WITH_INFO) {\n\t\t\tif (rc == SQL_ERROR) {\n#ifdef HAVE_SQL_EXTENDED_FETCH\n\t\t\todbc_sql_error(result->conn_ptr, result->stmt, \"SQLExtendedFetch\");\n#else\n\t\t\todbc_sql_error(result->conn_ptr, result->stmt, \"SQLFetch\");\n#endif\n\t\t\t}\n\t\t\tRETURN_FALSE;\n\t\t}\n\n\t\tresult->fetched++;\n\t}\n\n\tswitch(result->values[field_ind].coltype) {\n\t\tcase SQL_BINARY:\n\t\tcase SQL_VARBINARY:\n\t\tcase SQL_LONGVARBINARY:\n\t\t\tif (result->binmode <= 1) {\n\t\t\t\tsql_c_type = SQL_C_BINARY;\n\t\t\t}\n\t\t\tif (result->binmode <= 0) {\n\t\t\t\tbreak;\n\t\t\t}\n\t\t\t/* TODO: Check this is the intended behaviour */\n\t\t\tZEND_FALLTHROUGH;\n\n\t\tcase SQL_LONGVARCHAR:\n#if defined(ODBCVER) && (ODBCVER >= 0x0300)\n\t\tcase SQL_WLONGVARCHAR:\n#endif\n\t\t\tif (IS_SQL_LONG(result->values[field_ind].coltype)) {\n\t\t\t\tif (result->longreadlen <= 0) {\n\t\t\t\t   break;\n\t\t\t\t} else {\n\t\t\t\t   fieldsize = result->longreadlen;\n\t\t\t\t}\n\t\t\t} else {\n\t\t\t   PHP_ODBC_SQLCOLATTRIBUTE(result->stmt, (SQLUSMALLINT)(field_ind + 1),\n\t\t\t\t\t   \t\t\t(SQLUSMALLINT)((sql_c_type == SQL_C_BINARY) ? SQL_COLUMN_LENGTH :\n\t\t\t\t\t   \t\t\tSQL_COLUMN_DISPLAY_SIZE),\n\t\t\t\t\t   \t\t\tNULL, 0, NULL, &fieldsize);\n\t\t\t}\n\t\t\t/* For char data, the length of the returned string will be longreadlen - 1 */\n\t\t\tfieldsize = (result->longreadlen <= 0) ? 4096 : result->longreadlen;\n\t\t\tfield_str = zend_string_alloc(fieldsize, 0);\n\n\t\t/* SQLGetData will truncate CHAR data to fieldsize - 1 bytes and append \\0.\n\t\t * For binary data it is truncated to fieldsize bytes.\n\t\t */\n\t\t\trc = SQLGetData(result->stmt, (SQLUSMALLINT)(field_ind + 1), sql_c_type,\n\t\t\t\t\t\t\tZSTR_VAL(field_str), fieldsize, &result->values[field_ind].vallen);\n\n\t\t\tif (rc == SQL_ERROR) {\n\t\t\t\todbc_sql_error(result->conn_ptr, result->stmt, \"SQLGetData\");\n\t\t\t\tzend_string_efree(field_str);\n\t\t\t\tRETURN_FALSE;\n\t\t\t}\n\n\t\t\tif (rc != SQL_SUCCESS && rc != SQL_SUCCESS_WITH_INFO) {\n\t\t\t\tzend_string_efree(field_str);\n\t\t\t\tphp_error_docref(NULL, E_WARNING, \"Cannot get data of column #%d (retcode %u)\", field_ind + 1, rc);\n\t\t\t\tRETURN_FALSE;\n\t\t\t} else if (result->values[field_ind].vallen == SQL_NULL_DATA) {\n\t\t\t\tzend_string_efree(field_str);\n\t\t\t\tRETURN_NULL();\n\t\t\t} else if (result->values[field_ind].vallen == SQL_NO_TOTAL) {\n\t\t\t\tzend_string_efree(field_str);\n\t\t\t\tphp_error_docref(NULL, E_WARNING, \"Cannot get data of column #%d (driver cannot determine length)\", field_ind + 1);\n\t\t\t\tRETURN_FALSE;\n\t\t\t}\n\t\t\t/* Reduce fieldlen by 1 if we have char data. One day we might\n\t\t\t   have binary strings... */\n\t\t\tif ((result->values[field_ind].coltype == SQL_LONGVARCHAR)\n#if defined(ODBCVER) && (ODBCVER >= 0x0300)\n\t\t\t    || (result->values[field_ind].coltype == SQL_WLONGVARCHAR)\n#endif\n\t\t\t) {\n\t\t\t\tfieldsize -= 1;\n\t\t\t}\n\t\t\t/* Don't duplicate result, saves one emalloc.\n\t\t\t   For SQL_SUCCESS, the length is in vallen.\n\t\t\t */\n\t\t\tif (rc != SQL_SUCCESS_WITH_INFO) {\n\t\t\t\tfield_str = zend_string_truncate(field_str, result->values[field_ind].vallen, 0);\n\t\t\t}\n\t\t\tZSTR_VAL(field_str)[ZSTR_LEN(field_str)] = '\\0';\n\t\t\tRETURN_NEW_STR(field_str);\n\t\t\tbreak;\n\n\t\tdefault:\n\t\t\tif (result->values[field_ind].vallen == SQL_NULL_DATA) {\n\t\t\t\tRETURN_NULL();\n\t\t\t} else if (result->values[field_ind].vallen == SQL_NO_TOTAL) {\n\t\t\t\tphp_error_docref(NULL, E_WARNING, \"Cannot get data of column #%d (driver cannot determine length)\", field_ind + 1);\n\t\t\t\tRETURN_FALSE;\n\t\t\t} else {\n\t\t\t\tRETURN_STRINGL(result->values[field_ind].value, result->values[field_ind].vallen);\n\t\t\t}\n\t\t\tbreak;\n\t}\n\n/* If we come here, output unbound LONG and/or BINARY column data to the client */\n\n\t/* We emalloc 1 byte more for SQL_C_CHAR (trailing \\0) */\n\tfieldsize = (sql_c_type == SQL_C_CHAR) ? 4096 : 4095;\n\tfield = emalloc(fieldsize);\n\n\t/* Call SQLGetData() until SQL_SUCCESS is returned */\n\twhile(1) {\n\t\trc = SQLGetData(result->stmt, (SQLUSMALLINT)(field_ind + 1),sql_c_type, field, fieldsize, &result->values[field_ind].vallen);\n\n\t\tif (rc == SQL_ERROR) {\n\t\t\todbc_sql_error(result->conn_ptr, result->stmt, \"SQLGetData\");\n\t\t\tefree(field);\n\t\t\tRETURN_FALSE;\n\t\t}\n\n\t\tif (rc != SQL_SUCCESS && rc != SQL_SUCCESS_WITH_INFO) {\n\t\t\tphp_error_docref(NULL, E_WARNING, \"Cannot get data of column #%d (retcode %u)\", field_ind + 1, rc);\n\t\t\tefree(field);\n\t\t\tRETURN_FALSE;\n\t\t}\n\n\t\tif (result->values[field_ind].vallen == SQL_NULL_DATA) {\n\t\t\tefree(field);\n\t\t\tRETURN_NULL();\n\t\t} else if (result->values[field_ind].vallen == SQL_NO_TOTAL) {\n\t\t\tphp_error_docref(NULL, E_WARNING, \"Cannot get data of column #%d (driver cannot determine length)\", field_ind + 1);\n\t\t\tefree(field);\n\t\t\tRETURN_FALSE;\n\t\t}\n\t\t/* chop the trailing \\0 by outputting only 4095 bytes */\n\t\tPHPWRITE(field,(rc == SQL_SUCCESS_WITH_INFO) ? 4095 : result->values[field_ind].vallen);\n\n\t\tif (rc == SQL_SUCCESS) { /* no more data avail */\n\t\t\tefree(field);\n\t\t\tRETURN_TRUE;\n\t\t}\n\t}\n\tRETURN_TRUE;",
+    "semantic": "get field index if the field parameter was a string",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_OBJECT_OF_CLASS",
+            "Z_PARAM_STR_OR_LONG",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZSTR_VAL",
+            "RETURN_FALSE",
+            "ZEND_FALLTHROUGH",
+            "RETURN_NULL",
+            "ZSTR_LEN",
+            "RETURN_NEW_STR",
+            "RETURN_STRINGL",
+            "RETURN_TRUE"
+        ],
+        "zend_types": [
+            "zend_string",
+            "zend_long",
+            "zval"
+        ],
+        "internal_helpers": [
+            "php_error_docref",
+            "odbc_fetch_row",
+            "odbc_sql_error",
+            "zend_string_alloc",
+            "zend_string_efree",
+            "zend_string_truncate"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common odbc_result inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 8,
+    "purpose": "get field index if the field parameter was a string",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "odbc_close_all",
+        "odbc_binmode",
+        "odbc_longreadlen",
+        "odbc_prepare",
+        "odbc_execute",
+        "odbc_cursor",
+        "odbc_data_source",
+        "odbc_exec",
+        "odbc_fetch_object",
+        "odbc_fetch_array",
+        "odbc_fetch_into",
+        "odbc_fetch_row"
+    ]
+}

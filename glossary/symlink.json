@@ -1,0 +1,122 @@
+{
+    "php_function": "symlink",
+    "zend_function": "symlink",
+    "source_file": "nk.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "topath",
+            "macro": "Z_PARAM_PATH",
+            "arguments": [
+                "topath",
+                "topath_len"
+            ],
+            "type": "mixed",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_PATH(topath, topath_len)"
+        },
+        {
+            "name": "frompath",
+            "macro": "Z_PARAM_PATH",
+            "arguments": [
+                "frompath",
+                "frompath_len"
+            ],
+            "type": "mixed",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_PATH(frompath, frompath_len)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "WinBase.h",
+        "stdlib.h",
+        "unistd.h",
+        "sys/stat.h",
+        "string.h",
+        "win32/pwd.h",
+        "pwd.h",
+        "errno.h",
+        "ctype.h",
+        "php_string.h"
+    ],
+    "body": "char *topath, *frompath;\n\tsize_t topath_len, frompath_len;\n\tint ret;\n\tchar source_p[MAXPATHLEN];\n\tchar dest_p[MAXPATHLEN];\n\tchar dirname[MAXPATHLEN];\n\tsize_t len;\n\n\tZEND_PARSE_PARAMETERS_START(2, 2)\n\t\tZ_PARAM_PATH(topath, topath_len)\n\t\tZ_PARAM_PATH(frompath, frompath_len)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (!expand_filepath(frompath, source_p)) {\n\t\tphp_error_docref(NULL, E_WARNING, \"No such file or directory\");\n\t\tRETURN_FALSE;\n\t}\n\n\tmemcpy(dirname, source_p, sizeof(source_p));\n\tlen = zend_dirname(dirname, strlen(dirname));\n\n\tif (!expand_filepath_ex(topath, dest_p, dirname, len)) {\n\t\tphp_error_docref(NULL, E_WARNING, \"No such file or directory\");\n\t\tRETURN_FALSE;\n\t}\n\n\tif (php_stream_locate_url_wrapper(source_p, NULL, STREAM_LOCATE_WRAPPERS_ONLY) ||\n\t\tphp_stream_locate_url_wrapper(dest_p, NULL, STREAM_LOCATE_WRAPPERS_ONLY) )\n\t{\n\t\tphp_error_docref(NULL, E_WARNING, \"Unable to symlink to a URL\");\n\t\tRETURN_FALSE;\n\t}\n\n\tif (php_check_open_basedir(dest_p)) {\n\t\tRETURN_FALSE;\n\t}\n\n\tif (php_check_open_basedir(source_p)) {\n\t\tRETURN_FALSE;\n\t}\n\n\t/* For the source, an expanded path must be used (in ZTS an other thread could have changed the CWD).\n\t * For the target the exact string given by the user must be used, relative or not, existing or not.\n\t * The target is relative to the link itself, not to the CWD. */\n\tret = php_sys_symlink(topath, source_p);\n\n\tif (ret == -1) {\n\t\tphp_error_docref(NULL, E_WARNING, \"%s\", strerror(errno));\n\t\tRETURN_FALSE;\n\t}\n\n\tRETURN_TRUE;",
+    "semantic": "For the source, an expanded path must be used (in ZTS an other thread could have changed the CWD).",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_PATH",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_FALSE",
+            "RETURN_TRUE"
+        ],
+        "zend_types": [],
+        "internal_helpers": [
+            "php_error_docref",
+            "zend_dirname",
+            "php_stream_locate_url_wrapper",
+            "php_check_open_basedir",
+            "php_sys_symlink"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common symlink inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 6,
+    "purpose": "For the source, an expanded path must be used (in ZTS an other thread could have changed the CWD).",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "readlink",
+        "linkinfo",
+        "link"
+    ]
+}

@@ -1,0 +1,112 @@
+parameters:
+
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    _instanceof:
+        Psr\Http\Server\MiddlewareInterface:
+            tags: ['symfonicat.middleware']
+
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/Kernel.php'
+            - '../src/Module/'
+
+    App\Module\:
+        resource: '../src/Module/'
+
+    Symfonicat\:
+        resource: '../core/src/'
+        exclude:
+            - '../core/src/Composer/'
+            - '../core/src/DependencyInjection/'
+            - '../core/src/Entity/'
+            - '../core/src/Maker/'
+            - '../core/src/SymfonicatBundle.php'
+
+    Symfonicat\Service\DomainService: ~
+    Symfonicat\EventSubscriber\AdminLockSubscriber:
+        arguments:
+            $subdomainDir: '%kernel.project_dir%'
+
+    Symfonicat\Service\PackageDiscoveryService:
+        arguments:
+            $subdomainDir: '%kernel.project_dir%'
+
+    Symfonicat\Contract\AdminYamlDumper: '@Symfonicat\Service\AdminYaml'
+
+    Symfonicat\EventSubscriber\AdminYamlDumpSubscriber:
+        tags: ['doctrine.event_subscriber']
+
+    Symfonicat\Service\AffixService: ~
+    Symfonicat\Service\ModuleRequestContextStore:
+        arguments:
+            $secret: '%kernel.secret%'
+
+    Symfonicat\Service\FileUploadService:
+        arguments:
+            $publicDir: '%kernel.project_dir%/public'
+
+    Symfonicat\Service\PublicFileUploadService:
+        arguments:
+            $publicDir: '%kernel.project_dir%/public'
+
+    Intervention\Image\Drivers\Imagick\Driver: ~
+
+    Intervention\Image\ImageManager:
+        arguments:
+            $driver: '@Intervention\Image\Drivers\Imagick\Driver'
+
+    Intervention\Image\Interfaces\ImageManagerInterface: '@Intervention\Image\ImageManager'
+
+    Nyholm\Psr7\Factory\Psr17Factory: ~
+
+    Symfony\Bridge\PsrHttpMessage\HttpFoundationFactoryInterface:
+        class: Symfony\Bridge\PsrHttpMessage\Factory\HttpFoundationFactory
+
+    Symfony\Bridge\PsrHttpMessage\HttpMessageFactoryInterface:
+        class: Symfony\Bridge\PsrHttpMessage\Factory\PsrHttpFactory
+        arguments:
+            $serverRequestFactory: '@Nyholm\Psr7\Factory\Psr17Factory'
+            $streamFactory: '@Nyholm\Psr7\Factory\Psr17Factory'
+            $uploadedFileFactory: '@Nyholm\Psr7\Factory\Psr17Factory'
+            $responseFactory: '@Nyholm\Psr7\Factory\Psr17Factory'
+
+    Symfonicat\Security\AdminUserProvider:
+        arguments:
+            $cache: '@cache.app'
+
+    Symfonicat\Twig\EncoreEntryTagsExtension:
+        arguments:
+            $entryFilesTwigExtension: '@webpack_encore.twig_entry_files_extension'
+
+    Symfonicat\Twig\RuntimeAssetExtension:
+        arguments:
+            $subdomainDir: '%kernel.project_dir%'
+
+    symfonicat.redis_connection:
+        class: Redis
+        factory: ['Symfony\Component\Cache\Adapter\RedisAdapter', 'createConnection']
+        arguments:
+            - '%env(resolve:REDIS_URL)%'
+            - { class: 'Redis', lazy: true }
+
+    cache.default_marshaller:
+        class: Symfony\Component\Cache\Marshaller\DefaultMarshaller
+        arguments:
+            - true
+            - '%kernel.debug%'
+
+    Symfony\Component\HttpFoundation\Session\Storage\Handler\RedisSessionHandler:
+        arguments:
+            $redis: '@symfonicat.redis_connection'
+            $options:
+                prefix: 'symfonicat_session:'
+                ttl: 86400
+
+    Symfonicat\Command\RedisDebugCommand:
+        arguments:
+            $redisUrl: '%env(string:REDIS_URL)%'

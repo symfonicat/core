@@ -1,0 +1,120 @@
+{
+    "php_function": "openssl_pkcs12_read",
+    "zend_function": "openssl_pkcs12_read",
+    "source_file": "nssl.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "php_openssl.h",
+        "zend_attributes.h",
+        "zend_exceptions.h",
+        "ext/standard/file.h",
+        "ext/standard/info.h",
+        "ext/standard/php_fopen_wrappers.h",
+        "ext/standard/md5.h",
+        "ext/standard/base64.h",
+        "openssl/evp.h",
+        "openssl/bn.h",
+        "openssl/rsa.h",
+        "openssl/dsa.h",
+        "openssl/dh.h",
+        "openssl/x509.h",
+        "openssl/x509v3.h",
+        "openssl/crypto.h",
+        "openssl/pem.h",
+        "openssl/err.h",
+        "openssl/conf.h",
+        "openssl/rand.h",
+        "openssl/ssl.h",
+        "openssl/pkcs12.h",
+        "openssl/cms.h",
+        "openssl/core_names.h",
+        "openssl/param_build.h",
+        "openssl/provider.h",
+        "openssl/engine.h",
+        "time.h",
+        "openssl_arginfo.h"
+    ],
+    "body": "zval *zout = NULL, zextracerts, zcert, zpkey;\n\tchar *pass, *zp12;\n\tsize_t pass_len, zp12_len;\n\tPKCS12 * p12 = NULL;\n\tEVP_PKEY * pkey = NULL;\n\tX509 * cert = NULL;\n\tSTACK_OF(X509) * ca = NULL;\n\tBIO * bio_in = NULL;\n\tint i;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"szs\", &zp12, &zp12_len, &zout, &pass, &pass_len) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tRETVAL_FALSE;\n\n\tPHP_OPENSSL_CHECK_SIZE_T_TO_INT(zp12_len, pkcs12, 1);\n\n\tbio_in = BIO_new(BIO_s_mem());\n\n\tif (0 >= BIO_write(bio_in, zp12, (int)zp12_len)) {\n\t\tphp_openssl_store_errors();\n\t\tgoto cleanup;\n\t}\n\n\tif (d2i_PKCS12_bio(bio_in, &p12) && PKCS12_parse(p12, pass, &pkey, &cert, &ca)) {\n\t\tBIO * bio_out;\n\t\tint cert_num;\n\n\t\tzout = zend_try_array_init(zout);\n\t\tif (!zout) {\n\t\t\tgoto cleanup;\n\t\t}\n\n\t\tif (cert) {\n\t\t\tbio_out = BIO_new(BIO_s_mem());\n\t\t\tif (PEM_write_bio_X509(bio_out, cert)) {\n\t\t\t\tBUF_MEM *bio_buf;\n\t\t\t\tBIO_get_mem_ptr(bio_out, &bio_buf);\n\t\t\t\tZVAL_STRINGL(&zcert, bio_buf->data, bio_buf->length);\n\t\t\t\tadd_assoc_zval(zout, \"cert\", &zcert);\n\t\t\t} else {\n\t\t\t\tphp_openssl_store_errors();\n\t\t\t}\n\t\t\tBIO_free(bio_out);\n\t\t}\n\n\t\tif (pkey) {\n\t\t\tbio_out = BIO_new(BIO_s_mem());\n\t\t\tif (PEM_write_bio_PrivateKey(bio_out, pkey, NULL, NULL, 0, 0, NULL)) {\n\t\t\t\tBUF_MEM *bio_buf;\n\t\t\t\tBIO_get_mem_ptr(bio_out, &bio_buf);\n\t\t\t\tZVAL_STRINGL(&zpkey, bio_buf->data, bio_buf->length);\n\t\t\t\tadd_assoc_zval(zout, \"pkey\", &zpkey);\n\t\t\t} else {\n\t\t\t\tphp_openssl_store_errors();\n\t\t\t}\n\t\t\tBIO_free(bio_out);\n\t\t}\n\n\t\tcert_num = sk_X509_num(ca);\n\t\tif (ca && cert_num) {\n\t\t\tarray_init(&zextracerts);\n\n\t\t\tfor (i = 0; i < cert_num; i++) {\n\t\t\t\tzval zextracert;\n\t\t\t\tX509* aCA = sk_X509_pop(ca);\n\t\t\t\tif (!aCA) break;\n\n\t\t\t\tbio_out = BIO_new(BIO_s_mem());\n\t\t\t\tif (PEM_write_bio_X509(bio_out, aCA)) {\n\t\t\t\t\tBUF_MEM *bio_buf;\n\t\t\t\t\tBIO_get_mem_ptr(bio_out, &bio_buf);\n\t\t\t\t\tZVAL_STRINGL(&zextracert, bio_buf->data, bio_buf->length);\n\t\t\t\t\tadd_index_zval(&zextracerts, i, &zextracert);\n\t\t\t\t}\n\n\t\t\t\tX509_free(aCA);\n\t\t\t\tBIO_free(bio_out);\n\t\t\t}\n\n\t\t\tsk_X509_free(ca);\n\t\t\tadd_assoc_zval(zout, \"extracerts\", &zextracerts);\n\t\t}\n\n\t\tRETVAL_TRUE;\n\t} else {\n\t\tphp_openssl_store_errors();\n\t}\n\ncleanup:\n\tBIO_free(bio_in);\n\tEVP_PKEY_free(pkey);\n\tif (cert) {\n\t\tX509_free(cert);\n\t}\n\tif (p12) {\n\t\tPKCS12_free(p12);\n\t}",
+    "semantic": "Implements the PHP function openssl_pkcs12_read in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "ZVAL_STRINGL"
+        ],
+        "zend_types": [
+            "zval"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "php_openssl_store_errors",
+            "zend_try_array_init"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common openssl_pkcs12_read inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 6,
+    "purpose": "Implements the PHP function openssl_pkcs12_read in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "openssl_get_cert_locations",
+        "openssl_x509_export_to_file",
+        "openssl_spki_new",
+        "openssl_spki_verify",
+        "openssl_spki_export",
+        "openssl_spki_export_challenge",
+        "openssl_x509_export",
+        "openssl_x509_fingerprint",
+        "openssl_x509_check_private_key",
+        "openssl_x509_verify",
+        "openssl_x509_parse",
+        "openssl_x509_checkpurpose"
+    ]
+}

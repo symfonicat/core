@@ -1,0 +1,81 @@
+{
+    "php_function": "msgfmt_set_pattern",
+    "zend_function": "msgfmt_set_pattern",
+    "source_file": "mat/msgformat_attr.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php_intl.h",
+        "msgformat_class.h",
+        "msgformat_data.h",
+        "intl_convert.h",
+        "unicode/ustring.h"
+    ],
+    "body": "char*       value = NULL;\n\tsize_t      value_len = 0;\n\tint32_t     spattern_len = 0;\n\tUChar*\t    spattern  = NULL;\n\tUParseError spattern_error = {0};\n\tMSG_FORMAT_METHOD_INIT_VARS;\n\n\t/* Parse parameters. */\n\tif( zend_parse_method_parameters( ZEND_NUM_ARGS(), getThis(), \"Os\",\n\t\t&object, MessageFormatter_ce_ptr, &value, &value_len ) == FAILURE )\n\t{\n\t\tRETURN_THROWS();\n\t}\n\n\tMSG_FORMAT_METHOD_FETCH_OBJECT;\n\n\t/* Convert given pattern to UTF-16. */\n\tintl_convert_utf8_to_utf16(&spattern, &spattern_len, value, value_len, &INTL_DATA_ERROR_CODE(mfo));\n\tINTL_METHOD_CHECK_STATUS(mfo, \"Error converting pattern to UTF-16\" );\n\n#ifdef MSG_FORMAT_QUOTE_APOS\n\tif(msgformat_fix_quotes(&spattern, &spattern_len, &INTL_DATA_ERROR_CODE(mfo)) != SUCCESS) {\n\t\tintl_error_set( NULL, U_INVALID_FORMAT_ERROR,\n\t\t\t\"msgfmt_set_pattern: error converting pattern to quote-friendly format\", 0 );\n\t\tRETURN_FALSE;\n\t}\n#endif\n\n\tumsg_applyPattern(MSG_FORMAT_OBJECT(mfo), spattern, spattern_len, &spattern_error, &INTL_DATA_ERROR_CODE(mfo));\n\tif (spattern) {\n\t\tefree(spattern);\n\t}\n\tif (U_FAILURE(INTL_DATA_ERROR_CODE(mfo))) {\n\t\tchar *msg;\n\t\tspprintf(&msg, 0, \"Error setting symbol value at line %d, offset %d\", spattern_error.line, spattern_error.offset);\n\t\tintl_errors_set_custom_msg(INTL_DATA_ERROR_P(mfo), msg, 1);\n\t\tefree(msg);\n\t\tRETURN_FALSE;\n\t}\n\n\tif(mfo->mf_data.orig_format) {\n\t\tefree(mfo->mf_data.orig_format);\n\t}\n\tmfo->mf_data.orig_format = estrndup(value, value_len);\n\tmfo->mf_data.orig_format_len = value_len;\n\t/* invalidate cached format types */\n\tif (mfo->mf_data.arg_types) {\n\t\tzend_hash_destroy(mfo->mf_data.arg_types);\n\t\tefree(mfo->mf_data.arg_types);\n\t\tmfo->mf_data.arg_types = NULL;\n\t}\n\n\tRETURN_TRUE;",
+    "semantic": "Parse parameters.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_FALSE",
+            "RETURN_TRUE"
+        ],
+        "zend_types": [],
+        "internal_helpers": [
+            "zend_parse_method_parameters",
+            "zend_hash_destroy"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common msgfmt_set_pattern inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 4,
+    "purpose": "Parse parameters.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "msgfmt_get_pattern",
+        "msgfmt_get_locale"
+    ]
+}

@@ -1,0 +1,127 @@
+{
+	auto_https disable_redirects
+	servers {
+		protocols h1 h2 h3
+	}
+	frankenphp {
+		worker {
+			file /symfonicat/public/index.php
+			watch /symfonicat/public/index.php
+			watch /symfonicat/src/**/*.php
+			watch /symfonicat/core/src/**/*.php
+			watch /symfonicat/templates/**/*.twig
+			watch /symfonicat/config/**/*.yaml
+			watch /symfonicat/config/**/*.yml
+		}
+	}
+}
+
+{$SERVER_NAME}:80, *.{$SERVER_NAME}:80 {
+
+	mercure {
+		publisher_jwt {$MERCURE_JWT_SECRET}
+		subscriber_jwt {$MERCURE_JWT_SECRET}
+		anonymous
+	}
+
+	root * /symfonicat/public
+
+	route /build/* {
+		brotli_precompress {
+			root /symfonicat/public
+			disk_dir build
+			quality 6
+			min_size 1024
+			extensions .js .json .css .wasm .woff2
+		}
+
+		file_server {
+			precompressed br gzip zstd
+		}
+	}
+
+	encode zstd gzip
+
+	@coreLockedOut {
+		path /core*
+		not file {
+			root /symfonicat
+			try_files /symfonicat.lock
+		}
+	}
+
+	handle @coreLockedOut {
+		request_header X-Symfonicat-Core-Locked "1"
+		rewrite * /index.php
+		php_server
+	}
+
+	@moduleRequest path_regexp module ^/m(?:/|$)
+
+	handle @moduleRequest {
+		route {
+			brotli_decompress
+			php_server
+		}
+	}
+
+	handle {
+		php_server
+	}
+}
+
+
+{$SERVER_NAME}:443, *.{$SERVER_NAME}:443 {
+	import /run/symfonicat/caddy/tls.caddy
+
+	mercure {
+		publisher_jwt {$MERCURE_JWT_SECRET}
+		subscriber_jwt {$MERCURE_JWT_SECRET}
+		anonymous
+	}
+
+	root * /symfonicat/public
+
+	route /build/* {
+		brotli_precompress {
+			root /symfonicat/public
+			disk_dir build
+			quality 6
+			min_size 1024
+			extensions .js .json .css .wasm .woff2
+		}
+
+		file_server {
+			precompressed br gzip zstd
+		}
+	}
+
+	encode zstd gzip
+
+	@coreLockedOut {
+		path /core*
+		not file {
+			root /symfonicat
+			try_files /symfonicat.lock
+		}
+	}
+
+	handle @coreLockedOut {
+		request_header X-Symfonicat-Core-Locked "1"
+		rewrite * /index.php
+		php_server
+	}
+
+	@moduleRequest path_regexp module ^/m(?:/|$)
+
+	handle @moduleRequest {
+		route {
+			brotli_decompress
+			php_server
+		}
+	}
+
+	handle {
+		php_server
+	}
+}

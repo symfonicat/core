@@ -1,0 +1,200 @@
+{
+    "php_function": "openssl_cms_decrypt",
+    "zend_function": "openssl_cms_decrypt",
+    "source_file": "nssl.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "infilename",
+            "macro": "Z_PARAM_PATH",
+            "arguments": [
+                "infilename",
+                "infilename_len"
+            ],
+            "type": "mixed",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_PATH(infilename, infilename_len)"
+        },
+        {
+            "name": "outfilename",
+            "macro": "Z_PARAM_PATH",
+            "arguments": [
+                "outfilename",
+                "outfilename_len"
+            ],
+            "type": "mixed",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_PATH(outfilename, outfilename_len)"
+        },
+        {
+            "name": "recipcert",
+            "macro": "Z_PARAM_ZVAL",
+            "arguments": [
+                "recipcert"
+            ],
+            "type": "zval",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": true,
+            "raw": "Z_PARAM_ZVAL(recipcert)"
+        },
+        {
+            "name": "recipkey",
+            "macro": "Z_PARAM_ZVAL_OR_NULL",
+            "arguments": [
+                "recipkey"
+            ],
+            "type": "zval",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": true,
+            "raw": "Z_PARAM_ZVAL_OR_NULL(recipkey)"
+        },
+        {
+            "name": "encoding",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "encoding"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(encoding)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "php_openssl.h",
+        "zend_attributes.h",
+        "zend_exceptions.h",
+        "ext/standard/file.h",
+        "ext/standard/info.h",
+        "ext/standard/php_fopen_wrappers.h",
+        "ext/standard/md5.h",
+        "ext/standard/base64.h",
+        "openssl/evp.h",
+        "openssl/bn.h",
+        "openssl/rsa.h",
+        "openssl/dsa.h",
+        "openssl/dh.h",
+        "openssl/x509.h",
+        "openssl/x509v3.h",
+        "openssl/crypto.h",
+        "openssl/pem.h",
+        "openssl/err.h",
+        "openssl/conf.h",
+        "openssl/rand.h",
+        "openssl/ssl.h",
+        "openssl/pkcs12.h",
+        "openssl/cms.h",
+        "openssl/core_names.h",
+        "openssl/param_build.h",
+        "openssl/provider.h",
+        "openssl/engine.h",
+        "time.h",
+        "openssl_arginfo.h"
+    ],
+    "body": "X509 *cert;\n\tzval *recipcert, *recipkey = NULL;\n\tbool free_recipcert;\n\tEVP_PKEY * key = NULL;\n\tzend_long encoding = ENCODING_SMIME;\n\tBIO * in = NULL, * out = NULL, * datain = NULL;\n\tCMS_ContentInfo * cms = NULL;\n\tchar * infilename;\n\tsize_t infilename_len;\n\tchar * outfilename;\n\tsize_t outfilename_len;\n\n\tZEND_PARSE_PARAMETERS_START(3, 5)\n\t\tZ_PARAM_PATH(infilename, infilename_len)\n\t\tZ_PARAM_PATH(outfilename, outfilename_len)\n\t\tZ_PARAM_ZVAL(recipcert)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_ZVAL_OR_NULL(recipkey)\n\t\tZ_PARAM_LONG(encoding)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tRETVAL_FALSE;\n\n\tcert = php_openssl_x509_from_zval(recipcert, &free_recipcert, 3, false, NULL);\n\tif (cert == NULL) {\n\t\tphp_error_docref(NULL, E_WARNING, \"X.509 Certificate cannot be retrieved\");\n\t\tgoto clean_exit;\n\t}\n\n\tkey = php_openssl_pkey_from_zval(recipkey ? recipkey : recipcert, 0, \"\", 0, recipkey ? 4 : 3);\n\tif (key == NULL) {\n\t\tif (!EG(exception)) {\n\t\t\tphp_error_docref(NULL, E_WARNING, \"Unable to get private key\");\n\t\t}\n\t\tgoto clean_exit;\n\t}\n\n\tin = php_openssl_bio_new_file(\n\t\t\tinfilename, infilename_len, 1, PHP_OPENSSL_BIO_MODE_R(CMS_BINARY));\n\tif (in == NULL) {\n\t\tgoto clean_exit;\n\t}\n\n\tout = php_openssl_bio_new_file(\n\t\t\toutfilename, outfilename_len, 2, PHP_OPENSSL_BIO_MODE_W(CMS_BINARY));\n\tif (out == NULL) {\n\t\tgoto clean_exit;\n\t}\n\n\tswitch (encoding) {\n\t\tcase ENCODING_DER:\n\t\t\tcms = d2i_CMS_bio(in, NULL);\n\t\t\tbreak;\n\t\tcase ENCODING_PEM:\n                        cms = PEM_read_bio_CMS(in, NULL, 0, NULL);\n\t\t\tbreak;\n\t\tcase ENCODING_SMIME:\n\t\t\tcms = SMIME_read_CMS(in, &datain);\n\t\t\tbreak;\n\t\tdefault:\n\t\t\tzend_argument_value_error(5, \"must be an OPENSSL_ENCODING_* constant\");\n\t\t\tgoto clean_exit;\n\t}\n\n\tif (cms == NULL) {\n\t\tphp_openssl_store_errors();\n\t\tgoto clean_exit;\n\t}\n\tif (CMS_decrypt(cms, key, cert, NULL, out, 0)) {\n\t\tRETVAL_TRUE;\n\t} else {\n\t\tphp_openssl_store_errors();\n\t}\nclean_exit:\n\tif (cms) {\n\t\tCMS_ContentInfo_free(cms);\n\t}\n\tBIO_free(datain);\n\tBIO_free(in);\n\tBIO_free(out);\n\tif (cert && free_recipcert) {\n\t\tX509_free(cert);\n\t}\n\tEVP_PKEY_free(key);",
+    "semantic": "Implements the PHP function openssl_cms_decrypt in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_PATH",
+            "Z_PARAM_ZVAL",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_ZVAL_OR_NULL",
+            "Z_PARAM_LONG",
+            "ZEND_PARSE_PARAMETERS_END"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "php_openssl_x509_from_zval",
+            "php_error_docref",
+            "php_openssl_pkey_from_zval",
+            "php_openssl_bio_new_file",
+            "zend_argument_value_error",
+            "php_openssl_store_errors"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common openssl_cms_decrypt inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 7,
+    "purpose": "Implements the PHP function openssl_cms_decrypt in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "openssl_get_cert_locations",
+        "openssl_x509_export_to_file",
+        "openssl_spki_new",
+        "openssl_spki_verify",
+        "openssl_spki_export",
+        "openssl_spki_export_challenge",
+        "openssl_x509_export",
+        "openssl_x509_fingerprint",
+        "openssl_x509_check_private_key",
+        "openssl_x509_verify",
+        "openssl_x509_parse",
+        "openssl_x509_checkpurpose"
+    ]
+}

@@ -1,0 +1,162 @@
+{
+    "php_function": "mb_output_handler",
+    "zend_function": "mb_output_handler",
+    "source_file": "string.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "str",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "str"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(str)"
+        },
+        {
+            "name": "arg_status",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "arg_status"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(arg_status)"
+        }
+    ],
+    "includes": [
+        "limits.h",
+        "libmbfl/config.h",
+        "php.h",
+        "php_ini.h",
+        "php_variables.h",
+        "mbstring.h",
+        "ext/standard/php_string.h",
+        "ext/standard/php_mail.h",
+        "ext/standard/exec.h",
+        "main/php_output.h",
+        "ext/standard/info.h",
+        "ext/pcre/php_pcre.h",
+        "libmbfl/mbfl/mbfilter_8bit.h",
+        "libmbfl/mbfl/mbfilter_pass.h",
+        "libmbfl/mbfl/eaw_table.h",
+        "libmbfl/filters/mbfilter_base64.h",
+        "libmbfl/filters/mbfilter_cjk.h",
+        "libmbfl/filters/mbfilter_qprint.h",
+        "libmbfl/filters/mbfilter_htmlent.h",
+        "libmbfl/filters/mbfilter_uuencode.h",
+        "libmbfl/filters/mbfilter_ucs4.h",
+        "libmbfl/filters/mbfilter_utf16.h",
+        "libmbfl/filters/mbfilter_singlebyte.h",
+        "libmbfl/filters/translit_kana_jisx0201_jisx0208.h",
+        "libmbfl/filters/unicode_prop.h",
+        "php_globals.h",
+        "rfc1867.h",
+        "php_content_types.h",
+        "SAPI.h",
+        "php_unicode.h",
+        "TSRM.h",
+        "mb_gpc.h",
+        "zend_smart_str.h",
+        "zend_multibyte.h",
+        "mbstring_arginfo.h",
+        "rare_cp_bitvec.h",
+        "emmintrin.h",
+        "immintrin.h",
+        "pmmintrin.h"
+    ],
+    "body": "zend_string *str;\n\tzend_long arg_status;\n\n\tZEND_PARSE_PARAMETERS_START(2, 2)\n\t\tZ_PARAM_STR(str)\n\t\tZ_PARAM_LONG(arg_status)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tconst mbfl_encoding *encoding = MBSTRG(current_http_output_encoding);\n\tif (encoding == &mbfl_encoding_pass) {\n\t\tRETURN_STR_COPY(str);\n\t}\n\n\tif (arg_status & PHP_OUTPUT_HANDLER_START) {\n\t\tbool free_mimetype = false;\n\t\tchar *mimetype = NULL;\n\n\t\t/* Analyze mime type */\n\t\tif (SG(sapi_headers).mimetype && _php_mb_match_regex(MBSTRG(http_output_conv_mimetypes), SG(sapi_headers).mimetype, strlen(SG(sapi_headers).mimetype))) {\n\t\t\tchar *s;\n\t\t\tif ((s = strchr(SG(sapi_headers).mimetype, ';')) == NULL) {\n\t\t\t\tmimetype = estrdup(SG(sapi_headers).mimetype);\n\t\t\t} else {\n\t\t\t\tmimetype = estrndup(SG(sapi_headers).mimetype, s - SG(sapi_headers).mimetype);\n\t\t\t}\n\t\t\tfree_mimetype = true;\n\t\t} else if (SG(sapi_headers).send_default_content_type) {\n\t\t\tmimetype = SG(default_mimetype) ? SG(default_mimetype) : SAPI_DEFAULT_MIMETYPE;\n\t\t}\n\n\t\t/* If content-type is not yet set, set it and enable conversion */\n\t\tif (SG(sapi_headers).send_default_content_type || free_mimetype) {\n\t\t\tconst char *charset = encoding->mime_name;\n\t\t\tif (charset) {\n\t\t\t\tchar *p;\n\t\t\t\tsize_t len = spprintf(&p, 0, \"Content-Type: %s; charset=%s\",  mimetype, charset);\n\t\t\t\tif (sapi_add_header(p, len, 0) != FAILURE) {\n\t\t\t\t\tSG(sapi_headers).send_default_content_type = 0;\n\t\t\t\t}\n\t\t\t}\n\n\t\t\tMBSTRG(outconv_enabled) = true;\n\t\t}\n\n\t\tif (free_mimetype) {\n\t\t\tefree(mimetype);\n\t\t}\n\t}\n\n\tif (!MBSTRG(outconv_enabled)) {\n\t\tRETURN_STR_COPY(str);\n\t}\n\n\tmb_convert_buf buf;\n\tmb_convert_buf_init(&buf, ZSTR_LEN(str), MBSTRG(current_filter_illegal_substchar), MBSTRG(current_filter_illegal_mode));\n\n\tuint32_t wchar_buf[128];\n\tunsigned char *in = (unsigned char*)ZSTR_VAL(str);\n\tsize_t in_len = ZSTR_LEN(str);\n\tbool last_feed = ((arg_status & PHP_OUTPUT_HANDLER_END) != 0);\n\n\twhile (in_len) {\n\t\tsize_t out_len = MBSTRG(current_internal_encoding)->to_wchar(&in, &in_len, wchar_buf, 128, &MBSTRG(outconv_state));\n\t\tZEND_ASSERT(out_len <= 128);\n\t\tencoding->from_wchar(wchar_buf, out_len, &buf, !in_len && last_feed);\n\t}\n\n\tMBSTRG(illegalchars) += buf.errors;\n\tRETVAL_STR(mb_convert_buf_result_raw(&buf));\n\n\tif (last_feed) {\n\t\tMBSTRG(outconv_enabled) = false;\n\t\tMBSTRG(outconv_state) = 0;\n\t}",
+    "semantic": "Analyze mime type",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STR",
+            "Z_PARAM_LONG",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_STR_COPY",
+            "ZSTR_LEN",
+            "ZSTR_VAL",
+            "ZEND_ASSERT"
+        ],
+        "zend_types": [
+            "zend_string",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "sapi_add_header",
+            "mb_convert_buf_init",
+            "mb_convert_buf_result_raw"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common mb_output_handler inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 7,
+    "purpose": "Analyze mime type",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "mb_language",
+        "mb_internal_encoding",
+        "mb_http_input",
+        "mb_http_output",
+        "mb_detect_order",
+        "mb_substitute_character",
+        "mb_preferred_mime_name",
+        "mb_parse_str",
+        "mb_str_split",
+        "mb_strlen",
+        "mb_strpos",
+        "mb_strrpos"
+    ]
+}

@@ -1,0 +1,84 @@
+{
+    "php_function": "gc_destructor_fiber",
+    "zend_function": "gc_destructor_fiber",
+    "source_file": "",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "zend.h",
+        "zend_API.h",
+        "zend_compile.h",
+        "zend_errors.h",
+        "zend_fibers.h",
+        "zend_hrtime.h",
+        "zend_portability.h",
+        "zend_types.h",
+        "zend_weakrefs.h",
+        "zend_string.h"
+    ],
+    "body": "uint32_t idx, end;\n\n\tzend_fiber *fiber = GC_G(dtor_fiber);\n\tZEND_ASSERT(fiber != NULL);\n\tZEND_ASSERT(fiber == EG(active_fiber));\n\n\tfor (;;) {\n\t\tGC_G(dtor_fiber_running) = true;\n\n\t\tidx = GC_G(dtor_idx);\n\t\tend = GC_G(dtor_end);\n\t\tif (UNEXPECTED(gc_call_destructors(idx, end, fiber) == FAILURE)) {\n\t\t\t/* We resumed after being suspended by a destructor */\n\t\t\treturn;\n\t\t}\n\n\t\t/* We have called all destructors. Suspend fiber until the next GC run\n\t\t */\n\t\tGC_G(dtor_fiber_running) = false;\n\t\tzend_fiber_suspend(fiber, NULL, NULL);\n\n\t\tif (UNEXPECTED(fiber->flags & ZEND_FIBER_FLAG_DESTROYED)) {\n\t\t\t/* Fiber is being destroyed by shutdown sequence */\n\t\t\tif (GC_G(dtor_fiber) == fiber) {\n\t\t\t\tGC_G(dtor_fiber) = NULL;\n\t\t\t}\n\t\t\tGC_DELREF(&fiber->std);\n\t\t\tgc_check_possible_root((zend_refcounted*)&fiber->std.gc);\n\t\t\treturn;\n\t\t}\n\t}",
+    "semantic": "We resumed after being suspended by a destructor",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "GC_G",
+            "ZEND_ASSERT",
+            "ZEND_FIBER_FLAG_DESTROYED",
+            "GC_DELREF"
+        ],
+        "zend_types": [],
+        "internal_helpers": [
+            "gc_call_destructors",
+            "zend_fiber_suspend",
+            "gc_check_possible_root"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common gc_destructor_fiber inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": false,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "We resumed after being suspended by a destructor",
+    "php_version": "8.4.0-dev",
+    "related": []
+}

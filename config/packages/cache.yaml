@@ -1,0 +1,18 @@
+framework:
+    cache:
+        prefix_seed: symfonicat/core
+        default_redis_provider: '%env(resolve:REDIS_URL)%'
+
+        # Keep application state shared in Redis while keeping framework warmup
+        # metadata local and fast through APCu.
+        app: cache.adapter.redis_tag_aware
+        system: cache.adapter.apcu
+
+        pools:
+            cache.rate_limiter:
+                adapter: cache.app
+                default_lifetime: 3600
+
+            cache.symfonicat:
+                adapter: cache.app
+                default_lifetime: 3600

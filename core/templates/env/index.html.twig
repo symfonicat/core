@@ -1,0 +1,105 @@
+{% extends '@symfonicat/base.html.twig' %}
+{% block title %}Env{% endblock %}
+{% block body %}
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">env parents</div>
+                <div class="card-body">
+                    <table class="table table-sm align-middle mb-4" id="env-parent">
+                        <thead>
+                            <tr>
+                                <th><i class="fa fa-hashtag"></i></th>
+                                <th class="text-end">&nbsp;</th>
+                            </tr>
+                        </thead>
+                        <tbody id="env-parent-body">
+                        {% for env_parent in env_parents %}
+                            {{ include('@symfonicat/env_parent/_row.html.twig') }}
+                        {% else %}
+                            <tr id="env-parent-empty">
+                                <td colspan="2">no records found</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+
+                    {{ form_start(env_parent_form) }}
+                        <div class="d-flex align-items-start gap-2">
+                            <div class="flex-grow-1">
+                                {{ form_row(env_parent_form.id, {
+                                    row_attr: {
+                                        class: 'mb-0'
+                                    },
+                                    attr: {
+                                        class: 'form-control-sm'
+                                    }
+                                }) }}
+                            </div>
+                            <div class="flex-shrink-0 d-flex flex-column">
+                                <button class="btn btn-sm btn-success">create env parent</button>
+                            </div>
+                        </div>
+                    {{ form_end(env_parent_form) }}
+
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">env</div>
+                <div class="card-body">
+                    <table class="table table-sm align-middle mb-4" id="env">
+                        <thead>
+                            <tr>
+                                <th>env parent</th>
+                                <th><i class="fa fa-hashtag"></i></th>
+                                <th class="text-end">&nbsp;</th>
+                            </tr>
+                        </thead>
+                        <tbody id="env-body">
+                        {% for env in envs %}
+                            {{ include('@symfonicat/env/_row.html.twig') }}
+                        {% else %}
+                            <tr id="env-empty">
+                                <td colspan="3">no records found</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+
+                    {{ form_start(env_form) }}
+                        <div class="d-flex align-items-start gap-2 flex-wrap">
+                            <div class="flex-grow-1">
+                                {{ form_row(env_form.envParent, {
+                                    row_attr: {
+                                        class: 'mb-0'
+                                    },
+                                    attr: {
+                                        class: 'form-select-sm'
+                                    }
+                                }) }}
+                            </div>
+                            <div class="flex-grow-1">
+                                {{ form_row(env_form.id, {
+                                    row_attr: {
+                                        class: 'mb-0'
+                                    },
+                                    attr: {
+                                        class: 'form-control-sm'
+                                    }
+                                }) }}
+                            </div>
+                            <div class="flex-shrink-0 d-flex flex-column">
+                                <button class="btn btn-sm btn-success">create env</button>
+                            </div>
+                        </div>
+                    {{ form_end(env_form) }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}

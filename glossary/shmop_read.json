@@ -1,0 +1,90 @@
+{
+    "php_function": "shmop_read",
+    "zend_function": "shmop_read",
+    "source_file": ".c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_shmop.h",
+        "Zend/zend_attributes.h",
+        "shmop_arginfo.h",
+        "tsrm_win32.h",
+        "ext/standard/info.h"
+    ],
+    "body": "zval *shmid;\n\tzend_long start, count;\n\tphp_shmop *shmop;\n\tchar *startaddr;\n\tint bytes;\n\tzend_string *return_string;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"Oll\", &shmid, shmop_ce, &start, &count) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tshmop = Z_SHMOP_P(shmid);\n\n\tif (start < 0 || start > shmop->size) {\n\t\tzend_argument_value_error(2, \"must be between 0 and the segment size\");\n\t\tRETURN_THROWS();\n\t}\n\n\tif (count < 0 || start > (ZEND_LONG_MAX - count) || start + count > shmop->size) {\n\t\tzend_argument_value_error(3, \"is out of range\");\n\t\tRETURN_THROWS();\n\t}\n\n\tstartaddr = shmop->addr + start;\n\tbytes = count ? count : shmop->size - start;\n\n\treturn_string = zend_string_init(startaddr, bytes, 0);\n\n\tRETURN_NEW_STR(return_string);",
+    "semantic": "Implements the PHP function shmop_read in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "ZEND_LONG_MAX",
+            "RETURN_NEW_STR"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_long",
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "zend_argument_value_error",
+            "zend_string_init"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common shmop_read inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 4,
+    "purpose": "Implements the PHP function shmop_read in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "shmop_open",
+        "shmop_close",
+        "shmop_size",
+        "shmop_write",
+        "shmop_delete"
+    ]
+}

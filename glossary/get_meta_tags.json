@@ -1,0 +1,143 @@
+{
+    "php_function": "get_meta_tags",
+    "zend_function": "get_meta_tags",
+    "source_file": "le.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "filename",
+            "macro": "Z_PARAM_PATH",
+            "arguments": [
+                "filename",
+                "filename_len"
+            ],
+            "type": "mixed",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_PATH(filename, filename_len)"
+        },
+        {
+            "name": "use_include_path",
+            "macro": "Z_PARAM_BOOL",
+            "arguments": [
+                "use_include_path"
+            ],
+            "type": "bool",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_BOOL(use_include_path)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "ext/standard/flock_compat.h",
+        "ext/standard/php_filestat.h",
+        "php_open_temporary_file.h",
+        "ext/standard/basic_functions.h",
+        "php_ini.h",
+        "zend_smart_str.h",
+        "stdio.h",
+        "stdlib.h",
+        "errno.h",
+        "wchar.h",
+        "sys/types.h",
+        "sys/stat.h",
+        "fcntl.h",
+        "php_string.h",
+        "file.h",
+        "fsock.h",
+        "fopen_wrappers.h",
+        "streamsfuncs.h",
+        "scanf.h",
+        "zend_API.h",
+        "file_arginfo.h"
+    ],
+    "body": "char *filename;\n\tsize_t filename_len;\n\tbool use_include_path = 0;\n\tint in_tag = 0, done = 0;\n\tint looking_for_val = 0, have_name = 0, have_content = 0;\n\tint saw_name = 0, saw_content = 0;\n\tchar *name = NULL, *value = NULL, *temp = NULL;\n\tphp_meta_tags_token tok, tok_last;\n\tphp_meta_tags_data md;\n\n\t/* Initialize our structure */\n\tmemset(&md, 0, sizeof(md));\n\n\t/* Parse arguments */\n\tZEND_PARSE_PARAMETERS_START(1, 2)\n\t\tZ_PARAM_PATH(filename, filename_len)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_BOOL(use_include_path)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tmd.stream = php_stream_open_wrapper(filename, \"rb\",\n\t\t\t(use_include_path ? USE_PATH : 0) | REPORT_ERRORS,\n\t\t\tNULL);\n\tif (!md.stream)\t{\n\t\tRETURN_FALSE;\n\t}\n\n\tarray_init(return_value);\n\n\ttok_last = TOK_EOF;\n\n\twhile (!done && (tok = php_next_meta_token(&md)) != TOK_EOF) {\n\t\tif (tok == TOK_ID) {\n\t\t\tif (tok_last == TOK_OPENTAG) {\n\t\t\t\tmd.in_meta = !strcasecmp(\"meta\", md.token_data);\n\t\t\t} else if (tok_last == TOK_SLASH && in_tag) {\n\t\t\t\tif (strcasecmp(\"head\", md.token_data) == 0) {\n\t\t\t\t\t/* We are done here! */\n\t\t\t\t\tdone = 1;\n\t\t\t\t}\n\t\t\t} else if (tok_last == TOK_EQUAL && looking_for_val) {\n\t\t\t\tif (saw_name) {\n\t\t\t\t\tif (name) efree(name);\n\t\t\t\t\t/* Get the NAME attr (Single word attr, non-quoted) */\n\t\t\t\t\ttemp = name = estrndup(md.token_data, md.token_len);\n\n\t\t\t\t\twhile (temp && *temp) {\n\t\t\t\t\t\tif (strchr(PHP_META_UNSAFE, *temp)) {\n\t\t\t\t\t\t\t*temp = '_';\n\t\t\t\t\t\t}\n\t\t\t\t\t\ttemp++;\n\t\t\t\t\t}\n\n\t\t\t\t\thave_name = 1;\n\t\t\t\t} else if (saw_content) {\n\t\t\t\t\tif (value) efree(value);\n\t\t\t\t\tvalue = estrndup(md.token_data, md.token_len);\n\t\t\t\t\thave_content = 1;\n\t\t\t\t}\n\n\t\t\t\tlooking_for_val = 0;\n\t\t\t} else {\n\t\t\t\tif (md.in_meta) {\n\t\t\t\t\tif (strcasecmp(\"name\", md.token_data) == 0) {\n\t\t\t\t\t\tsaw_name = 1;\n\t\t\t\t\t\tsaw_content = 0;\n\t\t\t\t\t\tlooking_for_val = 1;\n\t\t\t\t\t} else if (strcasecmp(\"content\", md.token_data) == 0) {\n\t\t\t\t\t\tsaw_name = 0;\n\t\t\t\t\t\tsaw_content = 1;\n\t\t\t\t\t\tlooking_for_val = 1;\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t} else if (tok == TOK_STRING && tok_last == TOK_EQUAL && looking_for_val) {\n\t\t\tif (saw_name) {\n\t\t\t\tif (name) efree(name);\n\t\t\t\t/* Get the NAME attr (Quoted single/double) */\n\t\t\t\ttemp = name = estrndup(md.token_data, md.token_len);\n\n\t\t\t\twhile (temp && *temp) {\n\t\t\t\t\tif (strchr(PHP_META_UNSAFE, *temp)) {\n\t\t\t\t\t\t*temp = '_';\n\t\t\t\t\t}\n\t\t\t\t\ttemp++;\n\t\t\t\t}\n\n\t\t\t\thave_name = 1;\n\t\t\t} else if (saw_content) {\n\t\t\t\tif (value) efree(value);\n\t\t\t\tvalue = estrndup(md.token_data, md.token_len);\n\t\t\t\thave_content = 1;\n\t\t\t}\n\n\t\t\tlooking_for_val = 0;\n\t\t} else if (tok == TOK_OPENTAG) {\n\t\t\tif (looking_for_val) {\n\t\t\t\tlooking_for_val = 0;\n\t\t\t\thave_name = saw_name = 0;\n\t\t\t\thave_content = saw_content = 0;\n\t\t\t}\n\t\t\tin_tag = 1;\n\t\t} else if (tok == TOK_CLOSETAG) {\n\t\t\tif (have_name) {\n\t\t\t\t/* For BC */\n\t\t\t\tzend_str_tolower(name, strlen(name));\n\t\t\t\tif (have_content) {\n\t\t\t\t\tadd_assoc_string(return_value, name, value);\n\t\t\t\t} else {\n\t\t\t\t\tadd_assoc_string(return_value, name, \"\");\n\t\t\t\t}\n\n\t\t\t\tefree(name);\n\t\t\t\tif (value) efree(value);\n\t\t\t} else if (have_content) {\n\t\t\t\tefree(value);\n\t\t\t}\n\n\t\t\tname = value = NULL;\n\n\t\t\t/* Reset all of our flags */\n\t\t\tin_tag = looking_for_val = 0;\n\t\t\thave_name = saw_name = 0;\n\t\t\thave_content = saw_content = 0;\n\t\t\tmd.in_meta = 0;\n\t\t}\n\n\t\ttok_last = tok;\n\n\t\tif (md.token_data)\n\t\t\tefree(md.token_data);\n\n\t\tmd.token_data = NULL;\n\t}\n\n\tif (value) efree(value);\n\tif (name) efree(name);\n\tphp_stream_close(md.stream);",
+    "semantic": "Initialize our structure",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_PATH",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_BOOL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [],
+        "internal_helpers": [
+            "php_stream_open_wrapper",
+            "php_next_meta_token",
+            "zend_str_tolower",
+            "php_stream_close"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common get_meta_tags inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": true,
+        "uses_streams": true,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid leaving streams open on any early-exit branch."
+    ],
+    "complexity": 9,
+    "purpose": "Initialize our structure",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "flock",
+        "file_get_contents",
+        "file_put_contents",
+        "file",
+        "tempnam",
+        "tmpfile",
+        "fopen",
+        "popen",
+        "pclose",
+        "fscanf",
+        "mkdir",
+        "rmdir"
+    ]
+}

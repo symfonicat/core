@@ -1,0 +1,157 @@
+{
+    "php_function": "imageaffine",
+    "zend_function": "imageaffine",
+    "source_file": "",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "IM",
+            "macro": "Z_PARAM_OBJECT_OF_CLASS",
+            "arguments": [
+                "IM",
+                "gd_image_ce"
+            ],
+            "type": "zend_object",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_OBJECT_OF_CLASS(IM, gd_image_ce)"
+        },
+        {
+            "name": "z_affine",
+            "macro": "Z_PARAM_ARRAY",
+            "arguments": [
+                "z_affine"
+            ],
+            "type": "HashTable",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY(z_affine)"
+        },
+        {
+            "name": "z_rect",
+            "macro": "Z_PARAM_ARRAY_OR_NULL",
+            "arguments": [
+                "z_rect"
+            ],
+            "type": "HashTable",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY_OR_NULL(z_rect)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "ext/standard/head.h",
+        "math.h",
+        "SAPI.h",
+        "php_gd.h",
+        "ext/standard/php_image.h",
+        "ext/standard/info.h",
+        "php_open_temporary_file.h",
+        "php_memory_streams.h",
+        "zend_object_handlers.h",
+        "gd_compat.h",
+        "gd_arginfo.h"
+    ],
+    "body": "zval *IM;\n\tgdImagePtr src;\n\tgdImagePtr dst;\n\tgdRect rect;\n\tgdRectPtr pRect = NULL;\n\tzval *z_rect = NULL;\n\tzval *z_affine;\n\tzval *tmp;\n\tdouble affine[6];\n\tint i, nelems;\n\tzval *zval_affine_elem = NULL;\n\n\tZEND_PARSE_PARAMETERS_START(2, 3)\n\t\tZ_PARAM_OBJECT_OF_CLASS(IM, gd_image_ce)\n\t\tZ_PARAM_ARRAY(z_affine)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_ARRAY_OR_NULL(z_rect)\n\tZEND_PARSE_PARAMETERS_END();\n\n\n\tsrc = php_gd_libgdimageptr_from_zval_p(IM);\n\n\tif ((nelems = zend_hash_num_elements(Z_ARRVAL_P(z_affine))) != 6) {\n\t\tzend_argument_value_error(2, \"must have 6 elements\");\n\t\tRETURN_THROWS();\n\t}\n\n\tfor (i = 0; i < nelems; i++) {\n\t\tif ((zval_affine_elem = zend_hash_index_find(Z_ARRVAL_P(z_affine), i)) != NULL) {\n\t\t\tswitch (Z_TYPE_P(zval_affine_elem)) {\n\t\t\t\tcase IS_LONG:\n\t\t\t\t\taffine[i] = Z_LVAL_P(zval_affine_elem);\n\t\t\t\t\tif (affine[i] < INT_MIN || affine[i] > INT_MAX) {\n\t\t\t\t\t\tzend_argument_value_error(2, \"element %i must be between %d and %d\", i, INT_MIN, INT_MAX);\n\t\t\t\t\t\tRETURN_THROWS();\n\t\t\t\t\t}\n\t\t\t\t\tbreak;\n\t\t\t\tcase IS_DOUBLE:\n\t\t\t\t\taffine[i] = Z_DVAL_P(zval_affine_elem);\n\t\t\t\t\tif (affine[i] < INT_MIN || affine[i] > INT_MAX) {\n\t\t\t\t\t\tzend_argument_value_error(2, \"element %i must be between %d and %d\", i, INT_MIN, INT_MAX);\n\t\t\t\t\t\tRETURN_THROWS();\n\t\t\t\t\t}\n\t\t\t\t\tbreak;\n\t\t\t\tcase IS_STRING:\n\t\t\t\t\taffine[i] = zval_get_double(zval_affine_elem);\n\t\t\t\t\tif (affine[i] < INT_MIN || affine[i] > INT_MAX) {\n\t\t\t\t\t\tzend_argument_value_error(2, \"element %i must be between %d and %d\", i, INT_MIN, INT_MAX);\n\t\t\t\t\t\tRETURN_THROWS();\n\t\t\t\t\t}\n\t\t\t\t\tbreak;\n\t\t\t\tdefault:\n\t\t\t\t\tzend_argument_type_error(3, \"contains invalid type for element %i\", i);\n\t\t\t\t\tRETURN_THROWS();\n\t\t\t}\n\t\t}\n\t}\n\n\tif (z_rect != NULL) {\n\t\tif ((tmp = zend_hash_str_find(Z_ARRVAL_P(z_rect), \"x\", sizeof(\"x\") - 1)) != NULL) {\n\t\t\trect.x = zval_get_long(tmp);\n\t\t} else {\n\t\t\tzend_argument_value_error(3, \"must have an \\\"x\\\" key\");\n\t\t\tRETURN_THROWS();\n\t\t}\n\n\t\tif ((tmp = zend_hash_str_find(Z_ARRVAL_P(z_rect), \"y\", sizeof(\"y\") - 1)) != NULL) {\n\t\t\trect.y = zval_get_long(tmp);\n\t\t} else {\n\t\t\tzend_argument_value_error(3, \"must have a \\\"y\\\" key\");\n\t\t\tRETURN_THROWS();\n\t\t}\n\n\t\tif ((tmp = zend_hash_str_find(Z_ARRVAL_P(z_rect), \"width\", sizeof(\"width\") - 1)) != NULL) {\n\t\t\trect.width = zval_get_long(tmp);\n\t\t} else {\n\t\t\tzend_argument_value_error(3, \"must have a \\\"width\\\" key\");\n\t\t\tRETURN_THROWS();\n\t\t}\n\n\t\tif ((tmp = zend_hash_str_find(Z_ARRVAL_P(z_rect), \"height\", sizeof(\"height\") - 1)) != NULL) {\n\t\t\trect.height = zval_get_long(tmp);\n\t\t} else {\n\t\t\tzend_argument_value_error(3, \"must have a \\\"height\\\" key\");\n\t\t\tRETURN_THROWS();\n\t\t}\n\t\tpRect = &rect;\n\t}\n\n\tif (gdTransformAffineGetImage(&dst, src, pRect, affine) != GD_TRUE) {\n\t\tRETURN_FALSE;\n\t}\n\n\tif (dst == NULL) {\n\t\tRETURN_FALSE;\n\t}\n\n\tphp_gd_assign_libgdimageptr_as_extgdimage(return_value, dst);",
+    "semantic": "Implements the PHP function imageaffine in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_OBJECT_OF_CLASS",
+            "Z_PARAM_ARRAY",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_ARRAY_OR_NULL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_THROWS",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zval"
+        ],
+        "internal_helpers": [
+            "php_gd_libgdimageptr_from_zval_p",
+            "zend_hash_num_elements",
+            "zend_argument_value_error",
+            "zend_hash_index_find",
+            "zval_get_double",
+            "zend_argument_type_error",
+            "zend_hash_str_find",
+            "zval_get_long",
+            "php_gd_assign_libgdimageptr_as_extgdimage"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common imageaffine inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 9,
+    "purpose": "Implements the PHP function imageaffine in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "gd_info",
+        "imageloadfont",
+        "imagesetstyle",
+        "imagecreatetruecolor",
+        "imageistruecolor",
+        "imagetruecolortopalette",
+        "imagepalettetotruecolor",
+        "imagecolormatch",
+        "imagesetthickness",
+        "imagefilledellipse",
+        "imagefilledarc",
+        "imagealphablending"
+    ]
+}

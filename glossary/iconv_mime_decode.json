@@ -1,0 +1,103 @@
+{
+    "php_function": "iconv_mime_decode",
+    "zend_function": "iconv_mime_decode",
+    "source_file": ".c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "ext/standard/info.h",
+        "main/php_output.h",
+        "SAPI.h",
+        "php_ini.h",
+        "stdlib.h",
+        "errno.h",
+        "php_iconv.h",
+        "iconv.h",
+        "gnu/libc-version.h",
+        "zend_smart_str.h",
+        "ext/standard/base64.h",
+        "ext/standard/quot_print.h",
+        "iconv_arginfo.h"
+    ],
+    "body": "zend_string *encoded_str;\n\tconst char *charset = NULL;\n\tsize_t charset_len;\n\tzend_long mode = 0;\n\n\tsmart_str retval = {0};\n\n\tphp_iconv_err_t err;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"S|ls!\",\n\t\t&encoded_str, &mode, &charset, &charset_len) == FAILURE) {\n\n\t\tRETURN_THROWS();\n\t}\n\n\tif (charset == NULL) {\n\t \tcharset = get_internal_encoding();\n\t} else if (charset_len >= ICONV_CSNMAXLEN) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Encoding parameter exceeds the maximum allowed length of %d characters\", ICONV_CSNMAXLEN);\n\t\tRETURN_FALSE;\n\t}\n\n\terr = _php_iconv_mime_decode(&retval, ZSTR_VAL(encoded_str), ZSTR_LEN(encoded_str), charset, NULL, (int)mode);\n\t_php_iconv_show_error(err, charset, \"???\");\n\n\tif (err == PHP_ICONV_ERR_SUCCESS) {\n\t\tRETVAL_STR(smart_str_extract(&retval));\n\t} else {\n\t\tsmart_str_free(&retval);\n\t\tRETVAL_FALSE;\n\t}",
+    "semantic": "Implements the PHP function iconv_mime_decode in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_FALSE",
+            "ZSTR_VAL",
+            "ZSTR_LEN"
+        ],
+        "zend_types": [
+            "zend_string",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "php_error_docref",
+            "smart_str_extract",
+            "smart_str_free"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common iconv_mime_decode inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": true,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 4,
+    "purpose": "Implements the PHP function iconv_mime_decode in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "iconv_strlen",
+        "iconv_substr",
+        "iconv_strpos",
+        "iconv_strrpos",
+        "iconv_mime_encode",
+        "iconv_mime_decode_headers",
+        "iconv",
+        "iconv_set_encoding",
+        "iconv_get_encoding"
+    ]
+}

@@ -1,0 +1,37 @@
+# see https://symfony.com/doc/current/reference/configuration/framework.html
+framework:
+    secret: '%env(APP_SECRET)%'
+    trusted_proxies: '%env(default::SYMFONY_TRUSTED_PROXIES)%'
+    trusted_headers:
+        - x-forwarded-for
+        - x-forwarded-host
+        - x-forwarded-proto
+        - x-forwarded-port
+        - x-forwarded-prefix
+
+    rate_limiter:
+        core_login:
+            policy: sliding_window
+            limit: 10
+            interval: '5 minutes'
+            cache_pool: cache.rate_limiter
+
+    serializer:
+        enable_attributes: true
+
+    # Note that the session will be started ONLY if you read or write from it.
+    session:
+        handler_id: Symfony\Component\HttpFoundation\Session\Storage\Handler\RedisSessionHandler
+        cookie_secure: auto
+        cookie_samesite: lax
+
+    #esi: true
+    #fragments: true
+
+when@test:
+    framework:
+        test: true
+        session:
+            # Bypass the RedisSessionHandler so the suite runs without a real Redis.
+            handler_id: null
+            storage_factory_id: session.storage.factory.mock_file

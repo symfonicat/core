@@ -1,0 +1,150 @@
+{
+    "php_function": "imagerotate",
+    "zend_function": "imagerotate",
+    "source_file": "",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "SIM",
+            "macro": "Z_PARAM_OBJECT_OF_CLASS",
+            "arguments": [
+                "SIM",
+                "gd_image_ce"
+            ],
+            "type": "zend_object",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_OBJECT_OF_CLASS(SIM, gd_image_ce)"
+        },
+        {
+            "name": "degrees",
+            "macro": "Z_PARAM_DOUBLE",
+            "arguments": [
+                "degrees"
+            ],
+            "type": "double",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_DOUBLE(degrees)"
+        },
+        {
+            "name": "color",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "color"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(color)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "ext/standard/head.h",
+        "math.h",
+        "SAPI.h",
+        "php_gd.h",
+        "ext/standard/php_image.h",
+        "ext/standard/info.h",
+        "php_open_temporary_file.h",
+        "php_memory_streams.h",
+        "zend_object_handlers.h",
+        "gd_compat.h",
+        "gd_arginfo.h"
+    ],
+    "body": "zval *SIM;\n\tgdImagePtr im_dst, im_src;\n\tdouble degrees;\n\tzend_long color;\n\n\tZEND_PARSE_PARAMETERS_START(3, 3)\n\t\tZ_PARAM_OBJECT_OF_CLASS(SIM, gd_image_ce)\n\t\tZ_PARAM_DOUBLE(degrees)\n\t\tZ_PARAM_LONG(color)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (degrees < (double)(INT_MIN / 100) || degrees > (double)(INT_MAX / 100)) {\n\t\tzend_argument_value_error(2, \"must be between %d and %d\", (INT_MIN / 100), (INT_MAX / 100));\n\t\tRETURN_THROWS();\n\t}\n\n\tim_src = php_gd_libgdimageptr_from_zval_p(SIM);\n\tim_dst = gdImageRotateInterpolated(im_src, (const float)degrees, color);\n\n\tif (im_dst == NULL) {\n\t\tRETURN_FALSE;\n\t}\n\n\tphp_gd_assign_libgdimageptr_as_extgdimage(return_value, im_dst);",
+    "semantic": "Implements the PHP function imagerotate in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_OBJECT_OF_CLASS",
+            "Z_PARAM_DOUBLE",
+            "Z_PARAM_LONG",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_THROWS",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_argument_value_error",
+            "php_gd_libgdimageptr_from_zval_p",
+            "php_gd_assign_libgdimageptr_as_extgdimage"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common imagerotate inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "Implements the PHP function imagerotate in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "gd_info",
+        "imageloadfont",
+        "imagesetstyle",
+        "imagecreatetruecolor",
+        "imageistruecolor",
+        "imagetruecolortopalette",
+        "imagepalettetotruecolor",
+        "imagecolormatch",
+        "imagesetthickness",
+        "imagefilledellipse",
+        "imagefilledarc",
+        "imagealphablending"
+    ]
+}

@@ -1,0 +1,8 @@
+framework:
+    cache:
+        app: cache.adapter.array
+
+        pools:
+            cache.symfonicat:
+                adapter: cache.adapter.array
+                default_lifetime: 3600

@@ -1,0 +1,130 @@
+{
+    "php_function": "get_html_translation_table",
+    "zend_function": "get_html_translation_table",
+    "source_file": "ml.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "all",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "all"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(all)"
+        },
+        {
+            "name": "flags",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "flags"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(flags)"
+        },
+        {
+            "name": "charset_hint",
+            "macro": "Z_PARAM_STRING",
+            "arguments": [
+                "charset_hint",
+                "charset_hint_len"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING(charset_hint, charset_hint_len)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "config.w32.h",
+        "php_config.h",
+        "php_standard.h",
+        "SAPI.h",
+        "locale.h",
+        "zend_hash.h",
+        "html_tables.h"
+    ],
+    "body": "zend_long all = PHP_HTML_SPECIALCHARS,\n\t\t flags = ENT_QUOTES|ENT_SUBSTITUTE;\n\tint doctype;\n\tentity_table_opt entity_table;\n\tconst enc_to_uni *to_uni_table = NULL;\n\tchar *charset_hint = NULL;\n\tsize_t charset_hint_len;\n\tenum entity_charset charset;\n\n\t/* in this function we have to jump through some loops because we're\n\t * getting the translated table from data structures that are optimized for\n\t * random access, not traversal */\n\n\tZEND_PARSE_PARAMETERS_START(0, 3)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_LONG(all)\n\t\tZ_PARAM_LONG(flags)\n\t\tZ_PARAM_STRING(charset_hint, charset_hint_len)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tcharset = determine_charset(charset_hint, /* quiet */ 0);\n\tdoctype = flags & ENT_HTML_DOC_TYPE_MASK;\n\tLIMIT_ALL(all, doctype, charset);\n\n\tarray_init(return_value);\n\n\tentity_table = determine_entity_table((int)all, doctype);\n\tif (all && !CHARSET_UNICODE_COMPAT(charset)) {\n\t\tto_uni_table = enc_to_uni_index[charset];\n\t}\n\n\tif (all) { /* PHP_HTML_ENTITIES (actually, any non-zero value for 1st param) */\n\t\tconst entity_stage1_row *ms_table = entity_table.ms_table;\n\n\t\tif (CHARSET_UNICODE_COMPAT(charset)) {\n\t\t\tunsigned i, j, k,\n\t\t\t\t\t max_i, max_j, max_k;\n\t\t\t/* no mapping to unicode required */\n\t\t\tif (CHARSET_SINGLE_BYTE(charset)) { /* ISO-8859-1 */\n\t\t\t\tmax_i = 1; max_j = 4; max_k = 64;\n\t\t\t} else {\n\t\t\t\tmax_i = 0x1E; max_j = 64; max_k = 64;\n\t\t\t}\n\n\t\t\tfor (i = 0; i < max_i; i++) {\n\t\t\t\tif (ms_table[i] == empty_stage2_table)\n\t\t\t\t\tcontinue;\n\t\t\t\tfor (j = 0; j < max_j; j++) {\n\t\t\t\t\tif (ms_table[i][j] == empty_stage3_table)\n\t\t\t\t\t\tcontinue;\n\t\t\t\t\tfor (k = 0; k < max_k; k++) {\n\t\t\t\t\t\tconst entity_stage3_row *r = &ms_table[i][j][k];\n\t\t\t\t\t\tunsigned code;\n\n\t\t\t\t\t\tif (r->data.ent.entity == NULL)\n\t\t\t\t\t\t\tcontinue;\n\n\t\t\t\t\t\tcode = ENT_CODE_POINT_FROM_STAGES(i, j, k);\n\t\t\t\t\t\tif (((code == '\\'' && !(flags & ENT_HTML_QUOTE_SINGLE)) ||\n\t\t\t\t\t\t\t\t(code == '\"' && !(flags & ENT_HTML_QUOTE_DOUBLE))))\n\t\t\t\t\t\t\tcontinue;\n\t\t\t\t\t\twrite_s3row_data(r, code, charset, return_value);\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t} else {\n\t\t\t/* we have to iterate through the set of code points for this\n\t\t\t * encoding and map them to unicode code points */\n\t\t\tunsigned i;\n\t\t\tfor (i = 0; i <= 0xFF; i++) {\n\t\t\t\tconst entity_stage3_row *r;\n\t\t\t\tunsigned uni_cp;\n\n\t\t\t\t/* can be done before mapping, they're invariant */\n\t\t\t\tif (((i == '\\'' && !(flags & ENT_HTML_QUOTE_SINGLE)) ||\n\t\t\t\t\t\t(i == '\"' && !(flags & ENT_HTML_QUOTE_DOUBLE))))\n\t\t\t\t\tcontinue;\n\n\t\t\t\tmap_to_unicode(i, to_uni_table, &uni_cp);\n\t\t\t\tr = &ms_table[ENT_STAGE1_INDEX(uni_cp)][ENT_STAGE2_INDEX(uni_cp)][ENT_STAGE3_INDEX(uni_cp)];\n\t\t\t\tif (r->data.ent.entity == NULL)\n\t\t\t\t\tcontinue;\n\n\t\t\t\twrite_s3row_data(r, i, charset, return_value);\n\t\t\t}\n\t\t}\n\t} else {\n\t\t/* we could use sizeof(stage3_table_be_apos_00000) as well */\n\t\tunsigned\t  j,\n\t\t\t\t\t  numelems = sizeof(stage3_table_be_noapos_00000) /\n\t\t\t\t\t\t\tsizeof(*stage3_table_be_noapos_00000);\n\n\t\tfor (j = 0; j < numelems; j++) {\n\t\t\tconst entity_stage3_row *r = &entity_table.table[j];\n\t\t\tif (r->data.ent.entity == NULL)\n\t\t\t\tcontinue;\n\n\t\t\tif (((j == '\\'' && !(flags & ENT_HTML_QUOTE_SINGLE)) ||\n\t\t\t\t\t(j == '\"' && !(flags & ENT_HTML_QUOTE_DOUBLE))))\n\t\t\t\tcontinue;\n\n\t\t\t/* charset is indifferent, used cs_8859_1 for efficiency */\n\t\t\twrite_s3row_data(r, j, cs_8859_1, return_value);\n\t\t}\n\t}",
+    "semantic": "in this function we have to jump through some loops because we're getting the translated table from data structures that are optimized for random access, not traversal",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_LONG",
+            "Z_PARAM_STRING",
+            "ZEND_PARSE_PARAMETERS_END"
+        ],
+        "zend_types": [
+            "zend_long"
+        ],
+        "internal_helpers": []
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common get_html_translation_table inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 8,
+    "purpose": "in this function we have to jump through some loops because we're getting the translated table from data structures that are optimized for random access, not traversal",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "htmlspecialchars",
+        "htmlspecialchars_decode",
+        "html_entity_decode",
+        "htmlentities"
+    ]
+}

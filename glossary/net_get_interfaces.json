@@ -1,0 +1,85 @@
+{
+    "php_function": "net_get_interfaces",
+    "zend_function": "net_get_interfaces",
+    "source_file": "t.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "php.h",
+        "php_network.h",
+        "as400_protos.h"
+    ],
+    "body": "#ifdef PHP_WIN32\n# define MALLOC(x) HeapAlloc(GetProcessHeap(), 0, (x))\n# define FREE(x) HeapFree(GetProcessHeap(), 0, (x))\n\tULONG family = AF_UNSPEC;\n\tULONG flags = GAA_FLAG_INCLUDE_PREFIX;\n\tPIP_ADAPTER_ADDRESSES pAddresses = NULL, p;\n\tPIP_ADAPTER_UNICAST_ADDRESS u = NULL;\n\tULONG outBufLen = 0;\n\tDWORD dwRetVal = 0;\n\n\tZEND_PARSE_PARAMETERS_NONE();\n\n\t// Make an initial call to GetAdaptersAddresses to get the\n\t// size needed into the outBufLen variable\n\tif (GetAdaptersAddresses(family, flags, NULL, pAddresses, &outBufLen) == ERROR_BUFFER_OVERFLOW) {\n\t\tFREE(pAddresses);\n\t\tpAddresses = (IP_ADAPTER_ADDRESSES *) MALLOC(outBufLen);\n\t}\n\n\tif (pAddresses == NULL) {\n\t\tzend_error(E_WARNING, \"Memory allocation failed for IP_ADAPTER_ADDRESSES struct\");\n\t\tRETURN_FALSE;\n\t}\n\n\tdwRetVal = GetAdaptersAddresses(family, flags, NULL, pAddresses, &outBufLen);\n\n\tif (NO_ERROR != dwRetVal) {\n\t\tchar *buf = php_win32_error_to_msg(GetLastError());\n\t\tzend_error(E_WARNING, \"GetAdaptersAddresses failed: %s\", buf);\n\t\tphp_win32_error_msg_free(buf);\n\t\tFREE(pAddresses);\n\t\tRETURN_FALSE;\n\t}\n\n\tarray_init(return_value);\n\tfor (p = pAddresses; p; p = p->Next) {\n\t\tzval iface, unicast;\n\n\t\tif ((IF_TYPE_ETHERNET_CSMACD != p->IfType) && (IF_TYPE_IEEE80211 != p->IfType) && (IF_TYPE_SOFTWARE_LOOPBACK != p->IfType)) {\n\t\t\tcontinue;\n\t\t}\n\n\t\tarray_init(&iface);\n\n\t\tif (p->Description) {\n\t\t\tchar tmp[256];\n\t\t\tmemset(tmp, 0, sizeof(tmp));\n\t\t\twcstombs(tmp, p->Description, sizeof(tmp));\n\t\t\tadd_assoc_string(&iface, \"description\", tmp);\n\t\t}\n\n\t\tif (p->PhysicalAddressLength > 0) {\n\t\t\tzend_string *mac = zend_string_alloc(p->PhysicalAddressLength * 3, 0);\n\t\t\tchar *s = ZSTR_VAL(mac);\n\t\t\tULONG i;\n\t\t\tfor (i = 0; i < p->PhysicalAddressLength; ++i) {\n\t\t\t\ts += snprintf(s, 4, \"%02X:\", p->PhysicalAddress[i]);\n\t\t\t}\n\t\t\t*(--s) = 0;\n\t\t\tZSTR_LEN(mac) = s - ZSTR_VAL(mac);\n\t\t\tadd_assoc_str(&iface, \"mac\", mac);\n\t\t}\n\n\t\t/* Flags could be placed at this level,\n\t\t * but we repeat it in the unicast subarray\n\t\t * for consistency with the POSIX version.\n\t\t */\n\t\tadd_assoc_long(&iface, \"mtu\", p->Mtu);\n\n\t\tarray_init(&unicast);\n\t\tfor (u = p->FirstUnicastAddress; u; u = u->Next) {\n\t\t\tswitch (u->Address.lpSockaddr->sa_family) {\n\t\t\t\tcase AF_INET: {\n\t\t\t\t\tULONG mask;\n\t\t\t\t\tstruct sockaddr_in sin_mask;\n\n\t\t\t\t\tConvertLengthToIpv4Mask(u->OnLinkPrefixLength, &mask);\n\t\t\t\t\tsin_mask.sin_family = AF_INET;\n\t\t\t\t\tsin_mask.sin_addr.s_addr = mask;\n\n\t\t\t\t\tiface_append_unicast(&unicast, p->Flags,\n\t\t\t\t\t                     (struct sockaddr*)u->Address.lpSockaddr,\n\t\t\t\t\t                     (struct sockaddr*)&sin_mask, NULL, NULL);\n\t\t\t\t\tbreak;\n\t\t\t\t}\n\t\t\t\tcase AF_INET6: {\n\t\t\t\t\tULONG i, j;\n\t\t\t\t\tstruct sockaddr_in6 sin6_mask;\n\n\t\t\t\t\tmemset(&sin6_mask, 0, sizeof(sin6_mask));\n\t\t\t\t\tsin6_mask.sin6_family = AF_INET6;\n\t\t\t\t\tfor (i = u->OnLinkPrefixLength, j = 0; i > 0; i -= 8, ++j) {\n\t\t\t\t\t\tsin6_mask.sin6_addr.s6_addr[j] = (i >= 8) ? 0xff : ((ULONG)((0xffU << (8 - i)) & 0xffU));\n\t\t\t\t\t}\n\n\t\t\t\t\tiface_append_unicast(&unicast, p->Flags,\n\t\t\t\t\t                     (struct sockaddr*)u->Address.lpSockaddr,\n\t\t\t\t\t\t\t\t\t\t (struct sockaddr*)&sin6_mask, NULL, NULL);\n\t\t\t\t\tbreak;\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\tadd_assoc_zval(&iface, \"unicast\", &unicast);\n\n\t\tadd_assoc_bool(&iface, \"up\", (p->OperStatus == IfOperStatusUp));\n\n\t\tadd_assoc_zval(return_value, p->AdapterName, &iface);\n\t}\n\n\tFREE(pAddresses);\n#undef MALLOC\n#undef FREE\n#elif defined(HAVE_GETIFADDRS) || defined(__PASE__) /* !PHP_WIN32 */\n\tstruct ifaddrs *addrs = NULL, *p;\n\n\tZEND_PARSE_PARAMETERS_NONE();\n\n\tif (getifaddrs(&addrs)) {\n\t\tphp_error(E_WARNING, \"getifaddrs() failed %d: %s\", errno, strerror(errno));\n\t\tRETURN_FALSE;\n\t}\n\n\tarray_init(return_value);\n\tfor (p = addrs; p; p = p->ifa_next) {\n\t\tzval *iface = zend_hash_str_find(Z_ARR_P(return_value), p->ifa_name, strlen(p->ifa_name));\n\t\tzval *unicast, *status;\n\n\t\tif (!iface) {\n\t\t\tzval newif;\n\t\t\tarray_init(&newif);\n\t\t\tiface = zend_hash_str_add(Z_ARR_P(return_value), p->ifa_name, strlen(p->ifa_name), &newif);\n\t\t}\n\n\t\tunicast = zend_hash_str_find(Z_ARR_P(iface), \"unicast\", sizeof(\"unicast\") - 1);\n\t\tif (!unicast) {\n\t\t\tzval newuni;\n\t\t\tarray_init(&newuni);\n\t\t\tunicast = zend_hash_str_add(Z_ARR_P(iface), \"unicast\", sizeof(\"unicast\") - 1, &newuni);\n\t\t}\n\n\t\tiface_append_unicast(unicast,\n\t\t                     p->ifa_flags,\n\t\t                     p->ifa_addr, p->ifa_netmask,\n\t\t                     (p->ifa_flags & IFF_BROADCAST) ? p->ifa_broadaddr : NULL,\n\t\t\t\t\t         (p->ifa_flags & IFF_POINTOPOINT) ? p->ifa_dstaddr : NULL);\n\t\tstatus = zend_hash_str_find(Z_ARR_P(iface), \"up\", sizeof(\"up\") - 1);\n\t\tif (!status) {\n\t\t\tadd_assoc_bool(iface, \"up\", ((p->ifa_flags & IFF_UP) != 0));\n\t\t}\n\t}\n\n\tfreeifaddrs(addrs);\n#else\n\t/* Should never happen as we never register the function */\n\tZEND_UNREACHABLE();\n#endif",
+    "semantic": "Flags could be placed at this level, but we repeat it in the unicast subarray for consistency with the POSIX version.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_NONE",
+            "RETURN_FALSE",
+            "ZSTR_VAL",
+            "ZSTR_LEN",
+            "ZEND_UNREACHABLE"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "zend_error",
+            "php_win32_error_to_msg",
+            "php_win32_error_msg_free",
+            "zend_string_alloc",
+            "php_error",
+            "zend_hash_str_find",
+            "zend_hash_str_add"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common net_get_interfaces inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 10,
+    "purpose": "Flags could be placed at this level, but we repeat it in the unicast subarray for consistency with the POSIX version.",
+    "php_version": "8.4.0-dev",
+    "related": []
+}

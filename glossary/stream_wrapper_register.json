@@ -1,0 +1,94 @@
+{
+    "php_function": "stream_wrapper_register",
+    "zend_function": "stream_wrapper_register",
+    "source_file": "erspace.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "php.h",
+        "php_globals.h",
+        "ext/standard/file.h",
+        "ext/standard/flock_compat.h",
+        "sys/file.h",
+        "stddef.h",
+        "userspace_arginfo.h"
+    ],
+    "body": "zend_string *protocol;\n\tstruct php_user_stream_wrapper *uwrap;\n\tzend_class_entry *ce = NULL;\n\tzend_resource *rsrc;\n\tzend_long flags = 0;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"SC|l\", &protocol, &ce, &flags) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tuwrap = (struct php_user_stream_wrapper *)ecalloc(1, sizeof(*uwrap));\n\tuwrap->ce = ce;\n\tuwrap->protoname = estrndup(ZSTR_VAL(protocol), ZSTR_LEN(protocol));\n\tuwrap->wrapper.wops = &user_stream_wops;\n\tuwrap->wrapper.abstract = uwrap;\n\tuwrap->wrapper.is_url = ((flags & PHP_STREAM_IS_URL) != 0);\n\n\trsrc = zend_register_resource(uwrap, le_protocols);\n\n\tif (php_register_url_stream_wrapper_volatile(protocol, &uwrap->wrapper) == SUCCESS) {\n\t\tuwrap->resource = rsrc;\n\t\tRETURN_TRUE;\n\t}\n\n\t/* We failed.  But why? */\n\tif (zend_hash_exists(php_stream_get_url_stream_wrappers_hash(), protocol)) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Protocol %s:// is already defined.\", ZSTR_VAL(protocol));\n\t} else {\n\t\t/* Hash doesn't exist so it must have been an invalid protocol scheme */\n\t\tphp_error_docref(NULL, E_WARNING, \"Invalid protocol scheme specified. Unable to register wrapper class %s to %s://\", ZSTR_VAL(uwrap->ce->name), ZSTR_VAL(protocol));\n\t}\n\n\tzend_list_delete(rsrc);\n\tRETURN_FALSE;",
+    "semantic": "We failed.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "ZSTR_VAL",
+            "ZSTR_LEN",
+            "RETURN_TRUE",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zend_string",
+            "zend_class_entry",
+            "zend_resource",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "zend_register_resource",
+            "php_register_url_stream_wrapper_volatile",
+            "zend_hash_exists",
+            "php_stream_get_url_stream_wrappers_hash",
+            "php_error_docref",
+            "zend_list_delete"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common stream_wrapper_register inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 4,
+    "purpose": "We failed.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "stream_wrapper_unregister",
+        "stream_wrapper_restore"
+    ]
+}

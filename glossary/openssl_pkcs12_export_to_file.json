@@ -1,0 +1,206 @@
+{
+    "php_function": "openssl_pkcs12_export_to_file",
+    "zend_function": "openssl_pkcs12_export_to_file",
+    "source_file": "nssl.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "cert_obj",
+            "macro": "Z_PARAM_OBJ_OF_CLASS_OR_STR",
+            "arguments": [
+                "cert_obj",
+                "php_openssl_certificate_ce",
+                "cert_str"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_OBJ_OF_CLASS_OR_STR(cert_obj, php_openssl_certificate_ce, cert_str)"
+        },
+        {
+            "name": "filename",
+            "macro": "Z_PARAM_PATH",
+            "arguments": [
+                "filename",
+                "filename_len"
+            ],
+            "type": "mixed",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_PATH(filename, filename_len)"
+        },
+        {
+            "name": "zpkey",
+            "macro": "Z_PARAM_ZVAL",
+            "arguments": [
+                "zpkey"
+            ],
+            "type": "zval",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": true,
+            "raw": "Z_PARAM_ZVAL(zpkey)"
+        },
+        {
+            "name": "pass",
+            "macro": "Z_PARAM_STRING",
+            "arguments": [
+                "pass",
+                "pass_len"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING(pass, pass_len)"
+        },
+        {
+            "name": "args",
+            "macro": "Z_PARAM_ARRAY",
+            "arguments": [
+                "args"
+            ],
+            "type": "HashTable",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY(args)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "php_openssl.h",
+        "zend_attributes.h",
+        "zend_exceptions.h",
+        "ext/standard/file.h",
+        "ext/standard/info.h",
+        "ext/standard/php_fopen_wrappers.h",
+        "ext/standard/md5.h",
+        "ext/standard/base64.h",
+        "openssl/evp.h",
+        "openssl/bn.h",
+        "openssl/rsa.h",
+        "openssl/dsa.h",
+        "openssl/dh.h",
+        "openssl/x509.h",
+        "openssl/x509v3.h",
+        "openssl/crypto.h",
+        "openssl/pem.h",
+        "openssl/err.h",
+        "openssl/conf.h",
+        "openssl/rand.h",
+        "openssl/ssl.h",
+        "openssl/pkcs12.h",
+        "openssl/cms.h",
+        "openssl/core_names.h",
+        "openssl/param_build.h",
+        "openssl/provider.h",
+        "openssl/engine.h",
+        "time.h",
+        "openssl_arginfo.h"
+    ],
+    "body": "X509 *cert;\n\tzend_object *cert_obj;\n\tzend_string *cert_str;\n\tBIO * bio_out = NULL;\n\tPKCS12 * p12 = NULL;\n\tchar * filename, file_path[MAXPATHLEN];\n\tchar * friendly_name = NULL;\n\tsize_t filename_len;\n\tchar * pass;\n\tsize_t pass_len;\n\tzval *zpkey = NULL, *args = NULL;\n\tEVP_PKEY *priv_key = NULL;\n\tzval * item;\n\tSTACK_OF(X509) *ca = NULL;\n\n\tZEND_PARSE_PARAMETERS_START(4, 5)\n\t\tZ_PARAM_OBJ_OF_CLASS_OR_STR(cert_obj, php_openssl_certificate_ce, cert_str)\n\t\tZ_PARAM_PATH(filename, filename_len)\n\t\tZ_PARAM_ZVAL(zpkey)\n\t\tZ_PARAM_STRING(pass, pass_len)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_ARRAY(args)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tRETVAL_FALSE;\n\n\tcert = php_openssl_x509_from_param(cert_obj, cert_str, 1);\n\tif (cert == NULL) {\n\t\tphp_error_docref(NULL, E_WARNING, \"X.509 Certificate cannot be retrieved\");\n\t\treturn;\n\t}\n\n\tpriv_key = php_openssl_pkey_from_zval(zpkey, 0, \"\", 0, 3);\n\tif (priv_key == NULL) {\n\t\tif (!EG(exception)) {\n\t\t\tphp_error_docref(NULL, E_WARNING, \"Cannot get private key from parameter 3\");\n\t\t}\n\t\tgoto cleanup;\n\t}\n\tif (!X509_check_private_key(cert, priv_key)) {\n\t\tphp_openssl_store_errors();\n\t\tphp_error_docref(NULL, E_WARNING, \"Private key does not correspond to cert\");\n\t\tgoto cleanup;\n\t}\n\tif (!php_openssl_check_path(filename, filename_len, file_path, 2)) {\n\t\tgoto cleanup;\n\t}\n\n\t/* parse extra config from args array, promote this to an extra function */\n\tif (args &&\n\t\t(item = zend_hash_str_find(Z_ARRVAL_P(args), \"friendly_name\", sizeof(\"friendly_name\")-1)) != NULL &&\n\t\tZ_TYPE_P(item) == IS_STRING\n\t) {\n\t\tfriendly_name = Z_STRVAL_P(item);\n\t}\n\t/* certpbe (default RC2-40)\n\t   keypbe (default 3DES)\n\t   friendly_caname\n\t*/\n\n\tif (args && (item = zend_hash_str_find(Z_ARRVAL_P(args), \"extracerts\", sizeof(\"extracerts\")-1)) != NULL) {\n\t\tca = php_array_to_X509_sk(item, 5, \"extracerts\");\n\t}\n\t/* end parse extra config */\n\n\t/*PKCS12 *PKCS12_create(char *pass, char *name, EVP_PKEY *pkey, X509 *cert, STACK_OF(X509) *ca,\n\t\t\t\tint nid_key, int nid_cert, int iter, int mac_iter, int keytype);*/\n\n\tp12 = PKCS12_create(pass, friendly_name, priv_key, cert, ca, 0, 0, 0, 0, 0);\n\tif (p12 != NULL) {\n\t\tbio_out = BIO_new_file(file_path, PHP_OPENSSL_BIO_MODE_W(PKCS7_BINARY));\n\t\tif (bio_out != NULL) {\n\t\t\tif (i2d_PKCS12_bio(bio_out, p12) == 0) {\n\t\t\t\tphp_openssl_store_errors();\n\t\t\t\tphp_error_docref(NULL, E_WARNING, \"Error writing to file %s\", file_path);\n\t\t\t} else {\n\t\t\t\tRETVAL_TRUE;\n\t\t\t}\n\t\t\tBIO_free(bio_out);\n\t\t} else {\n\t\t\tphp_openssl_store_errors();\n\t\t\tphp_error_docref(NULL, E_WARNING, \"Error opening file %s\", file_path);\n\t\t}\n\n\t\tPKCS12_free(p12);\n\t} else {\n\t\tphp_openssl_store_errors();\n\t}\n\n\tphp_sk_X509_free(ca);\n\ncleanup:\n\tEVP_PKEY_free(priv_key);\n\n\tif (cert_str) {\n\t\tX509_free(cert);\n\t}",
+    "semantic": "parse extra config from args array, promote this to an extra function",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_OBJ_OF_CLASS_OR_STR",
+            "Z_PARAM_PATH",
+            "Z_PARAM_ZVAL",
+            "Z_PARAM_STRING",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_ARRAY",
+            "ZEND_PARSE_PARAMETERS_END"
+        ],
+        "zend_types": [
+            "zend_object",
+            "zend_string",
+            "zval"
+        ],
+        "internal_helpers": [
+            "php_openssl_x509_from_param",
+            "php_error_docref",
+            "php_openssl_pkey_from_zval",
+            "php_openssl_store_errors",
+            "php_openssl_check_path",
+            "zend_hash_str_find",
+            "php_array_to_X509_sk",
+            "php_sk_X509_free"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common openssl_pkcs12_export_to_file inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 7,
+    "purpose": "parse extra config from args array, promote this to an extra function",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "openssl_get_cert_locations",
+        "openssl_x509_export_to_file",
+        "openssl_spki_new",
+        "openssl_spki_verify",
+        "openssl_spki_export",
+        "openssl_spki_export_challenge",
+        "openssl_x509_export",
+        "openssl_x509_fingerprint",
+        "openssl_x509_check_private_key",
+        "openssl_x509_verify",
+        "openssl_x509_parse",
+        "openssl_x509_checkpurpose"
+    ]
+}

@@ -1,0 +1,36 @@
+{% extends '@symfonicat/base.html.twig' %}
+{% block title %}Domains{% endblock %}
+{% block body %}
+
+    <div class="d-flex justify-content-end mb-1">
+        <a href="{{ path('symfonicat_domain_create') }}" class="btn btn-sm btn-success">create domain</a>
+    </div>
+
+    <table class="table table-sm" id="domains">
+        <thead>
+            <tr>
+                <th>domain</th>
+                <th>subdomains</th>
+                <th>catch</th>
+                <th>parcel</th>
+                <th>middlewares</th>
+                <th>modules</th>
+                {% for env_parent in env_parents %}
+                    <th>{{ env_parent.id }}</th>
+                {% endfor %}
+                <th>&nbsp;</th>
+            </tr>
+        </thead>
+        <tbody id="domains-body">
+        {% for domain in domains %}
+            {{ include('@symfonicat/domain/_row.html.twig') }}
+        {% else %}
+            <tr id="domains-empty">
+                <td colspan="{{ 7 + env_parents|length }}">no records found</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+
+{% endblock %}

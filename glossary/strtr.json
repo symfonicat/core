@@ -1,0 +1,142 @@
+{
+    "php_function": "strtr",
+    "zend_function": "strtr",
+    "source_file": "ring.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "str",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "str"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(str)"
+        },
+        {
+            "name": "from_ht",
+            "macro": "Z_PARAM_ARRAY_HT",
+            "arguments": [
+                "from_ht"
+            ],
+            "type": "HashTable",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY_HT(from_ht)"
+        }
+    ],
+    "includes": [
+        "stdio.h",
+        "php.h",
+        "php_string.h",
+        "php_variables.h",
+        "locale.h",
+        "scanf.h",
+        "zend_API.h",
+        "zend_execute.h",
+        "basic_functions.h",
+        "zend_smart_str.h",
+        "Zend/zend_exceptions.h",
+        "TSRM.h",
+        "ext/standard/file.h",
+        "ext/standard/html.h",
+        "ext/random/php_random.h",
+        "emmintrin.h",
+        "Zend/zend_bitset.h",
+        "tmmintrin.h",
+        "arm_neon.h"
+    ],
+    "body": "zend_string *str, *from_str = NULL;\n\tHashTable *from_ht = NULL;\n\tchar *to = NULL;\n\tsize_t to_len = 0;\n\n\tif (ZEND_NUM_ARGS() <= 2) {\n\t\tZEND_PARSE_PARAMETERS_START(2, 2)\n\t\t\tZ_PARAM_STR(str)\n\t\t\tZ_PARAM_ARRAY_HT(from_ht)\n\t\tZEND_PARSE_PARAMETERS_END();\n\t} else {\n\t\tZEND_PARSE_PARAMETERS_START(3, 3)\n\t\t\tZ_PARAM_STR(str)\n\t\t\tZ_PARAM_STR(from_str)\n\t\t\tZ_PARAM_STRING(to, to_len)\n\t\tZEND_PARSE_PARAMETERS_END();\n\t}\n\n\t/* shortcut for empty string */\n\tif (ZSTR_LEN(str) == 0) {\n\t\tRETURN_EMPTY_STRING();\n\t}\n\n\tif (!to) {\n\t\tphp_strtr_array(return_value, str, from_ht);\n\t} else {\n\t\tRETURN_STR(php_strtr_ex(str,\n\t\t\t\t  ZSTR_VAL(from_str),\n\t\t\t\t  to,\n\t\t\t\t  MIN(ZSTR_LEN(from_str), to_len)));\n\t}",
+    "semantic": "shortcut for empty string",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STR",
+            "Z_PARAM_ARRAY_HT",
+            "ZEND_PARSE_PARAMETERS_END",
+            "Z_PARAM_STRING",
+            "ZSTR_LEN",
+            "RETURN_EMPTY_STRING",
+            "RETURN_STR",
+            "ZSTR_VAL"
+        ],
+        "zend_types": [
+            "zend_string",
+            "HashTable"
+        ],
+        "internal_helpers": [
+            "php_strtr_array",
+            "php_strtr_ex"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common strtr inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 4,
+    "purpose": "shortcut for empty string",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "bin2hex",
+        "hex2bin",
+        "strspn",
+        "strcspn",
+        "nl_langinfo",
+        "strcoll",
+        "trim",
+        "rtrim",
+        "ltrim",
+        "wordwrap",
+        "explode",
+        "implode"
+    ]
+}

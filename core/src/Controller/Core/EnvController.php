@@ -1,0 +1,94 @@
+<?php
+
+namespace Symfonicat\Controller\Core;
+
+use Symfonicat\Entity\Env;
+use Symfonicat\Entity\EnvParent;
+use Symfonicat\Form\EnvType;
+use Symfonicat\Form\EnvParentType;
+use Symfonicat\Repository\EnvRepository;
+use Symfonicat\Repository\EnvParentRepository;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Form\FormFactoryInterface;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Attribute\Route;
+
+final class EnvController extends AbstractController
+{
+    #[Route('/core/env', name: 'symfonicat_env_index', methods: ['GET', 'POST'])]
+    public function index(
+        Request $request,
+        EnvRepository $envRepository,
+        EnvParentRepository $envParentRepository,
+        EntityManagerInterface $entityManager,
+        FormFactoryInterface $formFactory,
+    ): Response
+    {
+        $envParent = new EnvParent();
+        $envParentForm = $formFactory->createNamed('env_parent_create', EnvParentType::class, $envParent);
+        $envParentForm->handleRequest($request);
+
+        if ($envParentForm->isSubmitted() && $envParentForm->isValid()) {
+            $entityManager->persist($envParent);
+            $entityManager->flush();
+
+            return $this->redirectToRoute('symfonicat_env_index', [], Response::HTTP_SEE_OTHER);
+        }
+
+        $env = new Env();
+        $envForm = $formFactory->createNamed('env_create', EnvType::class, $env);
+        $envForm->handleRequest($request);
+
+        if ($envForm->isSubmitted() && $envForm->isValid()) {
+            $entityManager->persist($env);
+            $entityManager->flush();
+
+            return $this->redirectToRoute('symfonicat_env_index', [], Response::HTTP_SEE_OTHER);
+        }
+
+        return $this->render('@symfonicat/env/index.html.twig', [
+            'env_parents' => $envParentRepository->findAllOrdered(),
+            'envs' => $envRepository->findAllOrdered(),
+            'env_parent_form' => $envParentForm,
+            'env_form' => $envForm,
+        ]);
+    }
+
+    #[Route('/core/env/{id}', name: 'symfonicat_env_delete', methods: ['POST'])]
+    public function delete(Request $request, string $id, EnvRepository $envRepository, EntityManagerInterface $entityManager): Response
+    {
+        $env = $envRepository->find($id);
+        if (!$env instanceof Env) {
+            return $this->redirectToRoute('symfonicat_env_index', [], Response::HTTP_SEE_OTHER);
+        }
+
+        if ($this->isCsrfTokenValid('delete' . $env->getId(), $request->getPayload()->getString('_token'))) {
+            $entityManager->remove($env);
+            $entityManager->flush();
+        }
+
+        return $this->redirectToRoute('symfonicat_env_index', [], Response::HTTP_SEE_OTHER);
+    }
+
+    #[Route('/core/env/parent/{id}', name: 'symfonicat_env_parent_delete', methods: ['POST'])]
+    public function deleteParent(
+        Request $request,
+        string $id,
+        EnvParentRepository $envParentRepository,
+        EntityManagerInterface $entityManager,
+    ): Response {
+        $envParent = $envParentRepository->find($id);
+        if (!$envParent instanceof EnvParent) {
+            return $this->redirectToRoute('symfonicat_env_index', [], Response::HTTP_SEE_OTHER);
+        }
+
+        if ($this->isCsrfTokenValid('delete' . $envParent->getId(), $request->getPayload()->getString('_token'))) {
+            $entityManager->remove($envParent);
+            $entityManager->flush();
+        }
+
+        return $this->redirectToRoute('symfonicat_env_index', [], Response::HTTP_SEE_OTHER);
+    }
+}

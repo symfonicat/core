@@ -1,0 +1,106 @@
+{
+    "php_function": "pg_lo_import",
+    "zend_function": "pg_lo_import",
+    "source_file": ".c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "stdlib.h",
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "ext/standard/info.h",
+        "zend_smart_str.h",
+        "ext/pcre/php_pcre.h",
+        "php_pgsql.h",
+        "php_globals.h",
+        "zend_exceptions.h",
+        "zend_attributes.h",
+        "php_network.h",
+        "pgsql_arginfo.h"
+    ],
+    "body": "zval *pgsql_link = NULL, *oid = NULL;\n\tzend_string *file_in;\n\tPGconn *pgsql;\n\tOid returned_oid;\n\tpgsql_link_handle *link;\n\n\tif (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS(),\n\t\t\t\t\t\t\t\t \"OP|z\", &pgsql_link, pgsql_link_ce, &file_in, &oid) == SUCCESS) {\n\t\tlink = Z_PGSQL_LINK_P(pgsql_link);\n\t\tCHECK_PGSQL_LINK(link);\n\t}\n\telse if (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS(),\n\t\t\t\t\t\t\t\t\t  \"P|z\", &file_in, &oid) == SUCCESS) {\n\t\tlink = FETCH_DEFAULT_LINK();\n\t\tCHECK_DEFAULT_LINK(link);\n\t}\n\telse {\n\t\tWRONG_PARAM_COUNT;\n\t}\n\n\tif (php_check_open_basedir(ZSTR_VAL(file_in))) {\n\t\tRETURN_FALSE;\n\t}\n\n\tpgsql = link->conn;\n\n\tif (oid) {\n\t\tOid wanted_oid;\n\t\tswitch (Z_TYPE_P(oid)) {\n\t\tcase IS_STRING:\n\t\t\t{\n\t\t\t\tif (!is_valid_oid_string(Z_STR_P(oid), &wanted_oid)) {\n\t\t\t\t\t/* wrong integer format */\n\t\t\t\t\tzend_value_error(\"Invalid OID value passed\");\n\t\t\t\t\tRETURN_THROWS();\n\t\t\t\t}\n\t\t\t}\n\t\t\tbreak;\n\t\tcase IS_LONG:\n\t\t\tif (Z_LVAL_P(oid) < (zend_long)InvalidOid) {\n\t\t\t\tzend_value_error(\"Invalid OID value passed\");\n\t\t\t\tRETURN_THROWS();\n\t\t\t}\n\t\t\twanted_oid = (Oid)Z_LVAL_P(oid);\n\t\t\tbreak;\n\t\tdefault:\n\t\t\tzend_type_error(\"OID value must be of type string|int, %s given\", zend_zval_value_name(oid));\n\t\t\tRETURN_THROWS();\n\t\t}\n\n\t\treturned_oid = lo_import_with_oid(pgsql, ZSTR_VAL(file_in), wanted_oid);\n\n\t\tif (returned_oid == InvalidOid) {\n\t\t\tRETURN_FALSE;\n\t\t}\n\n\t\tPGSQL_RETURN_OID(returned_oid);\n\t}\n\n\treturned_oid = lo_import(pgsql, ZSTR_VAL(file_in));\n\n\tif (returned_oid == InvalidOid) {\n\t\tRETURN_FALSE;\n\t}\n\tPGSQL_RETURN_OID(returned_oid);",
+    "semantic": "wrong integer format",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMS_QUIET",
+            "ZEND_NUM_ARGS",
+            "ZSTR_VAL",
+            "RETURN_FALSE",
+            "RETURN_THROWS"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_string",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters_ex",
+            "php_check_open_basedir",
+            "zend_value_error",
+            "zend_type_error",
+            "zend_zval_value_name"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common pg_lo_import inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 6,
+    "purpose": "wrong integer format",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "pg_connect",
+        "pg_connect_poll",
+        "pg_pconnect",
+        "pg_close",
+        "pg_dbname",
+        "pg_last_error",
+        "pg_options",
+        "pg_port",
+        "pg_tty",
+        "pg_host",
+        "pg_version",
+        "pg_jit"
+    ]
+}

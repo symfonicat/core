@@ -1,0 +1,104 @@
+{
+    "php_function": "odbc_tables",
+    "zend_function": "odbc_tables",
+    "source_file": "bc.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_globals.h",
+        "zend_attributes.h",
+        "ext/standard/info.h",
+        "Zend/zend_interfaces.h",
+        "zend_smart_str.h",
+        "php_odbc.h",
+        "php_odbc_includes.h",
+        "php_odbc_utils.h",
+        "fcntl.h",
+        "php_ini.h",
+        "odbc_arginfo.h"
+    ],
+    "body": "zval *pv_conn;\n\todbc_result   *result = NULL;\n\tchar *cat = NULL, *schema = NULL, *table = NULL, *type = NULL;\n\tsize_t cat_len = 0, schema_len = 0, table_len = 0, type_len = 0;\n\tRETCODE rc;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"O|s!s!s!s!\", &pv_conn, odbc_connection_ce, &cat, &cat_len, &schema, &schema_len,\n\t\t&table, &table_len, &type, &type_len) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\todbc_connection *conn = Z_ODBC_CONNECTION_P(pv_conn);\n\tCHECK_ODBC_CONNECTION(conn);\n\n\tobject_init_ex(return_value, odbc_result_ce);\n\tresult = Z_ODBC_RESULT_P(return_value);\n\n\trc = PHP_ODBC_SQLALLOCSTMT(conn->hdbc, &(result->stmt));\n\tif (rc == SQL_INVALID_HANDLE) {\n\t\tphp_error_docref(NULL, E_WARNING, \"SQLAllocStmt error 'Invalid Handle'\");\n\t\tzval_ptr_dtor(return_value);\n\t\tRETURN_FALSE;\n\t}\n\n\tif (rc == SQL_ERROR) {\n\t\todbc_sql_error(conn, SQL_NULL_HSTMT, \"SQLAllocStmt\");\n\t\tzval_ptr_dtor(return_value);\n\t\tRETURN_FALSE;\n\t}\n\n\t/* This hack is needed to access table information in Access databases (fmk) */\n\tif (schema && schema_len == 0 && table && table_len) {\n\t\tschema = NULL;\n\t}\n\n\trc = SQLTables(result->stmt,\n\t\t\t(SQLCHAR *) cat, SAFE_SQL_NTS(cat),\n\t\t\t(SQLCHAR *) schema,\tSAFE_SQL_NTS(schema),\n\t\t\t(SQLCHAR *) table, SAFE_SQL_NTS(table),\n\t\t\t(SQLCHAR *) type, SAFE_SQL_NTS(type));\n\n\tif (rc == SQL_ERROR) {\n\t\todbc_sql_error(conn, result->stmt, \"SQLTables\");\n\t\tzval_ptr_dtor(return_value);\n\t\tRETURN_FALSE;\n\t}\n\n\tresult->numparams = 0;\n\tSQLNumResultCols(result->stmt, &(result->numcols));\n\n\tif (result->numcols > 0) {\n\t\todbc_bindcols(result);\n\t} else {\n\t\tresult->values = NULL;\n\t}\n\tresult->conn_ptr = conn;\n\tresult->fetched = 0;\n\n\todbc_insert_new_result(conn, return_value);",
+    "semantic": "This hack is needed to access table information in Access databases (fmk)",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zval"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "php_error_docref",
+            "zval_ptr_dtor",
+            "odbc_sql_error",
+            "odbc_bindcols",
+            "odbc_insert_new_result"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common odbc_tables inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 5,
+    "purpose": "This hack is needed to access table information in Access databases (fmk)",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "odbc_close_all",
+        "odbc_binmode",
+        "odbc_longreadlen",
+        "odbc_prepare",
+        "odbc_execute",
+        "odbc_cursor",
+        "odbc_data_source",
+        "odbc_exec",
+        "odbc_fetch_object",
+        "odbc_fetch_array",
+        "odbc_fetch_into",
+        "odbc_fetch_row"
+    ]
+}

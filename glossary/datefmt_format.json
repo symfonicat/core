@@ -1,0 +1,83 @@
+{
+    "php_function": "datefmt_format",
+    "zend_function": "datefmt_format",
+    "source_file": "rmat/dateformat_format.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "../php_intl.h",
+        "unicode/ustring.h",
+        "unicode/ucal.h",
+        "../intl_convert.h",
+        "../common/common_date.h",
+        "dateformat.h",
+        "dateformat_class.h",
+        "dateformat_data.h"
+    ],
+    "body": "UDate \t\ttimestamp\t= 0;\n\tHashTable\t*hash_arr\t= NULL;\n\tzval\t\t*zarg\t\t= NULL;\n\n\tDATE_FORMAT_METHOD_INIT_VARS;\n\n\t/* Parse parameters. */\n\tif (zend_parse_method_parameters(ZEND_NUM_ARGS(), getThis(), \"Oz\",\n\t\t\t&object, IntlDateFormatter_ce_ptr, &zarg) == FAILURE) {\n\t\tintl_error_set(NULL, U_ILLEGAL_ARGUMENT_ERROR, \"datefmt_format: unable \"\n\t\t\t\t\"to parse input params\", 0 );\n\t\tRETURN_THROWS();\n\t}\n\n\tDATE_FORMAT_METHOD_FETCH_OBJECT;\n\n\tif (Z_TYPE_P(zarg) == IS_ARRAY) {\n\t\thash_arr = Z_ARRVAL_P(zarg);\n\t\tif (!hash_arr || zend_hash_num_elements(hash_arr) == 0) {\n\t\t\tRETURN_FALSE;\n\t\t}\n\n\t\ttimestamp = internal_get_timestamp(dfo, hash_arr);\n\t\tINTL_METHOD_CHECK_STATUS(dfo, \"datefmt_format: date formatting failed\")\n\t} else {\n\t\ttimestamp = intl_zval_to_millis(zarg, INTL_DATA_ERROR_P(dfo),\n\t\t\t\t\"datefmt_format\");\n\t\tif (U_FAILURE(INTL_DATA_ERROR_CODE(dfo))) {\n\t\t\tRETURN_FALSE;\n\t\t}\n\t}\n\n\tinternal_format( dfo, timestamp, return_value);",
+    "semantic": "Parse parameters.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "HashTable",
+            "zval"
+        ],
+        "internal_helpers": [
+            "zend_parse_method_parameters",
+            "zend_hash_num_elements"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common datefmt_format inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 3,
+    "purpose": "Parse parameters.",
+    "php_version": "8.4.0-dev",
+    "related": []
+}

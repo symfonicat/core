@@ -1,0 +1,102 @@
+{
+    "php_function": "ftp_get",
+    "zend_function": "ftp_get",
+    "source_file": ".c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "ext/standard/info.h",
+        "ext/standard/file.h",
+        "Zend/zend_attributes.h",
+        "Zend/zend_exceptions.h",
+        "php_ftp.h",
+        "ftp.h",
+        "ftp_arginfo.h"
+    ],
+    "body": "zval\t\t*z_ftp;\n\tftpbuf_t\t*ftp;\n\tftptype_t\txtype;\n\tphp_stream\t*outstream;\n\tchar\t\t*local, *remote;\n\tsize_t\t\tlocal_len, remote_len;\n\tzend_long\t\tmode=FTPTYPE_IMAGE, resumepos=0;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"Opp|ll\", &z_ftp, php_ftp_ce, &local, &local_len, &remote, &remote_len, &mode, &resumepos) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\tGET_FTPBUF(ftp, z_ftp);\n\tXTYPE(xtype, mode);\n\n\t/* ignore autoresume if autoseek is switched off */\n\tif (!ftp->autoseek && resumepos == PHP_FTP_AUTORESUME) {\n\t\tresumepos = 0;\n\t}\n\n#ifdef PHP_WIN32\n\tmode = FTPTYPE_IMAGE;\n#endif\n\n\tif (ftp->autoseek && resumepos) {\n\t\toutstream = php_stream_open_wrapper(local, mode == FTPTYPE_ASCII ? \"rt+\" : \"rb+\", REPORT_ERRORS, NULL);\n\t\tif (outstream == NULL) {\n\t\t\toutstream = php_stream_open_wrapper(local, mode == FTPTYPE_ASCII ? \"wt\" : \"wb\", REPORT_ERRORS, NULL);\n\t\t}\n\t\tif (outstream != NULL) {\n\t\t\t/* if autoresume is wanted seek to end */\n\t\t\tif (resumepos == PHP_FTP_AUTORESUME) {\n\t\t\t\tphp_stream_seek(outstream, 0, SEEK_END);\n\t\t\t\tresumepos = php_stream_tell(outstream);\n\t\t\t} else {\n\t\t\t\tphp_stream_seek(outstream, resumepos, SEEK_SET);\n\t\t\t}\n\t\t}\n\t} else {\n\t\toutstream = php_stream_open_wrapper(local, mode == FTPTYPE_ASCII ? \"wt\" : \"wb\", REPORT_ERRORS, NULL);\n\t}\n\n\tif (outstream == NULL)\t{\n\t\tphp_error_docref(NULL, E_WARNING, \"Error opening %s\", local);\n\t\tRETURN_FALSE;\n\t}\n\n\tif (!ftp_get(ftp, outstream, remote, remote_len, xtype, resumepos)) {\n\t\tphp_stream_close(outstream);\n\t\tVCWD_UNLINK(local);\n\t\tif (*ftp->inbuf) {\n\t\t\tphp_error_docref(NULL, E_WARNING, \"%s\", ftp->inbuf);\n\t\t}\n\t\tRETURN_FALSE;\n\t}\n\n\tphp_stream_close(outstream);\n\tRETURN_TRUE;",
+    "semantic": "ignore autoresume if autoseek is switched off",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_FALSE",
+            "RETURN_TRUE"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "php_stream_open_wrapper",
+            "php_stream_seek",
+            "php_stream_tell",
+            "php_error_docref",
+            "php_stream_close"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common ftp_get inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": true,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid leaving streams open on any early-exit branch."
+    ],
+    "complexity": 5,
+    "purpose": "ignore autoresume if autoseek is switched off",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "ftp_connect",
+        "ftp_ssl_connect",
+        "ftp_login",
+        "ftp_pwd",
+        "ftp_cdup",
+        "ftp_chdir",
+        "ftp_exec",
+        "ftp_raw",
+        "ftp_mkdir",
+        "ftp_rmdir",
+        "ftp_chmod",
+        "ftp_alloc"
+    ]
+}

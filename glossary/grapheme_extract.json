@@ -1,0 +1,176 @@
+{
+    "php_function": "grapheme_extract",
+    "zend_function": "grapheme_extract",
+    "source_file": "me/grapheme_string.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "str",
+            "macro": "Z_PARAM_STRING",
+            "arguments": [
+                "str",
+                "str_len"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING(str, str_len)"
+        },
+        {
+            "name": "size",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "size"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(size)"
+        },
+        {
+            "name": "extract_type",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "extract_type"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(extract_type)"
+        },
+        {
+            "name": "lstart",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "lstart"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(lstart)"
+        },
+        {
+            "name": "next",
+            "macro": "Z_PARAM_ZVAL",
+            "arguments": [
+                "next"
+            ],
+            "type": "zval",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": true,
+            "raw": "Z_PARAM_ZVAL(next)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "grapheme.h",
+        "grapheme_util.h",
+        "unicode/utypes.h",
+        "unicode/utf8.h",
+        "unicode/ucol.h",
+        "unicode/ustring.h",
+        "unicode/ubrk.h"
+    ],
+    "body": "char *str, *pstr;\n\tUText ut = UTEXT_INITIALIZER;\n\tsize_t str_len;\n\tzend_long size; /* maximum number of grapheme clusters, bytes, or characters (based on extract_type) to return */\n\tzend_long lstart = 0; /* starting position in str in bytes */\n\tint32_t start = 0;\n\tzend_long extract_type = GRAPHEME_EXTRACT_TYPE_COUNT;\n\tUErrorCode status;\n\tunsigned char u_break_iterator_buffer[U_BRK_SAFECLONE_BUFFERSIZE];\n\tUBreakIterator* bi = NULL;\n\tint ret_pos;\n\tzval *next = NULL; /* return offset of next part of the string */\n\n\tZEND_PARSE_PARAMETERS_START(2, 5)\n\t\tZ_PARAM_STRING(str, str_len)\n\t\tZ_PARAM_LONG(size)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_LONG(extract_type)\n\t\tZ_PARAM_LONG(lstart)\n\t\tZ_PARAM_ZVAL(next)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (lstart < 0) {\n\t\tlstart += str_len;\n\t}\n\n\tif ( NULL != next ) {\n\t\tif ( !Z_ISREF_P(next) ) {\n\t\t\tintl_error_set( NULL, U_ILLEGAL_ARGUMENT_ERROR,\n\t\t\t\t \"grapheme_extract: 'next' was not passed by reference\", 0 );\n\t\t\tRETURN_FALSE;\n\t\t} else {\n\t\t\tZVAL_DEREF(next);\n\t\t\t/* initialize next */\n\t\t\tzval_ptr_dtor(next);\n\t\t\tZVAL_LONG(next, lstart);\n\t\t}\n\t}\n\n\tif ( extract_type < GRAPHEME_EXTRACT_TYPE_MIN || extract_type > GRAPHEME_EXTRACT_TYPE_MAX ) {\n\t\tzend_argument_value_error(3, \"must be one of GRAPHEME_EXTR_COUNT, GRAPHEME_EXTR_MAXBYTES, or GRAPHEME_EXTR_MAXCHARS\");\n\t\tRETURN_THROWS();\n\t}\n\n\tif ( lstart > INT32_MAX || lstart < 0 || (size_t)lstart >= str_len ) {\n\t\tintl_error_set( NULL, U_ILLEGAL_ARGUMENT_ERROR, \"grapheme_extract: start not contained in string\", 0 );\n\t\tRETURN_FALSE;\n\t}\n\n\tif (size < 0) {\n\t\tzend_argument_value_error(2, \"must be greater than or equal to 0\");\n\t\tRETURN_THROWS();\n\t}\n\n\tif (size > INT32_MAX) {\n\t\tzend_argument_value_error(2, \"is too large\");\n\t\tRETURN_THROWS();\n\t}\n\n\tif (size == 0) {\n\t\tRETURN_EMPTY_STRING();\n\t}\n\n\t/* we checked that it will fit: */\n\tstart = (int32_t) lstart;\n\n\tpstr = str + start;\n\n\t/* just in case pstr points in the middle of a character, move forward to the start of the next char */\n\tif ( !U8_IS_SINGLE(*pstr) && !U8_IS_LEAD(*pstr) ) {\n\t\tchar *str_end = str + str_len;\n\n\t\twhile ( !U8_IS_SINGLE(*pstr) && !U8_IS_LEAD(*pstr) ) {\n\t\t\tpstr++;\n\t\t\tif ( pstr >= str_end ) {\n\t\t\t\tintl_error_set( NULL, U_ILLEGAL_ARGUMENT_ERROR,\n\t\t\t\t\t\t\t\t\"grapheme_extract: invalid input string\", 0 );\n\n\t\t\t\tRETURN_FALSE;\n\t\t\t}\n\t\t}\n\t}\n\n\tstr_len -= (pstr - str);\n\n\t/* if the string is all ASCII up to size+1 - or str_len whichever is first - then we are done.\n\t\t(size + 1 because the size-th character might be the beginning of a grapheme cluster)\n\t */\n\n\tif ( -1 != grapheme_ascii_check((unsigned char *)pstr, MIN(size + 1, str_len)) ) {\n\t\tsize_t nsize = MIN(size, str_len);\n\t\tif ( NULL != next ) {\n\t\t\tZVAL_LONG(next, start+nsize);\n\t\t}\n\t\tRETURN_STRINGL(pstr, nsize);\n\t}\n\n\tstatus = U_ZERO_ERROR;\n\tutext_openUTF8(&ut, pstr, str_len, &status);\n\n\tif ( U_FAILURE( status ) ) {\n\t\t/* Set global error code. */\n\t\tintl_error_set_code( NULL, status );\n\n\t\t/* Set error messages. */\n\t\tintl_error_set_custom_msg( NULL, \"Error opening UTF-8 text\", 0 );\n\n\t\tRETURN_FALSE;\n\t}\n\n\tbi = NULL;\n\tstatus = U_ZERO_ERROR;\n\tbi = grapheme_get_break_iterator(u_break_iterator_buffer, &status );\n\n\tubrk_setUText(bi, &ut, &status);\n\t/* if the caller put us in the middle of a grapheme, we can't detect it in all cases since we\n\t\tcan't back up. So, we will not do anything. */\n\n\t/* now we need to find the end of the chunk the user wants us to return */\n\t/* it's ok to convert str_len to in32_t since if it were too big intl_convert_utf8_to_utf16 above would fail */\n\tret_pos = (*grapheme_extract_iters[extract_type])(bi, size, (unsigned char *)pstr, (int32_t)str_len);\n\n\tutext_close(&ut);\n\tubrk_close(bi);\n\n\tif ( NULL != next ) {\n\t\tZVAL_LONG(next, start+ret_pos);\n\t}\n\n\tRETURN_STRINGL(((char *)pstr), ret_pos);",
+    "semantic": "maximum number of grapheme clusters, bytes, or characters (based on extract_type) to return",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STRING",
+            "Z_PARAM_LONG",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_ZVAL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_FALSE",
+            "ZVAL_DEREF",
+            "ZVAL_LONG",
+            "RETURN_THROWS",
+            "RETURN_EMPTY_STRING",
+            "RETURN_STRINGL"
+        ],
+        "zend_types": [
+            "zend_long",
+            "zval"
+        ],
+        "internal_helpers": [
+            "zval_ptr_dtor",
+            "zend_argument_value_error"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common grapheme_extract inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 7,
+    "purpose": "maximum number of grapheme clusters, bytes, or characters (based on extract_type) to return",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "grapheme_strlen",
+        "grapheme_strpos",
+        "grapheme_stripos",
+        "grapheme_strrpos",
+        "grapheme_strripos",
+        "grapheme_substr",
+        "grapheme_strstr",
+        "grapheme_stristr",
+        "grapheme_str_split"
+    ]
+}

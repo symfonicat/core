@@ -1,0 +1,33 @@
+{% extends '@symfonicat/base.html.twig' %}
+{% block title %}Parcels{% endblock %}
+{% block body %}
+
+    <div class="d-flex justify-content-end mb-1">
+        <a href="{{ path('symfonicat_core_schema_update') }}" class="btn btn-sm btn-success">update schema</a>
+    </div>
+
+    <table class="table table-sm align-middle">
+        <thead>
+            <tr>
+                <th class="text-end">bucket</th>
+                <th class="text-center">&nbsp;</th>
+                <th>parcel</th>
+                <th>path</th>
+                {% for env_parent in env_parents %}
+                    <th>{{ env_parent.id }}</th>
+                {% endfor %}
+                <th class="text-end">&nbsp;</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for parcel in parcels %}
+            {{ include('@symfonicat/parcel/_row.html.twig') }}
+        {% else %}
+            <tr>
+                <td colspan="{{ 4 + env_parents|length }}">no records found</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+{% endblock %}

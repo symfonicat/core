@@ -1,0 +1,124 @@
+{
+    "php_function": "array_values",
+    "zend_function": "array_values",
+    "source_file": "ray.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "input",
+            "macro": "Z_PARAM_ARRAY",
+            "arguments": [
+                "input"
+            ],
+            "type": "HashTable",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY(input)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "php_ini.h",
+        "stdarg.h",
+        "stdlib.h",
+        "math.h",
+        "time.h",
+        "string.h",
+        "zend_globals.h",
+        "zend_interfaces.h",
+        "php_array.h",
+        "basic_functions.h",
+        "php_string.h",
+        "php_math.h",
+        "zend_smart_str.h",
+        "zend_bitset.h",
+        "zend_exceptions.h",
+        "ext/random/php_random.h",
+        "zend_frameless_function.h"
+    ],
+    "body": "zval\t *input;\t\t/* Input array */\n\tzend_array *arrval;\n\tzend_long arrlen;\n\n\tZEND_PARSE_PARAMETERS_START(1, 1)\n\t\tZ_PARAM_ARRAY(input)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tarrval = Z_ARRVAL_P(input);\n\n\t/* Return empty input as is */\n\tarrlen = zend_hash_num_elements(arrval);\n\tif (!arrlen) {\n\t\tRETURN_EMPTY_ARRAY();\n\t}\n\n\t/* Return vector-like packed arrays as-is */\n\tif (HT_IS_PACKED(arrval) && HT_IS_WITHOUT_HOLES(arrval) &&\n\t\tarrval->nNextFreeElement == arrlen) {\n\t\tRETURN_COPY(input);\n\t}\n\n\tRETURN_ARR(zend_array_to_list(arrval));",
+    "semantic": "Input array",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_ARRAY",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_EMPTY_ARRAY",
+            "RETURN_COPY",
+            "RETURN_ARR"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_array",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_hash_num_elements",
+            "zend_array_to_list"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common array_values inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 4,
+    "purpose": "Input array",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "krsort",
+        "ksort",
+        "count",
+        "natsort",
+        "natcasesort",
+        "asort",
+        "arsort",
+        "sort",
+        "rsort",
+        "usort",
+        "uasort",
+        "uksort"
+    ]
+}

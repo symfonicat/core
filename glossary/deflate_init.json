@@ -1,0 +1,103 @@
+{
+    "php_function": "deflate_init",
+    "zend_function": "deflate_init",
+    "source_file": "",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "SAPI.h",
+        "php_ini.h",
+        "ext/standard/info.h",
+        "php_zlib.h",
+        "zlib_arginfo.h"
+    ],
+    "body": "php_zlib_context *ctx;\n\tzend_long encoding, level = -1, memory = 8, window = 15, strategy = Z_DEFAULT_STRATEGY;\n\tchar *dict = NULL;\n\tsize_t dictlen = 0;\n\tHashTable *options = NULL;\n\tzval *option_buffer;\n\n\tif (SUCCESS != zend_parse_parameters(ZEND_NUM_ARGS(), \"l|H\", &encoding, &options)) {\n\t\tRETURN_THROWS();\n\t}\n\n\tif (options && (option_buffer = zend_hash_str_find(options, ZEND_STRL(\"level\"))) != NULL) {\n\t\tlevel = zval_get_long(option_buffer);\n\t}\n\tif (level < -1 || level > 9) {\n\t\tzend_value_error(\"deflate_init(): \\\"level\\\" option must be between -1 and 9\");\n\t\tRETURN_THROWS();\n\t}\n\n\tif (options && (option_buffer = zend_hash_str_find(options, ZEND_STRL(\"memory\"))) != NULL) {\n\t\tmemory = zval_get_long(option_buffer);\n\t}\n\tif (memory < 1 || memory > 9) {\n\t\tzend_value_error(\"deflate_init(): \\\"memory\\\" option must be between 1 and 9\");\n\t\tRETURN_THROWS();\n\t}\n\n\tif (options && (option_buffer = zend_hash_str_find(options, ZEND_STRL(\"window\"))) != NULL) {\n\t\twindow = zval_get_long(option_buffer);\n\t}\n\tif (window < 8 || window > 15) {\n\t\tzend_value_error(\"deflate_init(): \\\"window\\\" option must be between 8 and 15\");\n\t\tRETURN_THROWS();\n\t}\n\n\tif (options && (option_buffer = zend_hash_str_find(options, ZEND_STRL(\"strategy\"))) != NULL) {\n\t\tstrategy = zval_get_long(option_buffer);\n\t}\n\tswitch (strategy) {\n\t\tcase Z_FILTERED:\n\t\tcase Z_HUFFMAN_ONLY:\n\t\tcase Z_RLE:\n\t\tcase Z_FIXED:\n\t\tcase Z_DEFAULT_STRATEGY:\n\t\t\tbreak;\n\t\tdefault:\n\t\t\tzend_value_error(\"deflate_init(): \\\"strategy\\\" option must be one of ZLIB_FILTERED, ZLIB_HUFFMAN_ONLY, ZLIB_RLE, ZLIB_FIXED, or ZLIB_DEFAULT_STRATEGY\");\n\t\t\tRETURN_THROWS();\n\t}\n\n\tif (!zlib_create_dictionary_string(options, &dict, &dictlen)) {\n\t\tRETURN_THROWS();\n\t}\n\n\tswitch (encoding) {\n\t\tcase PHP_ZLIB_ENCODING_RAW:\n\t\tcase PHP_ZLIB_ENCODING_GZIP:\n\t\tcase PHP_ZLIB_ENCODING_DEFLATE:\n\t\t\tbreak;\n\t\tdefault:\n\t\t\tzend_argument_value_error(1, \"must be one of ZLIB_ENCODING_RAW, ZLIB_ENCODING_GZIP, or ZLIB_ENCODING_DEFLATE\");\n\t\t\tRETURN_THROWS();\n\t}\n\n\tobject_init_ex(return_value, deflate_context_ce);\n\tctx = Z_DEFLATE_CONTEXT_P(return_value);\n\n\tctx->Z.zalloc = php_zlib_alloc;\n\tctx->Z.zfree = php_zlib_free;\n\n\tif (encoding < 0) {\n\t\tencoding += 15 - window;\n\t} else {\n\t\tencoding -= 15 - window;\n\t}\n\n\tif (deflateInit2(&ctx->Z, level, Z_DEFLATED, encoding, memory, strategy) != Z_OK) {\n\t\tzval_ptr_dtor(return_value);\n\t\tphp_error_docref(NULL, E_WARNING, \"Failed allocating zlib.deflate context\");\n\t\tRETURN_FALSE;\n\t}\n\n\tif (dict) {\n\t\tint success = deflateSetDictionary(&ctx->Z, (Bytef *) dict, dictlen);\n\t\tZEND_ASSERT(success == Z_OK);\n\t\tefree(dict);\n\t}",
+    "semantic": "Implements the PHP function deflate_init in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "ZEND_STRL",
+            "RETURN_FALSE",
+            "ZEND_ASSERT"
+        ],
+        "zend_types": [
+            "zend_long",
+            "HashTable",
+            "zval"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "zend_hash_str_find",
+            "zval_get_long",
+            "zend_value_error",
+            "zend_argument_value_error",
+            "zval_ptr_dtor",
+            "php_error_docref"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common deflate_init inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 7,
+    "purpose": "Implements the PHP function deflate_init in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "ob_gzhandler",
+        "zlib_get_coding_type",
+        "gzfile",
+        "gzopen",
+        "readgzfile",
+        "name",
+        "name",
+        "inflate_init",
+        "inflate_add",
+        "inflate_get_status",
+        "inflate_get_read_len",
+        "deflate_add"
+    ]
+}

@@ -1,0 +1,118 @@
+{
+    "php_function": "socket_import_stream",
+    "zend_function": "socket_import_stream",
+    "source_file": "kets.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "zstream",
+            "macro": "Z_PARAM_RESOURCE",
+            "arguments": [
+                "zstream"
+            ],
+            "type": "zend_resource",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_RESOURCE(zstream)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_network.h",
+        "ext/standard/file.h",
+        "ext/standard/info.h",
+        "php_ini.h",
+        "stddef.h",
+        "sockaddr_conv.h",
+        "multicast.h",
+        "sendrecvmsg.h",
+        "sockets_arginfo.h"
+    ],
+    "body": "zval\t\t\t\t *zstream;\n\tphp_stream\t\t\t *stream;\n\tphp_socket\t\t\t *retsock = NULL;\n\tPHP_SOCKET\t\t\t socket; /* fd */\n\n\tZEND_PARSE_PARAMETERS_START(1, 1)\n\t\tZ_PARAM_RESOURCE(zstream)\n\tZEND_PARSE_PARAMETERS_END();\n\tphp_stream_from_zval(stream, zstream);\n\n\tif (php_stream_cast(stream, PHP_STREAM_AS_SOCKETD, (void**)&socket, 1)) {\n\t\t/* error supposedly already shown */\n\t\tRETURN_FALSE;\n\t}\n\n\tobject_init_ex(return_value, socket_ce);\n\tretsock = Z_SOCKET_P(return_value);\n\n\tif (!socket_import_file_descriptor(socket, retsock)) {\n\t\tzval_ptr_dtor(return_value);\n\t\tRETURN_FALSE;\n\t}\n\n#ifdef PHP_WIN32\n\t/* on windows, check if the stream is a socket stream and read its\n\t * private data; otherwise assume it's in non-blocking mode */\n\tif (php_stream_is(stream, PHP_STREAM_IS_SOCKET)) {\n\t\tretsock->blocking =\n\t\t\t\t((php_netstream_data_t *)stream->abstract)->is_blocked;\n\t} else {\n\t\tretsock->blocking = 1;\n\t}\n#endif\n\n\t/* hold a zval reference to the stream (holding a php_stream* directly could\n\t * also be done, but this makes socket_export_stream a bit simpler) */\n\tZVAL_COPY(&retsock->zstream, zstream);\n\n\tphp_stream_set_option(stream, PHP_STREAM_OPTION_READ_BUFFER, PHP_STREAM_BUFFER_NONE, NULL);",
+    "semantic": "fd",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_RESOURCE",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_FALSE",
+            "ZVAL_COPY"
+        ],
+        "zend_types": [
+            "zval"
+        ],
+        "internal_helpers": [
+            "php_stream_from_zval",
+            "php_stream_cast",
+            "zval_ptr_dtor",
+            "php_stream_is",
+            "php_stream_set_option"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common socket_import_stream inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 5,
+    "purpose": "fd",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "socket_select",
+        "socket_create_listen",
+        "socket_accept",
+        "socket_set_nonblock",
+        "socket_set_block",
+        "socket_listen",
+        "socket_close",
+        "socket_write",
+        "socket_read",
+        "socket_getsockname",
+        "socket_getpeername",
+        "socket_create"
+    ]
+}

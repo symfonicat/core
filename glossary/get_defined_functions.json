@@ -1,0 +1,111 @@
+{
+    "php_function": "get_defined_functions",
+    "zend_function": "get_defined_functions",
+    "source_file": "in_functions.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "zend.h",
+        "zend_API.h",
+        "zend_attributes.h",
+        "zend_gc.h",
+        "zend_builtin_functions.h",
+        "zend_constants.h",
+        "zend_ini.h",
+        "zend_interfaces.h",
+        "zend_exceptions.h",
+        "zend_extensions.h",
+        "zend_closures.h",
+        "zend_generators.h",
+        "zend_builtin_functions_arginfo.h",
+        "zend_smart_str.h"
+    ],
+    "body": "zval internal, user;\n\tzend_string *key;\n\tzend_function *func;\n\tbool exclude_disabled = 1;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"|b\", &exclude_disabled) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tif (exclude_disabled == 0) {\n\t\tzend_error(E_DEPRECATED,\n\t\t\t\"get_defined_functions(): Setting $exclude_disabled to false has no effect\");\n\t}\n\n\tarray_init(&internal);\n\tarray_init(&user);\n\tarray_init(return_value);\n\n\tZEND_HASH_MAP_FOREACH_STR_KEY_PTR(EG(function_table), key, func) {\n\t\tif (key && ZSTR_VAL(key)[0] != 0) {\n\t\t\tif (func->type == ZEND_INTERNAL_FUNCTION) {\n\t\t\t\tadd_next_index_str(&internal, zend_string_copy(key));\n\t\t\t} else if (func->type == ZEND_USER_FUNCTION) {\n\t\t\t\tadd_next_index_str(&user, zend_string_copy(key));\n\t\t\t}\n\t\t}\n\t} ZEND_HASH_FOREACH_END();\n\n\tzend_hash_str_add_new(Z_ARRVAL_P(return_value), \"internal\", sizeof(\"internal\")-1, &internal);\n\tzend_hash_add_new(Z_ARRVAL_P(return_value), ZSTR_KNOWN(ZEND_STR_USER), &user);",
+    "semantic": "Implements the PHP function get_defined_functions in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "ZEND_HASH_MAP_FOREACH_STR_KEY_PTR",
+            "ZSTR_VAL",
+            "ZEND_INTERNAL_FUNCTION",
+            "ZEND_USER_FUNCTION",
+            "ZEND_HASH_FOREACH_END",
+            "ZSTR_KNOWN",
+            "ZEND_STR_USER"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_string",
+            "zend_function"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "zend_error",
+            "zend_string_copy",
+            "zend_hash_str_add_new",
+            "zend_hash_add_new"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common get_defined_functions inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 4,
+    "purpose": "Implements the PHP function get_defined_functions in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "exit",
+        "zend_version",
+        "gc_mem_caches",
+        "gc_collect_cycles",
+        "gc_enabled",
+        "gc_enable",
+        "gc_disable",
+        "gc_status",
+        "func_num_args",
+        "func_get_arg",
+        "func_get_args",
+        "strlen"
+    ]
+}

@@ -1,0 +1,170 @@
+{
+    "php_function": "openssl_x509_export_to_file",
+    "zend_function": "openssl_x509_export_to_file",
+    "source_file": "nssl.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "cert_obj",
+            "macro": "Z_PARAM_OBJ_OF_CLASS_OR_STR",
+            "arguments": [
+                "cert_obj",
+                "php_openssl_certificate_ce",
+                "cert_str"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_OBJ_OF_CLASS_OR_STR(cert_obj, php_openssl_certificate_ce, cert_str)"
+        },
+        {
+            "name": "filename",
+            "macro": "Z_PARAM_PATH",
+            "arguments": [
+                "filename",
+                "filename_len"
+            ],
+            "type": "mixed",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_PATH(filename, filename_len)"
+        },
+        {
+            "name": "notext",
+            "macro": "Z_PARAM_BOOL",
+            "arguments": [
+                "notext"
+            ],
+            "type": "bool",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_BOOL(notext)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "php_openssl.h",
+        "zend_attributes.h",
+        "zend_exceptions.h",
+        "ext/standard/file.h",
+        "ext/standard/info.h",
+        "ext/standard/php_fopen_wrappers.h",
+        "ext/standard/md5.h",
+        "ext/standard/base64.h",
+        "openssl/evp.h",
+        "openssl/bn.h",
+        "openssl/rsa.h",
+        "openssl/dsa.h",
+        "openssl/dh.h",
+        "openssl/x509.h",
+        "openssl/x509v3.h",
+        "openssl/crypto.h",
+        "openssl/pem.h",
+        "openssl/err.h",
+        "openssl/conf.h",
+        "openssl/rand.h",
+        "openssl/ssl.h",
+        "openssl/pkcs12.h",
+        "openssl/cms.h",
+        "openssl/core_names.h",
+        "openssl/param_build.h",
+        "openssl/provider.h",
+        "openssl/engine.h",
+        "time.h",
+        "openssl_arginfo.h"
+    ],
+    "body": "X509 *cert;\n\tzend_object *cert_obj;\n\tzend_string *cert_str;\n\n\tbool notext = 1;\n\tBIO * bio_out;\n\tchar * filename, file_path[MAXPATHLEN];\n\tsize_t filename_len;\n\n\tZEND_PARSE_PARAMETERS_START(2, 3)\n\t\tZ_PARAM_OBJ_OF_CLASS_OR_STR(cert_obj, php_openssl_certificate_ce, cert_str)\n\t\tZ_PARAM_PATH(filename, filename_len)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_BOOL(notext)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tRETVAL_FALSE;\n\n\tcert = php_openssl_x509_from_param(cert_obj, cert_str, 1);\n\tif (cert == NULL) {\n\t\tphp_error_docref(NULL, E_WARNING, \"X.509 Certificate cannot be retrieved\");\n\t\treturn;\n\t}\n\n\tif (!php_openssl_check_path(filename, filename_len, file_path, 2)) {\n\t\tgoto exit_cleanup_cert;\n\t}\n\n\tbio_out = BIO_new_file(file_path, PHP_OPENSSL_BIO_MODE_W(PKCS7_BINARY));\n\tif (bio_out) {\n\t\tif (!notext && !X509_print(bio_out, cert)) {\n\t\t\tphp_openssl_store_errors();\n\t\t}\n\t\tif (!PEM_write_bio_X509(bio_out, cert)) {\n\t\t\tphp_openssl_store_errors();\n\t\t}\n\n\t\tRETVAL_TRUE;\n\t} else {\n\t\tphp_openssl_store_errors();\n\t\tphp_error_docref(NULL, E_WARNING, \"Error opening file %s\", file_path);\n\t}\n\n\tif (!BIO_free(bio_out)) {\n\t\tphp_openssl_store_errors();\n\t}\n\nexit_cleanup_cert:\n\tif (cert_str) {\n\t\tX509_free(cert);\n\t}",
+    "semantic": "Implements the PHP function openssl_x509_export_to_file in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_OBJ_OF_CLASS_OR_STR",
+            "Z_PARAM_PATH",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_BOOL",
+            "ZEND_PARSE_PARAMETERS_END"
+        ],
+        "zend_types": [
+            "zend_object",
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "php_openssl_x509_from_param",
+            "php_error_docref",
+            "php_openssl_check_path",
+            "php_openssl_store_errors"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common openssl_x509_export_to_file inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 6,
+    "purpose": "Implements the PHP function openssl_x509_export_to_file in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "openssl_get_cert_locations",
+        "openssl_spki_new",
+        "openssl_spki_verify",
+        "openssl_spki_export",
+        "openssl_spki_export_challenge",
+        "openssl_x509_export",
+        "openssl_x509_fingerprint",
+        "openssl_x509_check_private_key",
+        "openssl_x509_verify",
+        "openssl_x509_parse",
+        "openssl_x509_checkpurpose",
+        "openssl_x509_read"
+    ]
+}

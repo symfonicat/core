@@ -1,0 +1,95 @@
+{
+    "php_function": "mysqli_stmt_attr_set",
+    "zend_function": "mysqli_stmt_attr_set",
+    "source_file": "li_api.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "signal.h",
+        "php.h",
+        "zend_smart_str.h",
+        "php_mysqli_structs.h",
+        "mysqli_priv.h",
+        "ext/mysqlnd/mysql_float_to_double.h"
+    ],
+    "body": "MY_STMT\t*stmt;\n\tzval\t*mysql_stmt;\n\tzend_long\tmode_in;\n\tmy_bool mode_b;\n\tunsigned long\tmode;\n\tzend_long\tattr;\n\tvoid\t*mode_p;\n\n\tif (zend_parse_method_parameters(ZEND_NUM_ARGS(), getThis(), \"Oll\", &mysql_stmt, mysqli_stmt_class_entry, &attr, &mode_in) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tMYSQLI_FETCH_RESOURCE_STMT(stmt, mysql_stmt, MYSQLI_STATUS_VALID);\n\n\tswitch (attr) {\n\tcase STMT_ATTR_UPDATE_MAX_LENGTH:\n\t\tif (mode_in != 0 && mode_in != 1) {\n\t\t\tzend_argument_value_error(ERROR_ARG_POS(3), \"must be 0 or 1 for attribute MYSQLI_STMT_ATTR_UPDATE_MAX_LENGTH\");\n\t\t\tRETURN_THROWS();\n\t\t}\n\t\tmode_b = (my_bool) mode_in;\n\t\tmode_p = &mode_b;\n\t\tbreak;\n\tcase STMT_ATTR_CURSOR_TYPE:\n\t\tswitch (mode_in) {\n\t\t\tcase CURSOR_TYPE_NO_CURSOR:\n\t\t\tcase CURSOR_TYPE_READ_ONLY:\n\t\t\t\tbreak;\n\t\t\tdefault:\n\t\t\t\tzend_argument_value_error(ERROR_ARG_POS(3), \"must be one of the MYSQLI_CURSOR_TYPE_* constants \"\n\t\t\t\t\t\"for attribute MYSQLI_STMT_ATTR_CURSOR_TYPE\");\n\t\t\t\tRETURN_THROWS();\n\t\t}\n\t\tmode = mode_in;\n\t\tmode_p = &mode;\n\t\tbreak;\n\tdefault:\n\t\tzend_argument_value_error(ERROR_ARG_POS(2), \"must be either \"\n\t\t\t\"MYSQLI_STMT_ATTR_UPDATE_MAX_LENGTH or MYSQLI_STMT_ATTR_CURSOR_TYPE\");\n\t\tRETURN_THROWS();\n\t}\n\n\tif (FAIL == mysql_stmt_attr_set(stmt->stmt, attr, mode_p)) {\n\t\tMYSQLI_REPORT_STMT_ERROR(stmt->stmt);\n\t\tRETURN_FALSE;\n\t}\n\tRETURN_TRUE;",
+    "semantic": "Implements the PHP function mysqli_stmt_attr_set in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_FALSE",
+            "RETURN_TRUE"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_parse_method_parameters",
+            "zend_argument_value_error"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common mysqli_stmt_attr_set inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "Implements the PHP function mysqli_stmt_attr_set in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "mysqli_affected_rows",
+        "mysqli_autocommit",
+        "mysqli_stmt_bind_param",
+        "mysqli_stmt_bind_result",
+        "mysqli_change_user",
+        "mysqli_character_set_name",
+        "mysqli_close",
+        "mysqli_commit",
+        "mysqli_data_seek",
+        "mysqli_debug",
+        "mysqli_dump_debug_info",
+        "mysqli_errno"
+    ]
+}

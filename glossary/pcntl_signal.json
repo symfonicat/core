@@ -1,0 +1,166 @@
+{
+    "php_function": "pcntl_signal",
+    "zend_function": "pcntl_signal",
+    "source_file": ".c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "signo",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "signo"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(signo)"
+        },
+        {
+            "name": "handle",
+            "macro": "Z_PARAM_ZVAL",
+            "arguments": [
+                "handle"
+            ],
+            "type": "zval",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": true,
+            "raw": "Z_PARAM_ZVAL(handle)"
+        },
+        {
+            "name": "restart_syscalls",
+            "macro": "Z_PARAM_BOOL_OR_NULL",
+            "arguments": [
+                "restart_syscalls",
+                "restart_syscalls_is_null"
+            ],
+            "type": "bool",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_BOOL_OR_NULL(restart_syscalls, restart_syscalls_is_null)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "ext/standard/info.h",
+        "php_signal.h",
+        "php_ticks.h",
+        "zend_fibers.h",
+        "sys/wait.h",
+        "sys/time.h",
+        "sys/resource.h",
+        "php_pcntl.h",
+        "errno.h",
+        "sched.h",
+        "sys/types.h",
+        "sys/cpuset.h",
+        "sys/syscall.h",
+        "sys/pset.h",
+        "sys/processor.h",
+        "pthread/qos.h",
+        "sys/fork.h",
+        "Zend/zend_enum.h",
+        "Zend/zend_max_execution_timer.h",
+        "pcntl_arginfo.h"
+    ],
+    "body": "zval *handle;\n\tzend_long signo;\n\tbool restart_syscalls = 1;\n\tbool restart_syscalls_is_null = 1;\n\n\tZEND_PARSE_PARAMETERS_START(2, 3)\n\t\tZ_PARAM_LONG(signo)\n\t\tZ_PARAM_ZVAL(handle)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_BOOL_OR_NULL(restart_syscalls, restart_syscalls_is_null)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (signo < 1) {\n\t\tzend_argument_value_error(1, \"must be greater than or equal to 1\");\n\t\tRETURN_THROWS();\n\t}\n\n\tif (signo >= PCNTL_G(num_signals)) {\n\t\tzend_argument_value_error(1, \"must be less than %d\", PCNTL_G(num_signals));\n\t\tRETURN_THROWS();\n\t}\n\n\tif (!PCNTL_G(spares)) {\n\t\t/* since calling malloc() from within a signal handler is not portable,\n\t\t * pre-allocate a few records for recording signals */\n\t\tfor (unsigned int i = 0; i < PCNTL_G(num_signals); i++) {\n\t\t\tstruct php_pcntl_pending_signal *psig;\n\n\t\t\tpsig = emalloc(sizeof(*psig));\n\t\t\tpsig->next = PCNTL_G(spares);\n\t\t\tPCNTL_G(spares) = psig;\n\t\t}\n\t}\n\n\t/* If restart_syscalls was not explicitly specified and the signal is SIGALRM, then default\n\t * restart_syscalls to false. PHP used to enforce that restart_syscalls is false for SIGALRM,\n\t * so we keep this differing default to reduce the degree of BC breakage. */\n\tif (restart_syscalls_is_null && signo == SIGALRM) {\n\t\trestart_syscalls = 0;\n\t}\n\n\t/* Special long value case for SIG_DFL and SIG_IGN */\n\tif (Z_TYPE_P(handle) == IS_LONG) {\n\t\tif (Z_LVAL_P(handle) != (zend_long) SIG_DFL && Z_LVAL_P(handle) != (zend_long) SIG_IGN) {\n\t\t\tzend_argument_value_error(2, \"must be either SIG_DFL or SIG_IGN when an integer value is given\");\n\t\t\tRETURN_THROWS();\n\t\t}\n\t\tif (php_signal(signo, (Sigfunc *) Z_LVAL_P(handle), (int) restart_syscalls) == (void *)SIG_ERR) {\n\t\t\tPCNTL_G(last_error) = errno;\n\t\t\tphp_error_docref(NULL, E_WARNING, \"Error assigning signal\");\n\t\t\tRETURN_FALSE;\n\t\t}\n\t\tzend_hash_index_update(&PCNTL_G(php_signal_table), signo, handle);\n\t\tRETURN_TRUE;\n\t}\n\n\tif (!zend_is_callable_ex(handle, NULL, 0, NULL, NULL, NULL)) {\n\t\tPCNTL_G(last_error) = EINVAL;\n\n\t\tzend_argument_type_error(2, \"must be of type callable|int, %s given\", zend_zval_value_name(handle));\n\t\tRETURN_THROWS();\n\t}\n\n\t/* Add the function name to our signal table */\n\thandle = zend_hash_index_update(&PCNTL_G(php_signal_table), signo, handle);\n\tZ_TRY_ADDREF_P(handle);\n\n\tif (php_signal4(signo, pcntl_signal_handler, (int) restart_syscalls, 1) == (void *)SIG_ERR) {\n\t\tPCNTL_G(last_error) = errno;\n\t\tphp_error_docref(NULL, E_WARNING, \"Error assigning signal\");\n\t\tRETURN_FALSE;\n\t}\n\tRETURN_TRUE;",
+    "semantic": "since calling malloc() from within a signal handler is not portable, pre-allocate a few records for recording signals",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_LONG",
+            "Z_PARAM_ZVAL",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_BOOL_OR_NULL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_THROWS",
+            "RETURN_FALSE",
+            "RETURN_TRUE"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_argument_value_error",
+            "php_signal",
+            "php_error_docref",
+            "zend_hash_index_update",
+            "zend_is_callable_ex",
+            "zend_argument_type_error",
+            "zend_zval_value_name",
+            "php_signal4"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common pcntl_signal inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 8,
+    "purpose": "since calling malloc() from within a signal handler is not portable, pre-allocate a few records for recording signals",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "pcntl_fork",
+        "pcntl_alarm",
+        "pcntl_waitpid",
+        "pcntl_waitid",
+        "pcntl_wait",
+        "pcntl_wifexited",
+        "pcntl_wifstopped",
+        "pcntl_wifsignaled",
+        "pcntl_wifcontinued",
+        "pcntl_wexitstatus",
+        "pcntl_wtermsig",
+        "pcntl_wstopsig"
+    ]
+}

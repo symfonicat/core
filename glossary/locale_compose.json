@@ -1,0 +1,120 @@
+{
+    "php_function": "locale_compose",
+    "zend_function": "locale_compose",
+    "source_file": "/locale_methods.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "arr",
+            "macro": "Z_PARAM_ARRAY",
+            "arguments": [
+                "arr"
+            ],
+            "type": "HashTable",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY(arr)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "unicode/ustring.h",
+        "unicode/udata.h",
+        "unicode/putil.h",
+        "unicode/ures.h",
+        "php_intl.h",
+        "locale.h",
+        "locale_class.h",
+        "intl_convert.h",
+        "intl_data.h",
+        "zend_API.h",
+        "zend.h",
+        "php.h",
+        "main/php_ini.h",
+        "zend_smart_str.h"
+    ],
+    "body": "smart_str      \tloc_name_s = {0};\n\tsmart_str *loc_name = &loc_name_s;\n\tzval*\t\t\tarr\t= NULL;\n\tHashTable*\t\thash_arr = NULL;\n\tint \t\t\tresult = 0;\n\n\tintl_error_reset( NULL );\n\n\tZEND_PARSE_PARAMETERS_START(1, 1)\n\t\tZ_PARAM_ARRAY(arr)\n\tZEND_PARSE_PARAMETERS_END();\n\n\thash_arr = Z_ARRVAL_P( arr );\n\n\tif( !hash_arr || zend_hash_num_elements( hash_arr ) == 0 )\n\t\tRETURN_FALSE;\n\n\t/* Check for grandfathered first */\n\tresult = append_key_value(loc_name, hash_arr,  LOC_GRANDFATHERED_LANG_TAG);\n\tif( result == SUCCESS){\n\t\tRETURN_SMART_STR(loc_name);\n\t}\n\tif( !handleAppendResult( result, loc_name)){\n\t\tRETURN_FALSE;\n\t}\n\n\t/* Not grandfathered */\n\tresult = append_key_value(loc_name, hash_arr , LOC_LANG_TAG);\n\tif( result == LOC_NOT_FOUND ){\n\t\tzend_argument_value_error(1, \"must contain a \\\"%s\\\" key\", LOC_LANG_TAG);\n\t\tsmart_str_free(loc_name);\n\t\tRETURN_THROWS();\n\t}\n\tif( !handleAppendResult( result, loc_name)){\n\t\tRETURN_FALSE;\n\t}\n\n\t/* Extlang */\n\tresult = append_multiple_key_values(loc_name, hash_arr , LOC_EXTLANG_TAG);\n\tif( !handleAppendResult( result, loc_name)){\n\t\tRETURN_FALSE;\n\t}\n\n\t/* Script */\n\tresult = append_key_value(loc_name, hash_arr , LOC_SCRIPT_TAG);\n\tif( !handleAppendResult( result, loc_name)){\n\t\tRETURN_FALSE;\n\t}\n\n\t/* Region */\n\tresult = append_key_value( loc_name, hash_arr , LOC_REGION_TAG);\n\tif( !handleAppendResult( result, loc_name)){\n\t\tRETURN_FALSE;\n\t}\n\n\t/* Variant */\n\tresult = append_multiple_key_values( loc_name, hash_arr , LOC_VARIANT_TAG);\n\tif( !handleAppendResult( result, loc_name)){\n\t\tRETURN_FALSE;\n\t}\n\n\t/* Private */\n\tresult = append_multiple_key_values( loc_name, hash_arr , LOC_PRIVATE_TAG);\n\tif( !handleAppendResult( result, loc_name)){\n\t\tRETURN_FALSE;\n\t}\n\n\tRETURN_SMART_STR(loc_name);",
+    "semantic": "Check for grandfathered first",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_ARRAY",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_FALSE",
+            "RETURN_SMART_STR",
+            "RETURN_THROWS"
+        ],
+        "zend_types": [
+            "zval",
+            "HashTable"
+        ],
+        "internal_helpers": [
+            "zend_hash_num_elements",
+            "zend_argument_value_error",
+            "smart_str_free"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common locale_compose inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": true,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 4,
+    "purpose": "Check for grandfathered first",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "zif_locale_get_default",
+        "zif_locale_set_default",
+        "locale_get_script",
+        "locale_get_region",
+        "locale_get_primary_language",
+        "locale_get_display_name",
+        "locale_get_display_language",
+        "locale_get_display_script",
+        "locale_get_display_region",
+        "locale_get_display_variant",
+        "locale_get_keywords",
+        "locale_canonicalize"
+    ]
+}

@@ -1,0 +1,16 @@
+<div class="row g-2 align-items-start" data-middleware-collection-item>
+    <div class="col-md-10">
+        {{ form_row(item_form, {
+            label: false,
+            row_attr: {
+                class: 'mb-0'
+            },
+            attr: {
+                class: 'form-select-sm'
+            }
+        }) }}
+    </div>
+    <div class="col-md-2 d-grid">
+        <button type="button" class="btn btn-sm btn-outline-danger" data-action="middleware-collection#remove">remove</button>
+    </div>
+</div>

@@ -1,0 +1,99 @@
+{
+    "php_function": "ob_gzhandler",
+    "zend_function": "ob_gzhandler",
+    "source_file": "",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "SAPI.h",
+        "php_ini.h",
+        "ext/standard/info.h",
+        "php_zlib.h",
+        "zlib_arginfo.h"
+    ],
+    "body": "char *in_str;\n\tsize_t in_len;\n\tzend_long flags = 0;\n\tphp_output_context ctx = {0};\n\tint encoding;\n\n\t/*\n\t * NOTE that the real ob_gzhandler is an alias to \"zlib output compression\".\n\t * This is a really bad hack, because\n\t * - we have to initialize a php_zlib_context on demand\n\t * - we have to clean it up in RSHUTDOWN\n\t * - OG(running) is not set or set to any other output handler\n\t * - we have to mess around with php_output_context */\n\n\tif (SUCCESS != zend_parse_parameters(ZEND_NUM_ARGS(), \"sl\", &in_str, &in_len, &flags)) {\n\t\tRETURN_THROWS();\n\t}\n\n\tif (!(encoding = php_zlib_output_encoding())) {\n\t\tRETURN_FALSE;\n\t}\n\n\tif (flags & PHP_OUTPUT_HANDLER_START) {\n\t\tswitch (encoding) {\n\t\t\tcase PHP_ZLIB_ENCODING_GZIP:\n\t\t\t\tsapi_add_header_ex(ZEND_STRL(\"Content-Encoding: gzip\"), 1, 1);\n\t\t\t\tbreak;\n\t\t\tcase PHP_ZLIB_ENCODING_DEFLATE:\n\t\t\t\tsapi_add_header_ex(ZEND_STRL(\"Content-Encoding: deflate\"), 1, 1);\n\t\t\t\tbreak;\n\t\t}\n\t\tsapi_add_header_ex(ZEND_STRL(\"Vary: Accept-Encoding\"), 1, 0);\n\t}\n\n\tif (!ZLIBG(ob_gzhandler)) {\n\t\tZLIBG(ob_gzhandler) = php_zlib_output_handler_context_init();\n\t}\n\n\tctx.op = flags;\n\tctx.in.data = in_str;\n\tctx.in.used = in_len;\n\n\tzend_result rv = php_zlib_output_handler_ex(ZLIBG(ob_gzhandler), &ctx);\n\n\tif (SUCCESS != rv) {\n\t\tif (ctx.out.data && ctx.out.free) {\n\t\t\tefree(ctx.out.data);\n\t\t}\n\t\tphp_zlib_cleanup_ob_gzhandler_mess();\n\t\tRETURN_FALSE;\n\t}\n\n\tif (ctx.out.data) {\n\t\tRETVAL_STRINGL(ctx.out.data, ctx.out.used);\n\t\tif (ctx.out.free) {\n\t\t\tefree(ctx.out.data);\n\t\t}\n\t} else {\n\t\tRETVAL_EMPTY_STRING();\n\t}",
+    "semantic": "NOTE that the real ob_gzhandler is an alias to \"zlib output compression\".",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_FALSE",
+            "ZEND_STRL"
+        ],
+        "zend_types": [
+            "zend_long",
+            "zend_result"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "php_zlib_output_encoding",
+            "sapi_add_header_ex",
+            "php_zlib_output_handler_context_init",
+            "php_zlib_output_handler_ex",
+            "php_zlib_cleanup_ob_gzhandler_mess"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common ob_gzhandler inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 6,
+    "purpose": "NOTE that the real ob_gzhandler is an alias to \"zlib output compression\".",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "zlib_get_coding_type",
+        "gzfile",
+        "gzopen",
+        "readgzfile",
+        "name",
+        "name",
+        "inflate_init",
+        "inflate_add",
+        "inflate_get_status",
+        "inflate_get_read_len",
+        "deflate_init",
+        "deflate_add"
+    ]
+}

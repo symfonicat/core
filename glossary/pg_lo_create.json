@@ -1,0 +1,136 @@
+{
+    "php_function": "pg_lo_create",
+    "zend_function": "pg_lo_create",
+    "source_file": ".c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "pgsql_link",
+            "macro": "Z_PARAM_ZVAL",
+            "arguments": [
+                "pgsql_link"
+            ],
+            "type": "zval",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": true,
+            "raw": "Z_PARAM_ZVAL(pgsql_link)"
+        },
+        {
+            "name": "oid",
+            "macro": "Z_PARAM_ZVAL",
+            "arguments": [
+                "oid"
+            ],
+            "type": "zval",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": true,
+            "raw": "Z_PARAM_ZVAL(oid)"
+        }
+    ],
+    "includes": [
+        "stdlib.h",
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "ext/standard/info.h",
+        "zend_smart_str.h",
+        "ext/pcre/php_pcre.h",
+        "php_pgsql.h",
+        "php_globals.h",
+        "zend_exceptions.h",
+        "zend_attributes.h",
+        "php_network.h",
+        "pgsql_arginfo.h"
+    ],
+    "body": "zval *pgsql_link = NULL, *oid = NULL;\n\tPGconn *pgsql;\n\tOid pgsql_oid, wanted_oid = InvalidOid;\n\tpgsql_link_handle *link;\n\n\tZEND_PARSE_PARAMETERS_START(0, 2)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_ZVAL(pgsql_link)\n\t\tZ_PARAM_ZVAL(oid)\n\tZEND_PARSE_PARAMETERS_END();\n\n\t/* Overloaded method uses default link if arg 1 is not an object, set oid pointer */\n\tif ((ZEND_NUM_ARGS() == 1) && (Z_TYPE_P(pgsql_link) != IS_OBJECT)) {\n\t\toid = pgsql_link;\n\t\tpgsql_link = NULL;\n\t}\n\n\tif (pgsql_link == NULL) {\n\t\tlink = FETCH_DEFAULT_LINK();\n\t\tCHECK_DEFAULT_LINK(link);\n\t} else if ((Z_TYPE_P(pgsql_link) == IS_OBJECT && instanceof_function(Z_OBJCE_P(pgsql_link), pgsql_link_ce))) {\n\t\tlink = Z_PGSQL_LINK_P(pgsql_link);\n\t\tCHECK_PGSQL_LINK(link);\n\t} else {\n\t\tzend_argument_type_error(1, \"must be of type PgSql\\\\Connection when the connection is provided\");\n\t\tRETURN_THROWS();\n\t}\n\n\tpgsql = link->conn;\n\n\tif (oid) {\n\t\tswitch (Z_TYPE_P(oid)) {\n\t\tcase IS_STRING:\n\t\t\t{\n\t\t\t\tif (!is_valid_oid_string(Z_STR_P(oid), &wanted_oid)) {\n\t\t\t\t\t/* wrong integer format */\n\t\t\t\t\tzend_value_error(\"Invalid OID value passed\");\n\t\t\t\t\tRETURN_THROWS();\n\t\t\t\t}\n\t\t\t}\n\t\t\tbreak;\n\t\tcase IS_LONG:\n\t\t\tif (Z_LVAL_P(oid) < (zend_long)InvalidOid) {\n\t\t\t\tzend_value_error(\"Invalid OID value passed\");\n\t\t\t\tRETURN_THROWS();\n\t\t\t}\n\t\t\twanted_oid = (Oid)Z_LVAL_P(oid);\n\t\t\tbreak;\n\t\tdefault:\n\t\t\tzend_type_error(\"OID value must be of type string|int, %s given\", zend_zval_value_name(oid));\n\t\t\tRETURN_THROWS();\n\t\t}\n\t\tif ((pgsql_oid = lo_create(pgsql, wanted_oid)) == InvalidOid) {\n\t\t\tphp_error_docref(NULL, E_WARNING, \"Unable to create PostgreSQL large object\");\n\t\t\tRETURN_FALSE;\n\t\t}\n\n\t\tPGSQL_RETURN_OID(pgsql_oid);\n\t}\n\n\tif ((pgsql_oid = lo_creat(pgsql, INV_READ|INV_WRITE)) == InvalidOid) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Unable to create PostgreSQL large object\");\n\t\tRETURN_FALSE;\n\t}\n\n\tPGSQL_RETURN_OID(pgsql_oid);",
+    "semantic": "Overloaded method uses default link if arg 1 is not an object, set oid pointer",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_ZVAL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_argument_type_error",
+            "zend_value_error",
+            "zend_type_error",
+            "zend_zval_value_name",
+            "php_error_docref"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common pg_lo_create inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 7,
+    "purpose": "Overloaded method uses default link if arg 1 is not an object, set oid pointer",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "pg_connect",
+        "pg_connect_poll",
+        "pg_pconnect",
+        "pg_close",
+        "pg_dbname",
+        "pg_last_error",
+        "pg_options",
+        "pg_port",
+        "pg_tty",
+        "pg_host",
+        "pg_version",
+        "pg_jit"
+    ]
+}

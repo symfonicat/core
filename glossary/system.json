@@ -1,0 +1,86 @@
+{
+    "php_function": "system",
+    "zend_function": "system",
+    "source_file": "ec.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "stdio.h",
+        "php.h",
+        "ctype.h",
+        "php_string.h",
+        "ext/standard/file.h",
+        "basic_functions.h",
+        "exec.h",
+        "SAPI.h",
+        "sys/wait.h",
+        "signal.h",
+        "sys/types.h",
+        "sys/stat.h",
+        "fcntl.h",
+        "unistd.h",
+        "limits.h"
+    ],
+    "body": "php_exec_ex(INTERNAL_FUNCTION_PARAM_PASSTHRU, 1);",
+    "semantic": "Implements the PHP function system in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [],
+        "zend_types": [],
+        "internal_helpers": [
+            "php_exec_ex"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common system inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": false,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 1,
+    "purpose": "Implements the PHP function system in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "exec",
+        "passthru",
+        "escapeshellcmd",
+        "escapeshellarg",
+        "proc_nice"
+    ]
+}

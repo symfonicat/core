@@ -1,0 +1,175 @@
+{
+    "php_function": "mail",
+    "zend_function": "mail",
+    "source_file": "il.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "to",
+            "macro": "Z_PARAM_PATH",
+            "arguments": [
+                "to",
+                "to_len"
+            ],
+            "type": "mixed",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_PATH(to, to_len)"
+        },
+        {
+            "name": "subject",
+            "macro": "Z_PARAM_PATH",
+            "arguments": [
+                "subject",
+                "subject_len"
+            ],
+            "type": "mixed",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_PATH(subject, subject_len)"
+        },
+        {
+            "name": "message",
+            "macro": "Z_PARAM_PATH",
+            "arguments": [
+                "message",
+                "message_len"
+            ],
+            "type": "mixed",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_PATH(message, message_len)"
+        },
+        {
+            "name": "headers_ht",
+            "macro": "Z_PARAM_ARRAY_HT_OR_STR",
+            "arguments": [
+                "headers_ht",
+                "headers_str"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY_HT_OR_STR(headers_ht, headers_str)"
+        },
+        {
+            "name": "extra_cmd",
+            "macro": "Z_PARAM_PATH_STR",
+            "arguments": [
+                "extra_cmd"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_PATH_STR(extra_cmd)"
+        }
+    ],
+    "includes": [
+        "stdlib.h",
+        "ctype.h",
+        "stdio.h",
+        "time.h",
+        "php.h",
+        "ext/standard/info.h",
+        "ext/standard/php_string.h",
+        "ext/standard/basic_functions.h",
+        "ext/date/php_date.h",
+        "zend_smart_str.h",
+        "php_syslog.h",
+        "php_mail.h",
+        "php_ini.h",
+        "exec.h"
+    ],
+    "body": "char *to=NULL, *message=NULL;\n\tchar *subject=NULL;\n\tzend_string *extra_cmd=NULL;\n\tzend_string *headers_str = NULL;\n\tHashTable *headers_ht = NULL;\n\tsize_t to_len, message_len;\n\tsize_t subject_len, i;\n\tchar *to_r, *subject_r;\n\n\tZEND_PARSE_PARAMETERS_START(3, 5)\n\t\tZ_PARAM_PATH(to, to_len)\n\t\tZ_PARAM_PATH(subject, subject_len)\n\t\tZ_PARAM_PATH(message, message_len)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_ARRAY_HT_OR_STR(headers_ht, headers_str)\n\t\tZ_PARAM_PATH_STR(extra_cmd)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (headers_str) {\n\t\tif (strlen(ZSTR_VAL(headers_str)) != ZSTR_LEN(headers_str)) {\n\t\t\tzend_argument_value_error(4, \"must not contain any null bytes\");\n\t\t\tRETURN_THROWS();\n\t\t}\n\t\theaders_str = php_trim(headers_str, NULL, 0, 2);\n\t} else if (headers_ht) {\n\t\theaders_str = php_mail_build_headers(headers_ht);\n\t\tif (EG(exception)) {\n\t\t\tRETURN_THROWS();\n\t\t}\n\t}\n\n\tif (to_len > 0) {\n\t\tto_r = estrndup(to, to_len);\n\t\tfor (; to_len; to_len--) {\n\t\t\tif (!isspace((unsigned char) to_r[to_len - 1])) {\n\t\t\t\tbreak;\n\t\t\t}\n\t\t\tto_r[to_len - 1] = '\\0';\n\t\t}\n\t\tfor (i = 0; to_r[i]; i++) {\n\t\t\tif (iscntrl((unsigned char) to_r[i])) {\n\t\t\t\t/* According to RFC 822, section 3.1.1 long headers may be separated into\n\t\t\t\t * parts using CRLF followed at least one linear-white-space character ('\\t' or ' ').\n\t\t\t\t * To prevent these separators from being replaced with a space, we use the\n\t\t\t\t * SKIP_LONG_HEADER_SEP to skip over them. */\n\t\t\t\tSKIP_LONG_HEADER_SEP(to_r, i);\n\t\t\t\tto_r[i] = ' ';\n\t\t\t}\n\t\t}\n\t} else {\n\t\tto_r = to;\n\t}\n\n\tif (subject_len > 0) {\n\t\tsubject_r = estrndup(subject, subject_len);\n\t\tfor (; subject_len; subject_len--) {\n\t\t\tif (!isspace((unsigned char) subject_r[subject_len - 1])) {\n\t\t\t\tbreak;\n\t\t\t}\n\t\t\tsubject_r[subject_len - 1] = '\\0';\n\t\t}\n\t\tfor (i = 0; subject_r[i]; i++) {\n\t\t\tif (iscntrl((unsigned char) subject_r[i])) {\n\t\t\t\tSKIP_LONG_HEADER_SEP(subject_r, i);\n\t\t\t\tsubject_r[i] = ' ';\n\t\t\t}\n\t\t}\n\t} else {\n\t\tsubject_r = subject;\n\t}\n\n\tzend_string *force_extra_parameters = zend_ini_str_ex(\"mail.force_extra_parameters\", strlen(\"mail.force_extra_parameters\"), false, NULL);\n\tif (force_extra_parameters) {\n\t\textra_cmd = php_escape_shell_cmd(force_extra_parameters);\n\t} else if (extra_cmd) {\n\t\textra_cmd = php_escape_shell_cmd(extra_cmd);\n\t}\n\n\tif (php_mail(to_r, subject_r, message, headers_str && ZSTR_LEN(headers_str) ? ZSTR_VAL(headers_str) : NULL, extra_cmd ? ZSTR_VAL(extra_cmd) : NULL)) {\n\t\tRETVAL_TRUE;\n\t} else {\n\t\tRETVAL_FALSE;\n\t}\n\n\tif (headers_str) {\n\t\tzend_string_release_ex(headers_str, 0);\n\t}\n\n\tif (extra_cmd) {\n\t\tzend_string_release_ex(extra_cmd, 0);\n\t}\n\tif (to_r != to) {\n\t\tefree(to_r);\n\t}\n\tif (subject_r != subject) {\n\t\tefree(subject_r);\n\t}",
+    "semantic": "According to RFC 822, section 3.1.1 long headers may be separated into parts using CRLF followed at least one linear-white-space character ('\\t' or ' ').",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_PATH",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_ARRAY_HT_OR_STR",
+            "Z_PARAM_PATH_STR",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZSTR_VAL",
+            "ZSTR_LEN",
+            "RETURN_THROWS"
+        ],
+        "zend_types": [
+            "zend_string",
+            "HashTable"
+        ],
+        "internal_helpers": [
+            "zend_argument_value_error",
+            "php_trim",
+            "php_mail_build_headers",
+            "zend_ini_str_ex",
+            "php_escape_shell_cmd",
+            "php_mail",
+            "zend_string_release_ex"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common mail inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 8,
+    "purpose": "According to RFC 822, section 3.1.1 long headers may be separated into parts using CRLF followed at least one linear-white-space character ('\\t' or ' ').",
+    "php_version": "8.4.0-dev",
+    "related": []
+}

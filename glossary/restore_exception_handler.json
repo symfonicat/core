@@ -1,0 +1,104 @@
+{
+    "php_function": "restore_exception_handler",
+    "zend_function": "restore_exception_handler",
+    "source_file": "in_functions.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "zend.h",
+        "zend_API.h",
+        "zend_attributes.h",
+        "zend_gc.h",
+        "zend_builtin_functions.h",
+        "zend_constants.h",
+        "zend_ini.h",
+        "zend_interfaces.h",
+        "zend_exceptions.h",
+        "zend_extensions.h",
+        "zend_closures.h",
+        "zend_generators.h",
+        "zend_builtin_functions_arginfo.h",
+        "zend_smart_str.h"
+    ],
+    "body": "ZEND_PARSE_PARAMETERS_NONE();\n\n\tif (Z_TYPE(EG(user_exception_handler)) != IS_UNDEF) {\n\t\tzval_ptr_dtor(&EG(user_exception_handler));\n\t}\n\tif (zend_stack_is_empty(&EG(user_exception_handlers))) {\n\t\tZVAL_UNDEF(&EG(user_exception_handler));\n\t} else {\n\t\tzval *tmp = zend_stack_top(&EG(user_exception_handlers));\n\t\tZVAL_COPY_VALUE(&EG(user_exception_handler), tmp);\n\t\tzend_stack_del_top(&EG(user_exception_handlers));\n\t}\n\n\t// TODO Change to void\n\tRETURN_TRUE;",
+    "semantic": "Implements the PHP function restore_exception_handler in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_NONE",
+            "ZVAL_UNDEF",
+            "ZVAL_COPY_VALUE",
+            "RETURN_TRUE"
+        ],
+        "zend_types": [
+            "zval"
+        ],
+        "internal_helpers": [
+            "zval_ptr_dtor",
+            "zend_stack_is_empty",
+            "zend_stack_top",
+            "zend_stack_del_top"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common restore_exception_handler inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 4,
+    "purpose": "Implements the PHP function restore_exception_handler in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "exit",
+        "zend_version",
+        "gc_mem_caches",
+        "gc_collect_cycles",
+        "gc_enabled",
+        "gc_enable",
+        "gc_disable",
+        "gc_status",
+        "func_num_args",
+        "func_get_arg",
+        "func_get_args",
+        "strlen"
+    ]
+}

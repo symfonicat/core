@@ -1,0 +1,129 @@
+{
+    "php_function": "stream_context_create",
+    "zend_function": "stream_context_create",
+    "source_file": "reamsfuncs.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "options",
+            "macro": "Z_PARAM_ARRAY_HT_OR_NULL",
+            "arguments": [
+                "options"
+            ],
+            "type": "HashTable",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY_HT_OR_NULL(options)"
+        },
+        {
+            "name": "params",
+            "macro": "Z_PARAM_ARRAY_HT_OR_NULL",
+            "arguments": [
+                "params"
+            ],
+            "type": "HashTable",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY_HT_OR_NULL(params)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "ext/standard/flock_compat.h",
+        "ext/standard/file.h",
+        "ext/standard/basic_functions.h",
+        "php_ini.h",
+        "streamsfuncs.h",
+        "php_network.h",
+        "php_string.h",
+        "unistd.h",
+        "win32/select.h",
+        "win32/sockets.h",
+        "win32/console.h"
+    ],
+    "body": "HashTable *options = NULL;\n\tHashTable *params = NULL;\n\tphp_stream_context *context;\n\n\tZEND_PARSE_PARAMETERS_START(0, 2)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_ARRAY_HT_OR_NULL(options)\n\t\tZ_PARAM_ARRAY_HT_OR_NULL(params)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tcontext = php_stream_context_alloc();\n\n\tif (options) {\n\t\tif (parse_context_options(context, options) == FAILURE) {\n\t\t\tRETURN_THROWS();\n\t\t}\n\t}\n\n\tif (params) {\n\t\tif (parse_context_params(context, params) == FAILURE) {\n\t\t\tRETURN_THROWS();\n\t\t}\n\t}\n\n\tRETURN_RES(context->res);",
+    "semantic": "Implements the PHP function stream_context_create in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_ARRAY_HT_OR_NULL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_THROWS",
+            "RETURN_RES"
+        ],
+        "zend_types": [
+            "HashTable"
+        ],
+        "internal_helpers": [
+            "php_stream_context_alloc"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common stream_context_create inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 4,
+    "purpose": "Implements the PHP function stream_context_create in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "stream_socket_pair",
+        "stream_socket_client",
+        "stream_socket_server",
+        "stream_socket_accept",
+        "stream_socket_get_name",
+        "stream_socket_sendto",
+        "stream_socket_recvfrom",
+        "stream_get_contents",
+        "stream_copy_to_stream",
+        "stream_get_meta_data",
+        "stream_get_transports",
+        "stream_get_wrappers"
+    ]
+}

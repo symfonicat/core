@@ -1,0 +1,117 @@
+{
+    "php_function": "locale_get_all_variants",
+    "zend_function": "locale_get_all_variants",
+    "source_file": "/locale_methods.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "loc_name",
+            "macro": "Z_PARAM_STRING",
+            "arguments": [
+                "loc_name",
+                "loc_name_len"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING(loc_name, loc_name_len)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "unicode/ustring.h",
+        "unicode/udata.h",
+        "unicode/putil.h",
+        "unicode/ures.h",
+        "php_intl.h",
+        "locale.h",
+        "locale_class.h",
+        "intl_convert.h",
+        "intl_data.h",
+        "zend_API.h",
+        "zend.h",
+        "php.h",
+        "main/php_ini.h",
+        "zend_smart_str.h"
+    ],
+    "body": "char*  \t                loc_name        = NULL;\n\tsize_t    \t\tloc_name_len    = 0;\n\n\tint\tresult\t\t= 0;\n\tchar*\ttoken\t\t= NULL;\n\tzend_string*\tvariant\t\t= NULL;\n\tchar*\tsaved_ptr\t= NULL;\n\n\tintl_error_reset( NULL );\n\n\tZEND_PARSE_PARAMETERS_START(1, 1)\n\t\tZ_PARAM_STRING(loc_name, loc_name_len)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif(loc_name_len == 0) {\n\t\tloc_name = (char *)intl_locale_get_default();\n\t\tloc_name_len = strlen(loc_name);\n\t}\n\n\tINTL_CHECK_LOCALE_LEN(loc_name_len);\n\n\tarray_init( return_value );\n\n\t/* If the locale is grandfathered, stop, no variants */\n\tif( findOffset( LOC_GRANDFATHERED , loc_name ) >=  0 ){\n\t\t/* (\"Grandfathered Tag. No variants.\"); */\n\t}\n\telse {\n\t/* Call ICU variant */\n\t\tvariant = get_icu_value_internal( loc_name , LOC_VARIANT_TAG , &result ,0);\n\t\tif( result > 0 && variant){\n\t\t\t/* Tokenize on the \"_\" or \"-\" */\n\t\t\ttoken = php_strtok_r( variant->val , DELIMITER , &saved_ptr);\n\t\t\tadd_next_index_stringl( return_value, token , strlen(token));\n\t\t\t/* tokenize on the \"_\" or \"-\" and stop  at singleton if any\t*/\n\t\t\twhile( (token = php_strtok_r(NULL , DELIMITER, &saved_ptr)) && (strlen(token)>1) ){\n\t\t\t\tadd_next_index_stringl( return_value, token , strlen(token));\n\t\t\t}\n\t\t}\n\t\tif( variant ){\n\t\t\tzend_string_release_ex( variant, 0 );\n\t\t}\n\t}",
+    "semantic": "If the locale is grandfathered, stop, no variants",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STRING",
+            "ZEND_PARSE_PARAMETERS_END"
+        ],
+        "zend_types": [
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "php_strtok_r",
+            "zend_string_release_ex"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common locale_get_all_variants inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 2,
+    "purpose": "If the locale is grandfathered, stop, no variants",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "zif_locale_get_default",
+        "zif_locale_set_default",
+        "locale_get_script",
+        "locale_get_region",
+        "locale_get_primary_language",
+        "locale_get_display_name",
+        "locale_get_display_language",
+        "locale_get_display_script",
+        "locale_get_display_region",
+        "locale_get_display_variant",
+        "locale_get_keywords",
+        "locale_canonicalize"
+    ]
+}

@@ -1,0 +1,116 @@
+{
+    "php_function": "image_type_to_extension",
+    "zend_function": "image_type_to_extension",
+    "source_file": "age.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "image_type",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "image_type"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(image_type)"
+        },
+        {
+            "name": "inc_dot",
+            "macro": "Z_PARAM_BOOL",
+            "arguments": [
+                "inc_dot"
+            ],
+            "type": "bool",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_BOOL(inc_dot)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "stdio.h",
+        "fcntl.h",
+        "fopen_wrappers.h",
+        "ext/standard/fsock.h",
+        "libavifinfo/avifinfo.h",
+        "unistd.h",
+        "php_image.h",
+        "zlib.h"
+    ],
+    "body": "zend_long image_type;\n\tbool inc_dot=1;\n\tconst char *imgext = NULL;\n\n\tZEND_PARSE_PARAMETERS_START(1, 2)\n\t\tZ_PARAM_LONG(image_type)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_BOOL(inc_dot)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tswitch (image_type) {\n\t\tcase IMAGE_FILETYPE_GIF:\n\t\t\timgext = \".gif\";\n\t\t\tbreak;\n\t\tcase IMAGE_FILETYPE_JPEG:\n\t\t\timgext = \".jpeg\";\n\t\t\tbreak;\n\t\tcase IMAGE_FILETYPE_PNG:\n\t\t\timgext = \".png\";\n\t\t\tbreak;\n\t\tcase IMAGE_FILETYPE_SWF:\n\t\tcase IMAGE_FILETYPE_SWC:\n\t\t\timgext = \".swf\";\n\t\t\tbreak;\n\t\tcase IMAGE_FILETYPE_PSD:\n\t\t\timgext = \".psd\";\n\t\t\tbreak;\n\t\tcase IMAGE_FILETYPE_BMP:\n\t\tcase IMAGE_FILETYPE_WBMP:\n\t\t\timgext = \".bmp\";\n\t\t\tbreak;\n\t\tcase IMAGE_FILETYPE_TIFF_II:\n\t\tcase IMAGE_FILETYPE_TIFF_MM:\n\t\t\timgext = \".tiff\";\n\t\t\tbreak;\n\t\tcase IMAGE_FILETYPE_IFF:\n\t\t\timgext = \".iff\";\n\t\t\tbreak;\n\t\tcase IMAGE_FILETYPE_JPC:\n\t\t\timgext = \".jpc\";\n\t\t\tbreak;\n\t\tcase IMAGE_FILETYPE_JP2:\n\t\t\timgext = \".jp2\";\n\t\t\tbreak;\n\t\tcase IMAGE_FILETYPE_JPX:\n\t\t\timgext = \".jpx\";\n\t\t\tbreak;\n\t\tcase IMAGE_FILETYPE_JB2:\n\t\t\timgext = \".jb2\";\n\t\t\tbreak;\n\t\tcase IMAGE_FILETYPE_XBM:\n\t\t\timgext = \".xbm\";\n\t\t\tbreak;\n\t\tcase IMAGE_FILETYPE_ICO:\n\t\t\timgext = \".ico\";\n\t\t\tbreak;\n\t\tcase IMAGE_FILETYPE_WEBP:\n\t\t\timgext = \".webp\";\n\t\t\tbreak;\n\t\tcase IMAGE_FILETYPE_AVIF:\n\t\t\timgext = \".avif\";\n\t\t\tbreak;\n\t}\n\n\tif (imgext) {\n\t\tRETURN_STRING(&imgext[!inc_dot]);\n\t}\n\n\tRETURN_FALSE;",
+    "semantic": "Implements the PHP function image_type_to_extension in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_LONG",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_BOOL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_STRING",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zend_long"
+        ],
+        "internal_helpers": []
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common image_type_to_extension inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "Implements the PHP function image_type_to_extension in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "image_type_to_mime_type",
+        "getimagesize",
+        "getimagesizefromstring"
+    ]
+}

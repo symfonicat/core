@@ -1,0 +1,158 @@
+{
+    "php_function": "bcpowmod",
+    "zend_function": "bcpowmod",
+    "source_file": "th.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "base_str",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "base_str"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(base_str)"
+        },
+        {
+            "name": "exponent_str",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "exponent_str"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(exponent_str)"
+        },
+        {
+            "name": "modulus_str",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "modulus_str"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(modulus_str)"
+        },
+        {
+            "name": "scale_param",
+            "macro": "Z_PARAM_LONG_OR_NULL",
+            "arguments": [
+                "scale_param",
+                "scale_param_is_null"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG_OR_NULL(scale_param, scale_param_is_null)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "zend_exceptions.h",
+        "zend_interfaces.h",
+        "bcmath_arginfo.h",
+        "ext/standard/info.h",
+        "php_bcmath.h",
+        "libbcmath/src/bcmath.h"
+    ],
+    "body": "zend_string *base_str, *exponent_str, *modulus_str;\n\tzend_long scale_param;\n\tbool scale_param_is_null = 1;\n\tbc_num bc_base = NULL, bc_expo = NULL, bc_modulus = NULL, result;\n\tint scale = BCG(bc_precision);\n\n\tZEND_PARSE_PARAMETERS_START(3, 4)\n\t\tZ_PARAM_STR(base_str)\n\t\tZ_PARAM_STR(exponent_str)\n\t\tZ_PARAM_STR(modulus_str)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_LONG_OR_NULL(scale_param, scale_param_is_null)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (scale_param_is_null) {\n\t\tscale = BCG(bc_precision);\n\t} else if (bcmath_check_scale(scale_param, 4) == FAILURE) {\n\t\tRETURN_THROWS();\n\t} else {\n\t\tscale = (int) scale_param;\n\t}\n\n\tBC_ARENA_SETUP;\n\n\tbc_init_num(&result);\n\n\tif (php_str2num(&bc_base, base_str) == FAILURE) {\n\t\tzend_argument_value_error(1, \"is not well-formed\");\n\t\tgoto cleanup;\n\t}\n\n\tif (php_str2num(&bc_expo, exponent_str) == FAILURE) {\n\t\tzend_argument_value_error(2, \"is not well-formed\");\n\t\tgoto cleanup;\n\t}\n\n\tif (php_str2num(&bc_modulus, modulus_str) == FAILURE) {\n\t\tzend_argument_value_error(3, \"is not well-formed\");\n\t\tgoto cleanup;\n\t}\n\n\traise_mod_status status = bc_raisemod(bc_base, bc_expo, bc_modulus, &result, scale);\n\tswitch (status) {\n\t\tcase BASE_HAS_FRACTIONAL:\n\t\t\tzend_argument_value_error(1, \"cannot have a fractional part\");\n\t\t\tgoto cleanup;\n\t\tcase EXPO_HAS_FRACTIONAL:\n\t\t\tzend_argument_value_error(2, \"cannot have a fractional part\");\n\t\t\tgoto cleanup;\n\t\tcase EXPO_IS_NEGATIVE:\n\t\t\tzend_argument_value_error(2, \"must be greater than or equal to 0\");\n\t\t\tgoto cleanup;\n\t\tcase MOD_HAS_FRACTIONAL:\n\t\t\tzend_argument_value_error(3, \"cannot have a fractional part\");\n\t\t\tgoto cleanup;\n\t\tcase MOD_IS_ZERO:\n\t\t\tzend_throw_exception_ex(zend_ce_division_by_zero_error, 0, \"Modulo by zero\");\n\t\t\tgoto cleanup;\n\t\tcase OK:\n\t\t\tRETVAL_NEW_STR(bc_num2str_ex(result, scale));\n\t\t\tbreak;\n\t\tEMPTY_SWITCH_DEFAULT_CASE();\n\t}\n\n\tcleanup: {\n\t\tbc_free_num(&bc_base);\n\t\tbc_free_num(&bc_expo);\n\t\tbc_free_num(&bc_modulus);\n\t\tbc_free_num(&result);\n\t\tBC_ARENA_TEARDOWN;\n\t};",
+    "semantic": "Implements the PHP function bcpowmod in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STR",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_LONG_OR_NULL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_THROWS"
+        ],
+        "zend_types": [
+            "zend_string",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "php_str2num",
+            "zend_argument_value_error",
+            "zend_throw_exception_ex"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common bcpowmod inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 7,
+    "purpose": "Implements the PHP function bcpowmod in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "bcadd",
+        "bcsub",
+        "bcmul",
+        "bcdiv",
+        "bcmod",
+        "bcdivmod",
+        "bcpow",
+        "bcsqrt",
+        "bccomp",
+        "bcfloor",
+        "bcceil",
+        "bcround"
+    ]
+}

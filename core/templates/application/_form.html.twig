@@ -1,0 +1,38 @@
+{{ form_start(form) }}
+
+<div class="d-flex justify-content-end">
+    <button class="btn btn-sm btn-success">{{ button_label|default('save') }}</button>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-3">
+        {{ form_row(form.name) }}
+    </div>
+    <div class="col-md-3">
+        {{ form_row(form.id) }}
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-3">
+        {{ form_row(form.domain) }}
+    </div>
+    <div class="col-md-3">
+        {{ form_row(form.subdomain) }}
+    </div>
+    <div class="col-md-3">
+        {{ form_row(form.endpoint) }}
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-9">
+        {{ include('@symfonicat/env/_env_collection.html.twig', { form: form.env }) }}
+    </div>
+</div>
+
+{% if form._token is defined %}
+    {{ form_widget(form._token) }}
+{% endif %}
+
+{{ form_end(form, { render_rest: false }) }}

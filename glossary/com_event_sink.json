@@ -1,0 +1,140 @@
+{
+    "php_function": "com_event_sink",
+    "zend_function": "com_event_sink",
+    "source_file": "com_com.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "object",
+            "macro": "Z_PARAM_OBJECT_OF_CLASS",
+            "arguments": [
+                "object",
+                "php_com_variant_class_entry"
+            ],
+            "type": "zend_object",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_OBJECT_OF_CLASS(object, php_com_variant_class_entry)"
+        },
+        {
+            "name": "sinkobject",
+            "macro": "Z_PARAM_OBJECT",
+            "arguments": [
+                "sinkobject"
+            ],
+            "type": "zend_object",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_OBJECT(sinkobject)"
+        },
+        {
+            "name": "sink_ht",
+            "macro": "Z_PARAM_ARRAY_HT_OR_STR_OR_NULL",
+            "arguments": [
+                "sink_ht",
+                "sink_str"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY_HT_OR_STR_OR_NULL(sink_ht, sink_str)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "ext/standard/info.h",
+        "php_com_dotnet.h",
+        "php_com_dotnet_internal.h",
+        "Zend/zend_exceptions.h"
+    ],
+    "body": "zval *object, *sinkobject;\n\tzend_string *sink_str = NULL;\n\tHashTable *sink_ht = NULL;\n\tzend_string *type_lib_name = NULL;\n\tzend_string *dispatch_name = NULL;\n\tphp_com_dotnet_object *obj;\n\tITypeInfo *typeinfo = NULL;\n\n\tZEND_PARSE_PARAMETERS_START(2, 3)\n\t\tZ_PARAM_OBJECT_OF_CLASS(object, php_com_variant_class_entry)\n\t\tZ_PARAM_OBJECT(sinkobject)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_ARRAY_HT_OR_STR_OR_NULL(sink_ht, sink_str)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tRETVAL_FALSE;\n\n\tphp_com_initialize();\n\tobj = CDNO_FETCH(object);\n\n\tif (sink_ht) {\n\t\t/* 0 => typelibname, 1 => dispname */\n\t\tzval *tmp;\n\n\t\tif ((tmp = zend_hash_index_find(sink_ht, 0)) != NULL && Z_TYPE_P(tmp) == IS_STRING)\n\t\t\ttype_lib_name = Z_STR_P(tmp);\n\t\tif ((tmp = zend_hash_index_find(sink_ht, 1)) != NULL && Z_TYPE_P(tmp) == IS_STRING)\n\t\t\tdispatch_name = Z_STR_P(tmp);\n\t} else if (sink_str) {\n\t\tdispatch_name = sink_str;\n\t}\n\n\ttypeinfo = php_com_locate_typeinfo(type_lib_name, obj, dispatch_name, /* sink */ true);\n\n\tif (typeinfo) {\n\t\tHashTable *id_to_name;\n\n\t\tALLOC_HASHTABLE(id_to_name);\n\n\t\tif (php_com_process_typeinfo(typeinfo, id_to_name, 0, &obj->sink_id, obj->code_page)) {\n\n\t\t\t/* Create the COM wrapper for this sink */\n\t\t\tobj->sink_dispatch = php_com_wrapper_export_as_sink(sinkobject, &obj->sink_id, id_to_name);\n\n\t\t\t/* Now hook it up to the source */\n\t\t\tphp_com_object_enable_event_sink(obj, /* enable */ true);\n\t\t\tRETVAL_TRUE;\n\n\t\t} else {\n\t\t\tFREE_HASHTABLE(id_to_name);\n\t\t}\n\t}\n\n\tif (typeinfo) {\n\t\tITypeInfo_Release(typeinfo);\n\t}",
+    "semantic": "0 => typelibname, 1 => dispname",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_OBJECT_OF_CLASS",
+            "Z_PARAM_OBJECT",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_ARRAY_HT_OR_STR_OR_NULL",
+            "ZEND_PARSE_PARAMETERS_END"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_string",
+            "HashTable"
+        ],
+        "internal_helpers": [
+            "php_com_initialize",
+            "zend_hash_index_find",
+            "php_com_locate_typeinfo",
+            "php_com_process_typeinfo",
+            "php_com_wrapper_export_as_sink",
+            "php_com_object_enable_event_sink"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common com_event_sink inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 6,
+    "purpose": "0 => typelibname, 1 => dispname",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "com_get_active_object",
+        "com_create_guid",
+        "com_print_typeinfo",
+        "com_message_pump",
+        "com_load_typelib"
+    ]
+}

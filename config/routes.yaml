@@ -1,0 +1,8 @@
+symfonicat_module:
+    resource: ../config/module_routes.php
+
+symfonicat_public:
+    resource: routes/public.yaml
+
+symfonicat_core:
+    resource: routes/core.yaml

@@ -1,0 +1,156 @@
+{
+    "php_function": "stream_socket_accept",
+    "zend_function": "stream_socket_accept",
+    "source_file": "reamsfuncs.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "zstream",
+            "macro": "Z_PARAM_RESOURCE",
+            "arguments": [
+                "zstream"
+            ],
+            "type": "zend_resource",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_RESOURCE(zstream)"
+        },
+        {
+            "name": "timeout",
+            "macro": "Z_PARAM_DOUBLE_OR_NULL",
+            "arguments": [
+                "timeout",
+                "timeout_is_null"
+            ],
+            "type": "double",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_DOUBLE_OR_NULL(timeout, timeout_is_null)"
+        },
+        {
+            "name": "zpeername",
+            "macro": "Z_PARAM_ZVAL",
+            "arguments": [
+                "zpeername"
+            ],
+            "type": "zval",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": true,
+            "raw": "Z_PARAM_ZVAL(zpeername)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "ext/standard/flock_compat.h",
+        "ext/standard/file.h",
+        "ext/standard/basic_functions.h",
+        "php_ini.h",
+        "streamsfuncs.h",
+        "php_network.h",
+        "php_string.h",
+        "unistd.h",
+        "win32/select.h",
+        "win32/sockets.h",
+        "win32/console.h"
+    ],
+    "body": "double timeout;\n\tbool timeout_is_null = 1;\n\tzval *zpeername = NULL;\n\tzend_string *peername = NULL;\n\tphp_timeout_ull conv;\n\tstruct timeval tv;\n\tphp_stream *stream = NULL, *clistream = NULL;\n\tzval *zstream;\n\tzend_string *errstr = NULL;\n\n\tZEND_PARSE_PARAMETERS_START(1, 3)\n\t\tZ_PARAM_RESOURCE(zstream)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_DOUBLE_OR_NULL(timeout, timeout_is_null)\n\t\tZ_PARAM_ZVAL(zpeername)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (timeout_is_null) {\n\t\ttimeout = (double)FG(default_socket_timeout);\n\t} else if (!zend_finite(timeout)) {\n\t\tzend_argument_value_error(2, \"must be a finite value\");\n\t\tRETURN_THROWS();\n\t}\n\n\tphp_stream_from_zval(stream, zstream);\n\n\t/* prepare the timeout value for use */\n\tstruct timeval *tv_pointer;\n\tif (timeout < 0.0 || timeout >= (double) PHP_TIMEOUT_ULL_MAX / 1000000.0) {\n\t\ttv_pointer = NULL;\n\t} else {\n\t\tconv = (php_timeout_ull) (timeout * 1000000.0);\n#ifdef PHP_WIN32\n\t\ttv.tv_sec = (long)(conv / 1000000);\n\t\ttv.tv_usec = (long)(conv % 1000000);\n#else\n\t\ttv.tv_sec = conv / 1000000;\n\t\ttv.tv_usec = conv % 1000000;\n#endif\n\t\ttv_pointer = &tv;\n\t}\n\n\tif (0 == php_stream_xport_accept(stream, &clistream,\n\t\t\t\tzpeername ? &peername : NULL,\n\t\t\t\tNULL, NULL,\n\t\t\t\ttv_pointer, &errstr\n\t\t\t\t) && clistream) {\n\n\t\tif (peername) {\n\t\t\tZEND_TRY_ASSIGN_REF_STR(zpeername, peername);\n\t\t}\n\t\tphp_stream_to_zval(clistream, return_value);\n\t} else {\n\t\tif (peername) {\n\t\t\tzend_string_release(peername);\n\t\t}\n\t\tphp_error_docref(NULL, E_WARNING, \"Accept failed: %s\", errstr ? ZSTR_VAL(errstr) : \"Unknown error\");\n\t\tRETVAL_FALSE;\n\t}\n\n\tif (errstr) {\n\t\tzend_string_release_ex(errstr, 0);\n\t}",
+    "semantic": "prepare the timeout value for use",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_RESOURCE",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_DOUBLE_OR_NULL",
+            "Z_PARAM_ZVAL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_THROWS",
+            "ZEND_TRY_ASSIGN_REF_STR",
+            "ZSTR_VAL"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "zend_finite",
+            "zend_argument_value_error",
+            "php_stream_from_zval",
+            "php_stream_xport_accept",
+            "php_stream_to_zval",
+            "zend_string_release",
+            "php_error_docref",
+            "zend_string_release_ex"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common stream_socket_accept inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 7,
+    "purpose": "prepare the timeout value for use",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "stream_socket_pair",
+        "stream_socket_client",
+        "stream_socket_server",
+        "stream_socket_get_name",
+        "stream_socket_sendto",
+        "stream_socket_recvfrom",
+        "stream_get_contents",
+        "stream_copy_to_stream",
+        "stream_get_meta_data",
+        "stream_get_transports",
+        "stream_get_wrappers",
+        "stream_select"
+    ]
+}

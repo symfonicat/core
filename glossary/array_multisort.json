@@ -1,0 +1,136 @@
+{
+    "php_function": "array_multisort",
+    "zend_function": "array_multisort",
+    "source_file": "ray.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "'+'",
+            "macro": "Z_PARAM_VARIADIC",
+            "arguments": [
+                "'+'",
+                "args",
+                "argc"
+            ],
+            "type": "mixed",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": true,
+            "by_reference": false,
+            "raw": "Z_PARAM_VARIADIC('+', args, argc)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "php_ini.h",
+        "stdarg.h",
+        "stdlib.h",
+        "math.h",
+        "time.h",
+        "string.h",
+        "zend_globals.h",
+        "zend_interfaces.h",
+        "php_array.h",
+        "basic_functions.h",
+        "php_string.h",
+        "php_math.h",
+        "zend_smart_str.h",
+        "zend_bitset.h",
+        "zend_exceptions.h",
+        "ext/random/php_random.h",
+        "zend_frameless_function.h"
+    ],
+    "body": "zval*\t\t\targs;\n\tzval**\t\t\tarrays;\n\tBucket**\t\tindirect;\n\tuint32_t\t\tidx;\n\tHashTable*\t\thash;\n\tuint32_t\t\targc;\n\tuint32_t\t\tarray_size;\n\tuint32_t\t\tnum_arrays = 0;\n\tint\t\t\t\tparse_state[MULTISORT_LAST];   /* 0 - flag not allowed 1 - flag allowed */\n\tint\t\t\t\tsort_order = PHP_SORT_ASC;\n\tint\t\t\t\tsort_type  = PHP_SORT_REGULAR;\n\tuint32_t\t\ti, k, n;\n\tbucket_compare_func_t *func;\n\n\tZEND_PARSE_PARAMETERS_START(1, -1)\n\t\tZ_PARAM_VARIADIC('+', args, argc)\n\tZEND_PARSE_PARAMETERS_END();\n\n\t/* Allocate space for storing pointers to input arrays and sort flags. */\n\tarrays = (zval **)ecalloc(argc, sizeof(zval *));\n\tfor (i = 0; i < MULTISORT_LAST; i++) {\n\t\tparse_state[i] = 0;\n\t}\n\tfunc = ARRAYG(multisort_func) = ecalloc(argc, sizeof(bucket_compare_func_t));\n\n\t/* Here we go through the input arguments and parse them. Each one can\n\t * be either an array or a sort flag which follows an array. If not\n\t * specified, the sort flags defaults to PHP_SORT_ASC and PHP_SORT_REGULAR\n\t * accordingly. There can't be two sort flags of the same type after an\n\t * array, and the very first argument has to be an array. */\n\tfor (i = 0; i < argc; i++) {\n\t\tzval *arg = &args[i];\n\n\t\tZVAL_DEREF(arg);\n\t\tif (Z_TYPE_P(arg) == IS_ARRAY) {\n\t\t\tSEPARATE_ARRAY(arg);\n\t\t\t/* We see the next array, so we update the sort flags of\n\t\t\t * the previous array and reset the sort flags. */\n\t\t\tif (i > 0) {\n\t\t\t\tARRAYG(multisort_func)[num_arrays - 1] = php_get_data_compare_func_unstable(sort_type, sort_order != PHP_SORT_ASC);\n\t\t\t\tsort_order = PHP_SORT_ASC;\n\t\t\t\tsort_type = PHP_SORT_REGULAR;\n\t\t\t}\n\t\t\tarrays[num_arrays++] = arg;\n\n\t\t\t/* Next one may be an array or a list of sort flags. */\n\t\t\tfor (k = 0; k < MULTISORT_LAST; k++) {\n\t\t\t\tparse_state[k] = 1;\n\t\t\t}\n\t\t} else if (Z_TYPE_P(arg) == IS_LONG) {\n\t\t\tswitch (Z_LVAL_P(arg) & ~PHP_SORT_FLAG_CASE) {\n\t\t\t\tcase PHP_SORT_ASC:\n\t\t\t\tcase PHP_SORT_DESC:\n\t\t\t\t\t/* flag allowed here */\n\t\t\t\t\tif (parse_state[MULTISORT_ORDER] == 1) {\n\t\t\t\t\t\t/* Save the flag and make sure then next arg is not the current flag. */\n\t\t\t\t\t\tsort_order = Z_LVAL_P(arg) == PHP_SORT_DESC ? PHP_SORT_DESC : PHP_SORT_ASC;\n\t\t\t\t\t\tparse_state[MULTISORT_ORDER] = 0;\n\t\t\t\t\t} else {\n\t\t\t\t\t\tzend_argument_type_error(i + 1, \"must be an array or a sort flag that has not already been specified\");\n\t\t\t\t\t\tMULTISORT_ABORT;\n\t\t\t\t\t}\n\t\t\t\t\tbreak;\n\n\t\t\t\tcase PHP_SORT_REGULAR:\n\t\t\t\tcase PHP_SORT_NUMERIC:\n\t\t\t\tcase PHP_SORT_STRING:\n\t\t\t\tcase PHP_SORT_NATURAL:\n\t\t\t\tcase PHP_SORT_LOCALE_STRING:\n\t\t\t\t\t/* flag allowed here */\n\t\t\t\t\tif (parse_state[MULTISORT_TYPE] == 1) {\n\t\t\t\t\t\t/* Save the flag and make sure then next arg is not the current flag. */\n\t\t\t\t\t\tsort_type = (int)Z_LVAL_P(arg);\n\t\t\t\t\t\tparse_state[MULTISORT_TYPE] = 0;\n\t\t\t\t\t} else {\n\t\t\t\t\t\tzend_argument_type_error(i + 1, \"must be an array or a sort flag that has not already been specified\");\n\t\t\t\t\t\tMULTISORT_ABORT;\n\t\t\t\t\t}\n\t\t\t\t\tbreak;\n\n\t\t\t\tdefault:\n\t\t\t\t\tzend_argument_value_error(i + 1, \"must be a valid sort flag\");\n\t\t\t\t\tMULTISORT_ABORT;\n\t\t\t\t\tbreak;\n\n\t\t\t}\n\t\t} else {\n\t\t\tzend_argument_type_error(i + 1, \"must be an array or a sort flag\");\n\t\t\tMULTISORT_ABORT;\n\t\t}\n\t}\n\t/* Take care of the last array sort flags. */\n\tARRAYG(multisort_func)[num_arrays - 1] = php_get_data_compare_func_unstable(sort_type, sort_order != PHP_SORT_ASC);\n\n\t/* Make sure the arrays are of the same size. */\n\tarray_size = zend_hash_num_elements(Z_ARRVAL_P(arrays[0]));\n\tfor (i = 1; i < num_arrays; i++) {\n\t\tif (zend_hash_num_elements(Z_ARRVAL_P(arrays[i])) != array_size) {\n\t\t\tzend_value_error(\"Array sizes are inconsistent\");\n\t\t\tMULTISORT_ABORT;\n\t\t}\n\t}\n\n\t/* If all arrays are empty we don't need to do anything. */\n\tif (array_size < 1) {\n\t\tefree(func);\n\t\tefree(arrays);\n\t\tRETURN_TRUE;\n\t}\n\n\t/* Create the indirection array. This array is of size MxN, where\n\t * M is the number of entries in each input array and N is the number\n\t * of the input arrays + 1. The last column is UNDEF to indicate the end\n\t * of the row. It also stores the original position for stable sorting. */\n\tindirect = (Bucket **)safe_emalloc(array_size, sizeof(Bucket *), 0);\n\t/* Move num_arrays multiplication to size because it's essentially impossible to overflow. */\n\tBucket *indirects = (Bucket *)safe_emalloc(array_size, sizeof(Bucket) * (num_arrays + 1), 0);\n\tfor (i = 0; i < array_size; i++) {\n\t\tindirect[i] = indirects + (i * (num_arrays + 1));\n\t}\n\tfor (i = 0; i < num_arrays; i++) {\n\t\tk = 0;\n\t\tif (HT_IS_PACKED(Z_ARRVAL_P(arrays[i]))) {\n\t\t\tzval *zv = Z_ARRVAL_P(arrays[i])->arPacked;\n\t\t\tfor (idx = 0; idx < Z_ARRVAL_P(arrays[i])->nNumUsed; idx++, zv++) {\n\t\t\t\tif (Z_TYPE_P(zv) == IS_UNDEF) continue;\n\t\t\t\tZVAL_COPY_VALUE(&indirect[k][i].val, zv);\n\t\t\t\tindirect[k][i].h = idx;\n\t\t\t\tindirect[k][i].key = NULL;\n\t\t\t\tk++;\n\t\t\t}\n\t\t} else {\n\t\t\tBucket *p = Z_ARRVAL_P(arrays[i])->arData;\n\t\t\tfor (idx = 0; idx < Z_ARRVAL_P(arrays[i])->nNumUsed; idx++, p++) {\n\t\t\t\tif (Z_TYPE(p->val) == IS_UNDEF) continue;\n\t\t\t\tindirect[k][i] = *p;\n\t\t\t\tk++;\n\t\t\t}\n\t\t}\n\t}\n\tfor (k = 0; k < array_size; k++) {\n\t\tZVAL_UNDEF(&indirect[k][num_arrays].val);\n\t\tZ_EXTRA_P(&indirect[k][num_arrays].val) = k;\n\t}\n\n\t/* Do the actual sort magic - bada-bim, bada-boom. */\n\tzend_sort(indirect, array_size, sizeof(Bucket *), php_multisort_compare, (swap_func_t)array_bucket_p_sawp);\n\tif (EG(exception)) {\n\t\tgoto clean_up;\n\t}\n\n\t/* Restructure the arrays based on sorted indirect - this is mostly taken from zend_hash_sort() function. */\n\tfor (i = 0; i < num_arrays; i++) {\n\t\thash = Z_ARRVAL_P(arrays[i]);\n\t\thash->nNumUsed = array_size;\n\t\thash->nNextFreeElement = array_size;\n\t\thash->nInternalPointer = 0;\n\t\tif (HT_IS_PACKED(hash)) {\n\t\t\tfor (k = 0; k < array_size; k++) {\n\t\t\t\tZVAL_COPY_VALUE(&hash->arPacked[k], &indirect[k][i].val);\n\t\t\t}\n\t\t} else {\n\t\t\tbool repack = true;\n\n\t\t\tfor (n = 0, k = 0; k < array_size; k++) {\n\t\t\t\thash->arData[k] = indirect[k][i];\n\t\t\t\tif (hash->arData[k].key == NULL) {\n\t\t\t\t\thash->arData[k].h = n++;\n\t\t\t\t} else {\n\t\t\t\t\trepack = false;\n\t\t\t\t}\n\t\t\t}\n\t\t\tif (repack) {\n\t\t\t\tzend_hash_to_packed(hash);\n\t\t\t} else {\n\t\t\t\tzend_hash_rehash(hash);\n\t\t\t}\n\t\t}\n\t}\n\tRETVAL_TRUE;\n\nclean_up:\n\tefree(indirects);\n\tefree(indirect);\n\tefree(func);\n\tefree(arrays);",
+    "semantic": "0 - flag not allowed 1 - flag allowed",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_VARIADIC",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZVAL_DEREF",
+            "SEPARATE_ARRAY",
+            "RETURN_TRUE",
+            "ZVAL_COPY_VALUE",
+            "ZVAL_UNDEF"
+        ],
+        "zend_types": [
+            "zval",
+            "Bucket",
+            "HashTable"
+        ],
+        "internal_helpers": [
+            "php_get_data_compare_func_unstable",
+            "zend_argument_type_error",
+            "zend_argument_value_error",
+            "zend_hash_num_elements",
+            "zend_value_error",
+            "zend_sort",
+            "zend_hash_sort",
+            "zend_hash_to_packed",
+            "zend_hash_rehash"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common array_multisort inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 10,
+    "purpose": "0 - flag not allowed 1 - flag allowed",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "krsort",
+        "ksort",
+        "count",
+        "natsort",
+        "natcasesort",
+        "asort",
+        "arsort",
+        "sort",
+        "rsort",
+        "usort",
+        "uasort",
+        "uksort"
+    ]
+}

@@ -1,0 +1,150 @@
+{
+    "php_function": "mb_get_info",
+    "zend_function": "mb_get_info",
+    "source_file": "string.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "type",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "type"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(type)"
+        }
+    ],
+    "includes": [
+        "limits.h",
+        "libmbfl/config.h",
+        "php.h",
+        "php_ini.h",
+        "php_variables.h",
+        "mbstring.h",
+        "ext/standard/php_string.h",
+        "ext/standard/php_mail.h",
+        "ext/standard/exec.h",
+        "main/php_output.h",
+        "ext/standard/info.h",
+        "ext/pcre/php_pcre.h",
+        "libmbfl/mbfl/mbfilter_8bit.h",
+        "libmbfl/mbfl/mbfilter_pass.h",
+        "libmbfl/mbfl/eaw_table.h",
+        "libmbfl/filters/mbfilter_base64.h",
+        "libmbfl/filters/mbfilter_cjk.h",
+        "libmbfl/filters/mbfilter_qprint.h",
+        "libmbfl/filters/mbfilter_htmlent.h",
+        "libmbfl/filters/mbfilter_uuencode.h",
+        "libmbfl/filters/mbfilter_ucs4.h",
+        "libmbfl/filters/mbfilter_utf16.h",
+        "libmbfl/filters/mbfilter_singlebyte.h",
+        "libmbfl/filters/translit_kana_jisx0201_jisx0208.h",
+        "libmbfl/filters/unicode_prop.h",
+        "php_globals.h",
+        "rfc1867.h",
+        "php_content_types.h",
+        "SAPI.h",
+        "php_unicode.h",
+        "TSRM.h",
+        "mb_gpc.h",
+        "zend_smart_str.h",
+        "zend_multibyte.h",
+        "mbstring_arginfo.h",
+        "rare_cp_bitvec.h",
+        "emmintrin.h",
+        "immintrin.h",
+        "pmmintrin.h"
+    ],
+    "body": "zend_string *type = NULL;\n\tsize_t n;\n\tchar *name;\n\tzval row;\n\tconst mbfl_encoding **entry;\n\tconst mbfl_language *lang = mbfl_no2language(MBSTRG(language));\n\n\tZEND_ASSERT(lang);\n\n\tZEND_PARSE_PARAMETERS_START(0, 1)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_STR(type)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (!type || zend_string_equals_literal_ci(type, \"all\")) {\n\t\tarray_init(return_value);\n\t\tif (MBSTRG(current_internal_encoding)) {\n\t\t\tadd_assoc_string(return_value, \"internal_encoding\", (char *)MBSTRG(current_internal_encoding)->name);\n\t\t}\n\t\tif (MBSTRG(http_input_identify)) {\n\t\t\tadd_assoc_string(return_value, \"http_input\", (char *)MBSTRG(http_input_identify)->name);\n\t\t}\n\t\tif (MBSTRG(current_http_output_encoding)) {\n\t\t\tadd_assoc_string(return_value, \"http_output\", (char *)MBSTRG(current_http_output_encoding)->name);\n\t\t}\n\n\t\tadd_assoc_str(return_value, \"http_output_conv_mimetypes\",\n\t\t\tzend_ini_str(\"mbstring.http_output_conv_mimetypes\", sizeof(\"mbstring.http_output_conv_mimetypes\") - 1, 0)\n\t\t);\n\n\t\tname = (char *)mbfl_no_encoding2name(lang->mail_charset);\n\t\tadd_assoc_string(return_value, \"mail_charset\", name);\n\n\t\tname = (char *)mbfl_no_encoding2name(lang->mail_header_encoding);\n\t\tadd_assoc_string(return_value, \"mail_header_encoding\", name);\n\n\t\tname = (char *)mbfl_no_encoding2name(lang->mail_body_encoding);\n\t\tadd_assoc_string(return_value, \"mail_body_encoding\", name);\n\n\t\tadd_assoc_long(return_value, \"illegal_chars\", MBSTRG(illegalchars));\n\n\t\tif (MBSTRG(encoding_translation)) {\n\t\t\tadd_assoc_string(return_value, \"encoding_translation\", \"On\");\n\t\t} else {\n\t\t\tadd_assoc_string(return_value, \"encoding_translation\", \"Off\");\n\t\t}\n\n\t\tname = (char *)mbfl_no_language2name(MBSTRG(language));\n\t\tadd_assoc_string(return_value, \"language\", name);\n\n\t\t// TODO Seems to always have one entry at least?\n\t\tn = MBSTRG(current_detect_order_list_size);\n\t\tentry = MBSTRG(current_detect_order_list);\n\t\tif (n > 0) {\n\t\t\tsize_t i;\n\t\t\tarray_init(&row);\n\t\t\tfor (i = 0; i < n; i++) {\n\t\t\t\tadd_next_index_string(&row, (*entry)->name);\n\t\t\t\tentry++;\n\t\t\t}\n\t\t\tadd_assoc_zval(return_value, \"detect_order\", &row);\n\t\t}\n\t\tif (MBSTRG(current_filter_illegal_mode) == MBFL_OUTPUTFILTER_ILLEGAL_MODE_NONE) {\n\t\t\tadd_assoc_string(return_value, \"substitute_character\", \"none\");\n\t\t} else if (MBSTRG(current_filter_illegal_mode) == MBFL_OUTPUTFILTER_ILLEGAL_MODE_LONG) {\n\t\t\tadd_assoc_string(return_value, \"substitute_character\", \"long\");\n\t\t} else if (MBSTRG(current_filter_illegal_mode) == MBFL_OUTPUTFILTER_ILLEGAL_MODE_ENTITY) {\n\t\t\tadd_assoc_string(return_value, \"substitute_character\", \"entity\");\n\t\t} else {\n\t\t\tadd_assoc_long(return_value, \"substitute_character\", MBSTRG(current_filter_illegal_substchar));\n\t\t}\n\t\tif (MBSTRG(strict_detection)) {\n\t\t\tadd_assoc_string(return_value, \"strict_detection\", \"On\");\n\t\t} else {\n\t\t\tadd_assoc_string(return_value, \"strict_detection\", \"Off\");\n\t\t}\n\t} else if (zend_string_equals_literal_ci(type, \"internal_encoding\")) {\n\t\tZEND_ASSERT(MBSTRG(current_internal_encoding));\n\t\tRETURN_STRING((char *)MBSTRG(current_internal_encoding)->name);\n\t} else if (zend_string_equals_literal_ci(type, \"http_input\")) {\n\t\tif (MBSTRG(http_input_identify)) {\n\t\t\tRETURN_STRING((char *)MBSTRG(http_input_identify)->name);\n\t\t}\n\t\tRETURN_NULL();\n\t} else if (zend_string_equals_literal_ci(type, \"http_output\")) {\n\t\tZEND_ASSERT(MBSTRG(current_http_output_encoding));\n\t\tRETURN_STRING((char *)MBSTRG(current_http_output_encoding)->name);\n\t} else if (zend_string_equals_literal_ci(type, \"http_output_conv_mimetypes\")) {\n\t\tRETURN_STR(\n\t\t\tzend_ini_str(\n\t\t\t\t\"mbstring.http_output_conv_mimetypes\",\n\t\t\t\tsizeof(\"mbstring.http_output_conv_mimetypes\") - 1,\n\t\t\t\tfalse\n\t\t\t)\n\t\t);\n\t} else if (zend_string_equals_literal_ci(type, \"mail_charset\")) {\n\t\tname = (char *)mbfl_no_encoding2name(lang->mail_charset);\n\t\tRETURN_STRING(name);\n\t} else if (zend_string_equals_literal_ci(type, \"mail_header_encoding\")) {\n\t\tname = (char *)mbfl_no_encoding2name(lang->mail_header_encoding);\n\t\tRETURN_STRING(name);\n\t} else if (zend_string_equals_literal_ci(type, \"mail_body_encoding\")) {\n\t\tname = (char *)mbfl_no_encoding2name(lang->mail_body_encoding);\n\t\tRETURN_STRING(name);\n\t} else if (zend_string_equals_literal_ci(type, \"illegal_chars\")) {\n\t\tRETURN_LONG(MBSTRG(illegalchars));\n\t} else if (zend_string_equals_literal_ci(type, \"encoding_translation\")) {\n\t\tif (MBSTRG(encoding_translation)) {\n\t\t\tRETURN_STRING(\"On\");\n\t\t} else {\n\t\t\tRETURN_STRING(\"Off\");\n\t\t}\n\t} else if (zend_string_equals_literal_ci(type, \"language\")) {\n\t\tname = (char *)mbfl_no_language2name(MBSTRG(language));\n\t\tRETURN_STRING(name);\n\t} else if (zend_string_equals_literal_ci(type, \"detect_order\")) {\n\t\t// TODO Seems to always have one entry at least?\n\t\tn = MBSTRG(current_detect_order_list_size);\n\t\tentry = MBSTRG(current_detect_order_list);\n\t\tif (n > 0) {\n\t\t\tsize_t i;\n\t\t\tarray_init(return_value);\n\t\t\tfor (i = 0; i < n; i++) {\n\t\t\t\tadd_next_index_string(return_value, (*entry)->name);\n\t\t\t\tentry++;\n\t\t\t}\n\t\t}\n\t} else if (zend_string_equals_literal_ci(type, \"substitute_character\")) {\n\t\tif (MBSTRG(current_filter_illegal_mode) == MBFL_OUTPUTFILTER_ILLEGAL_MODE_NONE) {\n\t\t\tRETURN_STRING(\"none\");\n\t\t} else if (MBSTRG(current_filter_illegal_mode) == MBFL_OUTPUTFILTER_ILLEGAL_MODE_LONG) {\n\t\t\tRETURN_STRING(\"long\");\n\t\t} else if (MBSTRG(current_filter_illegal_mode) == MBFL_OUTPUTFILTER_ILLEGAL_MODE_ENTITY) {\n\t\t\tRETURN_STRING(\"entity\");\n\t\t} else {\n\t\t\tRETURN_LONG(MBSTRG(current_filter_illegal_substchar));\n\t\t}\n\t} else if (zend_string_equals_literal_ci(type, \"strict_detection\")) {\n\t\tif (MBSTRG(strict_detection)) {\n\t\t\tRETURN_STRING(\"On\");\n\t\t} else {\n\t\t\tRETURN_STRING(\"Off\");\n\t\t}\n\t} else {\n\t\tphp_error_docref(NULL, E_WARNING, \"argument #1 ($type) must be a valid type\");\n\t\tRETURN_FALSE;\n\t}",
+    "semantic": "Implements the PHP function mb_get_info in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_ASSERT",
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_STR",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_STRING",
+            "RETURN_NULL",
+            "RETURN_STR",
+            "RETURN_LONG",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zend_string",
+            "zval"
+        ],
+        "internal_helpers": [
+            "zend_string_equals_literal_ci",
+            "zend_ini_str",
+            "php_error_docref"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common mb_get_info inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 9,
+    "purpose": "Implements the PHP function mb_get_info in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "mb_language",
+        "mb_internal_encoding",
+        "mb_http_input",
+        "mb_http_output",
+        "mb_detect_order",
+        "mb_substitute_character",
+        "mb_preferred_mime_name",
+        "mb_parse_str",
+        "mb_output_handler",
+        "mb_str_split",
+        "mb_strlen",
+        "mb_strpos"
+    ]
+}

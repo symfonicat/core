@@ -1,0 +1,83 @@
+{
+    "php_function": "sapi_windows_cp_get",
+    "zend_function": "sapi_windows_cp_get",
+    "source_file": "c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "assert.h",
+        "php.h",
+        "SAPI.h",
+        "win32/console.h",
+        "cp_enc_map.c"
+    ],
+    "body": "zend_string *kind = NULL;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"|S\", &kind) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tif (!kind) {\n\t\tconst struct php_win32_cp *cp = php_win32_cp_get_current();\n\t\tRETURN_LONG(cp->id);\n\t} else if (zend_string_equals_literal_ci(kind, \"ansi\")) {\n\t\tRETURN_LONG(GetACP());\n\t} else if (zend_string_equals_literal_ci(kind, \"oem\")) {\n\t\tRETURN_LONG(GetOEMCP());\n\t} else {\n\t\t/* TODO Warn/ValueError for invalid kind? */\n\t\tconst struct php_win32_cp *cp = php_win32_cp_get_current();\n\t\tRETURN_LONG(cp->id);\n\t}",
+    "semantic": "TODO Warn/ValueError for invalid kind?",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_LONG"
+        ],
+        "zend_types": [
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "php_win32_cp_get_current",
+            "zend_string_equals_literal_ci"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common sapi_windows_cp_get inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 4,
+    "purpose": "TODO Warn/ValueError for invalid kind?",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "sapi_windows_cp_set",
+        "sapi_windows_cp_is_utf8",
+        "sapi_windows_cp_conv"
+    ]
+}
