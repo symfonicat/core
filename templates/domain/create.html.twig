@@ -1,0 +1,5 @@
+{% extends 'admin/base.html.twig' %}
+{% block title %}New Domain{% endblock %}
+{% block body %}
+    {{ include('domain/_form.html.twig', { form: form, button_label: 'create' }) }}
+{% endblock %}
