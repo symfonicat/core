@@ -1,0 +1,14 @@
+<tr id="module_{{ module.id }}" class="btn-row">
+    <td><a href="{{ path('app_module_show', {'slug': module.slug}) }}">{{ module.name }}</a></td>
+    <td>{{ module.slug }}</td>
+    <td class="text-end btn-cell">
+        
+        <div class="btn-group btn-group-sm">
+            <a href="{{ path('app_module_edit', {'slug': module.slug}) }}" class="btn btn-sm btn-warning">
+                <i class="fa fa-pencil">&nbsp;</i>
+            </a>
+            {{ include('module/_delete_form.html.twig') }}
+        </div>
+
+    </td>
+</tr>

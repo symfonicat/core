@@ -1,0 +1,26 @@
+{% extends 'admin/base.html.twig' %}
+{% block title %}Modules{% endblock %}
+{% block body %}
+
+    <table class="table" id="modules">
+        <thead>
+            <tr>
+                <th>name</th>
+                <th>slug</th>
+                <th>&nbsp;</th>
+            </tr>
+        </thead>
+        <tbody id="modules-body">
+        {% for module in modules %}
+            {{ include('module/_row.html.twig') }}
+        {% else %}
+            <tr id="modules-empty">
+                <td colspan="3">no records found</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <a href="{{ path('app_module_create') }}" class="btn btn-sm btn-success">create</a>
+    
+{% endblock %}

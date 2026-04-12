@@ -1,0 +1,1 @@
+console.log('localhost symfonicat application loaded!')

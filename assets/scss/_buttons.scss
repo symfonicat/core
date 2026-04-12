@@ -1,0 +1,141 @@
+//
+// Base styles
+//
+
+.btn {
+  display: inline-block;
+  padding: $btn-padding-y $btn-padding-x;
+  font-family: $btn-font-family;
+  @include font-size($btn-font-size);
+  font-weight: $btn-font-weight;
+  line-height: $btn-line-height;
+  color: $gray-100;
+  text-align: center;
+  text-decoration: if($link-decoration == none, null, none);
+  white-space: $btn-white-space;
+  vertical-align: middle;
+  cursor: if($enable-button-pointers, pointer, null);
+  user-select: none;
+  border: 1px solid transparent;
+  @include border-radius($border-radius);
+  @include gradient-bg(transparent);
+  @include box-shadow($btn-box-shadow);
+  @include transition($btn-transition);
+
+  &:hover {
+    text-decoration: if($link-hover-decoration == underline, none, null);
+  }
+
+  &:focus-visible {
+    outline: 0;
+  }
+
+  .btn-check:focus-visible + & {
+    outline: 0;
+  }
+
+  // Interaction states (hover/focus/active/disabled) are handled by the variant mixins.
+}
+
+
+//
+// Alternate buttons
+//
+
+// scss-docs-start btn-variant-loops
+@each $color, $value in $theme-colors {
+  $btn-text-color: if(map-has-key($btn-variant-text-colors, $color), map-get($btn-variant-text-colors, $color), color-contrast($value));
+
+  .btn-#{$color} {
+    $hover-background: null;
+    $hover-border: null;
+    $active-background: null;
+    $active-border: null;
+
+    @if $color == "light" {
+      $hover-background: shade-color($value, $btn-hover-bg-shade-amount);
+      $hover-border: shade-color($value, $btn-hover-border-shade-amount);
+      $active-background: shade-color($value, $btn-active-bg-shade-amount);
+      $active-border: shade-color($value, $btn-active-border-shade-amount);
+    } @else if $color == "dark" {
+      $hover-background: tint-color($value, $btn-hover-bg-tint-amount);
+      $hover-border: tint-color($value, $btn-hover-border-tint-amount);
+      $active-background: tint-color($value, $btn-active-bg-tint-amount);
+      $active-border: tint-color($value, $btn-active-border-tint-amount);
+    } @else {
+      $hover-background: if($btn-text-color == $color-contrast-light, shade-color($value, $btn-hover-bg-shade-amount), tint-color($value, $btn-hover-bg-tint-amount));
+      $hover-border: if($btn-text-color == $color-contrast-light, shade-color($value, $btn-hover-border-shade-amount), tint-color($value, $btn-hover-border-tint-amount));
+      $active-background: if($btn-text-color == $color-contrast-light, shade-color($value, $btn-active-bg-shade-amount), tint-color($value, $btn-active-bg-tint-amount));
+      $active-border: if($btn-text-color == $color-contrast-light, shade-color($value, $btn-active-border-shade-amount), tint-color($value, $btn-active-border-tint-amount));
+    }
+
+    $computed-hover-color: color-contrast($hover-background);
+    $manual-hover-color: if(map-has-key($btn-variant-hover-text-colors, $color), map-get($btn-variant-hover-text-colors, $color), null);
+    $btn-hover-text-color: if($manual-hover-color == null, $computed-hover-color, $manual-hover-color);
+
+    @include button-variant(
+      $value,
+      $value,
+      $btn-text-color,
+      $hover-background: $hover-background,
+      $hover-border: $hover-border,
+      $hover-color: $btn-hover-text-color,
+      $active-background: $active-background,
+      $active-border: $active-border
+    );
+  }
+}
+
+@each $color, $value in $theme-colors {
+  .btn-outline-#{$color} {
+    @include button-outline-variant($value);
+  }
+}
+// scss-docs-end btn-variant-loops
+
+
+//
+// Link buttons
+//
+
+// Make a button look and behave like a link
+.btn-link {
+  font-weight: $font-weight-normal;
+  color: $link-color;
+  background-color: transparent;
+  border-color: transparent;
+  box-shadow: none;
+
+  text-decoration: $link-decoration;
+  @if $enable-gradients {
+    background-image: none;
+  }
+
+  &:hover,
+  &:focus-visible {
+    text-decoration: $link-hover-decoration;
+  }
+
+  &:focus-visible {
+    color: $link-color;
+  }
+
+  &:hover {
+    color: $link-hover-color;
+  }
+
+  // No need for an active state here
+}
+
+
+//
+// Button Sizes
+//
+
+.btn-lg {
+  @include button-size($btn-padding-y-lg, $btn-padding-x-lg, $btn-font-size-lg, $border-radius-lg);
+}
+
+.btn-sm {
+  @include button-size($btn-padding-y-sm, $btn-padding-x-sm, $btn-font-size-sm, $border-radius-sm);
+}

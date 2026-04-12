@@ -1,0 +1,32 @@
+{% extends 'base.html.twig' %}
+{% block title %}Main Project Router{% endblock %}
+
+{% block stylesheets -%}
+{{- parent() -}}
+{% set projectEntry = 'projects/' ~ project.slug -%}
+{% if encore_entry_exists(projectEntry) -%}
+{{- encore_entry_link_tags(projectEntry) | indent_links(8) -}}
+{%- endif %}
+{%- endblock %}
+
+{% block javascripts -%}
+{{- parent() -}}
+{% set projectEntry = 'projects/' ~ project.slug -%}
+{% if encore_entry_exists(projectEntry) -%}
+{{- encore_entry_script_tags(projectEntry) | indent_scripts(8) -}}
+{%- endif %}
+{% for module in projectModules -%}
+{% set moduleEntry = 'modules/' ~ module.slug -%}
+{% if encore_entry_exists(moduleEntry) -%}
+{{- encore_entry_script_tags(moduleEntry) | indent_scripts(8) -}}
+{%- endif %}
+{%- endfor %}
+{%- endblock %}
+
+{% block body %}
+
+    <main id="root" data-controller="{{ project.slug }}-app" data-turbo="false">
+        <div id="{{ project.slug }}-app-content" data-{{ project.slug }}-app-target="content"></div>
+    </main>
+    
+{% endblock %}

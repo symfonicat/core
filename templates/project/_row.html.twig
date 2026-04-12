@@ -1,0 +1,14 @@
+<tr id="project_{{ project.id }}" class="btn-row">
+    <td><a href="{{ path('app_project_edit', {'slug': project.slug}) }}">{{ project.name }}</a></td>
+    <td>{{ project.slug }}</td>
+    <td class="text-end btn-cell">
+        
+        <div class="btn-group btn-group-sm">
+            <a href="{{ path('app_project_edit', {'slug': project.slug}) }}" class="btn btn-sm btn-warning">
+                <i class="fa fa-pencil">&nbsp;</i>
+            </a>
+            {{ include('project/_delete_form.html.twig') }}
+        </div>
+
+    </td>
+</tr>

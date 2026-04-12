@@ -1,0 +1,77 @@
+{% set prototype_markup %}
+    {{ include('admin/_env_collection_item.html.twig', { item_form: form.vars.prototype }) }}
+{% endset %}
+
+<div class="mb-3">
+    {{ form_label(form) }}
+    {{ form_errors(form) }}
+
+    <div
+        class="d-grid gap-2"
+        data-env-collection
+        data-env-collection-index="{{ form|length }}"
+    >
+        <div class="d-grid gap-2" data-env-collection-items>
+            {% for item_form in form %}
+                {{ include('admin/_env_collection_item.html.twig', { item_form: item_form }) }}
+            {% endfor %}
+        </div>
+
+        <template data-env-collection-prototype>{{ prototype_markup|raw }}</template>
+
+        <button type="button" class="btn btn-sm btn-outline-secondary align-self-start" data-env-collection-add>add env</button>
+    </div>
+</div>
+
+<script>
+    (() => {
+        if (window.__symfonicatEnvCollectionInitialized) {
+            return;
+        }
+
+        window.__symfonicatEnvCollectionInitialized = true;
+
+        const addCollectionItem = (button) => {
+            const collection = button.closest('[data-env-collection]');
+            const items = collection?.querySelector('[data-env-collection-items]');
+            const template = collection?.querySelector('template[data-env-collection-prototype]');
+
+            if (!collection || !items || !template) {
+                return;
+            }
+
+            const index = Number(collection.dataset.envCollectionIndex || 0);
+            const markup = template.innerHTML.replace(/__name__/g, String(index));
+
+            collection.dataset.envCollectionIndex = String(index + 1);
+            items.insertAdjacentHTML('beforeend', markup);
+        };
+
+        const removeCollectionItem = (button) => {
+            const item = button.closest('[data-collection-item]');
+            if (!item) {
+                return;
+            }
+
+            item.remove();
+        };
+
+        document.addEventListener('click', (event) => {
+            const addButton = event.target.closest('[data-env-collection-add]');
+            if (addButton) {
+                event.preventDefault();
+                addCollectionItem(addButton);
+
+                return;
+            }
+
+            const removeButton = event.target.closest('[data-collection-remove]');
+            if (!removeButton) {
+                return;
+            }
+
+            event.preventDefault();
+            removeCollectionItem(removeButton);
+        });
+    })();
+</script>
