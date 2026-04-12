@@ -1,0 +1,26 @@
+{% extends 'admin/base.html.twig' %}
+{% block title %}Projects{% endblock %}
+{% block body %}
+
+    <table class="table" id="project">
+        <thead>
+            <tr>
+                <th>name</th>
+                <th>slug</th>
+                <th>&nbsp;</th>
+            </tr>
+        </thead>
+        <tbody id="project-body">
+        {% for project in projects %}
+            {{ include('project/_row.html.twig') }}
+        {% else %}
+            <tr id="project-empty">
+                <td colspan="3">no records found</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <a href="{{ path('app_project_create') }}" class="btn btn-sm btn-success">create</a>
+    
+{% endblock %}

@@ -1,0 +1,13 @@
+{{ form_start(form) }}
+{{ form_row(form.name) }}
+{{ form_row(form.slug) }}
+{{ form_row(form.icon) }}
+{{ form_row(form.modules) }}
+{{ include('env/_env_collection.html.twig', { form: form.env }) }}
+{% if form._token is defined %}
+    {{ form_widget(form._token) }}
+{% endif %}
+
+<button class="btn btn-sm btn-success">{{ button_label|default('save') }}</button>
+
+{{ form_end(form, { render_rest: false }) }}
