@@ -1,0 +1,43 @@
+{% extends 'base.html.twig' %}
+{% block title %}Main Domain Router{% endblock %}
+
+{% block stylesheets %}
+
+    {{ parent() }}
+
+    {% set domainEntry = 'domains/' ~ domain.id %}
+    {% if encore_entry_exists(domainEntry) %}
+    {{ encore_entry_link_tags(domainEntry) }}
+    {% endif %}
+
+{% endblock %}
+
+{% block javascripts %}
+
+    {{ parent() }}
+
+    {% set domainEntry = 'domains/' ~ domain.id %}
+    {% if encore_entry_exists(domainEntry) %}
+    {{ encore_entry_script_tags(domainEntry) }}
+    {% endif %}
+
+    {% for module in domain.modules %}
+        
+        {% set moduleEntry = 'modules/' ~ module.slug %}
+        {% if encore_entry_exists(moduleEntry) %}
+        {{ encore_entry_script_tags(moduleEntry) }}
+        {% endif %}
+
+    {% endfor %}
+
+{% endblock %}
+
+{% block body %}
+
+    {{ domain.id }}
+
+    <br />
+
+    color: {{ env('color') }}
+    
+{% endblock %}

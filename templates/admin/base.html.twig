@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+        
+        <link rel="icon" href="{{ asset('favicon.png') }}">
+        <title>{% block title %}Symfonicat Admin{% endblock %}</title>
+
+        {% block stylesheets %}
+{{ encore_entry_link_tags('symfonicat') }}
+        {% endblock %}
+
+        {% block javascripts %}
+{{ encore_entry_script_tags('symfonicat') }}
+        {% endblock %}
+
+    </head>
+    <body data-controller="symfony--ux-turbo--turbo-core" data-turbo-suppress-warning>
+        {% set admin_mfa_verified = app.request.attributes.get('symfonicat_admin_mfa_verified') %}
+        {% if admin_mfa_verified %}
+        <header class="d-flex align-items-center gap-3 px-3 py-2 bg-dark text-white">
+        
+            <a href="{{ path('symfonicat_admin_dashboard') }}" class="text-white text-decoration-none fw-bold">Symfonicat Admin</a>
+            <nav class="d-flex gap-2 ms-auto">
+                
+                <a href="{{ path('app_domain_index') }}" class="btn btn-sm btn-outline-light {{ active('app_domain_*', 'btn-light active') }}">domains</a>
+                <a href="{{ path('app_project_index') }}" class="btn btn-sm btn-outline-light {{ active('app_project_*', 'btn-light active') }}">projects</a>
+                <a href="{{ path('app_env_index') }}" class="btn btn-sm btn-outline-light {{ active('app_env_*', 'btn-light active') }}">env</a>
+                <a href="{{ path('app_module_index') }}" class="btn btn-sm btn-outline-light {{ active('app_module_*', 'btn-light active') }}">modules</a>
+                <a href="{{ path('app_routing_rule_index') }}" class="btn btn-sm btn-outline-light {{ active('app_routing_rule*', 'btn-light active') }}">routing rules</a>
+                <a
+                    class="btn btn-sm btn-secondary"
+                    data-no-prefetch
+                    data-no-prefetch-url="{{ path('symfonicat_admin_logout') }}"
+                    role="button"
+                    tabindex="0"
+                ><!-- -->
+                    logout
+                </a>
+
+            </nav>
+        </header>
+        {% endif %}
+
+        <main class="container-fluid py-3">
+
+            {% for message in app.flashes('debug') %}
+                <aside class="alert alert-warning">{{ message }}</aside>
+            {% endfor %}
+
+{{ block('body') | indent_body(12) }}
+
+        </main>
+    </body>
+</html>

@@ -1,0 +1,13 @@
+<div class="card card-body bg-body-tertiary" data-collection-item>
+    <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+            {{ form_row(item_form.env, { label: 'key' }) }}
+        </div>
+        <div class="col-md-6">
+            {{ form_row(item_form.value) }}
+        </div>
+        <div class="col-md-2 d-grid">
+            <button type="button" class="btn btn-sm btn-outline-danger" data-collection-remove>remove</button>
+        </div>
+    </div>
+</div>
