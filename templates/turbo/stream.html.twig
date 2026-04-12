@@ -1,0 +1,3 @@
+<turbo-stream action="{{ action }}" {% if target is not null %}target="{{ target }}"{% elseif targets is not null %}targets="{{ targets }}"{% endif %}>
+    <template>{{ content|raw }}</template>
+</turbo-stream>
