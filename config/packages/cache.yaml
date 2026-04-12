@@ -1,0 +1,13 @@
+framework:
+    cache:
+        prefix_seed: symfonicat/core
+        default_redis_provider: '%env(resolve:REDIS_URL)%'
+
+        # Keep the application cache shared across PHP workers and containers.
+        # The system cache stays on Symfony's default local adapter for fast warmups.
+        app: cache.adapter.redis_tag_aware
+
+        pools:
+            cache.symfonicat:
+                adapter: cache.app
+                default_lifetime: 3600
