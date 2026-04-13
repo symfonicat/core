@@ -1,0 +1,12 @@
+<tr id="routing_rule_{{ rule.id }}" class="btn-row">
+    <td><a href="{{ path('app_routing_rule_show', {'id': rule.id}) }}">{{ rule.slug }}</a></td>
+    <td>{{ rule.domain ? rule.domain.id : '-' }}</td>
+    <td class="text-end btn-cell">
+        <div class="btn-group btn-group-sm">
+            <a href="{{ path('app_routing_rule_edit', {'id': rule.id}) }}" class="btn btn-sm btn-warning">
+                <i class="fa fa-pencil">&nbsp;</i>
+            </a>
+            {{ include('routing_rule/_delete_form.html.twig') }}
+        </div>
+    </td>
+</tr>
