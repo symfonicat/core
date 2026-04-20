@@ -1,0 +1,7 @@
+doctrine:
+    dbal:
+        # Undo the "_test" dbname suffix that the default when@test block in
+        # config/packages/doctrine.yaml appends. It's meant for ParaTest against
+        # Postgres; with our SQLite DATABASE_URL it would tack "_test" onto the
+        # .db filename and diverge from tests/bootstrap.php.
+        dbname_suffix: ''
