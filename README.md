@@ -7,6 +7,29 @@ Canonical repository README: <https://github.com/symfonicat/core/blob/main/READM
 
 ## Install
 
+Before the stack can serve the seeded domains and projects, add these entries to your local `/etc/hosts` so `example.com` and `project1.example.com` resolve to the Docker host:
+
+```text
+127.0.0.1 example.com
+127.0.0.1 project1.example.com
+```
+
+You can stand up Symfonicat two ways. Both end at the same running stack.
+
+### From a git clone (no PHP or Composer on the host required)
+
+```bash
+git clone https://github.com/symfonicat/core symfonicat
+cd symfonicat
+docker compose up -d
+npm install
+npm run dev
+```
+
+On the first boot the `php` container will notice `vendor/` is missing and run `composer install` inside the container before it hands off to FrankenPHP. Set `SYMFONICAT_AUTO_COMPOSER_INSTALL=0` on the `php` service to opt out (e.g. production images that bake vendor/ in at build time).
+
+### From `composer create-project` (PHP 8.4 + Composer on the host)
+
 ```bash
 composer create-project symfonicat/core symfonicat
 cd symfonicat
@@ -15,12 +38,9 @@ npm install
 npm run dev
 ```
 
-Add these local host entries so the seeded domain and project resolve to your local stack:
+`composer create-project` runs `composer install` during project creation, so `vendor/` is already populated when the stack comes up.
 
-```text
-127.0.0.1 example.com
-127.0.0.1 project1.example.com
-```
+---
 
 You don't need to run `doctrine:schema:create` to get the UI up locally. On first container boot, the `php` service bootstraps the local stack:
 
