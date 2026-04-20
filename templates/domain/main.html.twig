@@ -1,0 +1,37 @@
+{% extends 'base.html.twig' %}
+{% block title %}Main Domain Router{% endblock %}
+
+{% block stylesheets -%}
+
+    {{- parent() -}}
+    {% for module in domain.modules -%}
+        {{- encore_entry_link_tags_module(module) | indent_links(8) -}}
+    {%- endfor %}
+
+    {{- encore_entry_link_tags_domain(domain) | indent_links(8) -}}
+
+{%- endblock %}
+
+{% block javascripts -%}
+
+    {{- parent() -}}
+    {% for module in domain.modules -%}
+        {{- encore_entry_script_tags_module(module) | indent_scripts(8) -}}
+    {%- endfor %}
+
+    {{- encore_entry_script_tags_domain(domain) | indent_scripts(8) -}}
+
+{%- endblock %}
+
+{% block body %}
+
+    <main id="root">
+    </main>
+
+    {{ domain.id }}
+
+    <br />
+
+    color: {{ env.color|default('') }}
+    
+{% endblock %}

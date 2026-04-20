@@ -1,0 +1,109 @@
+services:
+  php:
+    container_name: php
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: symfonicat-core-php:local
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      APP_ENV: ${APP_ENV:-dev}
+      APP_DEBUG: ${APP_DEBUG:-1}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-app}?serverVersion=16&charset=utf8
+      REDIS_URL: redis://redis:6379
+      MESSENGER_TRANSPORT_DSN: redis://redis:6379/symfonicat_messages
+      MESSENGER_FAILED_TRANSPORT_DSN: redis://redis:6379/symfonicat_failed_messages
+      MESSENGER_CONSUMER_NAME: php
+      MERCURE_URL: http://mercure/.well-known/mercure
+      MERCURE_PUBLIC_URL: ${MERCURE_PUBLIC_URL:-http://localhost:3000/.well-known/mercure}
+      MERCURE_JWT_SECRET: ${MERCURE_JWT_SECRET:-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
+    volumes:
+      - ./:/app
+      - ./Caddyfile:/etc/frankenphp/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - postgres
+      - redis
+      - mercure
+
+  messenger-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: symfonicat-core-php:local
+    restart: unless-stopped
+    scale: ${MESSENGER_WORKERS:-2}
+    command:
+      - /bin/sh
+      - -lc
+      - export MESSENGER_CONSUMER_NAME="$$HOSTNAME" && exec php bin/console messenger:consume async --no-interaction
+    environment:
+      APP_ENV: ${APP_ENV:-dev}
+      APP_DEBUG: ${APP_DEBUG:-1}
+      SYMFONICAT_AUTO_BOOTSTRAP: 0
+      DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-app}?serverVersion=16&charset=utf8
+      REDIS_URL: redis://redis:6379
+      MESSENGER_TRANSPORT_DSN: redis://redis:6379/symfonicat_messages
+      MESSENGER_FAILED_TRANSPORT_DSN: redis://redis:6379/symfonicat_failed_messages
+      MERCURE_URL: http://mercure/.well-known/mercure
+      MERCURE_PUBLIC_URL: ${MERCURE_PUBLIC_URL:-http://localhost:3000/.well-known/mercure}
+      MERCURE_JWT_SECRET: ${MERCURE_JWT_SECRET:-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
+    volumes:
+      - ./:/app
+    depends_on:
+      - postgres
+      - redis
+      - mercure
+
+  mercure:
+    container_name: mercure
+    image: dunglas/mercure
+    restart: unless-stopped
+    environment:
+      SERVER_NAME: :80
+      MERCURE_PUBLISHER_JWT_KEY: ${MERCURE_JWT_SECRET:-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
+      MERCURE_SUBSCRIBER_JWT_KEY: ${MERCURE_JWT_SECRET:-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
+      MERCURE_EXTRA_DIRECTIVES: |
+        cors_origins *
+        anonymous
+    ports:
+      - "3000:80"
+    volumes:
+      - mercure_data:/data
+      - mercure_config:/config
+
+  postgres:
+    container_name: postgres
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-app}
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    container_name: redis
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--loglevel", "nothing"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  caddy_data:
+  caddy_config:
+  mercure_data:
+  mercure_config:
+  postgres_data:
+  redis_data:

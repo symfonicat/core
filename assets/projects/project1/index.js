@@ -1,0 +1,1 @@
+console.log('[project]: project1 project loaded!')
