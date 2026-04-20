@@ -12,6 +12,10 @@
     <php>
         <ini name="display_errors" value="1" />
         <ini name="error_reporting" value="-1" />
+        <!-- Populate BOTH $_ENV and $_SERVER: KernelTestCase::createKernel()
+             checks $_ENV['APP_ENV'] first, and Docker/compose.yaml often
+             pre-exports APP_ENV=dev into $_ENV. -->
+        <env name="APP_ENV" value="test" force="true" />
         <server name="APP_ENV" value="test" force="true" />
         <server name="SHELL_VERBOSITY" value="-1" />
     </php>

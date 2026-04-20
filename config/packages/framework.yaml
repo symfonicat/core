@@ -15,4 +15,6 @@ when@test:
     framework:
         test: true
         session:
+            # Bypass the RedisSessionHandler so the suite runs without a real Redis.
+            handler_id: null
             storage_factory_id: session.storage.factory.mock_file
