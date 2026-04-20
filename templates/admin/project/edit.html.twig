@@ -1,0 +1,5 @@
+{% extends 'admin/base.html.twig' %}
+{% block title %}Edit Project{% endblock %}
+{% block body %}
+    {{ include('admin/project/_form.html.twig', { form: form, button_label: 'save' }) }}
+{% endblock %}

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+        {% if electron and electron_icon %}
+            {% if asset_base_url is not empty %}
+            {% set icon_url = asset_base_url ~ '/icons/' ~ electron_icon | url_encode ~ '.png' %}
+            {% else %}
+            {% set icon_url = asset('icons/' ~ electron_icon ~ '.png') %}
+            {% endif %}
+        {% else %}
+        {% set icon_url = asset('favicon.png') %}
+        {% endif %}
+
+        <link rel="icon" href="{{ icon_url }}" />
+        <title>{% block title %}Symfonicat{% endblock %}</title>
+
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&display=swap" rel="stylesheet">
+
+        <script type="text/javascript">
+            window.env = {{ env_json() | indent_json(12) }}
+            console.log('[window.env]', window.env)
+            console.log('----------------------')
+        </script>
+
+{% block stylesheets -%}
+{{- encore_entry_link_tags('symfonicat') | indent_links(8) -}}
+{%- endblock %}
+
+{% block javascripts -%}
+{{- encore_entry_script_tags('symfonicat') | indent_scripts(8) -}}
+{%- endblock %}
+
+    </head>
+    <body data-controller="symfony--ux-turbo--turbo-core" data-turbo-suppress-warning>
+        
+        {% block flashes %}
+            {% for message in app.flashes('debug') %}
+            <aside class="alert alert-warning">{{ message }}</aside>
+            {% endfor %}
+        {% endblock %}
+        
+        <aside
+            id="mercure-debug"
+            data-mercure-debug-listener
+            hidden
+            aria-hidden="true"
+            {{ turbo_stream_listen('mercure-debug') }}
+        ><!-- -->
+        </aside>
+
+        <header class="d-flex align-items-center gap-3 px-3 py-2 bg-dark text-white">
+            
+            <a href="{{ path('app_project_root') }}" class="text-white text-decoration-none fw-bold">Symfonicat</a>
+            <div class="ms-auto">
+                
+                <button
+                    type="button"
+                    class="btn btn-sm btn-outline-light{{ active('symfonicat_admin*', ' btn-light active') }}"
+                    data-no-prefetch
+                    data-no-prefetch-url="{{ path('symfonicat_admin_dashboard') }}"
+                ><!-- -->
+                
+                    admin
+                
+                </button>
+            </div>
+        </header>
+
+        <main class="container-fluid bg-dark py-3 text-white min-vh-100">
+            {{ block('flashes') | indent_body(12) }}
+            {{ block('body') | indent_body(12) }}
+        </main>
+
+        <!-- unfortunately not powered by Drupal -->
+        <!-- but fueled by NPM -->
+        <!-- meet Symfonicat -->
+
+    </body>
+</html>

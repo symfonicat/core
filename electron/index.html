@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <link rel="icon" href="__FAVICON_PATH__">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&display=swap" rel="stylesheet">
+    <title>__APP_TITLE__</title>
+    <script>
+        window.__symfonicatOrigin = "__APP_ORIGIN__";
+        window.__electronProjectId = "__PROJECT_ID__";
+    </script>
+    <script id="mercure-config" type="application/json">__MERCURE_CONFIG__</script>
+    __STYLE_TAGS__
+    __SCRIPT_TAGS__
+</head>
+<body data-turbo-suppress-warning>
+    <main id="root" class="container-fluid bg-dark py-3" data-controller="__PROJECT_ID__-app" data-turbo="false">
+        <div id="__PROJECT_ID__-app-content" data-__PROJECT_ID__-app-target="content"></div>
+    </main>
+</body>
+</html>
