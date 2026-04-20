@@ -6,7 +6,6 @@ use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\Project;
 use Symfonicat\Entity\RoutingRule;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
-use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\FormBuilderInterface;
@@ -16,18 +15,14 @@ class RoutingRuleType extends AbstractType
 {
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
+        // Reserved-argument enforcement lives on the entity
+        // (RoutingRule::validateArgument) so it fires for every persist path,
+        // not just this form. Duplicating it as a form-level Assert\Regex used
+        // to make the UI render the violation twice.
         $builder
             ->add('argument', null, [
                 'label' => 'argument',
                 'help' => sprintf('"%s" is reserved', RoutingRule::RESERVED_ARGUMENT),
-                'constraints' => [
-                    new Assert\Regex(
-                        pattern: sprintf('/^%s$/i', preg_quote(RoutingRule::RESERVED_ARGUMENT, '/')),
-                        match: false,
-                        message: sprintf('The routing rule argument "%s" is reserved.', RoutingRule::RESERVED_ARGUMENT),
-                        normalizer: static fn ($value): string => is_string($value) ? strtolower(trim($value)) : '',
-                    ),
-                ],
             ])
             ->add('type', ChoiceType::class, [
                 'choices' => RoutingRule::getTypeChoices(),

@@ -119,6 +119,32 @@ final class RoutingRuleTest extends TestCase
         yield 'with whitespace' => ['  admin  '];
     }
 
+    public function testValidateArgumentEmitsReservedViolationOnlyOnce(): void
+    {
+        // Regression guard: the form layer used to add an Assert\Regex with
+        // the same message as the entity callback, which rendered the error
+        // twice in the admin UI. The entity is the single source of truth.
+        $rule = (new RoutingRule())
+            ->setType(RoutingRule::TYPE_DOMAIN)
+            ->setDomain((new Domain())->setId('example.com'))
+            ->setArgument('admin');
+
+        $violations = $this->validator->validate($rule);
+
+        $reserved = [];
+        foreach ($violations as $violation) {
+            if (str_contains((string) $violation->getMessage(), 'reserved')) {
+                $reserved[] = (string) $violation->getMessage();
+            }
+        }
+
+        self::assertCount(1, $reserved, sprintf(
+            'expected exactly one "reserved" violation, got %d: %s',
+            count($reserved),
+            implode(' | ', $reserved),
+        ));
+    }
+
     public function testValidateArgumentAllowsNonReservedArguments(): void
     {
         $rule = (new RoutingRule())

@@ -62,14 +62,15 @@ final class SubdomainResolutionTest extends SymfonicatWebTestCase
         $this->client()->request('GET', '/');
 
         $response = $this->client()->getResponse();
-        self::assertTrue(
-            $response->isRedirect(),
-            'an unknown project subdomain must redirect back to the bare domain',
+        self::assertSame(
+            301,
+            $response->getStatusCode(),
+            'unknown project subdomains must 301 so search engines canonicalize on the bare domain',
         );
         self::assertSame(
-            'example.com',
-            parse_url((string) $response->headers->get('Location'), PHP_URL_HOST),
-            'redirect target must point at the bare domain host',
+            'http://example.com',
+            (string) $response->headers->get('Location'),
+            'redirect target must be exactly the bare-domain URL',
         );
     }
 
@@ -81,19 +82,33 @@ final class SubdomainResolutionTest extends SymfonicatWebTestCase
         $this->client()->request('GET', '/');
 
         $response = $this->client()->getResponse();
-        self::assertTrue($response->isRedirect(), 'www.* must redirect away so canonical URLs stay clean');
-        // We deliberately don't assert the full URL here: the current
-        // ProjectSubscriber implementation emits a malformed `http://.example.com`
-        // when the only subdomain segment is `www`. Asserting the ideal target
-        // (`http://example.com`) would make this test fail today; asserting the
-        // buggy target would make it fail after a fix. Checking the host-less
-        // Location is enough to prove the redirect fired and is aimed off of
-        // `www.`.
-        $location = (string) $response->headers->get('Location');
-        self::assertStringNotContainsString(
-            'www.',
-            $location,
-            'redirect target must strip the www prefix',
+        self::assertSame(
+            301,
+            $response->getStatusCode(),
+            'www.* must 301 so canonical URLs stay clean',
+        );
+        self::assertSame(
+            'http://example.com',
+            (string) $response->headers->get('Location'),
+            'www-only hosts must redirect to the bare domain, not to "http://.example.com"',
+        );
+    }
+
+    public function testWwwPrefixIsStrippedButInnerSubdomainSurvives(): void
+    {
+        $domain = $this->createDomain('example.com');
+        $this->createProject('project1', 'Project 1', $domain);
+
+        // www.project1.example.com should lose the `www` but keep `project1.`
+        $this->setHost('www.project1.example.com');
+        $this->client()->request('GET', '/');
+
+        $response = $this->client()->getResponse();
+        self::assertSame(301, $response->getStatusCode());
+        self::assertSame(
+            'http://project1.example.com',
+            (string) $response->headers->get('Location'),
+            'stripping www must not collapse a legitimate project subdomain with it',
         );
     }
 
@@ -108,11 +123,15 @@ final class SubdomainResolutionTest extends SymfonicatWebTestCase
         $this->client()->request('GET', '/');
 
         $response = $this->client()->getResponse();
-        self::assertTrue($response->isRedirect(), 'nested subdomain must redirect to the innermost known project');
         self::assertSame(
-            'project1.example.com',
-            parse_url((string) $response->headers->get('Location'), PHP_URL_HOST),
-            'redirect target must resolve to the project subdomain host',
+            301,
+            $response->getStatusCode(),
+            'nested subdomains must 301 so the innermost host is the canonical one',
+        );
+        self::assertSame(
+            'http://project1.example.com',
+            (string) $response->headers->get('Location'),
+            'redirect target must resolve to the project subdomain URL',
         );
     }
 

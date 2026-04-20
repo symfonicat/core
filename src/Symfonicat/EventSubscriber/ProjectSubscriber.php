@@ -46,11 +46,17 @@ class ProjectSubscriber implements EventSubscriberInterface
             $scheme = $event->getRequest()->getScheme();
             $host = $this->domainService->host();
 
-            $target = "$scheme://" . implode('.', array_reverse ( array_values($arr))) . ".$host";
+            // Rebuild the host from whatever remained after stripping `www`.
+            // When `www` was the only subdomain segment, `$arr` is empty and
+            // prepending `"." . $host` would produce `http://.example.com`, so
+            // we fall through to the bare host.
+            $remainder = implode('.', array_reverse(array_values($arr)));
+            $target = $remainder === ''
+                ? "$scheme://$host"
+                : "$scheme://$remainder.$host";
             $target = $this->withPort($event->getRequest(), $target);
 
-            $response = new RedirectResponse($target);
-            $event->setResponse($response, 301);
+            $event->setResponse(new RedirectResponse($target, 301));
             return;
         }
 
@@ -62,8 +68,7 @@ class ProjectSubscriber implements EventSubscriberInterface
             $target = "$scheme://$arr[0].$host";
             $target = $this->withPort($event->getRequest(), $target);
 
-            $response = new RedirectResponse($target);
-            $event->setResponse($response, 301);
+            $event->setResponse(new RedirectResponse($target, 301));
             return;
         }
 
@@ -83,8 +88,7 @@ class ProjectSubscriber implements EventSubscriberInterface
             $target = "$scheme://$host";
             $target = $this->withPort($event->getRequest(), $target);
 
-            $response = new RedirectResponse($target);
-            $event->setResponse($response, 301);
+            $event->setResponse(new RedirectResponse($target, 301));
             return;
         }
 
