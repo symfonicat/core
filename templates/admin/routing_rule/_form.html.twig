@@ -1,0 +1,26 @@
+{{ form_start(form, {
+    attr: {
+        'data-controller': 'routing-rule-form'
+    }
+}) }}
+{{ form_row(form.argument) }}
+{{ form_row(form.type, {
+    attr: {
+        'data-action': 'change->routing-rule-form#update',
+        'data-routing-rule-form-target': 'type'
+    }
+}) }}
+{{ form_row(form.domain, {
+    row_attr: {
+        'data-routing-rule-form-target': 'domainRow'
+    }
+}) }}
+{{ form_row(form.project, {
+    row_attr: {
+        'data-routing-rule-form-target': 'projectRow'
+    }
+}) }}
+
+<button class="btn btn-sm btn-success">save</button>
+
+{{ form_end(form) }}

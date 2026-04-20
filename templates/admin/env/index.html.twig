@@ -1,0 +1,25 @@
+{% extends 'admin/base.html.twig' %}
+{% block title %}Env{% endblock %}
+{% block body %}
+
+    <table class="table" id="env">
+        <thead>
+            <tr>
+                <th>id</th>
+                <th>&nbsp;</th>
+            </tr>
+        </thead>
+        <tbody id="env-body">
+        {% for env in envs %}
+            {{ include('admin/env/_row.html.twig') }}
+        {% else %}
+            <tr id="env-empty">
+                <td colspan="2">no records found</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <a href="{{ path('app_env_create') }}" class="btn btn-sm btn-success">create</a>
+
+{% endblock %}

@@ -1,0 +1,7 @@
+symfonicat_public:
+    resource: ../../src/Symfonicat/Controller/MainController.php
+    type: attribute
+
+symfonicat_modules:
+    resource: ../../src/Symfonicat/Controller/Module/
+    type: attribute

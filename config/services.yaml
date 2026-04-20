@@ -1,0 +1,62 @@
+parameters:
+
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/Symfonicat/'
+            - '../src/Kernel.php'
+
+    Symfonicat\:
+        resource: '../src/Symfonicat/'
+        exclude:
+            - '../src/Symfonicat/DependencyInjection/'
+            - '../src/Symfonicat/Entity/'
+            - '../src/Symfonicat/Maker/'
+            - '../src/Symfonicat/SymfonicatBundle.php'
+
+    Symfonicat\Service\DomainService:
+        arguments:
+            $projectDir: '%kernel.project_dir%'
+
+    Symfonicat\Service\ModuleService:
+        arguments:
+            $projectDir: '%kernel.project_dir%'
+
+    Symfonicat\Service\SubdomainService:
+        arguments:
+            $projectDir: '%kernel.project_dir%'
+
+    Symfonicat\Service\FileUploadService:
+        arguments:
+            $publicDir: '%kernel.project_dir%/public'
+
+    Symfonicat\Twig\ElectronExtension:
+        arguments:
+            $assetBaseUrl: '%symfonicat.asset_base_url%'
+
+    Symfonicat\Twig\EncoreEntryTagsExtension:
+        arguments:
+            $entryFilesTwigExtension: '@webpack_encore.twig_entry_files_extension'
+
+    symfonicat.redis_connection:
+        class: Predis\ClientInterface
+        factory: ['Symfony\Component\Cache\Adapter\RedisAdapter', 'createConnection']
+        arguments:
+            - '%env(resolve:REDIS_URL)%'
+            - { class: 'Predis\Client' }
+
+    Symfony\Component\HttpFoundation\Session\Storage\Handler\RedisSessionHandler:
+        arguments:
+            $redis: '@symfonicat.redis_connection'
+            $options:
+                prefix: 'symfonicat_session:'
+                ttl: 86400
+
+    Symfonicat\Command\RedisDebugCommand:
+        arguments:
+            $redisUrl: '%env(string:REDIS_URL)%'

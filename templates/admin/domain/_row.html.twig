@@ -1,0 +1,21 @@
+<tr id="domain_{{ domain.id }}" class="btn-row">
+    <td><a href="{{ path('app_domain_edit', {'id': domain.id}) }}">{{ domain.id }}</a></td>
+    <td>{{ domain.redirectDomain ? domain.redirectDomain.id : '-' }}</td>
+    <td>
+        {% for project in domain.projects %}
+            {{ project.name }}{% if not loop.last %}, {% endif %}
+        {% else %}
+            -
+        {% endfor %}
+    </td>
+    <td class="text-end btn-cell">
+
+        <div class="btn-group btn-group-sm">
+            <a href="{{ path('app_domain_edit', {'id': domain.id}) }}" class="btn btn-sm btn-warning">
+                <i class="fa fa-pencil">&nbsp;</i>
+            </a>
+            {{ include('admin/domain/_delete_form.html.twig') }}
+        </div>
+
+    </td>
+</tr>
