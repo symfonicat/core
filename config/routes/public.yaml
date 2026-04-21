@@ -1,6 +1,15 @@
-symfonicat_public:
+symfonicat_public_shell:
     resource: ../../src/Symfonicat/Controller/MainController.php
     type: attribute
+
+symfonicat_public_controllers:
+    resource: ../../src/Symfonicat/Controller/
+    type: attribute
+    exclude:
+        - ../../src/Symfonicat/Controller/Admin/
+        - ../../src/Symfonicat/Controller/Module/
+        - ../../src/Symfonicat/Controller/MainController.php
+    condition: 'not request.attributes.get("project") or not request.attributes.get("symfonicat_use_project_catch_all", true)'
 
 symfonicat_modules:
     resource: ../../src/Symfonicat/Controller/Module/

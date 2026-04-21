@@ -16,6 +16,11 @@ final class RoutingRuleService
     ) {
     }
 
+    public function getRedirectRuleForDomain(Domain $domain): ?RoutingRule
+    {
+        return $this->routingRuleRepository->findOneRedirectRuleForDomain($domain);
+    }
+
     /**
      * @return RoutingRule[]
      */
@@ -33,6 +38,11 @@ final class RoutingRuleService
         return $this->routingRuleRepository->findOneTypeDomainByDomainAndArgument($domain, $argument);
     }
 
+    public function getRedirectRuleForProject(Project $project): ?RoutingRule
+    {
+        return $this->routingRuleRepository->findOneRedirectRuleForProject($project);
+    }
+
     /**
      * @return RoutingRule[]
      */
@@ -48,6 +58,16 @@ final class RoutingRuleService
         }
 
         return $this->routingRuleRepository->findOneTypeProjectByProjectAndArgument($project, $argument);
+    }
+
+    public function getRouteRuleForDomain(Domain $domain): ?RoutingRule
+    {
+        return $this->routingRuleRepository->findOneRouteRuleForDomain($domain);
+    }
+
+    public function getRouteRuleForProject(Project $project): ?RoutingRule
+    {
+        return $this->routingRuleRepository->findOneRouteRuleForProject($project);
     }
 
     private function isReservedArgument(string $argument): bool

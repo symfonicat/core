@@ -21,12 +21,6 @@ class Project
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $icon = null;
 
-    #[ORM\Column(options: ['default' => false])]
-    private bool $routeOverride = false;
-
-    #[ORM\Column(length: 255, nullable: true)]
-    private ?string $routeName = null;
-
     /**
      * @var Collection<int, Domain>
      */
@@ -84,35 +78,6 @@ class Project
     public function setIcon(?string $icon): static
     {
         $this->icon = $icon;
-
-        return $this;
-    }
-
-    public function isRouteOverride(): bool
-    {
-        return $this->routeOverride;
-    }
-
-    public function getRouteOverride(): bool
-    {
-        return $this->routeOverride;
-    }
-
-    public function setRouteOverride(bool $routeOverride): static
-    {
-        $this->routeOverride = $routeOverride;
-
-        return $this;
-    }
-
-    public function getRouteName(): ?string
-    {
-        return $this->routeName;
-    }
-
-    public function setRouteName(?string $routeName): static
-    {
-        $this->routeName = $routeName;
 
         return $this;
     }

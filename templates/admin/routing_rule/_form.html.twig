@@ -4,33 +4,106 @@
     }
 }) }}
 
-<div class="row g-3">
+<div class="card mb-3">
+    <div class="card-header">rule</div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-6">
+                {{ form_row(form.type, {
+                    attr: {
+                        'data-action': 'change->routing-rule-form#update',
+                        'data-routing-rule-form-target': 'type'
+                    }
+                }) }}
 
-    <div class="col-md-6">
-        {{ form_row(form.type, {
-            attr: {
-                'data-action': 'change->routing-rule-form#update',
-                'data-routing-rule-form-target': 'type'
-            }
-        }) }}
+                {{ form_row(form.redirectType, {
+                    attr: {
+                        'data-action': 'change->routing-rule-form#update',
+                        'data-routing-rule-form-target': 'redirectType'
+                    },
+                    row_attr: {
+                        'data-routing-rule-form-target': 'redirectTypeRow'
+                    }
+                }) }}
+
+                {{ form_row(form.routeType, {
+                    attr: {
+                        'data-action': 'change->routing-rule-form#update',
+                        'data-routing-rule-form-target': 'routeType'
+                    },
+                    row_attr: {
+                        'data-routing-rule-form-target': 'routeTypeRow'
+                    }
+                }) }}
+            </div>
+
+            <div class="col-md-6" data-routing-rule-form-target="argumentRow">
+                {{ form_row(form.argument) }}
+            </div>
+        </div>
     </div>
+</div>
 
-    <div class="col-md-6">
-        {{ form_row(form.domain, {
+<div class="card mb-3">
+    <div class="card-header">match</div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-6" data-routing-rule-form-target="domainRow">
+                {{ form_row(form.domain) }}
+            </div>
+
+            <div class="col-md-12" data-routing-rule-form-target="projectRow">
+                {{ form_row(form.project) }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3" data-routing-rule-form-target="redirectCard">
+    <div class="card-header">redirect</div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-6">
+                {{ form_row(form.redirectTarget, {
+                    attr: {
+                        'data-action': 'change->routing-rule-form#update',
+                        'data-routing-rule-form-target': 'redirectTarget'
+                    },
+                    row_attr: {
+                        'data-routing-rule-form-target': 'redirectTargetRow'
+                    }
+                }) }}
+            </div>
+
+            <div class="col-md-6">
+                {{ form_row(form.redirectDomain, {
+                    row_attr: {
+                        'data-routing-rule-form-target': 'redirectDomainRow'
+                    }
+                }) }}
+                {{ form_row(form.redirectProject, {
+                    row_attr: {
+                        'data-routing-rule-form-target': 'redirectProjectRow'
+                    }
+                }) }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3" data-routing-rule-form-target="routeCard">
+    <div class="card-header">route</div>
+    <div class="card-body">
+        {{ form_row(form.route, {
             row_attr: {
-                'data-routing-rule-form-target': 'domainRow'
-            }
-        }) }}
-        {{ form_row(form.project, {
-            row_attr: {
-                'data-routing-rule-form-target': 'projectRow'
+                'data-routing-rule-form-target': 'routeRow'
             }
         }) }}
     </div>
 </div>
 
-{{ form_row(form.argument) }}
-
-<button class="btn btn-sm btn-success">save</button>
+<div class="d-flex justify-content-end">
+    <button class="btn btn-sm btn-success">save</button>
+</div>
 
 {{ form_end(form) }}

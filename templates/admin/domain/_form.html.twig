@@ -1,32 +1,11 @@
-{{ form_start(form, {
-    attr: {
-        'data-controller': 'route-override-form'
-    }
-}) }}
+{{ form_start(form) }}
 
 <div class="row g-3">
 
-    <div class="col-md-6">
+    <div class="col-md-12">
         {{ form_row(form.id) }}
     </div>
-
-    <div class="col-md-6">
-        {{ form_row(form.redirectDomain) }}
-    </div>
-
 </div>
-
-{{ form_row(form.routeOverride, {
-    attr: {
-        'data-action': 'change->route-override-form#update',
-        'data-route-override-form-target': 'toggle'
-    }
-}) }}
-{{ form_row(form.routeName, {
-    row_attr: {
-        'data-route-override-form-target': 'routeNameRow'
-    }
-}) }}
 
 <div class="row g-3">
 

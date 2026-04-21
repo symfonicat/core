@@ -6,7 +6,6 @@
         <thead>
             <tr>
                 <th>domain</th>
-                <th>redirect</th>
                 <th>projects</th>
                 <th>&nbsp;</th>
             </tr>
@@ -16,7 +15,7 @@
             {{ include('admin/domain/_row.html.twig') }}
         {% else %}
             <tr id="domains-empty">
-                <td colspan="4">no records found</td>
+                <td colspan="3">no records found</td>
             </tr>
         {% endfor %}
         </tbody>

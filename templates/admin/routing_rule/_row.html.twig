@@ -1,8 +1,28 @@
 <tr id="routing_rule_{{ rule.id }}" class="btn-row">
-    <td><a href="{{ path('app_routing_rule_show', {'id': rule.id}) }}">{{ rule.argument }}</a></td>
     <td>{{ rule.type }}</td>
-    <td>{{ rule.domain ? rule.domain.id : '-' }}</td>
-    <td>{{ rule.project ? rule.project.name : '-' }}</td>
+    <td><a href="{{ path('app_routing_rule_show', {'id': rule.id}) }}">{{ rule.argument }}</a></td>
+    <td>
+        {% if rule.type == 'domain' %}
+            domain: {{ rule.domain ? rule.domain.id : '-' }}
+        {% elseif rule.type == 'project' %}
+            project: {{ rule.project ? rule.project.id ~ ' ' ~ rule.project.name : '-' }}
+        {% elseif rule.type == 'redirect' %}
+            {{ rule.redirectType }}: {{ rule.domain ? rule.domain.id : (rule.project ? rule.project.id ~ ' ' ~ rule.project.name : '-') }}
+        {% else %}
+            {{ rule.routeType }}: {{ rule.domain ? rule.domain.id : (rule.project ? rule.project.id ~ ' ' ~ rule.project.name : '-') }}
+        {% endif %}
+    </td>
+    <td>
+        {% if rule.type == 'domain' %}
+            force domain shell
+        {% elseif rule.type == 'project' %}
+            bypass project catch-all
+        {% elseif rule.type == 'redirect' %}
+            {{ rule.redirectTarget }}: {{ rule.redirectDomain ? rule.redirectDomain.id : (rule.redirectProject ? rule.redirectProject.id ~ ' ' ~ rule.redirectProject.name : '-') }}
+        {% else %}
+            {{ rule.route ?: '-' }}
+        {% endif %}
+    </td>
     <td class="text-end btn-cell">
         <div class="btn-group btn-group-sm">
             <a href="{{ path('app_routing_rule_edit', {'id': rule.id}) }}" class="btn btn-sm btn-warning">

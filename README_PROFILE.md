@@ -17,21 +17,26 @@ Symfonicat has two public routing defaults:
 - projects are default client-side routed
 - domains are default Symfony-side routed
 
-`RoutingRule.argument` inverses that default by the first path segment.
+`RoutingRule.argument` only applies to the legacy `domain` and `project` rule types.
+- legacy `domain` and `project` rules require a non-empty argument; redirect and route rules omit it and normalize it to an empty string
 - the routing rule argument `admin` is reserved and cannot be used by domain or project routing rules
 - the runtime ignores any routing rule with argument `admin`, even if invalid data exists in the database
-- the routing rule form explains the `type`, `domain`, and `project` fields directly in the UI
+- legacy `domain` rules still force the matching argument into the domain shell
+- legacy `project` rules still bypass the project catch-all so Symfony handles the request
+- redirect rules apply to a whole domain or project and redirect to a domain or project
+- route rules apply to the root of a domain or project and render a named Symfony route
+- the routing rule form groups rule, match, redirect, and route fields into separate cards, keeps `type`, `redirectType`, and `routeType` together in the rule card, hides `argument` for redirect and route rules, hides unused match-field columns cleanly so the full-width project selector does not leave an empty slot above it, and keeps redirect target on the left with the selected redirect domain or project field on the right
 
-- a domain routing rule catches a matching argument into the domain shell so the domain bundle handles it through `domain/main.html.twig`
-- a project routing rule forces Symfony to handle a matching argument even though a project is active and would otherwise use the project catch-all
+- a domain route rule applies only when no project is active and the request is for `/`
+- a project route rule applies when a project is active and the request is for `/`
 
 ## Runtime Shape
 
 - `/` renders the domain shell when no project is resolved
 - `/{path}` renders the project shell when a project is resolved and the project catch-all is still enabled for that argument
+- top-level public controllers are imported with a guard so project subdomains keep the project catch-all unless a legacy project routing rule disables it for the current argument
 - project rendering checks `project/overrides/{project.id}.html.twig` before falling back to `project/main.html.twig`
 - domain rendering checks `domain/overrides/{domain.id}.html.twig` before falling back to `domain/main.html.twig`
-- domains and projects can set `routeOverride=true` with a `routeName` to render a Symfony route before shell rendering
 - modules attach to either domains or projects and expose backend endpoints under `/m/{id}`
 - webpack entries are discovered from `symfonicat:data:webpack` with filesystem fallback under `assets/domains`, `assets/projects`, and `assets/modules`
 - `Project.id` is the canonical, immutable project identifier for subdomains, asset entry names, and Electron/runtime data

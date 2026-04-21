@@ -15,16 +15,6 @@ class Domain
     #[ORM\Column(length: 255)]
     private ?string $id = null;
 
-    #[ORM\Column(options: ['default' => false])]
-    private bool $routeOverride = false;
-
-    #[ORM\Column(length: 255, nullable: true)]
-    private ?string $routeName = null;
-
-    #[ORM\ManyToOne(targetEntity: self::class)]
-    #[ORM\JoinColumn(name: 'redirect_domain_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
-    private ?self $redirectDomain = null;
-
     /**
      * @var Collection<int, Project>
      */
@@ -61,47 +51,6 @@ class Domain
     public function setId(string $id): static
     {
         $this->id = $id;
-
-        return $this;
-    }
-
-    public function isRouteOverride(): bool
-    {
-        return $this->routeOverride;
-    }
-
-    public function getRouteOverride(): bool
-    {
-        return $this->routeOverride;
-    }
-
-    public function setRouteOverride(bool $routeOverride): static
-    {
-        $this->routeOverride = $routeOverride;
-
-        return $this;
-    }
-
-    public function getRouteName(): ?string
-    {
-        return $this->routeName;
-    }
-
-    public function setRouteName(?string $routeName): static
-    {
-        $this->routeName = $routeName;
-
-        return $this;
-    }
-
-    public function getRedirectDomain(): ?self
-    {
-        return $this->redirectDomain;
-    }
-
-    public function setRedirectDomain(?self $redirectDomain): static
-    {
-        $this->redirectDomain = $redirectDomain;
 
         return $this;
     }

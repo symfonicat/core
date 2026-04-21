@@ -18,6 +18,20 @@ final class RoutingRuleRepository extends ServiceEntityRepository
         parent::__construct($registry, RoutingRule::class);
     }
 
+    public function findOneRedirectRuleForDomain(Domain $domain): ?RoutingRule
+    {
+        return $this->createQueryBuilder('rule')
+            ->andWhere('rule.type = :type')
+            ->andWhere('rule.redirectType = :redirectType')
+            ->andWhere('IDENTITY(rule.domain) = :domainId')
+            ->setParameter('type', RoutingRule::TYPE_REDIRECT)
+            ->setParameter('redirectType', RoutingRule::REDIRECT_TYPE_DOMAIN)
+            ->setParameter('domainId', $domain->getId())
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
     /**
      * @return RoutingRule[]
      */
@@ -46,6 +60,20 @@ final class RoutingRuleRepository extends ServiceEntityRepository
             ->getOneOrNullResult();
     }
 
+    public function findOneRedirectRuleForProject(Project $project): ?RoutingRule
+    {
+        return $this->createQueryBuilder('rule')
+            ->andWhere('rule.type = :type')
+            ->andWhere('rule.redirectType = :redirectType')
+            ->andWhere('IDENTITY(rule.project) = :projectId')
+            ->setParameter('type', RoutingRule::TYPE_REDIRECT)
+            ->setParameter('redirectType', RoutingRule::REDIRECT_TYPE_PROJECT)
+            ->setParameter('projectId', $project->getId())
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
     /**
      * @return RoutingRule[]
      */
@@ -69,6 +97,34 @@ final class RoutingRuleRepository extends ServiceEntityRepository
             ->setParameter('type', RoutingRule::TYPE_PROJECT)
             ->setParameter('projectId', $project->getId())
             ->setParameter('argument', $argument)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    public function findOneRouteRuleForDomain(Domain $domain): ?RoutingRule
+    {
+        return $this->createQueryBuilder('rule')
+            ->andWhere('rule.type = :type')
+            ->andWhere('rule.routeType = :routeType')
+            ->andWhere('IDENTITY(rule.domain) = :domainId')
+            ->setParameter('type', RoutingRule::TYPE_ROUTE)
+            ->setParameter('routeType', RoutingRule::ROUTE_TYPE_DOMAIN)
+            ->setParameter('domainId', $domain->getId())
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    public function findOneRouteRuleForProject(Project $project): ?RoutingRule
+    {
+        return $this->createQueryBuilder('rule')
+            ->andWhere('rule.type = :type')
+            ->andWhere('rule.routeType = :routeType')
+            ->andWhere('IDENTITY(rule.project) = :projectId')
+            ->setParameter('type', RoutingRule::TYPE_ROUTE)
+            ->setParameter('routeType', RoutingRule::ROUTE_TYPE_PROJECT)
+            ->setParameter('projectId', $project->getId())
             ->setMaxResults(1)
             ->getQuery()
             ->getOneOrNullResult();

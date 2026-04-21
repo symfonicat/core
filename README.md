@@ -80,10 +80,13 @@ go to `example.com` and `project1.example.com`, open up DevTools, and then check
 - `symfonicat:schema:update` treats `assets/modules/{id}` as the source of truth for `Module` rows, reads each module name from `assets/modules/{id}/package.json`, and prompts before removing referenced modules that no longer exist on disk
 - projects are default client-side routed: when a `Project` is active, the public runtime uses a catch-all route so the rest of the URL can be client-side routed
 - domains are default Symfony-side routed: when there is no active `Project`, public paths stay in the normal Symfony route table unless explicitly inverted
-- `RoutingRule.argument` inverses that default behavior by the first path segment for either a `Domain` or a `Project`
-- a domain-scoped routing rule catches that argument into the domain shell so the domain bundle handles it through `domain/main.html.twig`
-- a project-scoped routing rule disables the project catch-all for that argument so Symfony handles the request even though a `Project` is present
-- the routing rule form explains the `type`, `domain`, and `project` fields directly in the UI
+- `RoutingRule.argument` only applies to the legacy `domain` and `project` rule types
+- legacy `domain` and `project` rules require a non-empty argument; redirect and route rules omit it and normalize it to an empty string
+- legacy `domain` rules still force the matching argument into the domain shell
+- legacy `project` rules still bypass the project catch-all so Symfony handles the request
+- redirect rules apply to an entire `Domain` or `Project` and redirect to another `Domain` or `Project`
+- route rules apply to the root of a `Domain` or `Project` and render a named Symfony route
+- the routing rule form groups rule, match, redirect, and route fields into separate cards, keeps `type`, `redirectType`, and `routeType` together in the rule card, hides `argument` for redirect and route rules, hides unused match-field columns cleanly so the full-width project selector does not leave an empty slot above it, and keeps redirect target on the left with the selected redirect domain or project field on the right
 
 ## Included
 
@@ -101,44 +104,51 @@ go to `example.com` and `project1.example.com`, open up DevTools, and then check
 Symfonicat resolves requests in layers.
 
 1. A request arrives on the base domain or a subdomain.
-2. Subscribers resolve the active `Domain`, current `Project`, and the first path segment argument.
+2. Subscribers resolve the active `Domain`, current `Project`, and, when needed, the first path segment argument.
 3. Domain requests are default Symfony-side routed and project requests are default client-side routed through the project catch-all.
-4. `RoutingRule` can inverse that default for a matching argument:
-   - a domain rule catches the argument into the domain shell and renders `domain/main.html.twig`
-   - a project rule disables the project catch-all and lets the normal Symfony route table handle the request
+4. `RoutingRule` can redirect a whole domain/project, render a root route for a domain/project, or apply the legacy path-segment inversions.
 5. The public controller decides whether to render a domain shell or a project shell when the request is still on the shell path.
 6. Encore entrypoints are selected from the current database-backed domain, project, and module state.
 
-`MainController` resolves the active domain and project once per request and reuses them for route overrides plus shell rendering.
+`MainController` resolves the active domain and project once per request and reuses them for shell rendering.
 
-The public entry routes live in [MainController.php](src/Symfonicat/Controller/MainController.php):
+Top-level public controllers are imported separately from the public shell route. They are guarded so project subdomains keep the project catch-all unless a legacy project routing rule disables it for the current first path segment. Admin and module controllers use their own route imports. The public shell entry routes live in [MainController.php](src/Symfonicat/Controller/MainController.php):
 
 - `/` renders the domain shell when there is no resolved project.
 - `/{path}` renders the project shell when a project is resolved onto the request.
 - domain paths without a resolved project are left for the Symfony app route table.
-- project paths with a resolved project use the project catch-all unless a matching project routing rule disables it for that argument.
+- project paths with a resolved project use the project catch-all unless a legacy project rule disables it or a root route rule renders a Symfony route.
 
 Resolution is driven primarily by subdomain and routing-rule context. The key runtime pieces are:
 
 - [ProjectService.php](src/Symfonicat/Service/ProjectService.php)
 - [ProjectSubscriber.php](src/Symfonicat/EventSubscriber/ProjectSubscriber.php)
 - [RoutingRuleSubscriber.php](src/Symfonicat/EventSubscriber/RoutingRuleSubscriber.php)
-- [DomainRedirectSubscriber.php](src/Symfonicat/EventSubscriber/DomainRedirectSubscriber.php)
 
 ## Routing Rules
 
-`RoutingRule` records are first-path-segment routing inversions stored on the `argument` field.
+`RoutingRule` records are first-path-segment rules stored on the `argument` field.
 
-- `TYPE_DOMAIN` applies to a `Domain`
-- `TYPE_PROJECT` applies to a `Project`
-- the rule matches the first path segment argument from the current request
-- domains are default Symfony-side routed, so a matching domain rule catches that argument into the domain shell and renders `templates/domain/main.html.twig`
-- projects are default client-side routed, so a matching project rule forces Symfony to handle that argument even though a project is active on the request
+- `TYPE_DOMAIN` preserves the legacy domain-shell inversion for a matching first path segment
+- `TYPE_PROJECT` preserves the legacy project catch-all bypass for a matching first path segment
+- `TYPE_REDIRECT` applies a redirect for the current domain or project regardless of path
+- `TYPE_ROUTE` renders a Symfony route for the current domain or project root
+- only the legacy `domain` and `project` rule types use the `argument` field
+- `REDIRECT_TYPE_DOMAIN` and `REDIRECT_TYPE_PROJECT` decide whether the redirect rule matches a `Domain` or `Project`
+- `TARGET_TYPE_DOMAIN` and `TARGET_TYPE_PROJECT` decide whether the redirect points to a `Domain` or `Project`
+- `ROUTE_TYPE_DOMAIN` and `ROUTE_TYPE_PROJECT` decide whether the route rule matches a `Domain` or `Project`
+- domain route rules only apply when no project is active and the request is for `/`
+- project route rules apply when the current request resolved a project and the request is for `/`
+- the routing rule argument `admin` is reserved and ignored by runtime matching
 
-That gives two explicit patterns:
+That gives six explicit patterns:
 
-- set a domain routing rule with argument `foo` when `example.com/foo/...` should enter the domain bundle catch-all instead of normal Symfony-side domain routing
-- set a project routing rule with argument `foo` when `project1.example.com/foo/...` should bypass the project catch-all and be handled by Symfony routes/controllers
+- set a legacy domain rule with argument `foo` when `example.com/foo/...` should enter the domain shell instead of normal Symfony-side domain routing
+- set a legacy project rule with argument `foo` when `project1.example.com/foo/...` should bypass the project catch-all and be handled by Symfony routes/controllers
+- set a domain redirect rule when the current domain should redirect to another domain or project
+- set a project redirect rule when the current project should redirect to another domain or project
+- set a domain route rule when the root of a domain should render a named Symfony route while no project is active
+- set a project route rule when the root of a project should render a named Symfony route instead of the project shell
 
 ## Module System
 
@@ -172,7 +182,6 @@ Shell templates support file overrides:
 
 - project rendering checks `project/overrides/{project.id}.html.twig` first, then falls back to `project/main.html.twig`
 - domain rendering checks `domain/overrides/{domain.id}.html.twig` first, then falls back to `domain/main.html.twig`
-- domains and projects can also set `routeOverride=true` with a `routeName` to render a Symfony route before shell-template rendering runs
 - public shell templates stay under `templates/domain` and `templates/project`, while admin CRUD templates live under `templates/admin/{domain,project,env,routing_rule}`
 
 The shared webpack helper [webpack.symfonicat.js](webpack.symfonicat.js) discovers entries from:

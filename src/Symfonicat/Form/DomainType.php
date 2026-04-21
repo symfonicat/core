@@ -7,7 +7,6 @@ use Symfonicat\Entity\Module;
 use Symfonicat\Entity\Project;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
@@ -19,23 +18,6 @@ class DomainType extends AbstractType
         $builder
             ->add('id', null, [
                 'label' => 'domain',
-            ])
-            ->add('routeOverride', CheckboxType::class, [
-                'label' => 'route override',
-                'required' => false,
-            ])
-            ->add('routeName', null, [
-                'label' => 'route name',
-                'required' => false,
-                'label' => false,
-                'empty_data' => '',
-            ])
-            ->add('redirectDomain', EntityType::class, [
-                'class' => Domain::class,
-                'choice_label' => 'id',
-                'label' => 'redirect domain',
-                'required' => false,
-                'placeholder' => 'select a redirect domain',
             ])
             ->add('projects', EntityType::class, [
                 'class' => Project::class,
