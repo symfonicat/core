@@ -18,8 +18,8 @@ Symfonicat has two public routing defaults:
 - domains are default Symfony-side routed
 
 `RoutingRule.argument` only applies to the legacy `domain` and `project` rule types.
-- legacy `domain` and `project` rules require a non-empty argument; redirect and route rules omit it and normalize it to an empty string
-- the routing rule argument `admin` is reserved and cannot be used by domain or project routing rules
+- legacy `domain` and `project` rules require a non-empty argument through entity validation; redirect and route rules omit it and normalize it to an empty string
+- the routing rule argument `admin` is reserved through entity validation, cannot be used by domain or project routing rules, and is ignored by runtime matching
 - the runtime ignores any routing rule with argument `admin`, even if invalid data exists in the database
 - legacy `domain` rules still force the matching argument into the domain shell
 - legacy `project` rules still bypass the project catch-all so Symfony handles the request

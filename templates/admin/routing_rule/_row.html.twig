@@ -7,7 +7,7 @@
         {% elseif rule.type == 'project' %}
             project: {{ rule.project ? rule.project.id ~ ' ' ~ rule.project.name : '-' }}
         {% elseif rule.type == 'redirect' %}
-            {{ rule.redirectType }}: {{ rule.domain ? rule.domain.id : (rule.project ? rule.project.id ~ ' ' ~ rule.project.name : '-') }}
+            {{ rule.redirectType }}: {{ rule.domain ? rule.domain.id : (rule.project ? rule.project.name : '-') }}
         {% else %}
             {{ rule.routeType }}: {{ rule.domain ? rule.domain.id : (rule.project ? rule.project.id ~ ' ' ~ rule.project.name : '-') }}
         {% endif %}

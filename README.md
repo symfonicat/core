@@ -38,10 +38,6 @@ npm install
 npm run dev
 ```
 
-`composer create-project` runs `composer install` during project creation, so `vendor/` is already populated when the stack comes up.
-
----
-
 You don't need to run `doctrine:schema:create` to get the UI up locally. On first container boot, the `php` service bootstraps the local stack:
 
 - synchronizes the Doctrine schema
@@ -81,7 +77,7 @@ go to `example.com` and `project1.example.com`, open up DevTools, and then check
 - projects are default client-side routed: when a `Project` is active, the public runtime uses a catch-all route so the rest of the URL can be client-side routed
 - domains are default Symfony-side routed: when there is no active `Project`, public paths stay in the normal Symfony route table unless explicitly inverted
 - `RoutingRule.argument` only applies to the legacy `domain` and `project` rule types
-- legacy `domain` and `project` rules require a non-empty argument; redirect and route rules omit it and normalize it to an empty string
+- legacy `domain` and `project` rules require a non-empty argument through entity validation; redirect and route rules omit it and normalize it to an empty string
 - legacy `domain` rules still force the matching argument into the domain shell
 - legacy `project` rules still bypass the project catch-all so Symfony handles the request
 - redirect rules apply to an entire `Domain` or `Project` and redirect to another `Domain` or `Project`
@@ -139,7 +135,7 @@ Resolution is driven primarily by subdomain and routing-rule context. The key ru
 - `ROUTE_TYPE_DOMAIN` and `ROUTE_TYPE_PROJECT` decide whether the route rule matches a `Domain` or `Project`
 - domain route rules only apply when no project is active and the request is for `/`
 - project route rules apply when the current request resolved a project and the request is for `/`
-- the routing rule argument `admin` is reserved and ignored by runtime matching
+- the routing rule argument `admin` is reserved through entity validation and ignored by runtime matching
 
 That gives six explicit patterns:
 

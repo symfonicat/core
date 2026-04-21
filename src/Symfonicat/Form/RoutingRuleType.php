@@ -26,14 +26,6 @@ class RoutingRuleType extends AbstractType
                 'empty_data' => '',
                 'help_html' => TRUE,
                 'help' => sprintf('The path argument to inverse default <b>Project</b> <code>client-side</code> or <b>Domain</b> <code>server-side</code> routing for<br /><b>%s</b> is reserved', RoutingRule::RESERVED_ARGUMENT),
-                'constraints' => [
-                    new Assert\Regex(
-                        pattern: sprintf('/^%s$/i', preg_quote(RoutingRule::RESERVED_ARGUMENT, '/')),
-                        match: false,
-                        message: sprintf('The routing rule argument "%s" is reserved.', RoutingRule::RESERVED_ARGUMENT),
-                        normalizer: static fn ($value): string => is_string($value) ? strtolower(trim($value)) : '',
-                    ),
-                ],
             ])
             ->add('type', ChoiceType::class, [
                 'choices' => RoutingRule::getTypeChoices(),
