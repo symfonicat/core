@@ -3,7 +3,10 @@ import { Controller } from '@hotwired/stimulus'
 export default class extends Controller {
     static targets = [
         'type',
-        'argumentRow',
+        'argumentsRow',
+        'argumentsCollection',
+        'argumentsItems',
+        'argumentsPrototype',
         'redirectType',
         'routeType',
         'redirectTarget',
@@ -12,6 +15,7 @@ export default class extends Controller {
         'redirectTargetRow',
         'domainRow',
         'projectRow',
+        'applicationRow',
         'redirectCard',
         'redirectDomainRow',
         'redirectProjectRow',
@@ -35,10 +39,11 @@ export default class extends Controller {
 
         const isDomain = type === 'domain'
         const isProject = type === 'project'
+        const isApplication = type === 'application'
         const isRedirect = type === 'redirect'
         const isRoute = type === 'route'
 
-        this.toggleRow(this.argumentRowTarget, isDomain || isProject)
+        this.toggleRow(this.argumentsRowTarget, isDomain || isProject || isApplication)
         this.toggleRow(this.redirectCardTarget, isRedirect)
         this.toggleRow(this.redirectTypeRowTarget, isRedirect)
         this.toggleRow(this.redirectTargetRowTarget, isRedirect)
@@ -54,9 +59,27 @@ export default class extends Controller {
             this.projectRowTarget,
             isProject || (isRedirect && redirectType === 'project') || (isRoute && routeType === 'project')
         )
+        this.toggleRow(this.applicationRowTarget, isApplication)
         this.toggleRow(this.redirectDomainRowTarget, isRedirect && redirectTarget === 'domain')
         this.toggleRow(this.redirectProjectRowTarget, isRedirect && redirectTarget === 'project')
         this.toggleRow(this.routeRowTarget, isRoute)
+    }
+
+    addArgument(event) {
+        event.preventDefault()
+
+        const collection = this.argumentsCollectionTarget
+        const index = Number(collection.dataset.routingRuleFormIndex || 0)
+        const markup = this.argumentsPrototypeTarget.innerHTML.replace(/__name__/g, String(index))
+
+        collection.dataset.routingRuleFormIndex = String(index + 1)
+        this.argumentsItemsTarget.insertAdjacentHTML('beforeend', markup)
+    }
+
+    removeArgument(event) {
+        event.preventDefault()
+
+        event.currentTarget.closest('[data-routing-rule-form-argument-item]')?.remove()
     }
 
     toggleRow(row, visible) {

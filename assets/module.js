@@ -26,6 +26,27 @@ function normalizeRequestArguments(pathOrPayload, payload) {
     };
 }
 
+function getApplicationContextHeaders() {
+    if (typeof window === 'undefined') {
+        return {};
+    }
+
+    const context = window.symfonicatApplication ?? {};
+    const applicationId = String(context.id ?? '').trim();
+    const applicationPath = String(context.path ?? window.location?.pathname ?? '').trim();
+    const headers = {};
+
+    if (applicationId !== '') {
+        headers['X-Symfonicat-Application'] = applicationId;
+    }
+
+    if (applicationPath !== '') {
+        headers['X-Symfonicat-Application-Path'] = applicationPath;
+    }
+
+    return headers;
+}
+
 async function requestModule(moduleName, responseType, path = '', payload = {}) {
     const response = await fetch(buildModulePath(moduleName, path), {
         method: 'POST',
@@ -34,6 +55,7 @@ async function requestModule(moduleName, responseType, path = '', payload = {}) 
             Accept: responseType === 'html' ? 'text/html' : 'application/json',
             'Content-Type': 'application/json',
             'X-Requested-With': 'XMLHttpRequest',
+            ...getApplicationContextHeaders(),
         },
         body: JSON.stringify(payload ?? {}),
     });

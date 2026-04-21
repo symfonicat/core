@@ -3,7 +3,7 @@
 {% block body %}
 
     <h6>
-        {{ rule.argument }}
+        {{ rule.argumentsPath ?: '-' }}
 
         &nbsp;
 
@@ -22,12 +22,18 @@
         <dt class="col-sm-2">type</dt>
         <dd class="col-sm-10">{{ rule.type }}</dd>
 
+        <dt class="col-sm-2">arguments</dt>
+        <dd class="col-sm-10">{{ rule.argumentsPath ?: '-' }}</dd>
+
         {% if rule.type == 'domain' %}
             <dt class="col-sm-2">domain</dt>
             <dd class="col-sm-10">{{ rule.domain ? rule.domain.id : '-' }}</dd>
         {% elseif rule.type == 'project' %}
             <dt class="col-sm-2">project</dt>
             <dd class="col-sm-10">{{ rule.project ? rule.project.id ~ ' ' ~ rule.project.name : '-' }}</dd>
+        {% elseif rule.type == 'application' %}
+            <dt class="col-sm-2">application</dt>
+            <dd class="col-sm-10">{{ rule.application ? rule.application.id : '-' }}</dd>
         {% elseif rule.type == 'redirect' %}
             <dt class="col-sm-2">redirect type</dt>
             <dd class="col-sm-10">{{ rule.redirectType }}</dd>

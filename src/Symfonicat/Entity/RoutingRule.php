@@ -13,14 +13,16 @@ use Symfony\Component\Validator\Context\ExecutionContextInterface;
 #[ORM\Table(
     name: 'symfonicat_routing_rule',
     indexes: [
-        new ORM\Index(name: 'symfonicat_routing_rule_domain_argument_idx', columns: ['type', 'redirect_type', 'route_type', 'domain_id', 'argument']),
-        new ORM\Index(name: 'symfonicat_routing_rule_project_argument_idx', columns: ['type', 'redirect_type', 'route_type', 'project_id', 'argument']),
+        new ORM\Index(name: 'symfonicat_routing_rule_domain_arguments_idx', columns: ['type', 'redirect_type', 'route_type', 'domain_id']),
+        new ORM\Index(name: 'symfonicat_routing_rule_project_arguments_idx', columns: ['type', 'redirect_type', 'route_type', 'project_id']),
+        new ORM\Index(name: 'symfonicat_routing_rule_application_arguments_idx', columns: ['type', 'application_id']),
     ],
 )]
 class RoutingRule
 {
     public const TYPE_DOMAIN = 'domain';
     public const TYPE_PROJECT = 'project';
+    public const TYPE_APPLICATION = 'application';
     public const TYPE_REDIRECT = 'redirect';
     public const TYPE_ROUTE = 'route';
 
@@ -33,15 +35,20 @@ class RoutingRule
     public const ROUTE_TYPE_DOMAIN = 'domain';
     public const ROUTE_TYPE_PROJECT = 'project';
 
-    public const RESERVED_ARGUMENT = 'admin';
+    public const RESERVED_ARGUMENTS = [
+        'admin',
+    ];
 
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: 'integer')]
     private ?int $id = null;
 
-    #[ORM\Column(length: 50)]
-    private string $argument = '';
+    /**
+     * @var list<string>
+     */
+    #[ORM\Column(type: 'json')]
+    private array $arguments = [];
 
     #[ORM\Column(length: 20)]
     private string $type = self::TYPE_DOMAIN;
@@ -63,6 +70,10 @@ class RoutingRule
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?Project $project = null;
 
+    #[ORM\ManyToOne(targetEntity: Application::class)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?Application $application = null;
+
     #[ORM\ManyToOne(targetEntity: Domain::class)]
     #[ORM\JoinColumn(name: 'redirect_domain_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
     private ?Domain $redirectDomain = null;
@@ -79,6 +90,7 @@ class RoutingRule
         return [
             'domain' => self::TYPE_DOMAIN,
             'project' => self::TYPE_PROJECT,
+            'application' => self::TYPE_APPLICATION,
             'redirect' => self::TYPE_REDIRECT,
             'route' => self::TYPE_ROUTE,
         ];
@@ -116,18 +128,6 @@ class RoutingRule
     public function getId(): ?int
     {
         return $this->id;
-    }
-
-    public function getArgument(): string
-    {
-        return $this->argument;
-    }
-
-    public function setArgument(?string $argument): self
-    {
-        $this->argument = trim((string) $argument);
-
-        return $this;
     }
 
     public function getType(): string
@@ -206,6 +206,56 @@ class RoutingRule
         return $this;
     }
 
+    public function getApplication(): ?Application
+    {
+        return $this->application;
+    }
+
+    public function setApplication(?Application $application): self
+    {
+        $this->application = $application;
+
+        return $this;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function getArguments(): array
+    {
+        return $this->arguments;
+    }
+
+    /**
+     * @param iterable<mixed>|null $arguments
+     */
+    public function setArguments(?iterable $arguments): self
+    {
+        $normalizedArguments = [];
+
+        foreach ($arguments ?? [] as $argument) {
+            $argument = trim((string) $argument, " \t\n\r\0\x0B/");
+            if ($argument === '') {
+                continue;
+            }
+
+            $normalizedArguments[] = $argument;
+        }
+
+        $this->arguments = array_values($normalizedArguments);
+
+        return $this;
+    }
+
+    public function getArgumentsPath(): string
+    {
+        if ($this->arguments === []) {
+            return '';
+        }
+
+        return '/'.implode('/', $this->arguments);
+    }
+
     public function getRedirectDomain(): ?Domain
     {
         return $this->redirectDomain;
@@ -262,6 +312,11 @@ class RoutingRule
         return $this->type === self::TYPE_PROJECT;
     }
 
+    public function isApplicationType(): bool
+    {
+        return $this->type === self::TYPE_APPLICATION;
+    }
+
     public function isDomainRedirectType(): bool
     {
         return $this->redirectType === self::REDIRECT_TYPE_DOMAIN;
@@ -298,6 +353,7 @@ class RoutingRule
     {
         if ($this->isDomainType()) {
             $this->project = null;
+            $this->application = null;
             $this->redirectType = null;
             $this->redirectTarget = null;
             $this->routeType = null;
@@ -310,6 +366,20 @@ class RoutingRule
 
         if ($this->isProjectType()) {
             $this->domain = null;
+            $this->application = null;
+            $this->redirectType = null;
+            $this->redirectTarget = null;
+            $this->routeType = null;
+            $this->redirectDomain = null;
+            $this->redirectProject = null;
+            $this->route = null;
+
+            return;
+        }
+
+        if ($this->isApplicationType()) {
+            $this->domain = null;
+            $this->project = null;
             $this->redirectType = null;
             $this->redirectTarget = null;
             $this->routeType = null;
@@ -321,7 +391,8 @@ class RoutingRule
         }
 
         if ($this->isRedirectRule()) {
-            $this->argument = '';
+            $this->arguments = [];
+            $this->application = null;
             $this->routeType = null;
             $this->route = null;
 
@@ -347,7 +418,8 @@ class RoutingRule
         }
 
         if ($this->isRouteRule()) {
-            $this->argument = '';
+            $this->arguments = [];
+            $this->application = null;
             $this->redirectType = null;
             $this->redirectTarget = null;
             $this->redirectDomain = null;
@@ -367,7 +439,7 @@ class RoutingRule
     public function validateScope(ExecutionContextInterface $context): void
     {
         if ($this->isDomainType()) {
-            $this->validateArgument($context);
+            $this->validateArguments($context);
 
             if ($this->domain === null) {
                 $context->buildViolation('A domain routing rule requires a domain.')
@@ -379,11 +451,23 @@ class RoutingRule
         }
 
         if ($this->isProjectType()) {
-            $this->validateArgument($context);
+            $this->validateArguments($context);
 
             if ($this->project === null) {
                 $context->buildViolation('A project routing rule requires a project.')
                     ->atPath('project')
+                    ->addViolation();
+            }
+
+            return;
+        }
+
+        if ($this->isApplicationType()) {
+            $this->validateArguments($context);
+
+            if ($this->application === null) {
+                $context->buildViolation('An application routing rule requires an application.')
+                    ->atPath('application')
                     ->addViolation();
             }
 
@@ -401,19 +485,41 @@ class RoutingRule
         }
     }
 
-    public function validateArgument(ExecutionContextInterface $context): void
+    public function validateArguments(ExecutionContextInterface $context): void
     {
-        if (trim($this->argument) === '') {
-            $context->buildViolation('A domain or project routing rule requires an argument.')
-                ->atPath('argument')
+        if ($this->arguments === []) {
+            $context->buildViolation('A domain, project, or application routing rule requires at least one argument.')
+                ->atPath('arguments')
                 ->addViolation();
         }
 
-        if (strtolower(trim($this->argument)) === self::RESERVED_ARGUMENT) {
-            $context->buildViolation(sprintf('The routing rule argument "%s" is reserved.', self::RESERVED_ARGUMENT))
-                ->atPath('argument')
-                ->addViolation();
+        foreach ($this->arguments as $index => $argument) {
+            if ($this->isReservedArgument($argument)) {
+                $context->buildViolation(sprintf('The routing rule argument "%s" is reserved.', $argument))
+                    ->atPath(sprintf('arguments[%d]', $index))
+                    ->addViolation();
+            }
+
+            if (!$this->isValidArgumentRegex($argument)) {
+                $context->buildViolation(sprintf('The routing rule argument "%s" is not a valid regular expression segment.', $argument))
+                    ->atPath(sprintf('arguments[%d]', $index))
+                    ->addViolation();
+            }
         }
+    }
+
+    private function isReservedArgument(string $argument): bool
+    {
+        return in_array(strtolower(trim($argument)), self::RESERVED_ARGUMENTS, true);
+    }
+
+    private function isValidArgumentRegex(string $argument): bool
+    {
+        if ($argument === '*') {
+            return true;
+        }
+
+        return @preg_match('~^(?:'.str_replace('~', '\\~', $argument).')$~u', '') !== false;
     }
 
     private function validateRedirectRule(ExecutionContextInterface $context): void

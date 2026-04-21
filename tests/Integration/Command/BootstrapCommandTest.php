@@ -3,10 +3,12 @@
 namespace App\Tests\Integration\Command;
 
 use App\Tests\Support\SymfonicatKernelTestCase;
+use Symfonicat\Entity\Application;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\Env;
+use Symfonicat\Entity\Module;
 use Symfonicat\Entity\Project;
-use Symfony\Bundle\FrameworkBundle\Console\Application;
+use Symfony\Bundle\FrameworkBundle\Console\Application as ConsoleApplication;
 use Symfony\Component\Console\Tester\CommandTester;
 
 /**
@@ -28,12 +30,17 @@ final class BootstrapCommandTest extends SymfonicatKernelTestCase
         $localhost = $em->getRepository(Domain::class)->find('localhost');
         $exampleCom = $em->getRepository(Domain::class)->find('example.com');
         $project = $em->getRepository(Project::class)->find('project1');
+        $application = $em->getRepository(Application::class)->find('test');
+        $analytics = $em->getRepository(Module::class)->find('analytics');
         $color = $em->getRepository(Env::class)->find('color');
 
         self::assertInstanceOf(Domain::class, $localhost);
         self::assertInstanceOf(Domain::class, $exampleCom);
         self::assertInstanceOf(Project::class, $project);
         self::assertSame('Project 1', $project->getName());
+        self::assertInstanceOf(Application::class, $application);
+        self::assertInstanceOf(Module::class, $analytics);
+        self::assertSame('Analytics', $analytics->getName());
         self::assertInstanceOf(Env::class, $color);
 
         self::assertTrue(
@@ -41,9 +48,15 @@ final class BootstrapCommandTest extends SymfonicatKernelTestCase
             'bootstrap must attach project1 to example.com so subdomain routing works out of the box',
         );
 
+        self::assertTrue(
+            $application->hasModule($analytics),
+            'bootstrap must attach Analytics to the test application so application routes have a module by default',
+        );
+
         self::assertSame('blue', $this->envValueFor($localhost, 'color'));
         self::assertSame('blue', $this->envValueFor($exampleCom, 'color'));
         self::assertSame('green', $this->projectEnvValueFor($project, 'color'));
+        self::assertSame('red', $this->applicationEnvValueFor($application, 'color'));
     }
 
     public function testSecondRunIsIdempotentAndDoesNotDuplicateRows(): void
@@ -77,7 +90,17 @@ final class BootstrapCommandTest extends SymfonicatKernelTestCase
         $this->entityManager()->clear();
 
         self::assertSame(
-            ['domain' => 0, 'project' => 0, 'env' => 0, 'domain_env' => 0, 'project_env' => 0],
+            [
+                'application' => 0,
+                'application_env' => 0,
+                'domain' => 0,
+                'project' => 0,
+                'env' => 0,
+                'domain_env' => 0,
+                'project_env' => 0,
+                'module' => 0,
+                'module_application' => 0,
+            ],
             $this->countAll(),
             '--no-seed-localhost must skip ALL defaults, not just the localhost domain',
         );
@@ -122,7 +145,7 @@ final class BootstrapCommandTest extends SymfonicatKernelTestCase
 
     private function makeCommandTester(): CommandTester
     {
-        $application = new Application(self::$kernel);
+        $application = new ConsoleApplication(self::$kernel);
         $application->setAutoExit(false);
         $command = $application->find('symfonicat:bootstrap');
 
@@ -138,11 +161,15 @@ final class BootstrapCommandTest extends SymfonicatKernelTestCase
         $em->clear();
 
         return [
+            'application' => $this->countTable('symfonicat_application'),
+            'application_env' => $this->countTable('symfonicat_application_env'),
             'domain' => $this->countTable('symfonicat_domain'),
             'project' => $this->countTable('symfonicat_project'),
             'env' => $this->countTable('symfonicat_env'),
             'domain_env' => $this->countTable('symfonicat_domain_env'),
             'project_env' => $this->countTable('symfonicat_project_env'),
+            'module' => $this->countTable('symfonicat_module'),
+            'module_application' => $this->countTable('symfonicat_module_application'),
         ];
     }
 
@@ -167,6 +194,17 @@ final class BootstrapCommandTest extends SymfonicatKernelTestCase
     private function projectEnvValueFor(Project $project, string $envId): ?string
     {
         foreach ($project->getEnv() as $row) {
+            if ($row->getEnv()?->getId() === $envId) {
+                return $row->getValue();
+            }
+        }
+
+        return null;
+    }
+
+    private function applicationEnvValueFor(Application $application, string $envId): ?string
+    {
+        foreach ($application->getEnv() as $row) {
             if ($row->getEnv()?->getId() === $envId) {
                 return $row->getValue();
             }

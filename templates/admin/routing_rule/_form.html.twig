@@ -1,3 +1,16 @@
+{% set argument_prototype %}
+    <div data-routing-rule-form-argument-item>
+        <div class="input-group input-group-sm">
+            {{ form_widget(form.arguments.vars.prototype) }}
+            <button
+                type="button"
+                class="btn btn-outline-danger"
+                data-action="click->routing-rule-form#removeArgument"
+            >remove</button>
+        </div>
+    </div>
+{% endset %}
+
 {{ form_start(form, {
     attr: {
         'data-controller': 'routing-rule-form'
@@ -37,8 +50,43 @@
                 }) }}
             </div>
 
-            <div class="col-md-6" data-routing-rule-form-target="argumentRow">
-                {{ form_row(form.argument) }}
+            <div class="col-md-6" data-routing-rule-form-target="argumentsRow">
+                <div class="mb-3">
+                    {{ form_label(form.arguments) }}
+                    {{ form_errors(form.arguments) }}
+                    {{ form_help(form.arguments) }}
+
+                    <div
+                        class="d-grid gap-2 mt-2"
+                        data-routing-rule-form-target="argumentsCollection"
+                        data-routing-rule-form-index="{{ form.arguments|length }}"
+                    >
+                        <div class="d-grid gap-2" data-routing-rule-form-target="argumentsItems">
+                            {% for argument_form in form.arguments %}
+                                <div data-routing-rule-form-argument-item>
+                                    <div class="input-group input-group-sm">
+                                        {{ form_widget(argument_form) }}
+                                        <button
+                                            type="button"
+                                            class="btn btn-outline-danger"
+                                            data-action="click->routing-rule-form#removeArgument"
+                                        >remove</button>
+                                    </div>
+                                    {{ form_errors(argument_form) }}
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <template data-routing-rule-form-target="argumentsPrototype">{{ argument_prototype|raw }}</template>
+
+                        <button
+                            type="button"
+                            class="btn btn-sm btn-outline-secondary align-self-start"
+                            data-action="click->routing-rule-form#addArgument"
+                            data-no-prefetch
+                        >add argument</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -54,6 +102,10 @@
 
             <div class="col-md-12" data-routing-rule-form-target="projectRow">
                 {{ form_row(form.project) }}
+            </div>
+
+            <div class="col-md-12" data-routing-rule-form-target="applicationRow">
+                {{ form_row(form.application) }}
             </div>
         </div>
     </div>
@@ -106,4 +158,8 @@
     <button class="btn btn-sm btn-success">save</button>
 </div>
 
-{{ form_end(form) }}
+{% if form._token is defined %}
+    {{ form_widget(form._token) }}
+{% endif %}
+
+{{ form_end(form, { render_rest: false }) }}

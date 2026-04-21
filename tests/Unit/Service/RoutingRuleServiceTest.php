@@ -7,76 +7,89 @@ use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\Project;
 use Symfonicat\Entity\RoutingRule;
 use Symfonicat\Repository\RoutingRuleRepository;
+use Symfonicat\Service\PathService;
 use Symfonicat\Service\RoutingRuleService;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 /**
- * Guarantees the two reservation checks the RoutingRuleSubscriber relies on:
- *   - "admin" is never resolved from the repository, regardless of what rows
- *     somebody (mistakenly) typed into the database via the admin UI.
- *   - Non-reserved arguments forward through to the repository verbatim.
+ * Guarantees the path matching checks the RoutingRuleSubscriber relies on.
  */
 final class RoutingRuleServiceTest extends TestCase
 {
-    public function testDomainLookupSkipsRepositoryForReservedAdminArgument(): void
-    {
-        $repo = $this->createMock(RoutingRuleRepository::class);
-        $repo->expects(self::never())->method('findOneTypeDomainByDomainAndArgument');
-
-        $service = new RoutingRuleService($repo);
-        $domain = (new Domain())->setId('example.com');
-
-        self::assertNull($service->getTypeDomainByDomainAndArgument($domain, 'admin'));
-        self::assertNull($service->getTypeDomainByDomainAndArgument($domain, 'ADMIN'));
-        self::assertNull($service->getTypeDomainByDomainAndArgument($domain, '  admin '));
-    }
-
-    public function testProjectLookupSkipsRepositoryForReservedAdminArgument(): void
-    {
-        $repo = $this->createMock(RoutingRuleRepository::class);
-        $repo->expects(self::never())->method('findOneTypeProjectByProjectAndArgument');
-
-        $service = new RoutingRuleService($repo);
-        $project = (new Project())->setId('project1')->setName('Project 1');
-
-        self::assertNull($service->getTypeProjectByProjectAndArgument($project, 'admin'));
-    }
-
-    public function testDomainLookupDelegatesToRepositoryForNonReservedArgument(): void
+    public function testDomainLookupIgnoresReservedAdminArguments(): void
     {
         $domain = (new Domain())->setId('example.com');
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_DOMAIN)
             ->setDomain($domain)
-            ->setArgument('blog');
+            ->setArguments(['admin']);
 
         $repo = $this->createMock(RoutingRuleRepository::class);
         $repo->expects(self::once())
-            ->method('findOneTypeDomainByDomainAndArgument')
-            ->with(self::identicalTo($domain), 'blog')
-            ->willReturn($rule);
+            ->method('findTypeDomainByDomain')
+            ->with(self::identicalTo($domain))
+            ->willReturn([$rule]);
 
-        $service = new RoutingRuleService($repo);
+        $service = $this->service($repo);
 
-        self::assertSame($rule, $service->getTypeDomainByDomainAndArgument($domain, 'blog'));
+        self::assertNull($service->getTypeDomainByDomainAndPath($domain, '/admin'));
     }
 
-    public function testProjectLookupDelegatesToRepositoryForNonReservedArgument(): void
+    public function testProjectLookupIgnoresReservedAdminArguments(): void
     {
         $project = (new Project())->setId('project1')->setName('Project 1');
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_PROJECT)
             ->setProject($project)
-            ->setArgument('blog');
+            ->setArguments(['ADMIN']);
 
         $repo = $this->createMock(RoutingRuleRepository::class);
         $repo->expects(self::once())
-            ->method('findOneTypeProjectByProjectAndArgument')
-            ->with(self::identicalTo($project), 'blog')
-            ->willReturn($rule);
+            ->method('findTypeProjectByProject')
+            ->with(self::identicalTo($project))
+            ->willReturn([$rule]);
 
-        $service = new RoutingRuleService($repo);
+        $service = $this->service($repo);
 
-        self::assertSame($rule, $service->getTypeProjectByProjectAndArgument($project, 'blog'));
+        self::assertNull($service->getTypeProjectByProjectAndPath($project, '/admin'));
+    }
+
+    public function testDomainLookupReturnsFirstMatchingPathRule(): void
+    {
+        $domain = (new Domain())->setId('example.com');
+        $rule = (new RoutingRule())
+            ->setType(RoutingRule::TYPE_DOMAIN)
+            ->setDomain($domain)
+            ->setArguments(['blog']);
+
+        $repo = $this->createMock(RoutingRuleRepository::class);
+        $repo->expects(self::once())
+            ->method('findTypeDomainByDomain')
+            ->with(self::identicalTo($domain))
+            ->willReturn([$rule]);
+
+        $service = $this->service($repo);
+
+        self::assertSame($rule, $service->getTypeDomainByDomainAndPath($domain, '/blog'));
+    }
+
+    public function testProjectLookupReturnsFirstMatchingPathRule(): void
+    {
+        $project = (new Project())->setId('project1')->setName('Project 1');
+        $rule = (new RoutingRule())
+            ->setType(RoutingRule::TYPE_PROJECT)
+            ->setProject($project)
+            ->setArguments(['blog']);
+
+        $repo = $this->createMock(RoutingRuleRepository::class);
+        $repo->expects(self::once())
+            ->method('findTypeProjectByProject')
+            ->with(self::identicalTo($project))
+            ->willReturn([$rule]);
+
+        $service = $this->service($repo);
+
+        self::assertSame($rule, $service->getTypeProjectByProjectAndPath($project, '/blog'));
     }
 
     public function testCollectionLookupsAreStraightPassThrough(): void
@@ -97,9 +110,14 @@ final class RoutingRuleServiceTest extends TestCase
             ->with(self::identicalTo($project))
             ->willReturn($projectRules);
 
-        $service = new RoutingRuleService($repo);
+        $service = $this->service($repo);
 
         self::assertSame($domainRules, $service->getTypeDomainByDomain($domain));
         self::assertSame($projectRules, $service->getTypeProjectByProject($project));
+    }
+
+    private function service(RoutingRuleRepository $repository): RoutingRuleService
+    {
+        return new RoutingRuleService(new PathService(new RequestStack()), $repository);
     }
 }

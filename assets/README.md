@@ -25,6 +25,7 @@ These helpers are bootstrapped by `assets/app.js`. Module entrypoints do not nee
 - If a path is provided, it becomes `/m/{moduleId}/{path}`.
 - If no path is provided, the request goes to `/m/{moduleId}`.
 - Both helpers use `POST`.
+- Application shells set `window.symfonicatApplication`; when present, module requests send it as context headers so `/m/{moduleId}` can be authorized against the active application.
 - `.log(...)` behaves like `console.log(...)`, but prefixes the output with a styled module label such as `[module][analytics]:`
 - `.json(...)` expects a JSON response body.
 - `.html(...)` expects a raw HTML response body.

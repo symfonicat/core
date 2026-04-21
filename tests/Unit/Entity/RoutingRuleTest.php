@@ -16,7 +16,7 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
  * cannot afford to let regress:
  *   1. normalizeScope() zeros the non-applicable FK before persist/update, so
  *      callers can over-populate and the row stays internally consistent.
- *   2. validateArgument() forbids the reserved "admin" argument, which is the
+ *   2. validateArguments() forbids reserved path arguments, which is the
  *      backstop that keeps /admin from being overridden by the route-inversion
  *      subscriber.
  *
@@ -37,8 +37,14 @@ final class RoutingRuleTest extends TestCase
 
     public function testTypeChoicesExposeBothSupportedTypes(): void
     {
-        self::assertSame(['domain' => 'domain', 'project' => 'project'], RoutingRule::getTypeChoices());
-        self::assertSame(['domain', 'project'], RoutingRule::getTypes());
+        self::assertSame([
+            'domain' => 'domain',
+            'project' => 'project',
+            'application' => 'application',
+            'redirect' => 'redirect',
+            'route' => 'route',
+        ], RoutingRule::getTypeChoices());
+        self::assertSame(['domain', 'project', 'application', 'redirect', 'route'], RoutingRule::getTypes());
     }
 
     public function testSetTypeRejectsUnknownTypes(): void
@@ -69,7 +75,7 @@ final class RoutingRuleTest extends TestCase
 
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_DOMAIN)
-            ->setArgument('blog')
+            ->setArguments(['blog'])
             ->setDomain($domain)
             ->setProject($project);
 
@@ -86,7 +92,7 @@ final class RoutingRuleTest extends TestCase
 
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_PROJECT)
-            ->setArgument('blog')
+            ->setArguments(['blog'])
             ->setDomain($domain)
             ->setProject($project);
 
@@ -102,7 +108,7 @@ final class RoutingRuleTest extends TestCase
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_DOMAIN)
             ->setDomain((new Domain())->setId('example.com'))
-            ->setArgument($argument);
+            ->setArguments([$argument]);
 
         $violations = $this->validator->validate($rule);
 
@@ -127,7 +133,7 @@ final class RoutingRuleTest extends TestCase
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_DOMAIN)
             ->setDomain((new Domain())->setId('example.com'))
-            ->setArgument('admin');
+            ->setArguments(['admin']);
 
         $violations = $this->validator->validate($rule);
 
@@ -150,7 +156,7 @@ final class RoutingRuleTest extends TestCase
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_DOMAIN)
             ->setDomain((new Domain())->setId('example.com'))
-            ->setArgument('blog');
+            ->setArguments(['blog']);
 
         self::assertCount(0, $this->validator->validate($rule));
     }
@@ -159,7 +165,7 @@ final class RoutingRuleTest extends TestCase
     {
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_DOMAIN)
-            ->setArgument('blog');
+            ->setArguments(['blog']);
 
         $violations = $this->validator->validate($rule);
 
@@ -170,7 +176,7 @@ final class RoutingRuleTest extends TestCase
     {
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_PROJECT)
-            ->setArgument('blog');
+            ->setArguments(['blog']);
 
         $violations = $this->validator->validate($rule);
 

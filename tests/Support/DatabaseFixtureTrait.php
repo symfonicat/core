@@ -46,11 +46,14 @@ trait DatabaseFixtureTrait
         $tables = [
             // Children first to keep the intent readable even though FK checks are off.
             'symfonicat_routing_rule',
+            'symfonicat_application_env',
             'symfonicat_project_env',
             'symfonicat_domain_env',
+            'symfonicat_module_application',
             'symfonicat_module_project',
             'symfonicat_module_domain',
             'symfonicat_domain_project',
+            'symfonicat_application',
             'symfonicat_module',
             'symfonicat_project',
             'symfonicat_domain',
@@ -80,12 +83,10 @@ trait DatabaseFixtureTrait
         $this->entityManager()->clear();
     }
 
-    protected function createDomain(string $id, bool $routeOverride = false, ?string $routeName = null): Domain
+    protected function createDomain(string $id): Domain
     {
         $domain = (new Domain())
-            ->setId($id)
-            ->setRouteOverride($routeOverride)
-            ->setRouteName($routeName);
+            ->setId($id);
 
         $this->entityManager()->persist($domain);
         $this->entityManager()->flush();
@@ -97,14 +98,10 @@ trait DatabaseFixtureTrait
         string $id,
         string $name,
         ?Domain $domain = null,
-        bool $routeOverride = false,
-        ?string $routeName = null,
     ): Project {
         $project = (new Project())
             ->setId($id)
-            ->setName($name)
-            ->setRouteOverride($routeOverride)
-            ->setRouteName($routeName);
+            ->setName($name);
 
         if ($domain instanceof Domain) {
             $domain->addProject($project);
@@ -168,7 +165,7 @@ trait DatabaseFixtureTrait
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_DOMAIN)
             ->setDomain($domain)
-            ->setArgument($argument);
+            ->setArguments([$argument]);
 
         $this->entityManager()->persist($rule);
         $this->entityManager()->flush();
@@ -181,7 +178,7 @@ trait DatabaseFixtureTrait
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_PROJECT)
             ->setProject($project)
-            ->setArgument($argument);
+            ->setArguments([$argument]);
 
         $this->entityManager()->persist($rule);
         $this->entityManager()->flush();

@@ -11,7 +11,7 @@ use Doctrine\Persistence\ManagerRegistry;
 /**
  * @extends ServiceEntityRepository<RoutingRule>
  */
-final class RoutingRuleRepository extends ServiceEntityRepository
+class RoutingRuleRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
     {
@@ -46,20 +46,6 @@ final class RoutingRuleRepository extends ServiceEntityRepository
             ->getResult();
     }
 
-    public function findOneTypeDomainByDomainAndArgument(Domain $domain, string $argument): ?RoutingRule
-    {
-        return $this->createQueryBuilder('rule')
-            ->andWhere('rule.type = :type')
-            ->andWhere('IDENTITY(rule.domain) = :domainId')
-            ->andWhere('rule.argument = :argument')
-            ->setParameter('type', RoutingRule::TYPE_DOMAIN)
-            ->setParameter('domainId', $domain->getId())
-            ->setParameter('argument', $argument)
-            ->setMaxResults(1)
-            ->getQuery()
-            ->getOneOrNullResult();
-    }
-
     public function findOneRedirectRuleForProject(Project $project): ?RoutingRule
     {
         return $this->createQueryBuilder('rule')
@@ -88,20 +74,6 @@ final class RoutingRuleRepository extends ServiceEntityRepository
             ->getResult();
     }
 
-    public function findOneTypeProjectByProjectAndArgument(Project $project, string $argument): ?RoutingRule
-    {
-        return $this->createQueryBuilder('rule')
-            ->andWhere('rule.type = :type')
-            ->andWhere('IDENTITY(rule.project) = :projectId')
-            ->andWhere('rule.argument = :argument')
-            ->setParameter('type', RoutingRule::TYPE_PROJECT)
-            ->setParameter('projectId', $project->getId())
-            ->setParameter('argument', $argument)
-            ->setMaxResults(1)
-            ->getQuery()
-            ->getOneOrNullResult();
-    }
-
     public function findOneRouteRuleForDomain(Domain $domain): ?RoutingRule
     {
         return $this->createQueryBuilder('rule')
@@ -128,5 +100,18 @@ final class RoutingRuleRepository extends ServiceEntityRepository
             ->setMaxResults(1)
             ->getQuery()
             ->getOneOrNullResult();
+    }
+
+    /**
+     * @return RoutingRule[]
+     */
+    public function findTypeApplication(): array
+    {
+        return $this->createQueryBuilder('rule')
+            ->andWhere('rule.type = :type')
+            ->andWhere('rule.application IS NOT NULL')
+            ->setParameter('type', RoutingRule::TYPE_APPLICATION)
+            ->getQuery()
+            ->getResult();
     }
 }

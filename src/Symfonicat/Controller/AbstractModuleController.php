@@ -4,7 +4,7 @@ namespace Symfonicat\Controller;
 
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Attribute\Route;
+use Symfonicat\Service\ApplicationService;
 use Symfonicat\Service\DomainService;
 use Symfonicat\Service\ModuleService;
 use Symfonicat\Service\PathService;
@@ -21,32 +21,34 @@ abstract class AbstractModuleController extends AbstractController
         public readonly ModuleService $moduleService,
         public readonly ProjectService $projectService,
         public readonly PathService $pathService,
+        public readonly ?ApplicationService $applicationService = null,
 
     ) {
 
-        if (
+        $module = $this->moduleService->load();
 
-            ($project = $this->projectService->load()) &&
-            ($module = $this->moduleService->load()) &&
-            $project->getModules()->contains($module)
-
-        ) {
-
-            $this->shouldRun = TRUE;
-
+        if (!$module) {
+            return;
         }
 
-        if (
+        $project = $this->projectService->load();
 
-            ($domain = $this->domainService->load()) &&
-            ($module = $this->moduleService->load()) &&
-            (!$project) &&
-            $domain->getModules()->contains($module)
-
-        ) {
-
+        if ($project && $project->hasModule($module)) {
             $this->shouldRun = TRUE;
 
+            return;
+        }
+
+        $application = $this->applicationService?->load();
+
+        if ($application && $application->hasModule($module)) {
+            $this->shouldRun = TRUE;
+
+            return;
+        }
+
+        if (!$project && ($domain = $this->domainService->load()) && $domain->hasModule($module)) {
+            $this->shouldRun = TRUE;
         }
 
     }

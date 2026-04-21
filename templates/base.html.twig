@@ -27,6 +27,8 @@
             console.log('----------------------')
         </script>
 
+        {{ applicationHelper() | indent_body(8) }}
+
 {% block stylesheets -%}
 {{- encore_entry_link_tags('symfonicat') | indent_links(8) -}}
 {%- endblock %}

@@ -1,0 +1,5 @@
+{% extends 'admin/base.html.twig' %}
+{% block title %}New Application{% endblock %}
+{% block body %}
+    {{ include('admin/application/_form.html.twig', { form: form, button_label: 'create' }) }}
+{% endblock %}

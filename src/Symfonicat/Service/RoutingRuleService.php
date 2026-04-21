@@ -9,9 +9,8 @@ use Symfonicat\Repository\RoutingRuleRepository;
 
 final class RoutingRuleService
 {
-    private const RESERVED_ARGUMENT = 'admin';
-
     public function __construct(
+        private readonly PathService $pathService,
         private readonly RoutingRuleRepository $routingRuleRepository,
     ) {
     }
@@ -29,13 +28,15 @@ final class RoutingRuleService
         return $this->routingRuleRepository->findTypeDomainByDomain($domain);
     }
 
-    public function getTypeDomainByDomainAndArgument(Domain $domain, string $argument): ?RoutingRule
+    public function getTypeDomainByDomainAndPath(Domain $domain, string $path): ?RoutingRule
     {
-        if ($this->isReservedArgument($argument)) {
-            return null;
+        foreach ($this->routingRuleRepository->findTypeDomainByDomain($domain) as $rule) {
+            if ($this->matchesPath($rule, $path)) {
+                return $rule;
+            }
         }
 
-        return $this->routingRuleRepository->findOneTypeDomainByDomainAndArgument($domain, $argument);
+        return null;
     }
 
     public function getRedirectRuleForProject(Project $project): ?RoutingRule
@@ -51,13 +52,15 @@ final class RoutingRuleService
         return $this->routingRuleRepository->findTypeProjectByProject($project);
     }
 
-    public function getTypeProjectByProjectAndArgument(Project $project, string $argument): ?RoutingRule
+    public function getTypeProjectByProjectAndPath(Project $project, string $path): ?RoutingRule
     {
-        if ($this->isReservedArgument($argument)) {
-            return null;
+        foreach ($this->routingRuleRepository->findTypeProjectByProject($project) as $rule) {
+            if ($this->matchesPath($rule, $path)) {
+                return $rule;
+            }
         }
 
-        return $this->routingRuleRepository->findOneTypeProjectByProjectAndArgument($project, $argument);
+        return null;
     }
 
     public function getRouteRuleForDomain(Domain $domain): ?RoutingRule
@@ -70,8 +73,25 @@ final class RoutingRuleService
         return $this->routingRuleRepository->findOneRouteRuleForProject($project);
     }
 
-    private function isReservedArgument(string $argument): bool
+    public function getApplicationRuleForPath(string $path): ?RoutingRule
     {
-        return strtolower(trim($argument)) === self::RESERVED_ARGUMENT;
+        foreach ($this->routingRuleRepository->findTypeApplication() as $rule) {
+            if ($this->matchesPath($rule, $path)) {
+                return $rule;
+            }
+        }
+
+        return null;
+    }
+
+    private function matchesPath(RoutingRule $rule, string $path): bool
+    {
+        foreach ($rule->getArguments() as $argument) {
+            if (in_array(strtolower(trim($argument)), RoutingRule::RESERVED_ARGUMENTS, true)) {
+                return false;
+            }
+        }
+
+        return $this->pathService->matchesArguments($rule->getArguments(), $path);
     }
 }

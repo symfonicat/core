@@ -3,9 +3,11 @@
 namespace Symfonicat\EventSubscriber;
 
 use Symfonicat\Controller\MainController;
+use Symfonicat\Entity\Application;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\Project;
 use Symfonicat\Entity\RoutingRule;
+use Symfonicat\Service\ApplicationService;
 use Symfonicat\Service\DomainService;
 use Symfonicat\Service\PathService;
 use Symfonicat\Service\ProjectService;
@@ -21,14 +23,18 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Exception\MissingMandatoryParametersException;
 use Symfony\Component\Routing\Exception\RouteNotFoundException;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Twig\Environment;
+use Twig\Error\LoaderError;
 
 final class RoutingRuleSubscriber implements EventSubscriberInterface
 {
     public function __construct(
         private readonly RoutingRuleService $routingRuleService,
+        private readonly ApplicationService $applicationService,
         private readonly DomainService $domainService,
         private readonly ProjectService $projectService,
         private readonly PathService $pathService,
+        private readonly Environment $twig,
         private readonly UrlGeneratorInterface $urlGenerator,
         private readonly HttpKernelInterface $httpKernel,
     ) {
@@ -54,8 +60,11 @@ final class RoutingRuleSubscriber implements EventSubscriberInterface
             return;
         }
 
+        $isModulePath = $path === '/m' || str_starts_with($path, '/m/');
+
         $domain = $this->domainService->load();
         $project = $this->projectService->load();
+        $path = $this->pathService->path();
 
         if ($domain !== null) {
             $redirectRule = $this->routingRuleService->getRedirectRuleForDomain($domain);
@@ -99,12 +108,20 @@ final class RoutingRuleSubscriber implements EventSubscriberInterface
             }
         }
 
-        $argument = $this->pathService->arg(0);
-        if ($argument === null || $argument === '') {
+        if ($isModulePath) {
             return;
         }
 
-        if ($domain !== null && $this->routingRuleService->getTypeDomainByDomainAndArgument($domain, $argument) !== null) {
+        $application = $this->applicationService->load();
+        if ($application !== null) {
+            $request->attributes->set('application', $application);
+            $request->attributes->set('symfonicat_routing_rule_active', true);
+            $event->setResponse($this->renderApplication($application));
+
+            return;
+        }
+
+        if ($domain !== null && $this->routingRuleService->getTypeDomainByDomainAndPath($domain, $path) !== null) {
             $request->attributes->set('_controller', MainController::class.'::main');
             $request->attributes->set('_route', 'symfonicat_routing_rule_domain');
             $request->attributes->set('_route_params', [
@@ -116,7 +133,7 @@ final class RoutingRuleSubscriber implements EventSubscriberInterface
             return;
         }
 
-        if ($project !== null && $this->routingRuleService->getTypeProjectByProjectAndArgument($project, $argument) !== null) {
+        if ($project !== null && $this->routingRuleService->getTypeProjectByProjectAndPath($project, $path) !== null) {
             $request->attributes->set('symfonicat_use_project_catch_all', false);
 
             return;
@@ -223,6 +240,27 @@ final class RoutingRuleSubscriber implements EventSubscriberInterface
         $overrideRequest->attributes->set('symfonicat_route_override_active', true);
 
         return $this->httpKernel->handle($overrideRequest, HttpKernelInterface::SUB_REQUEST);
+    }
+
+    private function renderApplication(Application $application): Response
+    {
+        $template = $this->resolveApplicationTemplate(
+            sprintf('application/overrides/%s.html.twig', $application->getId()),
+            'application/main.html.twig',
+        );
+
+        return new Response($this->twig->render($template));
+    }
+
+    private function resolveApplicationTemplate(string $overrideTemplate, string $fallbackTemplate): string
+    {
+        try {
+            $this->twig->load($overrideTemplate);
+
+            return $overrideTemplate;
+        } catch (LoaderError) {
+            return $fallbackTemplate;
+        }
     }
 
     private function withPort(Request $request, string $url): string

@@ -1,63 +1,76 @@
 # Symfonicat
 
-`symfonicat/core` is the full Symfonicat Symfony application. It ships the public runtime, the separate admin runtime, webpack integration, Electron-facing commands, and the Docker/FrankenPHP starter shell in one repository.
+`symfonicat/core` is the full Symfonicat Symfony application. It ships the public runtime, admin runtime, Doctrine model, webpack integration, Electron-facing commands, and Docker/FrankenPHP starter shell in one repository.
 
-## What It Does
-
-- resolves a base `Domain` and optional subdomain `Project`
-- renders domain and project shells from one Symfony app
-- mounts database-backed modules onto domains or projects
-- keeps admin auth and admin CRUD inside Symfonicat
-- exposes Electron/runtime data from the same install target
-
-## Routing Model
-
-Symfonicat has two public routing defaults:
-
-- projects are default client-side routed
-- domains are default Symfony-side routed
-
-`RoutingRule.argument` only applies to the legacy `domain` and `project` rule types.
-- legacy `domain` and `project` rules require a non-empty argument through entity validation; redirect and route rules omit it and normalize it to an empty string
-- the routing rule argument `admin` is reserved through entity validation, cannot be used by domain or project routing rules, and is ignored by runtime matching
-- the runtime ignores any routing rule with argument `admin`, even if invalid data exists in the database
-- legacy `domain` rules still force the matching argument into the domain shell
-- legacy `project` rules still bypass the project catch-all so Symfony handles the request
-- redirect rules apply to a whole domain or project and redirect to a domain or project
-- route rules apply to the root of a domain or project and render a named Symfony route
-- the routing rule form groups rule, match, redirect, and route fields into separate cards, keeps `type`, `redirectType`, and `routeType` together in the rule card, hides `argument` for redirect and route rules, hides unused match-field columns cleanly so the full-width project selector does not leave an empty slot above it, and keeps redirect target on the left with the selected redirect domain or project field on the right
-
-- a domain route rule applies only when no project is active and the request is for `/`
-- a project route rule applies when a project is active and the request is for `/`
+Bootstrap seeds `localhost`, `example.com`, `project1`, the `test` application, the `analytics` module, and sample `color` env values. The `test` application has Analytics enabled and `color=red`.
 
 ## Runtime Shape
 
-- `/` renders the domain shell when no project is resolved
-- `/{path}` renders the project shell when a project is resolved and the project catch-all is still enabled for that argument
-- top-level public controllers are imported with a guard so project subdomains keep the project catch-all unless a legacy project routing rule disables it for the current argument
-- project rendering checks `project/overrides/{project.id}.html.twig` before falling back to `project/main.html.twig`
-- domain rendering checks `domain/overrides/{domain.id}.html.twig` before falling back to `domain/main.html.twig`
-- modules attach to either domains or projects and expose backend endpoints under `/m/{id}`
-- webpack entries are discovered from `symfonicat:data:webpack` with filesystem fallback under `assets/domains`, `assets/projects`, and `assets/modules`
-- `Project.id` is the canonical, immutable project identifier for subdomains, asset entry names, and Electron/runtime data
-- `Module.id` is the canonical, immutable module identifier for backend routes and module asset entry names
-- `symfonicat:schema:update` synchronizes `Module` rows from `assets/modules/{id}/package.json` and asks before deleting referenced modules removed from disk
+- `Domain` resolves the base host.
+- `Project` resolves the single supported subdomain layer.
+- `Application` resolves from `RoutingRule` regex path matches.
+- `/` renders the domain shell when no project is active.
+- `/{path}` renders the project shell when a project is active and the project catch-all remains enabled.
+- top-level public controllers are guarded so project subdomains keep the project catch-all unless a legacy project routing rule disables it for the current regex path.
+- application shells expose their matched application context so `/m/{module}` calls can run when the module is attached to that application.
+
+## Routing Rules
+
+`RoutingRule.arguments` is a multifield list of regex path segments. The segments are joined with `/` and matched against the full current path. Reserved arguments live in `RoutingRule::RESERVED_ARGUMENTS`; `admin` is reserved and ignored by runtime matching.
+
+Supported rule types:
+
+- `domain`: render the domain shell for a matching regex path.
+- `project`: bypass the project catch-all for a matching regex path.
+- `application`: render `templates/application/overrides/{application.id}.html.twig` or `templates/application/main.html.twig`.
+- `redirect`: redirect a whole domain or project to a domain or project.
+- `route`: render a named Symfony route for a domain root or project root.
+
+The routing-rule form keeps type selectors in the rule card, the regex `arguments` collection beside them, scope selectors in the match card, redirect target on the left, and redirect destination on the right.
+
+## Env
+
+Runtime env values are resolved through `EnvService` and exposed through Twig `env()`.
+
+Precedence is:
+
+1. application env
+2. domain env
+3. project env
+
+Project values overwrite domain values, and domain values overwrite application values.
+
+## Assets
+
+Webpack entries are discovered from `symfonicat:data:webpack`, with database-backed rows and filesystem fallback under:
+
+- `assets/application/{id}` -> `application/{id}`
+- `assets/domains/{id}` -> `domains/{id}`
+- `assets/projects/{id}` -> `projects/{id}`
+- `assets/modules/{id}` -> `modules/{id}`
+
+The public asset stack uses `assets/symfonicat.js`, `assets/stimulus.js`, `assets/controllers.json`, and `assets/controllers/`. The admin asset stack uses `assets/symfonicat_admin.js`, `assets/stimulus_admin.js`, `assets/controllers_admin.json`, and `assets/controllers_admin/`.
+
+## Sync
+
+`symfonicat:schema:update` synchronizes:
+
+- modules from `assets/modules/{id}/package.json`
+- applications from `assets/application/{id}`
+
+Missing application rows are created with only their `id`. Module deletions are confirmed when referencing entity rows exist.
+
+Run schema sync with an interactive terminal when confirmations may be needed. With Docker, use `docker exec -it php bin/console symfonicat:schema:update`; non-interactive runs fail instead of accepting defaults.
 
 ## Admin
 
-- admin lives under `/admin`
-- admin auth is isolated from any host app user system
-- the Docker image includes `ext-tidy`, and the shared base layouts use it to format the rendered `body` block for readable HTML source while keeping the first emitted line flush with the Twig print site
-- admins are managed with `symfonicat:admin:create` and `symfonicat:admin:delete`
+Admin lives under `/admin`, uses its own `Admin` entity/table, and is isolated from any host user system. Login is Symfony security session auth plus TOTP MFA, with admin lookups cached in Redis. Admin CRUD covers applications at `/admin/a*`, domains at `/admin/d*`, projects at `/admin/p*`, env keys at `/admin/e*`, and routing rules at `/admin/r*`.
 
-## Install
+Admins are managed with:
 
 ```bash
-composer create-project symfonicat/core symfonicat
-cd symfonicat
-docker compose up -d
-npm install
-npm run dev
+bin/console symfonicat:admin:create <email> <password>
+bin/console symfonicat:admin:delete <email>
 ```
 
-For the full development README, runtime details, and local bootstrap notes, see [README.md](https://github.com/symfonicat/core/blob/main/README.md).
+For full install, Docker, Electron, and runtime details, see [README.md](https://github.com/symfonicat/core/blob/main/README.md).

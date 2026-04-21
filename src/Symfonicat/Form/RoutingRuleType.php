@@ -2,12 +2,15 @@
 
 namespace Symfonicat\Form;
 
+use Symfonicat\Entity\Application;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\Project;
 use Symfonicat\Entity\RoutingRule;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
+use Symfony\Component\Form\Extension\Core\Type\CollectionType;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
@@ -15,22 +18,32 @@ class RoutingRuleType extends AbstractType
 {
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-        // Reserved-argument enforcement lives on the entity
-        // (RoutingRule::validateArgument) so it fires for every persist path,
-        // not just this form. Duplicating it as a form-level Assert\Regex used
-        // to make the UI render the violation twice.
+        // Reserved-argument enforcement lives on the entity so it fires for
+        // every persist path, not just this form.
         $builder
-            ->add('argument', null, [
-                'label' => 'argument',
+            ->add('arguments', CollectionType::class, [
+                'entry_type' => TextType::class,
+                'entry_options' => [
+                    'label' => false,
+                    'attr' => [
+                        'placeholder' => 'regex segment',
+                    ],
+                ],
+                'label' => 'arguments',
                 'required' => false,
-                'empty_data' => '',
-                'help_html' => TRUE,
-                'help' => sprintf('The path argument to inverse default <b>Project</b> <code>client-side</code> or <b>Domain</b> <code>server-side</code> routing for<br /><b>%s</b> is reserved', RoutingRule::RESERVED_ARGUMENT),
+                'empty_data' => [],
+                'allow_add' => true,
+                'allow_delete' => true,
+                'delete_empty' => true,
+                'by_reference' => false,
+                'prototype' => true,
+                'help_html' => true,
+                'help' => sprintf('Regex path segments to match. Reserved: <b>%s</b>.', implode('</b>, <b>', RoutingRule::RESERVED_ARGUMENTS)),
             ])
             ->add('type', ChoiceType::class, [
                 'choices' => RoutingRule::getTypeChoices(),
                 'label' => 'type',
-                'help' => 'Choose domain, project, redirect, or route.',
+                'help' => 'Choose domain, project, application, redirect, or route.',
             ])
             ->add('redirectType', ChoiceType::class, [
                 'choices' => RoutingRule::getRedirectTypeChoices(),
@@ -68,6 +81,14 @@ class RoutingRuleType extends AbstractType
                 'required' => false,
                 'placeholder' => 'select a project',
                 'help' => 'Select the project this rule applies to.',
+            ])
+            ->add('application', EntityType::class, [
+                'class' => Application::class,
+                'choice_label' => 'id',
+                'label' => 'application',
+                'required' => false,
+                'placeholder' => 'select an application',
+                'help' => 'Select the application this rule renders.',
             ])
             ->add('redirectDomain', EntityType::class, [
                 'class' => Domain::class,

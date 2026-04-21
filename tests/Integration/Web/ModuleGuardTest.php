@@ -3,6 +3,8 @@
 namespace App\Tests\Integration\Web;
 
 use App\Tests\Support\SymfonicatWebTestCase;
+use Symfonicat\Entity\Application;
+use Symfonicat\Entity\RoutingRule;
 
 /**
  * End-to-end guards for /m/<module>/... routes.
@@ -55,6 +57,66 @@ final class ModuleGuardTest extends SymfonicatWebTestCase
             '"working":true',
             (string) $this->client()->getResponse()->getContent(),
             'installed module must serve its JSON payload',
+        );
+    }
+
+    public function testModuleRouteSucceedsWhenModuleInstalledOnApplicationContext(): void
+    {
+        $this->createDomain('example.com');
+        $module = $this->createModule('analytics', 'Analytics');
+        $application = (new Application())->setId('test');
+        $application->addModule($module);
+        $rule = (new RoutingRule())
+            ->setType(RoutingRule::TYPE_APPLICATION)
+            ->setApplication($application)
+            ->setArguments(['u', '*', 'x*']);
+
+        $this->entityManager()->persist($application);
+        $this->entityManager()->persist($rule);
+        $this->entityManager()->flush();
+
+        $this->setHost('example.com');
+        $this->client()->request('GET', '/u/foo/xxx');
+        self::assertResponseIsSuccessful('application routing rule should render the test application');
+
+        $this->client()->request('POST', '/m/analytics', [], [], [
+            'HTTP_X_SYMFONICAT_APPLICATION' => 'test',
+            'HTTP_X_SYMFONICAT_APPLICATION_PATH' => '/u/foo/xxx',
+        ]);
+
+        self::assertResponseIsSuccessful();
+        self::assertJson((string) $this->client()->getResponse()->getContent());
+        self::assertStringContainsString(
+            '"working":true',
+            (string) $this->client()->getResponse()->getContent(),
+            'application-installed module must serve its JSON payload from a matching application route context',
+        );
+    }
+
+    public function testModuleRouteRejectsApplicationContextThatDoesNotMatchRoutingRule(): void
+    {
+        $this->createDomain('example.com');
+        $module = $this->createModule('analytics', 'Analytics');
+        $application = (new Application())->setId('test');
+        $application->addModule($module);
+        $rule = (new RoutingRule())
+            ->setType(RoutingRule::TYPE_APPLICATION)
+            ->setApplication($application)
+            ->setArguments(['u', '*', 'x*']);
+
+        $this->entityManager()->persist($application);
+        $this->entityManager()->persist($rule);
+        $this->entityManager()->flush();
+
+        $this->setHost('example.com');
+        $this->client()->request('POST', '/m/analytics', [], [], [
+            'HTTP_X_SYMFONICAT_APPLICATION' => 'test',
+            'HTTP_X_SYMFONICAT_APPLICATION_PATH' => '/not-the-application-path',
+        ]);
+
+        self::assertResponseStatusCodeSame(
+            404,
+            'module request headers must map back to a real application routing rule before the module can run',
         );
     }
 

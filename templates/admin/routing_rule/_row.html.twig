@@ -1,11 +1,13 @@
 <tr id="routing_rule_{{ rule.id }}" class="btn-row">
     <td>{{ rule.type }}</td>
-    <td><a href="{{ path('app_routing_rule_show', {'id': rule.id}) }}">{{ rule.argument }}</a></td>
+    <td><a href="{{ path('app_routing_rule_show', {'id': rule.id}) }}">{{ rule.argumentsPath ?: '-' }}</a></td>
     <td>
         {% if rule.type == 'domain' %}
             domain: {{ rule.domain ? rule.domain.id : '-' }}
         {% elseif rule.type == 'project' %}
             project: {{ rule.project ? rule.project.id ~ ' ' ~ rule.project.name : '-' }}
+        {% elseif rule.type == 'application' %}
+            application: {{ rule.application ? rule.application.id : '-' }}
         {% elseif rule.type == 'redirect' %}
             {{ rule.redirectType }}: {{ rule.domain ? rule.domain.id : (rule.project ? rule.project.name : '-') }}
         {% else %}
@@ -17,6 +19,8 @@
             force domain shell
         {% elseif rule.type == 'project' %}
             bypass project catch-all
+        {% elseif rule.type == 'application' %}
+            render application shell
         {% elseif rule.type == 'redirect' %}
             {{ rule.redirectTarget }}: {{ rule.redirectDomain ? rule.redirectDomain.id : (rule.redirectProject ? rule.redirectProject.id ~ ' ' ~ rule.redirectProject.name : '-') }}
         {% else %}

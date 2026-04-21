@@ -26,6 +26,7 @@ const loadModuleData = (projectDir) => {
         console.warn('[webpack] symfonicat:data:webpack failed; falling back to assets directories.');
 
         return {
+            applications: listDirNames(path.join(projectDir, 'assets', 'application')),
             domains: listDirNames(path.join(projectDir, 'assets', 'domains')),
             projects: listDirNames(path.join(projectDir, 'assets', 'projects')),
             modules: listDirNames(path.join(projectDir, 'assets', 'modules')),
@@ -51,6 +52,19 @@ module.exports = function configureSymfonicat(Encore, options = __dirname) {
         };
     const { projectDir, packageDir } = config;
     const moduleData = loadModuleData(projectDir);
+
+    (moduleData.applications || []).forEach((applicationId) => {
+        if (!applicationId) {
+            return;
+        }
+
+        const applicationPath = path.join(projectDir, 'assets', 'application', applicationId, 'index.js');
+        if (!fs.existsSync(applicationPath)) {
+            return;
+        }
+
+        Encore.addEntry('application/' + applicationId, `./assets/application/${applicationId}/index.js`);
+    });
 
     moduleData.projects.forEach((projectId) => {
         if (!projectId) {

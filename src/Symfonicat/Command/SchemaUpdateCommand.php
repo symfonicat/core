@@ -2,6 +2,7 @@
 
 namespace Symfonicat\Command;
 
+use Symfonicat\Service\ApplicationService;
 use Symfonicat\Entity\Module;
 use Symfonicat\Service\ModuleService;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -12,11 +13,12 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
     name: 'symfonicat:schema:update',
-    description: 'Synchronize filesystem modules with the module rows stored in the database.',
+    description: 'Synchronize filesystem modules and applications with database rows.',
 )]
 final class SchemaUpdateCommand extends Command
 {
     public function __construct(
+        private readonly ApplicationService $applicationService,
         private readonly ModuleService $moduleService,
     ) {
         parent::__construct();
@@ -27,7 +29,7 @@ final class SchemaUpdateCommand extends Command
         $io = new SymfonyStyle($input, $output);
 
         try {
-            $result = $this->moduleService->sync(function (Module $module, array $references) use ($io): bool {
+            $moduleResult = $this->moduleService->sync(function (Module $module, array $references) use ($input, $io): bool {
                 $io->warning(sprintf(
                     'Module "%s" no longer exists under assets/modules and still has referencing entity rows.',
                     $module->getId(),
@@ -46,10 +48,22 @@ final class SchemaUpdateCommand extends Command
                     ),
                 );
 
-                return $io->confirm(
+                return $this->confirmRequired(
+                    $input,
+                    $io,
                     sprintf('Delete those rows and remove module "%s"?', $module->getId()),
                     false,
                 );
+            });
+
+            $applicationResult = $this->applicationService->sync(function (array $applicationIds) use ($input, $io): bool {
+                $io->section('Missing applications');
+                $io->listing(array_map(
+                    static fn (string $applicationId): string => sprintf('%s from assets/application/%s', $applicationId, $applicationId),
+                    $applicationIds,
+                ));
+
+                return $this->confirmRequired($input, $io, 'Create these application rows?', false);
             });
         } catch (\Throwable $exception) {
             $io->error($exception->getMessage());
@@ -57,23 +71,23 @@ final class SchemaUpdateCommand extends Command
             return Command::FAILURE;
         }
 
-        if ($result['created'] !== []) {
+        if ($moduleResult['created'] !== []) {
             $io->section('Created modules');
             $io->listing(array_map(
                 static fn (array $module): string => sprintf('%s (%s)', $module['id'], $module['name']),
-                $result['created'],
+                $moduleResult['created'],
             ));
         }
 
-        if ($result['updated'] !== []) {
+        if ($moduleResult['updated'] !== []) {
             $io->section('Updated modules');
             $io->listing(array_map(
                 static fn (array $module): string => sprintf('%s: "%s" -> "%s"', $module['id'], $module['from'], $module['to']),
-                $result['updated'],
+                $moduleResult['updated'],
             ));
         }
 
-        if ($result['deleted'] !== []) {
+        if ($moduleResult['deleted'] !== []) {
             $io->section('Deleted modules');
             $io->listing(array_map(
                 static function (array $module): string {
@@ -89,22 +103,48 @@ final class SchemaUpdateCommand extends Command
 
                     return sprintf('%s after removing references from %s', $details, $referenceSummary);
                 },
-                $result['deleted'],
+                $moduleResult['deleted'],
+            ));
+        }
+
+        if ($applicationResult['created'] !== []) {
+            $io->section('Created applications');
+            $io->listing(array_map(
+                static fn (array $application): string => $application['id'],
+                $applicationResult['created'],
             ));
         }
 
         if (
-            $result['created'] === []
-            && $result['updated'] === []
-            && $result['deleted'] === []
+            $moduleResult['created'] === []
+            && $moduleResult['updated'] === []
+            && $moduleResult['deleted'] === []
+            && $applicationResult['created'] === []
         ) {
-            $io->success('Module rows already match assets/modules.');
+            $io->success('Module and application rows already match filesystem assets.');
 
             return Command::SUCCESS;
         }
 
-        $io->success('Module rows synchronized from assets/modules.');
+        $io->success('Module and application rows synchronized from filesystem assets.');
 
         return Command::SUCCESS;
+    }
+
+    private function confirmRequired(InputInterface $input, SymfonyStyle $io, string $question, bool $default): bool
+    {
+        if (!$input->isInteractive() || !$this->hasInteractiveTerminal()) {
+            throw new \RuntimeException(sprintf(
+                'Confirmation is required for "%s", but stdin is not interactive. Run this command with an attached terminal; with Docker use: docker exec -it php bin/console symfonicat:schema:update',
+                $question,
+            ));
+        }
+
+        return $io->confirm($question, $default);
+    }
+
+    private function hasInteractiveTerminal(): bool
+    {
+        return defined('STDIN') && function_exists('stream_isatty') && stream_isatty(STDIN);
     }
 }

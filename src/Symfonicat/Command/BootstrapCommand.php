@@ -6,13 +6,18 @@ use Doctrine\DBAL\ParameterType;
 use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
+use Symfonicat\Entity\Application;
+use Symfonicat\Entity\ApplicationEnv;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\DomainEnv;
 use Symfonicat\Entity\Env;
+use Symfonicat\Entity\Module;
 use Symfonicat\Entity\Project;
 use Symfonicat\Entity\ProjectEnv;
+use Symfonicat\Repository\ApplicationRepository;
 use Symfonicat\Repository\DomainRepository;
 use Symfonicat\Repository\EnvRepository;
+use Symfonicat\Repository\ModuleRepository;
 use Symfonicat\Repository\ProjectRepository;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -32,8 +37,10 @@ final class BootstrapCommand extends Command
 
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
+        private readonly ApplicationRepository $applicationRepository,
         private readonly DomainRepository $domainRepository,
         private readonly EnvRepository $envRepository,
+        private readonly ModuleRepository $moduleRepository,
         private readonly ProjectRepository $projectRepository,
     ) {
         parent::__construct();
@@ -191,6 +198,12 @@ final class BootstrapCommand extends Command
         $localhostColor = $this->ensureDomainEnvValue($localhost, $env, 'blue');
         $exampleColor = $this->ensureDomainEnvValue($exampleDomain, $env, 'blue');
         $projectColor = $this->ensureProjectEnvValue($project, $env, 'green');
+        [$analyticsModule, $createdAnalyticsModule, $updatedAnalyticsModule] = $this->ensureAnalyticsModule();
+        [$application, $createdApplication] = $this->ensureTestApplication();
+        $attachedAnalyticsToApplication = $this->attachModuleToApplication($application, $analyticsModule);
+        $attachedAnalyticsToExample = $this->attachModuleToDomain($exampleDomain, $analyticsModule);
+        $attachedAnalyticsToLocalhost = $this->attachModuleToDomain($localhost, $analyticsModule);
+        $applicationColor = $this->ensureApplicationEnvValue($application, $env, 'red');
 
         $this->entityManager->flush();
 
@@ -201,9 +214,16 @@ final class BootstrapCommand extends Command
             || $createdProject
             || $updatedProject
             || $attachedProjectToExample
+            || $createdAnalyticsModule
+            || $updatedAnalyticsModule
+            || $createdApplication
+            || $attachedAnalyticsToApplication
+            || $attachedAnalyticsToExample
+            || $attachedAnalyticsToLocalhost
             || $localhostColor !== 'unchanged'
             || $exampleColor !== 'unchanged'
             || $projectColor !== 'unchanged'
+            || $applicationColor !== 'unchanged'
         ) {
             $messages = [];
 
@@ -239,6 +259,38 @@ final class BootstrapCommand extends Command
                 $messages[] = 'Project 1 already attached to example.com';
             }
 
+            if ($createdAnalyticsModule) {
+                $messages[] = 'seeded Analytics module';
+            } elseif ($updatedAnalyticsModule) {
+                $messages[] = 'updated Analytics module';
+            } else {
+                $messages[] = 'Analytics module already present';
+            }
+
+            if ($createdApplication) {
+                $messages[] = 'seeded test application';
+            } else {
+                $messages[] = 'test application already present';
+            }
+
+            if ($attachedAnalyticsToApplication) {
+                $messages[] = 'attached Analytics module to test application';
+            } else {
+                $messages[] = 'Analytics module already attached to test application';
+            }
+
+            if ($attachedAnalyticsToExample) {
+                $messages[] = 'attached Analytics module to example.com domain';
+            } else {
+                $messages[] = 'Analytics module already attached to example.com domain';
+            }
+
+            if ($attachedAnalyticsToLocalhost) {
+                $messages[] = 'attached Analytics module to localhost domain';
+            } else {
+                $messages[] = 'Analytics module already attached to localhost domain';
+            }
+
             if ($localhostColor === 'created') {
                 $messages[] = 'seeded localhost color env value';
             } elseif ($localhostColor === 'updated') {
@@ -263,10 +315,61 @@ final class BootstrapCommand extends Command
                 $messages[] = 'Project 1 color env value already present';
             }
 
-            return implode('; ', $messages).'.';
+            if ($applicationColor === 'created') {
+                $messages[] = 'seeded test application color env value';
+            } elseif ($applicationColor === 'updated') {
+                $messages[] = 'updated test application color env value';
+            } else {
+                $messages[] = 'test application color env value already present';
+            }
+
+            return implode("\n", $messages).'.';
         }
 
         return 'Local development defaults already present.';
+    }
+
+    /**
+     * @return array{0: Module, 1: bool, 2: bool}
+     */
+    private function ensureAnalyticsModule(): array
+    {
+        $module = $this->moduleRepository->find('analytics');
+        $created = false;
+        $updated = false;
+
+        if (!$module instanceof Module) {
+            $module = (new Module())
+                ->setId('analytics')
+                ->setName('Analytics');
+
+            $this->entityManager->persist($module);
+            $created = true;
+        } elseif ($module->getName() !== 'Analytics') {
+            $module->setName('Analytics');
+            $updated = true;
+        }
+
+        return [$module, $created, $updated];
+    }
+
+    /**
+     * @return array{0: Application, 1: bool}
+     */
+    private function ensureTestApplication(): array
+    {
+        $application = $this->applicationRepository->find('test');
+        $created = false;
+
+        if (!$application instanceof Application) {
+            $application = (new Application())
+                ->setId('test');
+
+            $this->entityManager->persist($application);
+            $created = true;
+        }
+
+        return [$application, $created];
     }
 
     private function attachProjectToDomain(Domain $domain, Project $project): bool
@@ -278,6 +381,54 @@ final class BootstrapCommand extends Command
         $domain->addProject($project);
 
         return true;
+    }
+
+    private function attachModuleToApplication(Application $application, Module $module): bool
+    {
+        if ($application->hasModule($module)) {
+            return false;
+        }
+
+        $application->addModule($module);
+
+        return true;
+    }
+
+    private function attachModuleToDomain(Domain $domain, Module $module): bool
+    {
+        if ($domain->hasModule($module)) {
+            return false;
+        }
+
+        $domain->addModule($module);
+
+        return true;
+    }
+
+    private function ensureApplicationEnvValue(Application $application, Env $env, string $value): string
+    {
+        foreach ($application->getEnv() as $item) {
+            if ($item->getEnv()?->getId() !== $env->getId()) {
+                continue;
+            }
+
+            if ($item->getValue() === $value) {
+                return 'unchanged';
+            }
+
+            $item->setValue($value);
+
+            return 'updated';
+        }
+
+        $applicationEnv = (new ApplicationEnv())
+            ->setEnv($env)
+            ->setValue($value);
+
+        $application->addEnv($applicationEnv);
+        $this->entityManager->persist($applicationEnv);
+
+        return 'created';
     }
 
     private function ensureDomainEnvValue(Domain $domain, Env $env, string $value): string

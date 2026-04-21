@@ -2,23 +2,31 @@
 
 namespace App\Tests\Unit\Controller;
 
+use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Symfonicat\Controller\AbstractModuleController;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\Module;
 use Symfonicat\Entity\Project;
+use Symfonicat\Repository\DomainRepository;
+use Symfonicat\Repository\ModuleRepository;
+use Symfonicat\Repository\ProjectRepository;
 use Symfonicat\Service\DomainService;
 use Symfonicat\Service\ModuleService;
 use Symfonicat\Service\PathService;
 use Symfonicat\Service\ProjectService;
+use Symfonicat\Service\SubdomainService;
+use Psr\Log\NullLogger;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * AbstractModuleController's constructor wires a `$shouldRun` flag that
  * controllers use to decide whether the incoming /m/<module>/... request is
- * allowed for the current domain/project context. These tests pin the four
- * branches of that guard so refactoring the base class can't silently expose
+ * allowed for the current domain/project/application context. These tests pin
+ * the core branches of that guard so refactoring the base class can't silently expose
  * modules that the owning entity hasn't installed.
  */
 final class AbstractModuleControllerTest extends TestCase
@@ -123,16 +131,32 @@ final class AbstractModuleControllerTest extends TestCase
 
     private function makeController(?Domain $domain, ?Project $project, ?Module $module): object
     {
-        $domainService = $this->createStub(DomainService::class);
-        $domainService->method('load')->willReturn($domain);
+        $projectDir = dirname(__DIR__, 3);
+        $requestStack = new RequestStack();
+        $requestStack->push(Request::create('/m/analytics', 'POST', [], [], [], [
+            'HTTP_HOST' => $this->makeHost($domain, $project),
+        ]));
 
-        $projectService = $this->createStub(ProjectService::class);
-        $projectService->method('load')->willReturn($project);
+        $domainRepository = $this->createStub(DomainRepository::class);
+        $domainRepository->method('find')->willReturn($domain);
+        $domainService = new DomainService($projectDir, $requestStack, $domainRepository);
 
-        $moduleService = $this->createStub(ModuleService::class);
-        $moduleService->method('load')->willReturn($module);
+        $projectRepository = $this->createStub(ProjectRepository::class);
+        $projectRepository->method('find')->willReturn($project);
+        $projectRepository->method('findOneByIdForDomain')->willReturn($project);
+        $subdomainService = new SubdomainService($projectDir, $requestStack, new NullLogger(), $domainService);
+        $projectService = new ProjectService($domainService, $subdomainService, $projectRepository);
 
-        $pathService = $this->createStub(PathService::class);
+        $pathService = new PathService($requestStack);
+        $moduleRepository = $this->createStub(ModuleRepository::class);
+        $moduleRepository->method('find')->willReturn($module);
+        $moduleService = new ModuleService(
+            $requestStack,
+            $pathService,
+            $moduleRepository,
+            $this->createStub(EntityManagerInterface::class),
+            $projectDir,
+        );
 
         return new class($domainService, $moduleService, $projectService, $pathService) extends AbstractModuleController {
             public function runModule(Response $shouldRun, Response|false $fallback = false): Response
@@ -150,5 +174,16 @@ final class AbstractModuleControllerTest extends TestCase
     private function makeDomain(string $id): Domain
     {
         return (new Domain())->setId($id);
+    }
+
+    private function makeHost(?Domain $domain, ?Project $project): string
+    {
+        $domainId = $domain?->getId() ?? 'example.com';
+
+        if ($project instanceof Project && $project->getId() !== null) {
+            return $project->getId().'.'.$domainId;
+        }
+
+        return $domainId;
     }
 }

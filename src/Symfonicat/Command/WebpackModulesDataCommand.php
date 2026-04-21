@@ -2,6 +2,7 @@
 
 namespace Symfonicat\Command;
 
+use Symfonicat\Repository\ApplicationRepository;
 use Symfonicat\Repository\DomainRepository;
 use Symfonicat\Repository\ModuleRepository;
 use Symfonicat\Repository\ProjectRepository;
@@ -12,53 +13,84 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 #[AsCommand(
     name: 'symfonicat:data:webpack',
-    description: 'Output domain and project module data for webpack.',
+    description: 'Output application, domain, project, and module data for webpack.',
 )]
 final class WebpackModulesDataCommand extends Command
 {
     public function __construct(
+        private readonly ApplicationRepository $applicationRepository,
         private readonly DomainRepository $domainRepository,
         private readonly ModuleRepository $moduleRepository,
         private readonly ProjectRepository $projectRepository,
+        private readonly string $projectDir,
     ) {
         parent::__construct();
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $modules = [];
-        foreach ($this->moduleRepository->findAll() as $module) {
-            $id = $module->getId();
-            if ($id !== null && $id !== '') {
-                $modules[] = $id;
-            }
-        }
-        $modules = array_values(array_unique($modules));
-
-        $domains = [];
-        foreach ($this->domainRepository->findAll() as $domain) {
-            $id = $domain->getId();
-            if ($id !== null && $id !== '') {
-                $domains[] = $id;
-            }
-        }
-        $domains = array_values(array_unique($domains));
-
-        $projects = [];
-        foreach ($this->projectRepository->findAll() as $project) {
-            $id = $project->getId();
-            if ($id !== null && $id !== '') {
-                $projects[] = $id;
-            }
-        }
-        $projects = array_values(array_unique($projects));
-
         $output->writeln(json_encode([
-            'modules' => $modules,
-            'domains' => $domains,
-            'projects' => $projects,
+            'applications' => $this->idsFromRepositoryOrAssets(
+                fn (): array => $this->applicationRepository->findAll(),
+                'assets/application',
+            ),
+            'modules' => $this->idsFromRepositoryOrAssets(
+                fn (): array => $this->moduleRepository->findAll(),
+                'assets/modules',
+            ),
+            'domains' => $this->idsFromRepositoryOrAssets(
+                fn (): array => $this->domainRepository->findAll(),
+                'assets/domains',
+            ),
+            'projects' => $this->idsFromRepositoryOrAssets(
+                fn (): array => $this->projectRepository->findAll(),
+                'assets/projects',
+            ),
         ], JSON_THROW_ON_ERROR));
 
         return Command::SUCCESS;
+    }
+
+    /**
+     * @param callable(): iterable<object> $loader
+     *
+     * @return list<string>
+     */
+    private function idsFromRepositoryOrAssets(callable $loader, string $assetDirectory): array
+    {
+        try {
+            $ids = [];
+
+            foreach ($loader() as $entity) {
+                if (!method_exists($entity, 'getId')) {
+                    continue;
+                }
+
+                $id = trim((string) $entity->getId());
+                if ($id !== '') {
+                    $ids[] = $id;
+                }
+            }
+
+            $ids = array_values(array_unique($ids));
+            sort($ids, SORT_STRING);
+
+            return $ids;
+        } catch (\Throwable) {
+            return $this->idsFromAssets($assetDirectory);
+        }
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function idsFromAssets(string $assetDirectory): array
+    {
+        $directories = glob($this->projectDir.'/'.$assetDirectory.'/*', GLOB_ONLYDIR) ?: [];
+        $ids = array_map('basename', $directories);
+        $ids = array_values(array_unique($ids));
+        sort($ids, SORT_STRING);
+
+        return $ids;
     }
 }
