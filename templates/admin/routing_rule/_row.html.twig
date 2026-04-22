@@ -1,13 +1,24 @@
 <tr id="routing_rule_{{ rule.id }}" class="btn-row">
     <td>{{ rule.type }}</td>
-    <td><a href="{{ path_application(rule.application.id) }}">{{ rule.argumentsPath ?: '-' }}</a></td>
+    <td>
+        {% if rule.type == 'application' and rule.application %}
+            <a href="{{ path_application(rule.application.id) }}">{{ rule.argumentsPath ?: '-' }}</a>
+        {% else %}
+            {{ rule.argumentsPath ?: '-' }}
+        {% endif %}
+    </td>
     <td>
         {% if rule.type == 'domain' %}
             domain: {{ rule.domain ? rule.domain.id : '-' }}
         {% elseif rule.type == 'project' %}
             project: {{ rule.project ? rule.project.id ~ ' ' ~ rule.project.name : '-' }}
         {% elseif rule.type == 'application' %}
-            application: <a href="{{ path_application(rule.application.id) }}">{{ rule.application ? rule.application.id : '-' }}</a>
+            application:
+            {% if rule.application %}
+                <a href="{{ path_application(rule.application.id) }}">{{ rule.application.id }}</a>
+            {% else %}
+                -
+            {% endif %}
         {% elseif rule.type == 'redirect' %}
             {{ rule.redirectType }}: {{ rule.domain ? rule.domain.id : (rule.project ? rule.project.name : '-') }}
         {% else %}
