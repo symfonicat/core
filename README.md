@@ -33,7 +33,7 @@ npm install
 npm run dev
 ```
 
-On first container boot the `php` service synchronizes the Doctrine schema and seeds the local development rows: `localhost`, `example.com`, `project1`, the `test` application, the `analytics` module, and sample `color` env values. The `test` application has Analytics enabled and `color=red`; the default domains use `color=blue`, and `project1` uses `color=green`. After the stack is up, create an admin and synchronize filesystem-backed rows:
+On first container boot the `php` service synchronizes the Doctrine schema and seeds the local development rows: `localhost`, `example.com`, `project1`, the `test` application, the `analytics` module, a `/symfonicat/*/test*` application routing rule, and sample `color` env values. The `test` application has Analytics enabled and `color=red`; the default domains use `color=blue`, and `project1` uses `color=green`. After the stack is up, create an admin and synchronize filesystem-backed rows:
 
 ```bash
 docker exec php bin/console symfonicat:admin:create <email> <password>
@@ -185,7 +185,7 @@ docker exec php bin/console symfonicat:admin:delete <email>
 Important Symfonicat commands include:
 
 - `symfonicat:bootstrap`: waits for the database, synchronizes the schema, and seeds local defaults
-- `symfonicat:schema:update`: synchronizes module rows from `assets/modules/*/package.json` and application rows from `assets/application/*`
+- `symfonicat:schema:update`: synchronizes module rows from `assets/modules/*/package.json`, application rows from `assets/application/*`, and project rows from `assets/projects/*`
 - `symfonicat:data:webpack`: emits application/domain/project/module entry data for webpack with filesystem fallback
 - `symfonicat:admin:create`: creates or updates an admin and prints the MFA QR code
 - `symfonicat:admin:delete`: deletes an admin

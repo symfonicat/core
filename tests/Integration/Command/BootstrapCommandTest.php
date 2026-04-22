@@ -8,6 +8,7 @@ use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\Env;
 use Symfonicat\Entity\Module;
 use Symfonicat\Entity\Project;
+use Symfonicat\Entity\RoutingRule;
 use Symfony\Bundle\FrameworkBundle\Console\Application as ConsoleApplication;
 use Symfony\Component\Console\Tester\CommandTester;
 
@@ -33,6 +34,7 @@ final class BootstrapCommandTest extends SymfonicatKernelTestCase
         $application = $em->getRepository(Application::class)->find('test');
         $analytics = $em->getRepository(Module::class)->find('analytics');
         $color = $em->getRepository(Env::class)->find('color');
+        $applicationRules = $em->getRepository(RoutingRule::class)->findTypeApplication();
 
         self::assertInstanceOf(Domain::class, $localhost);
         self::assertInstanceOf(Domain::class, $exampleCom);
@@ -57,6 +59,9 @@ final class BootstrapCommandTest extends SymfonicatKernelTestCase
         self::assertSame('blue', $this->envValueFor($exampleCom, 'color'));
         self::assertSame('green', $this->projectEnvValueFor($project, 'color'));
         self::assertSame('red', $this->applicationEnvValueFor($application, 'color'));
+        self::assertCount(1, $applicationRules);
+        self::assertSame(['symfonicat', '*', 'test*'], $applicationRules[0]->getArguments());
+        self::assertSame('test', $applicationRules[0]->getApplication()?->getId());
     }
 
     public function testSecondRunIsIdempotentAndDoesNotDuplicateRows(): void
@@ -100,6 +105,7 @@ final class BootstrapCommandTest extends SymfonicatKernelTestCase
                 'project_env' => 0,
                 'module' => 0,
                 'module_application' => 0,
+                'routing_rule' => 0,
             ],
             $this->countAll(),
             '--no-seed-localhost must skip ALL defaults, not just the localhost domain',
@@ -170,6 +176,7 @@ final class BootstrapCommandTest extends SymfonicatKernelTestCase
             'project_env' => $this->countTable('symfonicat_project_env'),
             'module' => $this->countTable('symfonicat_module'),
             'module_application' => $this->countTable('symfonicat_module_application'),
+            'routing_rule' => $this->countTable('symfonicat_routing_rule'),
         ];
     }
 

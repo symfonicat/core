@@ -1,7 +1,9 @@
 {% extends 'admin/base.html.twig' %}
 {% block title %}Edit Application{% endblock %}
 {% block body %}
-    <h6>{{ application.id }}</h6>
-
+    
+    <h3>{{ application.id }}</h3>
+    <hr />
     {{ include('admin/application/_form.html.twig', { form: form, button_label: 'save' }) }}
+
 {% endblock %}

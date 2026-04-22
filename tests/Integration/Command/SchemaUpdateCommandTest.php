@@ -81,7 +81,9 @@ final class SchemaUpdateCommandTest extends SymfonicatKernelTestCase
         $application->setAutoExit(false);
         $command = $application->find('symfonicat:schema:update');
         $tester = new CommandTester($command);
-        $tester->execute([]);
+        // Schema update now requires confirmation when creating application/project rows.
+        $tester->setInputs(['yes', 'yes']);
+        $tester->execute([], ['interactive' => true]);
 
         return $tester;
     }

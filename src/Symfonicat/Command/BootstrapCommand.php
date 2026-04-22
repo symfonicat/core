@@ -14,11 +14,13 @@ use Symfonicat\Entity\Env;
 use Symfonicat\Entity\Module;
 use Symfonicat\Entity\Project;
 use Symfonicat\Entity\ProjectEnv;
+use Symfonicat\Entity\RoutingRule;
 use Symfonicat\Repository\ApplicationRepository;
 use Symfonicat\Repository\DomainRepository;
 use Symfonicat\Repository\EnvRepository;
 use Symfonicat\Repository\ModuleRepository;
 use Symfonicat\Repository\ProjectRepository;
+use Symfonicat\Repository\RoutingRuleRepository;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -42,6 +44,7 @@ final class BootstrapCommand extends Command
         private readonly EnvRepository $envRepository,
         private readonly ModuleRepository $moduleRepository,
         private readonly ProjectRepository $projectRepository,
+        private readonly RoutingRuleRepository $routingRuleRepository,
     ) {
         parent::__construct();
     }
@@ -204,6 +207,7 @@ final class BootstrapCommand extends Command
         $attachedAnalyticsToExample = $this->attachModuleToDomain($exampleDomain, $analyticsModule);
         $attachedAnalyticsToLocalhost = $this->attachModuleToDomain($localhost, $analyticsModule);
         $applicationColor = $this->ensureApplicationEnvValue($application, $env, 'red');
+        $createdApplicationRoutingRule = $this->ensureTestApplicationRoutingRule($application);
 
         $this->entityManager->flush();
 
@@ -224,6 +228,7 @@ final class BootstrapCommand extends Command
             || $exampleColor !== 'unchanged'
             || $projectColor !== 'unchanged'
             || $applicationColor !== 'unchanged'
+            || $createdApplicationRoutingRule
         ) {
             $messages = [];
 
@@ -323,6 +328,12 @@ final class BootstrapCommand extends Command
                 $messages[] = 'test application color env value already present';
             }
 
+            if ($createdApplicationRoutingRule) {
+                $messages[] = 'seeded test application routing rule';
+            } else {
+                $messages[] = 'test application routing rule already present';
+            }
+
             return implode("\n", $messages).'.';
         }
 
@@ -401,6 +412,26 @@ final class BootstrapCommand extends Command
         }
 
         $domain->addModule($module);
+
+        return true;
+    }
+
+    private function ensureTestApplicationRoutingRule(Application $application): bool
+    {
+        $arguments = ['symfonicat', '*', 'test*'];
+
+        foreach ($this->routingRuleRepository->findTypeApplication() as $rule) {
+            if ($rule->getApplication()?->getId() === $application->getId() && $rule->getArguments() === $arguments) {
+                return false;
+            }
+        }
+
+        $rule = (new RoutingRule())
+            ->setType(RoutingRule::TYPE_APPLICATION)
+            ->setApplication($application)
+            ->setArguments($arguments);
+
+        $this->entityManager->persist($rule);
 
         return true;
     }

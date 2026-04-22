@@ -8,7 +8,7 @@ use Symfonicat\Repository\ApplicationRepository;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 
-final class ApplicationService
+class ApplicationService
 {
     public function __construct(
         private readonly ApplicationRepository $applicationRepository,

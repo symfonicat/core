@@ -42,4 +42,15 @@ class ProjectRepository extends ServiceEntityRepository
             ->getQuery()
             ->getOneOrNullResult();
     }
+
+    /**
+     * @return Project[]
+     */
+    public function findAllOrderedById(): array
+    {
+        return $this->createQueryBuilder('project')
+            ->orderBy('project.id', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
 }

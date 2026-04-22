@@ -41,19 +41,6 @@ final class RoutingRuleController extends AbstractController
         ]);
     }
 
-    #[Route('/admin/r/{id}', name: 'app_routing_rule_show', methods: ['GET'])]
-    public function show(string $id, RoutingRuleRepository $routingRuleRepository): Response
-    {
-        $rule = $routingRuleRepository->find($id);
-        if (!$rule) {
-            throw $this->createNotFoundException(sprintf('Routing rule "%s" not found.', $id));
-        }
-
-        return $this->render('admin/routing_rule/show.html.twig', [
-            'rule' => $rule,
-        ]);
-    }
-
     #[Route('/admin/r/{id}/edit', name: 'app_routing_rule_edit', methods: ['GET', 'POST'])]
     public function edit(Request $request, string $id, RoutingRuleRepository $routingRuleRepository, EntityManagerInterface $entityManager): Response
     {

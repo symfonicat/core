@@ -7,7 +7,7 @@ use Pdp\Domain;
 use Pdp\Rules;
 use Symfony\Component\HttpFoundation\RequestStack;
 
-final class DomainService
+class DomainService
 {
     public function __construct(
         private readonly string $projectDir,

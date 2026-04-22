@@ -3,11 +3,14 @@
 namespace App\Tests\Unit\Service;
 
 use PHPUnit\Framework\TestCase;
+use Symfonicat\Entity\Application;
+use Symfonicat\Entity\ApplicationEnv;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\DomainEnv;
 use Symfonicat\Entity\Env;
 use Symfonicat\Entity\Project;
 use Symfonicat\Entity\ProjectEnv;
+use Symfonicat\Service\ApplicationService;
 use Symfonicat\Service\DomainService;
 use Symfonicat\Service\EnvService;
 use Symfonicat\Service\ProjectService;
@@ -15,7 +18,7 @@ use Symfonicat\Service\ProjectService;
 /**
  * Pure unit coverage of EnvService — the "env overlay" abstraction the rest of
  * the framework depends on. No container, no database: the service
- * collaborates with two DI-injected services that we stub directly.
+ * collaborates with three DI-injected services that we stub directly.
  */
 final class EnvServiceTest extends TestCase
 {
@@ -64,6 +67,34 @@ final class EnvServiceTest extends TestCase
         );
         self::assertSame('green', $service->get('color'));
         self::assertSame('default', $service->get('theme'));
+    }
+
+    public function testProjectValuesOverlayDomainAndApplicationValues(): void
+    {
+        $color = $this->makeEnv('color');
+        $theme = $this->makeEnv('theme');
+        $mode = $this->makeEnv('mode');
+
+        $application = $this->makeApplication('test', [
+            $color->getId() => 'red',
+            $theme->getId() => 'application',
+            $mode->getId() => 'default',
+        ]);
+        $domain = $this->makeDomain('example.com', [
+            $color->getId() => 'blue',
+            $theme->getId() => 'domain',
+        ]);
+        $project = $this->makeProject('project1', [
+            $color->getId() => 'green',
+        ]);
+        $domain->addProject($project);
+
+        $service = $this->makeService($domain, $project, $application);
+
+        self::assertSame(
+            ['color' => 'green', 'theme' => 'domain', 'mode' => 'default'],
+            $service->all(),
+        );
     }
 
     public function testGetTrimsLookupIdAndRejectsEmptyLookup(): void
@@ -143,15 +174,34 @@ final class EnvServiceTest extends TestCase
         self::assertSame(['color' => 'blue'], $service->all());
     }
 
-    private function makeService(?Domain $domain, ?Project $project): EnvService
+    private function makeService(?Domain $domain, ?Project $project, ?Application $application = null): EnvService
     {
+        $applicationService = $this->createStub(ApplicationService::class);
+        $applicationService->method('load')->willReturn($application);
+
         $domainService = $this->createStub(DomainService::class);
         $domainService->method('load')->willReturn($domain);
 
         $projectService = $this->createStub(ProjectService::class);
         $projectService->method('load')->willReturn($project);
 
-        return new EnvService($domainService, $projectService);
+        return new EnvService($applicationService, $domainService, $projectService);
+    }
+
+    /**
+     * @param array<string, string> $values
+     */
+    private function makeApplication(string $id, array $values): Application
+    {
+        $application = (new Application())->setId($id);
+
+        foreach ($values as $envId => $value) {
+            $env = $this->makeEnv($envId);
+            $applicationEnv = (new ApplicationEnv())->setEnv($env)->setValue($value);
+            $application->addEnv($applicationEnv);
+        }
+
+        return $application;
     }
 
     /**

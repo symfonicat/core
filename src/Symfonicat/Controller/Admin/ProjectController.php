@@ -26,56 +26,7 @@ final class ProjectController extends AbstractController
         ]);
     }
 
-    #[Route('/admin/p/create', name: 'app_project_create', methods: ['GET', 'POST'])]
-    public function new(
-        Request $request,
-        EntityManagerInterface $entityManager,
-        FileUploadService $fileUploadService,
-        ProjectRepository $projectRepository,
-    ): Response
-    {
-        $project = new Project();
-        $form = $this->createForm(ProjectType::class, $project, [
-            'id_editable' => true,
-        ]);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $id = trim((string) $project->getId());
-            if ($id === '') {
-                $form->get('id')->addError(new FormError('Project id is required.'));
-            } elseif ($projectRepository->find($id) instanceof Project) {
-                $form->get('id')->addError(new FormError(sprintf('Project "%s" already exists.', $id)));
-            }
-
-            if (!$form->isValid()) {
-                return $this->render('admin/project/create.html.twig', [
-                    'project' => $project,
-                    'form' => $form,
-                ]);
-            }
-
-            try {
-                $this->handleIconUpload($form, $project, $fileUploadService);
-            } catch (\RuntimeException | \InvalidArgumentException $error) {
-                $form->addError(new FormError($error->getMessage()));
-            }
-
-            if ($form->isValid()) {
-                $entityManager->persist($project);
-                $entityManager->flush();
-
-                return $this->redirectToRoute('app_project_index', [], Response::HTTP_SEE_OTHER);
-            }
-        }
-
-        return $this->render('admin/project/create.html.twig', [
-            'project' => $project,
-            'form' => $form,
-        ]);
-    }
-
-    #[Route('/admin/p/{id}/edit', name: 'app_project_edit', methods: ['GET', 'POST'])]
+    #[Route('/admin/p/{id}', name: 'app_project_edit', methods: ['GET', 'POST'])]
     public function edit(
         Request $request,
         string $id,
@@ -112,22 +63,6 @@ final class ProjectController extends AbstractController
             'project' => $project,
             'form' => $form,
         ]);
-    }
-
-    #[Route('/admin/p/{id}', name: 'app_project_delete', methods: ['POST'])]
-    public function delete(Request $request, string $id, ProjectRepository $projectRepository, EntityManagerInterface $entityManager): Response
-    {
-        $project = $projectRepository->find($id);
-        if (!$project) {
-            return $this->redirectToRoute('app_project_index', [], Response::HTTP_SEE_OTHER);
-        }
-
-        if ($this->isCsrfTokenValid('delete'.$project->getId(), $request->getPayload()->getString('_token'))) {
-            $entityManager->remove($project);
-            $entityManager->flush();
-        }
-
-        return $this->redirectToRoute('app_project_index', [], Response::HTTP_SEE_OTHER);
     }
 
     private function handleIconUpload(FormInterface $form, Project $project, FileUploadService $fileUploadService): void

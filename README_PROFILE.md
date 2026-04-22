@@ -2,7 +2,7 @@
 
 `symfonicat/core` is the full Symfonicat Symfony application. It ships the public runtime, admin runtime, Doctrine model, webpack integration, Electron-facing commands, and Docker/FrankenPHP starter shell in one repository.
 
-Bootstrap seeds `localhost`, `example.com`, `project1`, the `test` application, the `analytics` module, and sample `color` env values. The `test` application has Analytics enabled and `color=red`.
+Bootstrap seeds `localhost`, `example.com`, `project1`, the `test` application, the `analytics` module, a `/symfonicat/*/test*` application routing rule, and sample `color` env values. The `test` application has Analytics enabled and `color=red`.
 
 ## Runtime Shape
 
@@ -57,8 +57,9 @@ The public asset stack uses `assets/symfonicat.js`, `assets/stimulus.js`, `asset
 
 - modules from `assets/modules/{id}/package.json`
 - applications from `assets/application/{id}`
+- projects from `assets/projects/{id}`
 
-Missing application rows are created with only their `id`. Module deletions are confirmed when referencing entity rows exist.
+Missing application and project rows are created with only their `id`. Module deletions are confirmed when referencing entity rows exist.
 
 Run schema sync with an interactive terminal when confirmations may be needed. With Docker, use `docker exec -it php bin/console symfonicat:schema:update`; non-interactive runs fail instead of accepting defaults.
 

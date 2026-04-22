@@ -28,7 +28,7 @@ class ProjectType extends AbstractType
 
         $builder
             ->add('name', null, [
-                'label' => $projectId === '' ? 'name' : sprintf('name (%s)', $projectId),
+                'label' => 'name',
             ])
             ->add('icon', FileType::class, [
                 'label' => 'icon',

@@ -31,6 +31,10 @@ services:
         arguments:
             $projectDir: '%kernel.project_dir%'
 
+    Symfonicat\Service\ProjectService:
+        arguments:
+            $projectDir: '%kernel.project_dir%'
+
     Symfonicat\Command\WebpackModulesDataCommand:
         arguments:
             $projectDir: '%kernel.project_dir%'

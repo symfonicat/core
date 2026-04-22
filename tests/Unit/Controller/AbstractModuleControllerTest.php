@@ -145,7 +145,13 @@ final class AbstractModuleControllerTest extends TestCase
         $projectRepository->method('find')->willReturn($project);
         $projectRepository->method('findOneByIdForDomain')->willReturn($project);
         $subdomainService = new SubdomainService($projectDir, $requestStack, new NullLogger(), $domainService);
-        $projectService = new ProjectService($domainService, $subdomainService, $projectRepository);
+        $projectService = new ProjectService(
+            $domainService,
+            $subdomainService,
+            $projectRepository,
+            $this->createStub(EntityManagerInterface::class),
+            $projectDir,
+        );
 
         $pathService = new PathService($requestStack);
         $moduleRepository = $this->createStub(ModuleRepository::class);

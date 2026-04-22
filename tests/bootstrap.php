@@ -9,14 +9,6 @@ use Symfony\Component\Dotenv\Dotenv;
 
 require dirname(__DIR__).'/vendor/autoload.php';
 
-// Let PHPUnit double the numerous final Symfonicat services (DomainService,
-// ProjectService, RoutingRuleService, ...). dg/bypass-finals is a dev-only
-// dep that strips the `final` keyword at autoload time; production bytecode
-// is untouched.
-if (class_exists(\DG\BypassFinals::class)) {
-    \DG\BypassFinals::enable();
-}
-
 // compose.yaml and typical development shells export DATABASE_URL / REDIS_URL
 // pointing at the real Dockerized Postgres + Redis. PHP's Dotenv won't
 // override already-set process env vars, so we unset the subset the test env
@@ -62,7 +54,7 @@ if (method_exists(Dotenv::class, 'bootEnv')) {
     }
 })();
 
-// Drop and rebuild the SQLite schema once per phpunit invocation. Individual
+// Drop and rebuild the test schema once per phpunit invocation. Individual
 // tests are responsible for seeding (and for truncating between tests via
 // App\Tests\Support\SymfonicatTestCase), but the empty schema must exist
 // before the first kernel boot.
@@ -90,7 +82,38 @@ if (method_exists(Dotenv::class, 'bootEnv')) {
     $metadata = $entityManager->getMetadataFactory()->getAllMetadata();
     if ($metadata !== []) {
         $schemaTool = new SchemaTool($entityManager);
-        $schemaTool->dropDatabase();
+
+        if (!$isSqlite) {
+            $params = $connection->getParams();
+            $databaseName = strtolower((string) ($params['dbname'] ?? ''));
+            if ($databaseName === '' || !str_contains($databaseName, 'test')) {
+                throw new \RuntimeException(sprintf(
+                    'Refusing to reset non-test database "%s". Set DATABASE_URL in .env.test to SQLite or a database name containing "test".',
+                    $databaseName === '' ? '(unknown)' : $databaseName,
+                ));
+            }
+
+            // Doctrine's SchemaTool can emit plain "DROP TABLE <name>" for some
+            // platforms. PostgreSQL treats missing tables as an error, so reset
+            // the schema explicitly when available.
+            if (str_contains(get_class($platform), 'PostgreSQL')) {
+                $connection->executeStatement('DROP SCHEMA IF EXISTS public CASCADE');
+                $connection->executeStatement('CREATE SCHEMA public');
+                $connection->executeStatement('SET search_path TO public, pg_catalog');
+            } else {
+                $schemaManager = $connection->createSchemaManager();
+
+                foreach ($schemaManager->listTableNames() as $tableName) {
+                    $connection->executeStatement(sprintf(
+                        'DROP TABLE IF EXISTS %s',
+                        $platform->quoteIdentifier($tableName),
+                    ));
+                }
+            }
+        } else {
+            $schemaTool->dropDatabase();
+        }
+
         $schemaTool->createSchema($metadata);
     }
 

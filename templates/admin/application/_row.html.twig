@@ -1,5 +1,5 @@
 <tr id="application_{{ application.id }}" class="btn-row">
-    <td><a href="{{ path('app_application_show', {'id': application.id}) }}">{{ application.id }}</a></td>
+    <td>{{ application.id }}</td>
     <td>
         {% for module in application.modules %}
             {{ module.name }}{% if not loop.last %}, {% endif %}
@@ -9,13 +9,9 @@
     </td>
     <td class="text-end btn-cell">
         <div class="btn-group btn-group-sm">
-            <a href="{{ path('app_application_show', {'id': application.id}) }}" class="btn btn-sm btn-info">
-                <i class="fa fa-eye">&nbsp;</i>
-            </a>
             <a href="{{ path('app_application_edit', {'id': application.id}) }}" class="btn btn-sm btn-warning">
                 <i class="fa fa-pencil">&nbsp;</i>
             </a>
-            {{ include('admin/application/_delete_form.html.twig') }}
         </div>
     </td>
 </tr>

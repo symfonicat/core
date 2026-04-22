@@ -1,6 +1,6 @@
 <tr id="routing_rule_{{ rule.id }}" class="btn-row">
     <td>{{ rule.type }}</td>
-    <td><a href="{{ path('app_routing_rule_show', {'id': rule.id}) }}">{{ rule.argumentsPath ?: '-' }}</a></td>
+    <td><a href="{{ rule.argumentsPath|trim('*', 'both') }}">{{ rule.argumentsPath ?: '-' }}</a></td>
     <td>
         {% if rule.type == 'domain' %}
             domain: {{ rule.domain ? rule.domain.id : '-' }}

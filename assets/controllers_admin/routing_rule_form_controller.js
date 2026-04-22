@@ -67,6 +67,7 @@ export default class extends Controller {
 
     addArgument(event) {
         event.preventDefault()
+        event.stopImmediatePropagation()
 
         const collection = this.argumentsCollectionTarget
         const index = Number(collection.dataset.routingRuleFormIndex || 0)
@@ -78,6 +79,7 @@ export default class extends Controller {
 
     removeArgument(event) {
         event.preventDefault()
+        event.stopImmediatePropagation()
 
         event.currentTarget.closest('[data-routing-rule-form-argument-item]')?.remove()
     }
