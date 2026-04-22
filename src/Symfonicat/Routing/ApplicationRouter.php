@@ -4,6 +4,7 @@ namespace Symfonicat\Routing;
 
 use Symfonicat\Service\ApplicationUrlService;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpKernel\CacheWarmer\WarmableInterface;
 use Symfony\Component\Routing\Exception\InvalidParameterException;
 use Symfony\Component\Routing\Generator\UrlGenerator;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
@@ -12,7 +13,7 @@ use Symfony\Component\Routing\RequestContext;
 use Symfony\Component\Routing\RouteCollection;
 use Symfony\Component\Routing\RouterInterface;
 
-final class ApplicationRouter implements RouterInterface, RequestMatcherInterface
+final class ApplicationRouter implements RouterInterface, RequestMatcherInterface, WarmableInterface
 {
     public function __construct(
         private readonly RouterInterface $inner,
@@ -72,6 +73,18 @@ final class ApplicationRouter implements RouterInterface, RequestMatcherInterfac
     public function getContext(): RequestContext
     {
         return $this->inner->getContext();
+    }
+
+    /**
+     * @return list<class-string|string>
+     */
+    public function warmUp(string $cacheDir, ?string $buildDir = null): array
+    {
+        if (!$this->inner instanceof WarmableInterface) {
+            return [];
+        }
+
+        return $this->inner->warmUp($cacheDir, $buildDir);
     }
 
     /**

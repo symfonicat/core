@@ -98,7 +98,7 @@ Supported rule types:
 
 Redirect rules use `redirectType` to choose the matched scope (`domain` or `project`) and `redirectTarget` to choose the destination type (`domain` or `project`). Route rules use `routeType` to choose whether the root route applies to a domain or a project.
 
-The routing-rule admin form groups related fields into cards. The rule card contains `type`, `redirectType`, `routeType`, and the multifield `arguments` regex segment collection. The match card shows the relevant domain, project, or application selector. The redirect card keeps `redirectTarget` on the left and the selected redirect domain/project destination on the right.
+The routing-rule admin form groups related fields into cards. The rule card contains `type`, `redirectType`, `routeType`, and the multifield `arguments` regex segment collection. The match card shows the relevant domain, project, or application selector. The redirect card keeps `redirectTarget` on the left and the selected redirect domain/project destination on the right. The routing-rule list links application rows through `path_application()` only when an application target exists; other rule types render their argument path as plain text.
 
 ## Env
 

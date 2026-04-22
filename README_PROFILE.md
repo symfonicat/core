@@ -29,7 +29,7 @@ Supported rule types:
 
 For the seeded `test` application rule `/symfonicat/*/test*`, `path_application('test')` returns `/symfonicat/*/test`, and `path_application('test', 'somepath/path2', ['tay'])` returns `/symfonicat/tay/test/somepath/path2`. Application routing-rule arguments define the base path, so appended paths continue to render the same application shell.
 
-The routing-rule form keeps type selectors in the rule card, the regex `arguments` collection beside them, scope selectors in the match card, redirect target on the left, and redirect destination on the right.
+The routing-rule form keeps type selectors in the rule card, the regex `arguments` collection beside them, scope selectors in the match card, redirect target on the left, and redirect destination on the right. The routing-rule list links application rows only when an application target exists.
 
 ## Env
 
