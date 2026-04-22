@@ -33,7 +33,7 @@ npm install
 npm run dev
 ```
 
-On first container boot the `php` service synchronizes the Doctrine schema and seeds the local development rows: `localhost`, `example.com`, `project1`, the `test` application, the `analytics` module, a `/symfonicat/*/test*` application routing rule, and sample `color` env values. The `test` application has Analytics enabled and `color=red`; the default domains use `color=blue`, and `project1` uses `color=green`. After the stack is up, create an admin and synchronize filesystem-backed rows:
+On first container boot the `php` service synchronizes the Doctrine schema and seeds the local development rows: `localhost`, `example.com`, `project1`, the `test` application, the `analytics` module, a `/symfonicat/*/test*` application routing rule, and sample `color` env values. The `test` application and `project1` project both have Analytics enabled by default; the test application uses `color=red`, the default domains use `color=blue`, and `project1` uses `color=green`. After the stack is up, create an admin and synchronize filesystem-backed rows:
 
 ```bash
 docker exec php bin/console symfonicat:admin:create <email> <password>
@@ -147,15 +147,28 @@ Admin-specific JavaScript belongs in the admin stack and should not be registere
 
 Backend module controllers live under `/m/{id}` and should extend [AbstractModuleController.php](src/Symfonicat/Controller/AbstractModuleController.php). A module endpoint only runs when the current project, application, or domain context has that module attached. Application modules are loaded by application shell templates as frontend entrypoints.
 
-Application shells also expose `window.symfonicatApplication` with the active application id and the path that matched the application routing rule. Browser module requests include that context as headers, and `ApplicationService` verifies the path still maps to the same application before `/m/{id}` is allowed to run from an application module attachment.
+Application shells expose the active application id and a signed, expiring CSRF token through `applicationHelper()`. Browser module requests send those values as headers, and `ApplicationService` resolves the application from the signed request context before `/m/{id}` is allowed to run from an application module attachment.
 
-Browser-side module requests use [module.js](assets/module.js):
+Application URLs can also be generated directly. `path('symfonicat_application', {id: 'test'})` and `path_application('test')` both resolve through the application routing rule instead of the internal controller path. For the seeded `test` application rule `/symfonicat/*/test*`, those helpers produce `/symfonicat/*/test`; passing a path appends it, and `path_application('test', 'somepath/path2', ['tay'])` replaces the wildcard segment to produce `/symfonicat/tay/test/somepath/path2`. Application routing-rule arguments define the application base path, so trailing generated paths continue to render the same application shell. The internal `/application/{id}/{path}` route renders the same application shell and uses client-side history replacement to show the public application URL.
 
-- module requests are `POST`
-- module URLs begin with `/m/{moduleId}`
-- `.json(...)` expects JSON
-- `.html(...)` expects HTML
-- `.log(...)` prefixes console output with a module label
+Browser-side module requests use the string helpers installed by [module.js](assets/module.js):
+
+```javascript
+'analytics'.log('module active!')
+
+const rootJson = await 'analytics'.json({ event: 'pageview' });
+const nestedJson = await 'analytics'.json('events/pageview', { path: window.location.pathname });
+
+const rootHtml = await 'frame'.html({ slot: 'main' });
+const nestedHtml = await 'frame'.html('partials/card', { id: 'hero' });
+```
+
+- `''.json(payload)` posts JSON to `/m/{moduleId}` and parses the response as JSON.
+- `''.json(path, payload)` posts JSON to `/m/{moduleId}/{path}` and parses the response as JSON.
+- `''.html(payload)` posts JSON to `/m/{moduleId}` and returns the response body as HTML text.
+- `''.html(path, payload)` posts JSON to `/m/{moduleId}/{path}` and returns the response body as HTML text.
+- `''.log(...args)` behaves like `console.log(...)`, but prefixes output with `[module][{moduleId}]:`.
+- application module requests also include the application id, request flag, and signed CSRF token headers.
 
 ## Admin
 

@@ -10,6 +10,7 @@ import './bootstrap/index.esm.js'
 import './style.scss'
 
 import './module'
+import './application_redirect'
 import './stimulus'
 import './mercure'
 import './no_prefetch'

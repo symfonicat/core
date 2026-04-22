@@ -47,9 +47,9 @@ final class PathService
     /**
      * @param list<string> $arguments
      */
-    public function matchesArguments(array $arguments, ?string $path = null): bool
+    public function matchesArguments(array $arguments, ?string $path = null, bool $allowTrailingPath = false): bool
     {
-        $pattern = $this->compileArgumentsRegex($arguments);
+        $pattern = $this->compileArgumentsRegex($arguments, $allowTrailingPath);
         if ($pattern === null) {
             return false;
         }
@@ -78,7 +78,7 @@ final class PathService
     /**
      * @param list<string> $arguments
      */
-    private function compileArgumentsRegex(array $arguments): ?string
+    private function compileArgumentsRegex(array $arguments, bool $allowTrailingPath = false): ?string
     {
         $arguments = array_values(array_filter(
             array_map(
@@ -97,6 +97,8 @@ final class PathService
             $arguments,
         );
 
-        return '~^/'.implode('/', $segments).'$~u';
+        $suffix = $allowTrailingPath ? '(?:/.*)?' : '';
+
+        return '~^/'.implode('/', $segments).$suffix.'$~u';
     }
 }

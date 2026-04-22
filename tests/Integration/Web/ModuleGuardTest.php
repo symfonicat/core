@@ -78,10 +78,13 @@ final class ModuleGuardTest extends SymfonicatWebTestCase
         $this->setHost('example.com');
         $this->client()->request('GET', '/u/foo/xxx');
         self::assertResponseIsSuccessful('application routing rule should render the test application');
+        $token = $this->applicationCsrfTokenFromLastResponse();
 
         $this->client()->request('POST', '/m/analytics', [], [], [
+            'HTTP_X_SYMFONICAT_APPLICATION_REQUEST' => '1',
             'HTTP_X_SYMFONICAT_APPLICATION' => 'test',
-            'HTTP_X_SYMFONICAT_APPLICATION_PATH' => '/u/foo/xxx',
+            'HTTP_X_SYMFONICAT_APPLICATION_TOKEN' => $token,
+            'HTTP_ORIGIN' => 'http://example.com',
         ]);
 
         self::assertResponseIsSuccessful();
@@ -93,7 +96,40 @@ final class ModuleGuardTest extends SymfonicatWebTestCase
         );
     }
 
-    public function testModuleRouteRejectsApplicationContextThatDoesNotMatchRoutingRule(): void
+    public function testModuleRouteRejectsUnknownApplicationContext(): void
+    {
+        $this->createDomain('example.com');
+        $module = $this->createModule('analytics', 'Analytics');
+        $application = (new Application())->setId('test');
+        $application->addModule($module);
+        $rule = (new RoutingRule())
+            ->setType(RoutingRule::TYPE_APPLICATION)
+            ->setApplication($application)
+            ->setArguments(['u', '*', 'x*']);
+
+        $this->entityManager()->persist($application);
+        $this->entityManager()->persist($rule);
+        $this->entityManager()->flush();
+
+        $this->setHost('example.com');
+        $this->client()->request('GET', '/u/foo/xxx');
+        self::assertResponseIsSuccessful('application routing rule should render the test application');
+        $token = $this->applicationCsrfTokenFromLastResponse();
+
+        $this->client()->request('POST', '/m/analytics', [], [], [
+            'HTTP_X_SYMFONICAT_APPLICATION_REQUEST' => '1',
+            'HTTP_X_SYMFONICAT_APPLICATION' => 'does-not-exist',
+            'HTTP_X_SYMFONICAT_APPLICATION_TOKEN' => $token,
+            'HTTP_ORIGIN' => 'http://example.com',
+        ]);
+
+        self::assertResponseStatusCodeSame(
+            404,
+            'module request headers must map back to a real application before the module can run',
+        );
+    }
+
+    public function testModuleRouteRejectsApplicationContextWithoutValidCsrfToken(): void
     {
         $this->createDomain('example.com');
         $module = $this->createModule('analytics', 'Analytics');
@@ -110,14 +146,12 @@ final class ModuleGuardTest extends SymfonicatWebTestCase
 
         $this->setHost('example.com');
         $this->client()->request('POST', '/m/analytics', [], [], [
+            'HTTP_X_SYMFONICAT_APPLICATION_REQUEST' => '1',
             'HTTP_X_SYMFONICAT_APPLICATION' => 'test',
-            'HTTP_X_SYMFONICAT_APPLICATION_PATH' => '/not-the-application-path',
+            'HTTP_X_SYMFONICAT_APPLICATION_TOKEN' => 'invalid',
         ]);
 
-        self::assertResponseStatusCodeSame(
-            404,
-            'module request headers must map back to a real application routing rule before the module can run',
-        );
+        self::assertResponseStatusCodeSame(404);
     }
 
     public function testModuleRouteRespectsHttpMethodWhitelist(): void
@@ -178,5 +212,16 @@ final class ModuleGuardTest extends SymfonicatWebTestCase
         self::assertResponseIsSuccessful(
             '/milestones is a normal path segment and must render the project shell',
         );
+    }
+
+    private function applicationCsrfTokenFromLastResponse(): string
+    {
+        $content = (string) $this->client()->getResponse()->getContent();
+        preg_match('/"csrfToken"\s*:\s*"([^"]+)"/', $content, $matches);
+
+        self::assertArrayHasKey(1, $matches, 'application helper should emit a module CSRF token');
+        self::assertNotSame('csrf-token', $matches[1]);
+
+        return $matches[1];
     }
 }

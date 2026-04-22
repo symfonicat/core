@@ -102,6 +102,19 @@ class RoutingRuleRepository extends ServiceEntityRepository
             ->getOneOrNullResult();
     }
 
+    public function findOneTypeApplicationByApplicationId(string $applicationId): ?RoutingRule
+    {
+        return $this->createQueryBuilder('rule')
+            ->andWhere('rule.type = :type')
+            ->andWhere('IDENTITY(rule.application) = :applicationId')
+            ->setParameter('type', RoutingRule::TYPE_APPLICATION)
+            ->setParameter('applicationId', $applicationId)
+            ->orderBy('rule.id', 'ASC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
     /**
      * @return RoutingRule[]
      */

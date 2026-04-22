@@ -2,7 +2,9 @@
 
 namespace Symfonicat\Twig;
 
+use Symfonicat\Entity\Application;
 use Symfonicat\Service\ApplicationService;
+use Symfonicat\Service\ApplicationUrlService;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Twig\Extension\AbstractExtension;
 use Twig\Extension\GlobalsInterface;
@@ -12,6 +14,7 @@ final class ApplicationExtension extends AbstractExtension implements GlobalsInt
 {
     public function __construct(
         private readonly ApplicationService $applicationService,
+        private readonly ApplicationUrlService $applicationUrlService,
         private readonly RequestStack $requestStack,
     ) {
     }
@@ -20,6 +23,7 @@ final class ApplicationExtension extends AbstractExtension implements GlobalsInt
     {
         return [
             new TwigFunction('applicationHelper', $this->applicationHelper(...), ['is_safe' => ['html']]),
+            new TwigFunction('path_application', $this->pathApplication(...)),
         ];
     }
 
@@ -38,26 +42,33 @@ final class ApplicationExtension extends AbstractExtension implements GlobalsInt
         ];
     }
 
-    private function applicationHelper() {
-        
-        $application = $this->applicationService->load();
-        $helper = '';
-
-        if ($application) {
-
-            $id = $application->getId();
-            $path = $this->requestStack->getCurrentRequest()->getPathInfo();
-            $helper = <<<SCRIPT
-<script type="text/javascript">
-    window.symfonicatApplication = {
-        id: '$id',
-        path: '$path',
+    public function pathApplication(string $id, string|array|null $path = null, array $arguments = []): string
+    {
+        return $this->applicationUrlService->path($id, $path, $arguments);
     }
-</script>
-SCRIPT;
 
+    private function applicationHelper(): string
+    {
+        $application = $this->applicationService->load();
+        $request = $this->requestStack->getCurrentRequest();
+
+        if (!$application instanceof Application || $request === null) {
+            return 'null';
         }
 
-        return $helper;
+        $id = (string) $application->getId();
+        $redirectTo = $request->attributes->get('symfonicat_application_redirect_target');
+        $data = [
+            'id' => $id,
+            'csrfToken' => $this->applicationService->moduleRequestToken($id),
+            'requestHeader' => 'X-Symfonicat-Application-Request',
+            'tokenHeader' => 'X-Symfonicat-Application-Token',
+        ];
+
+        if (is_string($redirectTo) && $redirectTo !== '') {
+            $data['redirectTo'] = $redirectTo;
+        }
+
+        return json_encode($data, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
     }
 }

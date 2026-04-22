@@ -2,7 +2,7 @@
 
 `symfonicat/core` is the full Symfonicat Symfony application. It ships the public runtime, admin runtime, Doctrine model, webpack integration, Electron-facing commands, and Docker/FrankenPHP starter shell in one repository.
 
-Bootstrap seeds `localhost`, `example.com`, `project1`, the `test` application, the `analytics` module, a `/symfonicat/*/test*` application routing rule, and sample `color` env values. The `test` application has Analytics enabled and `color=red`.
+Bootstrap seeds `localhost`, `example.com`, `project1`, the `test` application, the `analytics` module, a `/symfonicat/*/test*` application routing rule, and sample `color` env values. The `test` application and `project1` project have Analytics enabled by default; the test application uses `color=red`.
 
 ## Runtime Shape
 
@@ -12,7 +12,8 @@ Bootstrap seeds `localhost`, `example.com`, `project1`, the `test` application, 
 - `/` renders the domain shell when no project is active.
 - `/{path}` renders the project shell when a project is active and the project catch-all remains enabled.
 - top-level public controllers are guarded so project subdomains keep the project catch-all unless a legacy project routing rule disables it for the current regex path.
-- application shells expose their matched application context so `/m/{module}` calls can run when the module is attached to that application.
+- application shells expose a signed CSRF-protected application request context so `/m/{module}` calls can run when the module is attached to that application.
+- application URLs can be generated with `path('symfonicat_application', {id: 'test'})` or `path_application('test')`, and both resolve through the matching routing rule rather than the internal `/application/{id}` route.
 
 ## Routing Rules
 
@@ -25,6 +26,8 @@ Supported rule types:
 - `application`: render `templates/application/overrides/{application.id}.html.twig` or `templates/application/main.html.twig`.
 - `redirect`: redirect a whole domain or project to a domain or project.
 - `route`: render a named Symfony route for a domain root or project root.
+
+For the seeded `test` application rule `/symfonicat/*/test*`, `path_application('test')` returns `/symfonicat/*/test`, and `path_application('test', 'somepath/path2', ['tay'])` returns `/symfonicat/tay/test/somepath/path2`. Application routing-rule arguments define the base path, so appended paths continue to render the same application shell.
 
 The routing-rule form keeps type selectors in the rule card, the regex `arguments` collection beside them, scope selectors in the match card, redirect target on the left, and redirect destination on the right.
 
@@ -50,6 +53,8 @@ Webpack entries are discovered from `symfonicat:data:webpack`, with database-bac
 - `assets/modules/{id}` -> `modules/{id}`
 
 The public asset stack uses `assets/symfonicat.js`, `assets/stimulus.js`, `assets/controllers.json`, and `assets/controllers/`. The admin asset stack uses `assets/symfonicat_admin.js`, `assets/stimulus_admin.js`, `assets/controllers_admin.json`, and `assets/controllers_admin/`.
+
+Public module JavaScript uses string helpers installed by `assets/module.js`: `''.json(payload)` posts to `/m/{moduleId}` and parses JSON, `''.json(path, payload)` posts to `/m/{moduleId}/{path}`, `''.html(...)` uses the same argument forms but returns response HTML text, and `''.log(...args)` prefixes console output with `[module][{moduleId}]:`.
 
 ## Sync
 

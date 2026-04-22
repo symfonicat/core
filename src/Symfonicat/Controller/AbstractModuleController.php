@@ -31,6 +31,16 @@ abstract class AbstractModuleController extends AbstractController
             return;
         }
 
+        if ($this->applicationService?->isApplicationModuleRequest()) {
+            $application = $this->applicationService->loadFromModuleRequest();
+
+            if ($application && $application->hasModule($module)) {
+                $this->shouldRun = TRUE;
+            }
+
+            return;
+        }
+
         $project = $this->projectService->load();
 
         if ($project && $project->hasModule($module)) {

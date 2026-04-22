@@ -18,14 +18,16 @@ const parsedHtml = await 'frame'.html({ data2: true });
 const parsedHtmlWithPath = await 'frame'.html('path/secondpath', { data2: true });
 ```
 
-These helpers are bootstrapped by `assets/app.js`. Module entrypoints do not need to import `./module` directly.
+These helpers are bootstrapped by `assets/symfonicat.js`. Module entrypoints do not need to import `./module` directly.
 
 ## Behavior
 - Every request starts with `/m/{moduleId}`.
 - If a path is provided, it becomes `/m/{moduleId}/{path}`.
 - If no path is provided, the request goes to `/m/{moduleId}`.
 - Both helpers use `POST`.
-- Application shells set `window.symfonicatApplication`; when present, module requests send it as context headers so `/m/{moduleId}` can be authorized against the active application.
-- `.log(...)` behaves like `console.log(...)`, but prefixes the output with a styled module label such as `[module][analytics]:`
-- `.json(...)` expects a JSON response body.
-- `.html(...)` expects a raw HTML response body.
+- Application shells set `window.symfonicatApplication`; when present, module requests send the application id, request flag, and signed CSRF token headers so `/m/{moduleId}` can be authorized against the active application.
+- `''.json(payload)` posts JSON to `/m/{moduleId}` and parses the response as JSON.
+- `''.json(path, payload)` posts JSON to `/m/{moduleId}/{path}` and parses the response as JSON.
+- `''.html(payload)` posts JSON to `/m/{moduleId}` and returns the response body as HTML text.
+- `''.html(path, payload)` posts JSON to `/m/{moduleId}/{path}` and returns the response body as HTML text.
+- `''.log(...args)` behaves like `console.log(...)`, but prefixes the output with a styled module label such as `[module][analytics]:`

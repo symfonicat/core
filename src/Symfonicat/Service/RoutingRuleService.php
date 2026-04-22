@@ -5,6 +5,7 @@ namespace Symfonicat\Service;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\Project;
 use Symfonicat\Entity\RoutingRule;
+use Symfonicat\Entity\Application;
 use Symfonicat\Repository\RoutingRuleRepository;
 
 final class RoutingRuleService
@@ -76,7 +77,7 @@ final class RoutingRuleService
     public function getApplicationRuleForPath(string $path): ?RoutingRule
     {
         foreach ($this->routingRuleRepository->findTypeApplication() as $rule) {
-            if ($this->matchesPath($rule, $path)) {
+            if ($this->matchesPath($rule, $path, true)) {
                 return $rule;
             }
         }
@@ -84,7 +85,14 @@ final class RoutingRuleService
         return null;
     }
 
-    private function matchesPath(RoutingRule $rule, string $path): bool
+    public function getApplicationRuleForApplication(Application|string $application): ?RoutingRule
+    {
+        $applicationId = $application instanceof Application ? (string) $application->getId() : $application;
+
+        return $this->routingRuleRepository->findOneTypeApplicationByApplicationId($applicationId);
+    }
+
+    private function matchesPath(RoutingRule $rule, string $path, bool $allowTrailingPath = false): bool
     {
         foreach ($rule->getArguments() as $argument) {
             if (in_array(strtolower(trim($argument)), RoutingRule::RESERVED_ARGUMENTS, true)) {
@@ -92,6 +100,6 @@ final class RoutingRuleService
             }
         }
 
-        return $this->pathService->matchesArguments($rule->getArguments(), $path);
+        return $this->pathService->matchesArguments($rule->getArguments(), $path, $allowTrailingPath);
     }
 }

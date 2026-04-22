@@ -204,6 +204,7 @@ final class BootstrapCommand extends Command
         [$analyticsModule, $createdAnalyticsModule, $updatedAnalyticsModule] = $this->ensureAnalyticsModule();
         [$application, $createdApplication] = $this->ensureTestApplication();
         $attachedAnalyticsToApplication = $this->attachModuleToApplication($application, $analyticsModule);
+        $attachedAnalyticsToProject = $this->attachModuleToProject($project, $analyticsModule);
         $attachedAnalyticsToExample = $this->attachModuleToDomain($exampleDomain, $analyticsModule);
         $attachedAnalyticsToLocalhost = $this->attachModuleToDomain($localhost, $analyticsModule);
         $applicationColor = $this->ensureApplicationEnvValue($application, $env, 'red');
@@ -222,6 +223,7 @@ final class BootstrapCommand extends Command
             || $updatedAnalyticsModule
             || $createdApplication
             || $attachedAnalyticsToApplication
+            || $attachedAnalyticsToProject
             || $attachedAnalyticsToExample
             || $attachedAnalyticsToLocalhost
             || $localhostColor !== 'unchanged'
@@ -282,6 +284,12 @@ final class BootstrapCommand extends Command
                 $messages[] = 'attached Analytics module to test application';
             } else {
                 $messages[] = 'Analytics module already attached to test application';
+            }
+
+            if ($attachedAnalyticsToProject) {
+                $messages[] = 'attached Analytics module to Project 1';
+            } else {
+                $messages[] = 'Analytics module already attached to Project 1';
             }
 
             if ($attachedAnalyticsToExample) {
@@ -401,6 +409,17 @@ final class BootstrapCommand extends Command
         }
 
         $application->addModule($module);
+
+        return true;
+    }
+
+    private function attachModuleToProject(Project $project, Module $module): bool
+    {
+        if ($project->hasModule($module)) {
+            return false;
+        }
+
+        $project->addModule($module);
 
         return true;
     }

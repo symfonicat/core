@@ -10,12 +10,15 @@ use Symfony\Component\HttpFoundation\RequestStack;
 
 class ApplicationService
 {
+    private const MODULE_REQUEST_TOKEN_TTL = 3600;
+
     public function __construct(
         private readonly ApplicationRepository $applicationRepository,
         private readonly EntityManagerInterface $entityManager,
         private readonly PathService $pathService,
         private readonly RequestStack $requestStack,
         private readonly RoutingRuleService $routingRuleService,
+        private readonly string $appSecret,
         private readonly string $projectDir,
     ) {
     }
@@ -125,28 +128,73 @@ class ApplicationService
         return $applications;
     }
 
+    public function isApplicationModuleRequest(): bool
+    {
+        $request = $this->requestStack->getCurrentRequest();
+
+        return $request instanceof Request && $this->isApplicationModuleRequestContext($request);
+    }
+
+    public function loadFromModuleRequest(): ?Application
+    {
+        $request = $this->requestStack->getCurrentRequest();
+        if (!$request instanceof Request) {
+            return null;
+        }
+
+        return $this->loadFromModuleRequestContext($request);
+    }
+
+    public function csrfTokenId(string $applicationId): string
+    {
+        return 'symfonicat_application_module_'.$applicationId;
+    }
+
+    public function moduleRequestToken(string $applicationId): string
+    {
+        $payload = $this->base64UrlEncode(json_encode([
+            'application' => $applicationId,
+            'expires' => time() + self::MODULE_REQUEST_TOKEN_TTL,
+            'nonce' => bin2hex(random_bytes(16)),
+        ], JSON_THROW_ON_ERROR));
+
+        return $payload.'.'.$this->signModuleRequestTokenPayload($payload);
+    }
+
     private function loadFromModuleRequestContext(Request $request): ?Application
     {
-        $path = $request->getPathInfo();
-        if (!str_starts_with($path, '/m/')) {
+        if (!$this->isApplicationModuleRequestContext($request)) {
             return null;
         }
 
         $applicationId = trim((string) $request->headers->get('X-Symfonicat-Application'));
-        $applicationPath = trim((string) $request->headers->get('X-Symfonicat-Application-Path'));
+        $token = trim((string) $request->headers->get('X-Symfonicat-Application-Token'));
 
-        if ($applicationId === '' || $applicationPath === '') {
+        if ($applicationId === '' || $token === '') {
             return null;
         }
 
-        $application = $this->loadFromPath($applicationPath);
-        if (!$application instanceof Application || $application->getId() !== $applicationId) {
+        if (!$this->isModuleRequestTokenValid($applicationId, $token)) {
             return null;
         }
 
-        $request->attributes->set('application', $application);
+        $application = $this->applicationRepository->find($applicationId);
 
-        return $application;
+        if ($application instanceof Application) {
+            $request->attributes->set('application', $application);
+        }
+
+        return $application instanceof Application ? $application : null;
+    }
+
+    private function isApplicationModuleRequestContext(Request $request): bool
+    {
+        $path = $request->getPathInfo();
+        if (!str_starts_with($path, '/m/')) {
+            return false;
+        }
+
+        return trim((string) $request->headers->get('X-Symfonicat-Application-Request')) === '1';
     }
 
     private function normalizePath(string $path): string
@@ -155,5 +203,61 @@ class ApplicationService
         $path = trim($path, '/');
 
         return $path === '' ? '/' : '/'.$path;
+    }
+
+    private function isModuleRequestTokenValid(string $applicationId, string $token): bool
+    {
+        $parts = explode('.', $token, 2);
+        if (count($parts) !== 2) {
+            return false;
+        }
+
+        [$payload, $signature] = $parts;
+        if (!hash_equals($this->signModuleRequestTokenPayload($payload), $signature)) {
+            return false;
+        }
+
+        $decoded = $this->base64UrlDecode($payload);
+        if ($decoded === null) {
+            return false;
+        }
+
+        try {
+            $data = json_decode($decoded, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return false;
+        }
+
+        if (!is_array($data)) {
+            return false;
+        }
+
+        if (($data['application'] ?? null) !== $applicationId) {
+            return false;
+        }
+
+        return is_int($data['expires'] ?? null) && $data['expires'] >= time();
+    }
+
+    private function signModuleRequestTokenPayload(string $payload): string
+    {
+        return $this->base64UrlEncode(hash_hmac('sha256', $payload, $this->appSecret, true));
+    }
+
+    private function base64UrlEncode(string $value): string
+    {
+        return rtrim(strtr(base64_encode($value), '+/', '-_'), '=');
+    }
+
+    private function base64UrlDecode(string $value): ?string
+    {
+        $remainder = strlen($value) % 4;
+        if ($remainder !== 0) {
+            $value .= str_repeat('=', 4 - $remainder);
+        }
+
+        $decoded = base64_decode(strtr($value, '-_', '+/'), true);
+
+        return $decoded === false ? null : $decoded;
     }
 }

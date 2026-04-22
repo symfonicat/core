@@ -33,15 +33,16 @@ function getApplicationContextHeaders() {
 
     const context = window.symfonicatApplication ?? {};
     const applicationId = String(context.id ?? '').trim();
-    const applicationPath = String(context.path ?? window.location?.pathname ?? '').trim();
+    const csrfToken = String(context.csrfToken ?? '').trim();
     const headers = {};
 
     if (applicationId !== '') {
+        headers[String(context.requestHeader ?? 'X-Symfonicat-Application-Request')] = '1';
         headers['X-Symfonicat-Application'] = applicationId;
     }
 
-    if (applicationPath !== '') {
-        headers['X-Symfonicat-Application-Path'] = applicationPath;
+    if (csrfToken !== '') {
+        headers[String(context.tokenHeader ?? 'X-Symfonicat-Application-Token')] = csrfToken;
     }
 
     return headers;

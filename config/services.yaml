@@ -29,11 +29,17 @@ services:
 
     Symfonicat\Service\ApplicationService:
         arguments:
+            $appSecret: '%kernel.secret%'
             $projectDir: '%kernel.project_dir%'
 
     Symfonicat\Service\ProjectService:
         arguments:
             $projectDir: '%kernel.project_dir%'
+
+    Symfonicat\Routing\ApplicationRouter:
+        decorates: 'router.default'
+        arguments:
+            $inner: '@Symfonicat\Routing\ApplicationRouter.inner'
 
     Symfonicat\Command\WebpackModulesDataCommand:
         arguments:

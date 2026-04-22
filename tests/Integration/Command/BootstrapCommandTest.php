@@ -55,6 +55,11 @@ final class BootstrapCommandTest extends SymfonicatKernelTestCase
             'bootstrap must attach Analytics to the test application so application routes have a module by default',
         );
 
+        self::assertTrue(
+            $project->hasModule($analytics),
+            'bootstrap must attach Analytics to Project 1 so project module routes work out of the box',
+        );
+
         self::assertSame('blue', $this->envValueFor($localhost, 'color'));
         self::assertSame('blue', $this->envValueFor($exampleCom, 'color'));
         self::assertSame('green', $this->projectEnvValueFor($project, 'color'));
@@ -105,6 +110,7 @@ final class BootstrapCommandTest extends SymfonicatKernelTestCase
                 'project_env' => 0,
                 'module' => 0,
                 'module_application' => 0,
+                'module_project' => 0,
                 'routing_rule' => 0,
             ],
             $this->countAll(),
@@ -176,6 +182,7 @@ final class BootstrapCommandTest extends SymfonicatKernelTestCase
             'project_env' => $this->countTable('symfonicat_project_env'),
             'module' => $this->countTable('symfonicat_module'),
             'module_application' => $this->countTable('symfonicat_module_application'),
+            'module_project' => $this->countTable('symfonicat_module_project'),
             'routing_rule' => $this->countTable('symfonicat_routing_rule'),
         ];
     }
