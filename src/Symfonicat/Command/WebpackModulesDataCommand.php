@@ -32,7 +32,7 @@ final class WebpackModulesDataCommand extends Command
         $output->writeln(json_encode([
             'applications' => $this->idsFromRepositoryOrAssets(
                 fn (): array => $this->applicationRepository->findAll(),
-                'assets/application',
+                'assets/applications',
             ),
             'modules' => $this->idsFromRepositoryOrAssets(
                 fn (): array => $this->moduleRepository->findAll(),

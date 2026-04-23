@@ -61,7 +61,7 @@ final class SchemaUpdateCommand extends Command
             $applicationResult = $this->applicationService->sync(function (array $applicationIds) use ($input, $io): bool {
                 $io->section('Missing applications');
                 $io->listing(array_map(
-                    static fn (string $applicationId): string => sprintf('%s from assets/application/%s', $applicationId, $applicationId),
+                    static fn (string $applicationId): string => sprintf('%s from assets/applications/%s', $applicationId, $applicationId),
                     $applicationIds,
                 ));
 

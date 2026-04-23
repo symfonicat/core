@@ -55,7 +55,7 @@ Symfonicat owns these tables:
 - `RoutingRule` -> `symfonicat_routing_rule`
 - `Admin` -> `symfonicat_admin`
 
-`Application.id`, `Domain.id`, `Project.id`, `Module.id`, and `Env.id` are string identifiers. `Project.id` is immutable once created and is also the project subdomain, project asset key, and Electron/runtime key. `Module.id` is immutable and is the module backend and frontend entry key. `Application.id` is the application shell key and maps to `assets/application/{id}` plus `templates/application/overrides/{id}.html.twig`.
+`Application.id`, `Domain.id`, `Project.id`, `Module.id`, and `Env.id` are string identifiers. `Project.id` is immutable once created and is also the project subdomain, project asset key, and Electron/runtime key. `Module.id` is immutable and is the module backend and frontend entry key. `Application.id` is the application shell key and maps to `assets/applications/{id}` plus `templates/application/overrides/{id}.html.twig`.
 
 `Domain`, `Project`, and `Application` can each attach `Module` rows. Modules are synchronized from `assets/modules/{id}/package.json`; deleted filesystem modules are only removed after the command shows referencing entity rows and receives confirmation.
 
@@ -131,7 +131,7 @@ Asset source lives in `assets`, and the build target is `public/build`.
 
 Scope entrypoints are discovered from `symfonicat:data:webpack`; the command falls back to filesystem discovery when database-backed rows are unavailable:
 
-- `assets/application/{id}/index.js` -> `application/{id}`
+- `assets/applications/{id}/index.js` -> `application/{id}`
 - `assets/domains/{id}/index.js` -> `domains/{id}`
 - `assets/projects/{id}/index.js` -> `projects/{id}`
 - `assets/modules/{id}/index.js` -> `modules/{id}`
@@ -198,7 +198,7 @@ docker exec php bin/console symfonicat:admin:delete <email>
 Important Symfonicat commands include:
 
 - `symfonicat:bootstrap`: waits for the database, synchronizes the schema, and seeds local defaults
-- `symfonicat:schema:update`: synchronizes module rows from `assets/modules/*/package.json`, application rows from `assets/application/*`, and project rows from `assets/projects/*`
+- `symfonicat:schema:update`: synchronizes module rows from `assets/modules/*/package.json`, application rows from `assets/applications/*`, and project rows from `assets/projects/*`
 - `symfonicat:data:webpack`: emits application/domain/project/module entry data for webpack with filesystem fallback
 - `symfonicat:admin:create`: creates or updates an admin, prompts for a hidden password, and prints the MFA QR code
 - `symfonicat:admin:delete`: deletes an admin

@@ -47,7 +47,7 @@ Project values overwrite domain values, and domain values overwrite application 
 
 Webpack entries are discovered from `symfonicat:data:webpack`, with database-backed rows and filesystem fallback under:
 
-- `assets/application/{id}` -> `application/{id}`
+- `assets/applications/{id}` -> `application/{id}`
 - `assets/domains/{id}` -> `domains/{id}`
 - `assets/projects/{id}` -> `projects/{id}`
 - `assets/modules/{id}` -> `modules/{id}`
@@ -61,7 +61,7 @@ Public module JavaScript uses string helpers installed by `assets/module.js`: `'
 `symfonicat:schema:update` synchronizes:
 
 - modules from `assets/modules/{id}/package.json`
-- applications from `assets/application/{id}`
+- applications from `assets/applications/{id}`
 - projects from `assets/projects/{id}`
 
 Missing application and project rows are created with only their `id`. Module deletions are confirmed when referencing entity rows exist.

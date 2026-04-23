@@ -243,7 +243,7 @@ class ApplicationService
      */
     private function discoverFilesystemApplications(): array
     {
-        $applicationDirectories = glob($this->projectDir.'/assets/application/*', GLOB_ONLYDIR) ?: [];
+        $applicationDirectories = glob($this->projectDir.'/assets/applications/*', GLOB_ONLYDIR) ?: [];
         sort($applicationDirectories, SORT_STRING);
 
         return array_values(array_map('basename', $applicationDirectories));
