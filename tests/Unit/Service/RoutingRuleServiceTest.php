@@ -116,6 +116,24 @@ final class RoutingRuleServiceTest extends TestCase
         self::assertSame($projectRules, $service->getTypeProjectByProject($project));
     }
 
+    public function testApplicationRouteLookupPassesThroughToRepository(): void
+    {
+        $rule = (new RoutingRule())
+            ->setType(RoutingRule::TYPE_APPLICATION)
+            ->setApplicationType(RoutingRule::APPLICATION_TYPE_ROUTE)
+            ->setRoute('app_project_test');
+
+        $repo = $this->createMock(RoutingRuleRepository::class);
+        $repo->expects(self::once())
+            ->method('findOneTypeApplicationByRoute')
+            ->with('app_project_test')
+            ->willReturn($rule);
+
+        $service = $this->service($repo);
+
+        self::assertSame($rule, $service->getApplicationRuleForRoute('app_project_test'));
+    }
+
     private function service(RoutingRuleRepository $repository): RoutingRuleService
     {
         return new RoutingRuleService(new PathService(new RequestStack()), $repository);

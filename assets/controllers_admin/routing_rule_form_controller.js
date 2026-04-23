@@ -3,6 +3,7 @@ import { Controller } from '@hotwired/stimulus'
 export default class extends Controller {
     static targets = [
         'type',
+        'applicationType',
         'argumentsRow',
         'argumentsCollection',
         'argumentsItems',
@@ -10,6 +11,7 @@ export default class extends Controller {
         'redirectType',
         'routeType',
         'redirectTarget',
+        'applicationTypeRow',
         'redirectTypeRow',
         'routeTypeRow',
         'redirectTargetRow',
@@ -33,6 +35,7 @@ export default class extends Controller {
         }
 
         const type = this.typeTarget.value
+        const applicationType = this.hasApplicationTypeTarget ? this.applicationTypeTarget.value : ''
         const redirectType = this.hasRedirectTypeTarget ? this.redirectTypeTarget.value : ''
         const routeType = this.hasRouteTypeTarget ? this.routeTypeTarget.value : ''
         const redirectTarget = this.hasRedirectTargetTarget ? this.redirectTargetTarget.value : ''
@@ -42,13 +45,16 @@ export default class extends Controller {
         const isApplication = type === 'application'
         const isRedirect = type === 'redirect'
         const isRoute = type === 'route'
+        const isApplicationArguments = isApplication && applicationType === 'arguments'
+        const isApplicationRoute = isApplication && applicationType === 'route'
 
-        this.toggleRow(this.argumentsRowTarget, isDomain || isProject || isApplication)
+        this.toggleRow(this.applicationTypeRowTarget, isApplication)
+        this.toggleRow(this.argumentsRowTarget, isDomain || isProject || isApplicationArguments)
         this.toggleRow(this.redirectCardTarget, isRedirect)
         this.toggleRow(this.redirectTypeRowTarget, isRedirect)
         this.toggleRow(this.redirectTargetRowTarget, isRedirect)
 
-        this.toggleRow(this.routeCardTarget, isRoute)
+        this.toggleRow(this.routeCardTarget, isRoute || isApplicationRoute)
         this.toggleRow(this.routeTypeRowTarget, isRoute)
 
         this.toggleRow(
@@ -62,7 +68,7 @@ export default class extends Controller {
         this.toggleRow(this.applicationRowTarget, isApplication)
         this.toggleRow(this.redirectDomainRowTarget, isRedirect && redirectTarget === 'domain')
         this.toggleRow(this.redirectProjectRowTarget, isRedirect && redirectTarget === 'project')
-        this.toggleRow(this.routeRowTarget, isRoute)
+        this.toggleRow(this.routeRowTarget, isRoute || isApplicationRoute)
     }
 
     addArgument(event) {

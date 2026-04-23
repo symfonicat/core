@@ -4,9 +4,14 @@ namespace Symfonicat\Service;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Symfonicat\Entity\Application;
+use Symfonicat\Entity\RoutingRule;
 use Symfonicat\Repository\ApplicationRepository;
+use Symfonicat\Repository\RoutingRuleRepository;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\Routing\Exception\InvalidParameterException;
+use Symfony\Component\Routing\Exception\MissingMandatoryParametersException;
+use Symfony\Component\Routing\RouterInterface;
 
 class ApplicationService
 {
@@ -14,9 +19,11 @@ class ApplicationService
 
     public function __construct(
         private readonly ApplicationRepository $applicationRepository,
+        private readonly RoutingRuleRepository $routingRuleRepository,
         private readonly EntityManagerInterface $entityManager,
         private readonly PathService $pathService,
         private readonly RequestStack $requestStack,
+        private readonly RouterInterface $frameworkRouter,
         private readonly RoutingRuleService $routingRuleService,
         private readonly string $appSecret,
         private readonly string $projectDir,
@@ -32,6 +39,11 @@ class ApplicationService
 
         $application = $request->attributes->get('application');
 
+        if ($application instanceof Application) {
+            return $application;
+        }
+
+        $application = $this->loadFromRoute((string) $request->attributes->get('_route', ''));
         if ($application instanceof Application) {
             return $application;
         }
@@ -61,6 +73,134 @@ class ApplicationService
         $rule = $this->routingRuleService->getApplicationRuleForPath($path);
 
         return $rule?->getApplication();
+    }
+
+    public function loadFromRoute(?string $route = null): ?Application
+    {
+        $request = $this->requestStack->getCurrentRequest();
+        if (!$request instanceof Request || str_starts_with($request->getPathInfo(), '/admin')) {
+            return null;
+        }
+
+        $route ??= (string) $request->attributes->get('_route', '');
+        $route = trim($route);
+        if ($route === '') {
+            return null;
+        }
+
+        $rule = $this->routingRuleRepository->findOneTypeApplicationByRoute($route);
+        $application = $rule?->getApplication();
+
+        if ($application instanceof Application) {
+            $request->attributes->set('application', $application);
+            $request->attributes->set('symfonicat_application_rule', $rule);
+        }
+
+        return $application instanceof Application ? $application : null;
+    }
+
+    /**
+     * @param string|array<int, mixed>|null $path
+     * @param array<int, mixed> $arguments
+     */
+    public function path(Application|string $application, string|array|null $path = null, array $arguments = []): string
+    {
+        if (is_array($path)) {
+            $arguments = $path;
+            $path = null;
+        }
+
+        $applicationId = $application instanceof Application ? (string) $application->getId() : trim((string) $application);
+        $applicationId = trim($applicationId);
+        if ($applicationId === '') {
+            throw new MissingMandatoryParametersException('The "id" parameter is required for the "symfonicat_application" route.');
+        }
+
+        $rule = $this->getRuleForApplication($applicationId);
+        if (!$rule instanceof RoutingRule) {
+            throw new InvalidParameterException(sprintf('Application "%s" does not have an application routing rule.', $applicationId));
+        }
+
+        return $this->pathFromRule($rule, (string) $path, $arguments);
+    }
+
+    /**
+     * @param array<string, mixed> $parameters
+     */
+    public function pathFromRouteParameters(array $parameters): string
+    {
+        $id = (string) ($parameters['id'] ?? '');
+        $path = $parameters['path'] ?? null;
+        $arguments = $parameters['arguments'] ?? [];
+
+        if (is_array($path) && $arguments === []) {
+            $arguments = $path;
+            $path = null;
+        }
+
+        if (!is_array($arguments)) {
+            $arguments = [$arguments];
+        }
+
+        return $this->path($id, is_array($path) ? null : (string) ($path ?? ''), array_values($arguments));
+    }
+
+    public function getRuleForApplication(Application|string $application, ?string $applicationType = null): ?RoutingRule
+    {
+        $applicationId = $application instanceof Application ? (string) $application->getId() : trim((string) $application);
+        if ($applicationId === '') {
+            return null;
+        }
+
+        return match ($applicationType) {
+            RoutingRule::APPLICATION_TYPE_ARGUMENTS => $this->routingRuleRepository->findOneTypeApplicationArgumentsByApplicationId($applicationId),
+            RoutingRule::APPLICATION_TYPE_ROUTE => $this->routingRuleRepository->findOneTypeApplicationRouteByApplicationId($applicationId),
+            default => $this->routingRuleRepository->findOneTypeApplicationArgumentsByApplicationId($applicationId)
+                ?? $this->routingRuleRepository->findOneTypeApplicationRouteByApplicationId($applicationId)
+                ?? $this->routingRuleRepository->findOneTypeApplicationByApplicationId($applicationId),
+        };
+    }
+
+    /**
+     * @param array<int, mixed> $arguments
+     */
+    public function pathFromRule(RoutingRule $rule, string $path = '', array $arguments = []): string
+    {
+        if ($rule->isApplicationRouteType()) {
+            return $this->pathFromRouteRule($rule, $path, $arguments);
+        }
+
+        $replacementArguments = array_values(array_map(
+            static fn (mixed $argument): string => trim((string) $argument, " \t\n\r\0\x0B/"),
+            $arguments,
+        ));
+
+        $segments = [];
+
+        foreach ($rule->getArguments() as $argument) {
+            $argument = trim($argument, " \t\n\r\0\x0B/");
+            if ($argument === '') {
+                continue;
+            }
+
+            if ($argument === '*') {
+                $replacement = array_shift($replacementArguments);
+                $segments[] = $replacement === null || $replacement === '' ? '*' : $replacement;
+
+                continue;
+            }
+
+            $argument = rtrim($argument, '*');
+            if ($argument !== '') {
+                $segments[] = $argument;
+            }
+        }
+
+        foreach ($this->pathSegments($path) as $pathSegment) {
+            $segments[] = $pathSegment;
+        }
+
+        return $this->segmentsToPath($segments);
     }
 
     /**
@@ -197,12 +337,87 @@ class ApplicationService
         return trim((string) $request->headers->get('X-Symfonicat-Application-Request')) === '1';
     }
 
+    /**
+     * @param array<int, mixed> $arguments
+     */
+    private function pathFromRouteRule(RoutingRule $rule, string $path, array $arguments): string
+    {
+        if ($arguments !== []) {
+            throw new InvalidParameterException(sprintf(
+                'Application "%s" route rules do not support wildcard path arguments.',
+                (string) $rule->getApplication()?->getId(),
+            ));
+        }
+
+        $routeName = trim((string) $rule->getRoute());
+        if ($routeName === '') {
+            throw new InvalidParameterException(sprintf(
+                'Application "%s" does not have a route name configured.',
+                (string) $rule->getApplication()?->getId(),
+            ));
+        }
+
+        $generatedPath = $this->frameworkRouter->generate($routeName);
+        $suffixSegments = $this->pathSegments($path);
+
+        if ($suffixSegments === []) {
+            return $generatedPath;
+        }
+
+        return rtrim($generatedPath, '/').'/'.implode('/', array_map($this->encodeSegment(...), $suffixSegments));
+    }
+
     private function normalizePath(string $path): string
     {
         $path = parse_url($path, PHP_URL_PATH) ?: $path;
         $path = trim($path, '/');
 
         return $path === '' ? '/' : '/'.$path;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function pathSegments(string $path): array
+    {
+        $path = trim($path, " \t\n\r\0\x0B/");
+        if ($path === '') {
+            return [];
+        }
+
+        return array_values(array_filter(
+            explode('/', $path),
+            static fn (string $segment): bool => $segment !== '',
+        ));
+    }
+
+    /**
+     * @param list<string> $segments
+     */
+    private function segmentsToPath(array $segments): string
+    {
+        $segments = array_values(array_filter(
+            array_map(
+                static fn (string $segment): string => trim($segment, " \t\n\r\0\x0B/"),
+                $segments,
+            ),
+            static fn (string $segment): bool => $segment !== '',
+        ));
+
+        if ($segments === []) {
+            return '/';
+        }
+
+        return '/'.implode('/', array_map($this->encodeSegment(...), $segments));
+    }
+
+    private function encodeSegment(string $segment): string
+    {
+        if ($segment === '*') {
+            return '*';
+        }
+
+        return str_replace('%2A', '*', rawurlencode($segment));
     }
 
     private function isModuleRequestTokenValid(string $applicationId, string $token): bool

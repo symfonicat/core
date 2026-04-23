@@ -36,7 +36,7 @@ npm run dev
 On first container boot the `php` service synchronizes the Doctrine schema and seeds the local development rows: `localhost`, `example.com`, `project1`, the `test` application, the `analytics` module, a `/symfonicat/*/test*` application routing rule, and sample `color` env values. The `test` application and `project1` project both have Analytics enabled by default; the test application uses `color=red`, the default domains use `color=blue`, and `project1` uses `color=green`. After the stack is up, create an admin and synchronize filesystem-backed rows:
 
 ```bash
-docker exec php bin/console symfonicat:admin:create <email> <password>
+docker exec -it php bin/console symfonicat:admin:create <username>
 docker exec -it php bin/console symfonicat:schema:update
 ```
 
@@ -92,13 +92,13 @@ Supported rule types:
 
 - `domain`: legacy rule that renders the domain shell for a matching regex path.
 - `project`: legacy rule that disables the project catch-all for a matching regex path so Symfony routes can handle it.
-- `application`: renders `templates/application/overrides/{application.id}.html.twig` when present, otherwise `templates/application/main.html.twig`.
+- `application`: either matches regex path arguments and renders the application shell, or attaches an application to a named Symfony route.
 - `redirect`: redirects a whole domain or project to a target domain or project, regardless of path.
 - `route`: renders a named Symfony route for the root of a domain or project.
 
-Redirect rules use `redirectType` to choose the matched scope (`domain` or `project`) and `redirectTarget` to choose the destination type (`domain` or `project`). Route rules use `routeType` to choose whether the root route applies to a domain or a project.
+Redirect rules use `redirectType` to choose the matched scope (`domain` or `project`) and `redirectTarget` to choose the destination type (`domain` or `project`). Route rules use `routeType` to choose whether the root route applies to a domain or a project. Application rules use `applicationType`: `arguments` matches `RoutingRule.arguments`, while `route` uses `RoutingRule.route` as the Symfony route name that should receive the application context.
 
-The routing-rule admin form groups related fields into cards. The rule card contains `type`, `redirectType`, `routeType`, and the multifield `arguments` regex segment collection. The match card shows the relevant domain, project, or application selector. The redirect card keeps `redirectTarget` on the left and the selected redirect domain/project destination on the right. The routing-rule list links application rows through `path_application()` only when an application target exists; other rule types render their argument path as plain text.
+The routing-rule admin form groups related fields into cards. The rule card contains `type`, `applicationType`, `redirectType`, `routeType`, and the relevant match settings. Application rules only show `arguments` for `applicationType=arguments`, and only show `route` for `applicationType=route`. The match card shows the relevant domain, project, or application selector. The redirect card keeps `redirectTarget` on the left and the selected redirect domain/project destination on the right. The routing-rule list links application rows through `path_application()` only when an application target exists.
 
 ## Env
 
@@ -149,7 +149,7 @@ Backend module controllers live under `/m/{id}` and should extend [AbstractModul
 
 Application shells expose the active application id and a signed, expiring CSRF token through `applicationHelper()`. Browser module requests send those values as headers, and `ApplicationService` resolves the application from the signed request context before `/m/{id}` is allowed to run from an application module attachment.
 
-Application URLs can also be generated directly. `path('symfonicat_application', {id: 'test'})` and `path_application('test')` both resolve through the application routing rule instead of the internal controller path. For the seeded `test` application rule `/symfonicat/*/test*`, those helpers produce `/symfonicat/*/test`; passing a path appends it, and `path_application('test', 'somepath/path2', ['tay'])` replaces the wildcard segment to produce `/symfonicat/tay/test/somepath/path2`. Application routing-rule arguments define the application base path, so trailing generated paths continue to render the same application shell. The internal `/application/{id}/{path}` route renders the same application shell and uses client-side history replacement to show the public application URL.
+Application URLs are generated through `ApplicationService`. `path('symfonicat_application', {id: 'test'})`, `path_application('test')`, and `path_application(application)` all resolve through the application routing rule instead of the internal controller path. For the seeded `test` application rule `/symfonicat/*/test*`, those helpers produce `/symfonicat/*/test`; passing a path appends it, and `path_application('test', 'somepath/path2', ['tay'])` or `path_application(application, 'somepath/path2', ['tay'])` replaces the wildcard segment to produce `/symfonicat/tay/test/somepath/path2`. Route-based application rules generate the configured Symfony route path instead. The internal `/application/{id}/{path}` route renders the same application shell and uses client-side history replacement to show the public application URL.
 
 Browser-side module requests use the string helpers installed by [module.js](assets/module.js):
 
@@ -189,7 +189,7 @@ Admin lives under `/admin` and is isolated from any host app user system.
 Useful commands:
 
 ```bash
-docker exec php bin/console symfonicat:admin:create <email> <password>
+docker exec -it php bin/console symfonicat:admin:create <username>
 docker exec php bin/console symfonicat:admin:delete <email>
 ```
 
@@ -200,7 +200,7 @@ Important Symfonicat commands include:
 - `symfonicat:bootstrap`: waits for the database, synchronizes the schema, and seeds local defaults
 - `symfonicat:schema:update`: synchronizes module rows from `assets/modules/*/package.json`, application rows from `assets/application/*`, and project rows from `assets/projects/*`
 - `symfonicat:data:webpack`: emits application/domain/project/module entry data for webpack with filesystem fallback
-- `symfonicat:admin:create`: creates or updates an admin and prints the MFA QR code
+- `symfonicat:admin:create`: creates or updates an admin, prompts for a hidden password, and prints the MFA QR code
 - `symfonicat:admin:delete`: deletes an admin
 - `symfonicat:public-suffix:refresh`: refreshes `public_suffix_list.dat`
 - `electron:*`: prepares, runs, builds, and packages the Electron shell

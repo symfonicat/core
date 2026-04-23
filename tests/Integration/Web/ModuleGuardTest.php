@@ -69,6 +69,7 @@ final class ModuleGuardTest extends SymfonicatWebTestCase
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_APPLICATION)
             ->setApplication($application)
+            ->setApplicationType(RoutingRule::APPLICATION_TYPE_ARGUMENTS)
             ->setArguments(['u', '*', 'x*']);
 
         $this->entityManager()->persist($application);
@@ -105,6 +106,7 @@ final class ModuleGuardTest extends SymfonicatWebTestCase
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_APPLICATION)
             ->setApplication($application)
+            ->setApplicationType(RoutingRule::APPLICATION_TYPE_ARGUMENTS)
             ->setArguments(['u', '*', 'x*']);
 
         $this->entityManager()->persist($application);
@@ -138,6 +140,7 @@ final class ModuleGuardTest extends SymfonicatWebTestCase
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_APPLICATION)
             ->setApplication($application)
+            ->setApplicationType(RoutingRule::APPLICATION_TYPE_ARGUMENTS)
             ->setArguments(['u', '*', 'x*']);
 
         $this->entityManager()->persist($application);

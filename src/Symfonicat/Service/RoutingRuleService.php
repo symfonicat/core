@@ -76,13 +76,23 @@ final class RoutingRuleService
 
     public function getApplicationRuleForPath(string $path): ?RoutingRule
     {
-        foreach ($this->routingRuleRepository->findTypeApplication() as $rule) {
+        foreach ($this->routingRuleRepository->findTypeApplicationByApplicationType(RoutingRule::APPLICATION_TYPE_ARGUMENTS) as $rule) {
             if ($this->matchesPath($rule, $path, true)) {
                 return $rule;
             }
         }
 
         return null;
+    }
+
+    public function getApplicationRuleForRoute(string $route): ?RoutingRule
+    {
+        $route = trim($route);
+        if ($route === '') {
+            return null;
+        }
+
+        return $this->routingRuleRepository->findOneTypeApplicationByRoute($route);
     }
 
     public function getApplicationRuleForApplication(Application|string $application): ?RoutingRule

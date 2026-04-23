@@ -15,7 +15,7 @@ use Symfony\Component\Validator\Context\ExecutionContextInterface;
     indexes: [
         new ORM\Index(name: 'symfonicat_routing_rule_domain_arguments_idx', columns: ['type', 'redirect_type', 'route_type', 'domain_id']),
         new ORM\Index(name: 'symfonicat_routing_rule_project_arguments_idx', columns: ['type', 'redirect_type', 'route_type', 'project_id']),
-        new ORM\Index(name: 'symfonicat_routing_rule_application_arguments_idx', columns: ['type', 'application_id']),
+        new ORM\Index(name: 'symfonicat_routing_rule_application_arguments_idx', columns: ['type', 'application_type', 'application_id', 'route']),
     ],
 )]
 class RoutingRule
@@ -34,6 +34,9 @@ class RoutingRule
 
     public const ROUTE_TYPE_DOMAIN = 'domain';
     public const ROUTE_TYPE_PROJECT = 'project';
+
+    public const APPLICATION_TYPE_ARGUMENTS = 'arguments';
+    public const APPLICATION_TYPE_ROUTE = 'route';
 
     public const RESERVED_ARGUMENTS = [
         'admin',
@@ -61,6 +64,9 @@ class RoutingRule
 
     #[ORM\Column(length: 20, nullable: true)]
     private ?string $routeType = null;
+
+    #[ORM\Column(length: 20, nullable: true)]
+    private ?string $applicationType = self::APPLICATION_TYPE_ARGUMENTS;
 
     #[ORM\ManyToOne(targetEntity: Domain::class)]
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
@@ -125,6 +131,14 @@ class RoutingRule
         ];
     }
 
+    public static function getApplicationTypeChoices(): array
+    {
+        return [
+            'arguments' => self::APPLICATION_TYPE_ARGUMENTS,
+            'route' => self::APPLICATION_TYPE_ROUTE,
+        ];
+    }
+
     public function getId(): ?int
     {
         return $this->id;
@@ -178,6 +192,18 @@ class RoutingRule
     public function setRouteType(?string $routeType): self
     {
         $this->routeType = $routeType;
+
+        return $this;
+    }
+
+    public function getApplicationType(): string
+    {
+        return $this->applicationType ?? self::APPLICATION_TYPE_ARGUMENTS;
+    }
+
+    public function setApplicationType(?string $applicationType): self
+    {
+        $this->applicationType = $applicationType;
 
         return $this;
     }
@@ -317,6 +343,16 @@ class RoutingRule
         return $this->type === self::TYPE_APPLICATION;
     }
 
+    public function isApplicationArgumentsType(): bool
+    {
+        return $this->getApplicationType() === self::APPLICATION_TYPE_ARGUMENTS;
+    }
+
+    public function isApplicationRouteType(): bool
+    {
+        return $this->getApplicationType() === self::APPLICATION_TYPE_ROUTE;
+    }
+
     public function isDomainRedirectType(): bool
     {
         return $this->redirectType === self::REDIRECT_TYPE_DOMAIN;
@@ -357,6 +393,7 @@ class RoutingRule
             $this->redirectType = null;
             $this->redirectTarget = null;
             $this->routeType = null;
+            $this->applicationType = null;
             $this->redirectDomain = null;
             $this->redirectProject = null;
             $this->route = null;
@@ -370,6 +407,7 @@ class RoutingRule
             $this->redirectType = null;
             $this->redirectTarget = null;
             $this->routeType = null;
+            $this->applicationType = null;
             $this->redirectDomain = null;
             $this->redirectProject = null;
             $this->route = null;
@@ -385,7 +423,13 @@ class RoutingRule
             $this->routeType = null;
             $this->redirectDomain = null;
             $this->redirectProject = null;
-            $this->route = null;
+
+            if ($this->isApplicationRouteType()) {
+                $this->arguments = [];
+            } else {
+                $this->route = null;
+                $this->applicationType = self::APPLICATION_TYPE_ARGUMENTS;
+            }
 
             return;
         }
@@ -394,6 +438,7 @@ class RoutingRule
             $this->arguments = [];
             $this->application = null;
             $this->routeType = null;
+            $this->applicationType = null;
             $this->route = null;
 
             if ($this->isDomainRedirectType()) {
@@ -422,6 +467,7 @@ class RoutingRule
             $this->application = null;
             $this->redirectType = null;
             $this->redirectTarget = null;
+            $this->applicationType = null;
             $this->redirectDomain = null;
             $this->redirectProject = null;
 
@@ -463,11 +509,27 @@ class RoutingRule
         }
 
         if ($this->isApplicationType()) {
-            $this->validateArguments($context);
-
             if ($this->application === null) {
                 $context->buildViolation('An application routing rule requires an application.')
                     ->atPath('application')
+                    ->addViolation();
+            }
+
+            if (!in_array($this->getApplicationType(), array_values(self::getApplicationTypeChoices()), true)) {
+                $context->buildViolation('An application routing rule requires an application type.')
+                    ->atPath('applicationType')
+                    ->addViolation();
+
+                return;
+            }
+
+            if ($this->isApplicationArgumentsType()) {
+                $this->validateArguments($context);
+            }
+
+            if ($this->isApplicationRouteType() && trim((string) $this->route) === '') {
+                $context->buildViolation('A route-based application rule requires a route.')
+                    ->atPath('route')
                     ->addViolation();
             }
 

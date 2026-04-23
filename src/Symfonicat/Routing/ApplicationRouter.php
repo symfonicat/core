@@ -2,7 +2,7 @@
 
 namespace Symfonicat\Routing;
 
-use Symfonicat\Service\ApplicationUrlService;
+use Symfonicat\Service\ApplicationService;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\CacheWarmer\WarmableInterface;
 use Symfony\Component\Routing\Exception\InvalidParameterException;
@@ -17,7 +17,7 @@ final class ApplicationRouter implements RouterInterface, RequestMatcherInterfac
 {
     public function __construct(
         private readonly RouterInterface $inner,
-        private readonly ApplicationUrlService $applicationUrlService,
+        private readonly ApplicationService $applicationService,
     ) {
     }
 
@@ -30,7 +30,7 @@ final class ApplicationRouter implements RouterInterface, RequestMatcherInterfac
             return $this->inner->generate($name, $parameters, $referenceType);
         }
 
-        $path = $this->applicationUrlService->pathFromRouteParameters($parameters);
+        $path = $this->applicationService->pathFromRouteParameters($parameters);
         $parameters = $this->removeApplicationParameters($parameters);
         $fragment = (string) ($parameters['_fragment'] ?? '');
         unset($parameters['_fragment']);

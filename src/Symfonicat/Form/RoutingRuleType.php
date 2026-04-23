@@ -45,6 +45,13 @@ class RoutingRuleType extends AbstractType
                 'label' => 'type',
                 'help' => 'Choose domain, project, application, redirect, or route.',
             ])
+            ->add('applicationType', ChoiceType::class, [
+                'choices' => RoutingRule::getApplicationTypeChoices(),
+                'label' => 'application type',
+                'required' => false,
+                'placeholder' => 'select application type',
+                'help' => 'Choose whether the application matches arguments or a Symfony route.',
+            ])
             ->add('redirectType', ChoiceType::class, [
                 'choices' => RoutingRule::getRedirectTypeChoices(),
                 'label' => 'redirect type',
@@ -109,7 +116,7 @@ class RoutingRuleType extends AbstractType
             ->add('route', null, [
                 'label' => 'route',
                 'required' => false,
-                'help' => 'Enter the Symfony route name to render.',
+                'help' => 'Enter the Symfony route name to render or attach an application to.',
             ])
         ;
     }

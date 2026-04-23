@@ -4,7 +4,6 @@ namespace Symfonicat\Twig;
 
 use Symfonicat\Entity\Application;
 use Symfonicat\Service\ApplicationService;
-use Symfonicat\Service\ApplicationUrlService;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Twig\Extension\AbstractExtension;
 use Twig\Extension\GlobalsInterface;
@@ -14,11 +13,10 @@ final class ApplicationExtension extends AbstractExtension implements GlobalsInt
 {
     public function __construct(
         private readonly ApplicationService $applicationService,
-        private readonly ApplicationUrlService $applicationUrlService,
         private readonly RequestStack $requestStack,
     ) {
     }
-    
+
     public function getFunctions(): array
     {
         return [
@@ -42,9 +40,9 @@ final class ApplicationExtension extends AbstractExtension implements GlobalsInt
         ];
     }
 
-    public function pathApplication(string $id, string|array|null $path = null, array $arguments = []): string
+    public function pathApplication(Application|string $application, string|array|null $path = null, array $arguments = []): string
     {
-        return $this->applicationUrlService->path($id, $path, $arguments);
+        return $this->applicationService->path($application, $path, $arguments);
     }
 
     private function applicationHelper(): string

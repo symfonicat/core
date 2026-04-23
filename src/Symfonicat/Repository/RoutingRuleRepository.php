@@ -115,6 +115,54 @@ class RoutingRuleRepository extends ServiceEntityRepository
             ->getOneOrNullResult();
     }
 
+    public function findOneTypeApplicationArgumentsByApplicationId(string $applicationId): ?RoutingRule
+    {
+        $qb = $this->createQueryBuilder('rule')
+            ->andWhere('rule.type = :type')
+            ->andWhere('IDENTITY(rule.application) = :applicationId')
+            ->setParameter('type', RoutingRule::TYPE_APPLICATION)
+            ->setParameter('applicationId', $applicationId)
+            ->orderBy('rule.id', 'ASC')
+            ->setMaxResults(1);
+
+        $qb->andWhere($qb->expr()->orX(
+            'rule.applicationType = :applicationType',
+            'rule.applicationType IS NULL',
+        ))->setParameter('applicationType', RoutingRule::APPLICATION_TYPE_ARGUMENTS);
+
+        return $qb->getQuery()->getOneOrNullResult();
+    }
+
+    public function findOneTypeApplicationRouteByApplicationId(string $applicationId): ?RoutingRule
+    {
+        return $this->createQueryBuilder('rule')
+            ->andWhere('rule.type = :type')
+            ->andWhere('rule.applicationType = :applicationType')
+            ->andWhere('IDENTITY(rule.application) = :applicationId')
+            ->setParameter('type', RoutingRule::TYPE_APPLICATION)
+            ->setParameter('applicationType', RoutingRule::APPLICATION_TYPE_ROUTE)
+            ->setParameter('applicationId', $applicationId)
+            ->orderBy('rule.id', 'ASC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    public function findOneTypeApplicationByRoute(string $route): ?RoutingRule
+    {
+        return $this->createQueryBuilder('rule')
+            ->andWhere('rule.type = :type')
+            ->andWhere('rule.applicationType = :applicationType')
+            ->andWhere('rule.route = :route')
+            ->setParameter('type', RoutingRule::TYPE_APPLICATION)
+            ->setParameter('applicationType', RoutingRule::APPLICATION_TYPE_ROUTE)
+            ->setParameter('route', $route)
+            ->orderBy('rule.id', 'ASC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
     /**
      * @return RoutingRule[]
      */
@@ -124,6 +172,31 @@ class RoutingRuleRepository extends ServiceEntityRepository
             ->andWhere('rule.type = :type')
             ->andWhere('rule.application IS NOT NULL')
             ->setParameter('type', RoutingRule::TYPE_APPLICATION)
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * @return RoutingRule[]
+     */
+    public function findTypeApplicationByApplicationType(string $applicationType): array
+    {
+        $qb = $this->createQueryBuilder('rule')
+            ->andWhere('rule.type = :type')
+            ->andWhere('rule.application IS NOT NULL')
+            ->setParameter('type', RoutingRule::TYPE_APPLICATION);
+
+        if ($applicationType === RoutingRule::APPLICATION_TYPE_ARGUMENTS) {
+            $qb->andWhere($qb->expr()->orX(
+                'rule.applicationType = :applicationType',
+                'rule.applicationType IS NULL',
+            ));
+        } else {
+            $qb->andWhere('rule.applicationType = :applicationType');
+        }
+
+        return $qb
+            ->setParameter('applicationType', $applicationType)
             ->getQuery()
             ->getResult();
     }

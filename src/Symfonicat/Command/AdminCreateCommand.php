@@ -38,29 +38,38 @@ final class AdminCreateCommand extends Command
     protected function configure(): void
     {
         $this
-            ->addArgument('email', InputArgument::REQUIRED, 'Admin email address.')
-            ->addArgument('password', InputArgument::OPTIONAL, 'Admin password.')
+            ->addArgument('username', InputArgument::REQUIRED, 'Admin username.')
         ;
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
-        $email = strtolower(trim((string) $input->getArgument('email')));
+        $username = strtolower(trim((string) $input->getArgument('username')));
 
-        if ($email === '') {
-            $io->error('Email must not be empty.');
+        if ($username === '') {
+            $io->error('Username must not be empty.');
 
             return Command::FAILURE;
         }
 
-        $password = (string) $input->getArgument('password');
-        if ($password === '') {
-            $helper = $this->getHelper('question');
-            $question = new Question('Password: ');
-            $question->setHidden(true);
-            $question->setHiddenFallback(false);
+        if (!$input->isInteractive()) {
+            $io->error('This command requires an interactive terminal so the password can be entered hidden.');
+
+            return Command::FAILURE;
+        }
+
+        $helper = $this->getHelper('question');
+        $question = new Question('Password: ');
+        $question->setHidden(true);
+        $question->setHiddenFallback(false);
+
+        try {
             $password = (string) $helper->ask($input, $output, $question);
+        } catch (\Throwable) {
+            $io->error('Hidden password input requires an interactive terminal. With Docker, use `docker exec -it php bin/console symfonicat:admin:create <username>`.');
+
+            return Command::FAILURE;
         }
 
         if ($password === '') {
@@ -69,7 +78,7 @@ final class AdminCreateCommand extends Command
             return Command::FAILURE;
         }
 
-        $admin = $this->adminRepository->findOneByEmail($email) ?? (new Admin())->setEmail($email);
+        $admin = $this->adminRepository->findOneByEmail($username) ?? (new Admin())->setEmail($username);
         $admin->setPassword($this->passwordHasher->hashPassword($admin, $password));
         $admin->setRoles(['ROLE_ADMIN']);
         $this->adminMfaService->ensureSecret($admin);

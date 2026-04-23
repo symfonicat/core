@@ -448,6 +448,7 @@ final class BootstrapCommand extends Command
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_APPLICATION)
             ->setApplication($application)
+            ->setApplicationType(RoutingRule::APPLICATION_TYPE_ARGUMENTS)
             ->setArguments($arguments);
 
         $this->entityManager->persist($rule);

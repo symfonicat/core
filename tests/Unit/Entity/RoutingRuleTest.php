@@ -45,6 +45,10 @@ final class RoutingRuleTest extends TestCase
             'route' => 'route',
         ], RoutingRule::getTypeChoices());
         self::assertSame(['domain', 'project', 'application', 'redirect', 'route'], RoutingRule::getTypes());
+        self::assertSame([
+            'arguments' => 'arguments',
+            'route' => 'route',
+        ], RoutingRule::getApplicationTypeChoices());
     }
 
     public function testSetTypeRejectsUnknownTypes(): void
@@ -100,6 +104,34 @@ final class RoutingRuleTest extends TestCase
 
         self::assertSame($project, $rule->getProject());
         self::assertNull($rule->getDomain(), 'project-typed rule must drop its domain reference');
+    }
+
+    public function testNormalizeScopeClearsRouteForArgumentBasedApplicationRules(): void
+    {
+        $rule = (new RoutingRule())
+            ->setType(RoutingRule::TYPE_APPLICATION)
+            ->setApplicationType(RoutingRule::APPLICATION_TYPE_ARGUMENTS)
+            ->setArguments(['symfonicat', '*', 'test*'])
+            ->setRoute('app_project_test');
+
+        $rule->normalizeScope();
+
+        self::assertSame(RoutingRule::APPLICATION_TYPE_ARGUMENTS, $rule->getApplicationType());
+        self::assertNull($rule->getRoute());
+    }
+
+    public function testNormalizeScopeClearsArgumentsForRouteBasedApplicationRules(): void
+    {
+        $rule = (new RoutingRule())
+            ->setType(RoutingRule::TYPE_APPLICATION)
+            ->setApplicationType(RoutingRule::APPLICATION_TYPE_ROUTE)
+            ->setArguments(['symfonicat', '*', 'test*'])
+            ->setRoute('app_project_test');
+
+        $rule->normalizeScope();
+
+        self::assertSame([], $rule->getArguments());
+        self::assertSame('app_project_test', $rule->getRoute());
     }
 
     #[DataProvider('reservedArgumentProvider')]
@@ -181,6 +213,18 @@ final class RoutingRuleTest extends TestCase
         $violations = $this->validator->validate($rule);
 
         self::assertHasViolationMatching($violations, 'A project routing rule requires a project.');
+    }
+
+    public function testValidateScopeRejectsRouteBasedApplicationRuleWithoutRoute(): void
+    {
+        $rule = (new RoutingRule())
+            ->setType(RoutingRule::TYPE_APPLICATION)
+            ->setApplicationType(RoutingRule::APPLICATION_TYPE_ROUTE);
+
+        $violations = $this->validator->validate($rule);
+
+        self::assertHasViolationMatching($violations, 'An application routing rule requires an application.');
+        self::assertHasViolationMatching($violations, 'A route-based application rule requires a route.');
     }
 
     private static function assertHasViolationMatching(ConstraintViolationListInterface $violations, string $needle, string $context = ''): void

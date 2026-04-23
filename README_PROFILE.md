@@ -13,7 +13,7 @@ Bootstrap seeds `localhost`, `example.com`, `project1`, the `test` application, 
 - `/{path}` renders the project shell when a project is active and the project catch-all remains enabled.
 - top-level public controllers are guarded so project subdomains keep the project catch-all unless a legacy project routing rule disables it for the current regex path.
 - application shells expose a signed CSRF-protected application request context so `/m/{module}` calls can run when the module is attached to that application.
-- application URLs can be generated with `path('symfonicat_application', {id: 'test'})` or `path_application('test')`, and both resolve through the matching routing rule rather than the internal `/application/{id}` route.
+- application URLs can be generated with `path('symfonicat_application', {id: 'test'})`, `path_application('test')`, or `path_application(application)`, and all resolve through the matching routing rule rather than the internal `/application/{id}` route.
 
 ## Routing Rules
 
@@ -23,13 +23,13 @@ Supported rule types:
 
 - `domain`: render the domain shell for a matching regex path.
 - `project`: bypass the project catch-all for a matching regex path.
-- `application`: render `templates/application/overrides/{application.id}.html.twig` or `templates/application/main.html.twig`.
+- `application`: either match regex path arguments and render the application shell, or attach an application to a named Symfony route.
 - `redirect`: redirect a whole domain or project to a domain or project.
 - `route`: render a named Symfony route for a domain root or project root.
 
-For the seeded `test` application rule `/symfonicat/*/test*`, `path_application('test')` returns `/symfonicat/*/test`, and `path_application('test', 'somepath/path2', ['tay'])` returns `/symfonicat/tay/test/somepath/path2`. Application routing-rule arguments define the base path, so appended paths continue to render the same application shell.
+Application rules use `applicationType`: `arguments` matches the regex segment list, and `route` uses the Symfony route name stored in `route`. For the seeded `test` application rule `/symfonicat/*/test*`, `path_application('test')` or `path_application(application)` returns `/symfonicat/*/test`, and `path_application('test', 'somepath/path2', ['tay'])` or `path_application(application, 'somepath/path2', ['tay'])` returns `/symfonicat/tay/test/somepath/path2`. Argument-based application rules define the base path, while route-based application rules generate the configured Symfony route path through `ApplicationService`.
 
-The routing-rule form keeps type selectors in the rule card, the regex `arguments` collection beside them, scope selectors in the match card, redirect target on the left, and redirect destination on the right. The routing-rule list links application rows only when an application target exists.
+The routing-rule form keeps type selectors in the rule card, shows `applicationType` when the rule type is `application`, shows either the regex `arguments` collection or the `route` field based on that application type, keeps scope selectors in the match card, and keeps redirect target on the left with redirect destination on the right. The routing-rule list links application rows only when an application target exists.
 
 ## Env
 
@@ -75,8 +75,10 @@ Admin lives under `/admin`, uses its own `Admin` entity/table, and is isolated f
 Admins are managed with:
 
 ```bash
-bin/console symfonicat:admin:create <email> <password>
+bin/console symfonicat:admin:create <username>
 bin/console symfonicat:admin:delete <email>
 ```
+
+`symfonicat:admin:create` prompts for the password with hidden input, so Docker usage should include `-it`.
 
 For full install, Docker, Electron, and runtime details, see [README.md](https://github.com/symfonicat/core/blob/main/README.md).

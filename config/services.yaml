@@ -30,6 +30,7 @@ services:
     Symfonicat\Service\ApplicationService:
         arguments:
             $appSecret: '%kernel.secret%'
+            $frameworkRouter: '@Symfonicat\Routing\ApplicationRouter.inner'
             $projectDir: '%kernel.project_dir%'
 
     Symfonicat\Service\ProjectService:

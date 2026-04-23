@@ -28,16 +28,53 @@ final class ApplicationRouteTest extends SymfonicatWebTestCase
 
     public function testTwigApplicationPathFunctionGeneratesApplicationRulePath(): void
     {
-        $this->seedApplicationRule();
+        $application = $this->seedApplicationRule();
 
         /** @var Environment $twig */
         $twig = self::getTestContainer()->get(Environment::class);
 
         self::assertSame('/symfonicat/*/test', trim($twig->createTemplate('{{ path_application("test") }}')->render()));
+        self::assertSame('/symfonicat/*/test', trim($twig->createTemplate('{{ path_application(application) }}')->render([
+            'application' => $application,
+        ])));
         self::assertSame('/symfonicat/*/test/somepath/path2', trim($twig->createTemplate('{{ path_application("test", "somepath/path2") }}')->render()));
+        self::assertSame('/symfonicat/*/test/somepath/path2', trim($twig->createTemplate('{{ path_application(application, "somepath/path2") }}')->render([
+            'application' => $application,
+        ])));
         self::assertSame('/symfonicat/tay/test', trim($twig->createTemplate('{{ path_application("test", ["tay"]) }}')->render()));
+        self::assertSame('/symfonicat/tay/test', trim($twig->createTemplate('{{ path_application(application, ["tay"]) }}')->render([
+            'application' => $application,
+        ])));
         self::assertSame('/symfonicat/tay/test/somepath/path2', trim($twig->createTemplate('{{ path_application("test", "somepath/path2", ["tay"]) }}')->render()));
+        self::assertSame('/symfonicat/tay/test/somepath/path2', trim($twig->createTemplate('{{ path_application(application, "somepath/path2", ["tay"]) }}')->render([
+            'application' => $application,
+        ])));
         self::assertSame('/symfonicat/*/test', trim($twig->createTemplate('{{ path("symfonicat_application", {id: "test"}) }}')->render()));
+    }
+
+    public function testRouteBasedApplicationRuleUsesConfiguredSymfonyRoute(): void
+    {
+        $application = (new Application())->setId('test');
+        $rule = (new RoutingRule())
+            ->setType(RoutingRule::TYPE_APPLICATION)
+            ->setApplication($application)
+            ->setApplicationType(RoutingRule::APPLICATION_TYPE_ROUTE)
+            ->setRoute('app_project_test');
+
+        $this->entityManager()->persist($application);
+        $this->entityManager()->persist($rule);
+        $this->entityManager()->flush();
+
+        /** @var UrlGeneratorInterface $router */
+        $router = self::getTestContainer()->get('router');
+        /** @var Environment $twig */
+        $twig = self::getTestContainer()->get(Environment::class);
+
+        self::assertSame('/test', $router->generate('symfonicat_application', ['id' => 'test']));
+        self::assertSame('/test', trim($twig->createTemplate('{{ path_application("test") }}')->render()));
+        self::assertSame('/test', trim($twig->createTemplate('{{ path_application(application) }}')->render([
+            'application' => $application,
+        ])));
     }
 
     public function testInternalApplicationRouteRendersShellWithPublicApplicationContext(): void
@@ -72,12 +109,33 @@ final class ApplicationRouteTest extends SymfonicatWebTestCase
         );
     }
 
+    public function testRouteBasedApplicationRuleInjectsApplicationIntoController(): void
+    {
+        $application = (new Application())->setId('test');
+        $rule = (new RoutingRule())
+            ->setType(RoutingRule::TYPE_APPLICATION)
+            ->setApplication($application)
+            ->setApplicationType(RoutingRule::APPLICATION_TYPE_ROUTE)
+            ->setRoute('app_project_test');
+
+        $this->entityManager()->persist($application);
+        $this->entityManager()->persist($rule);
+        $this->entityManager()->flush();
+
+        $this->setHost('example.com');
+        $this->client()->request('GET', '/test');
+
+        self::assertResponseIsSuccessful();
+        self::assertSame('test test', (string) $this->client()->getResponse()->getContent());
+    }
+
     private function seedApplicationRule(): Application
     {
         $application = (new Application())->setId('test');
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_APPLICATION)
             ->setApplication($application)
+            ->setApplicationType(RoutingRule::APPLICATION_TYPE_ARGUMENTS)
             ->setArguments(['symfonicat', '*', 'test*']);
 
         $this->entityManager()->persist($application);

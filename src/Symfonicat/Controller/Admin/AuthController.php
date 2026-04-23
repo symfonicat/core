@@ -28,7 +28,7 @@ final class AuthController extends AbstractController
         if (!$admin->hasMfaSecret()) {
             return new Response(
                 sprintf(
-                    'Admin MFA is not configured for "%s". Re-run "bin/console symfonicat:admin:create %s".',
+                    'Admin MFA is not configured for "%s". Re-run "bin/console symfonicat:admin:create %s". You will be prompted for the password.',
                     $admin->getEmail(),
                     $admin->getEmail(),
                 ),

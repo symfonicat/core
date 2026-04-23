@@ -16,6 +16,7 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Event\ControllerEvent;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Symfony\Component\HttpKernel\KernelEvents;
@@ -140,10 +141,32 @@ final class RoutingRuleSubscriber implements EventSubscriberInterface
         }
     }
 
+    public function onKernelController(ControllerEvent $event): void
+    {
+        if (!$event->isMainRequest()) {
+            return;
+        }
+
+        $request = $event->getRequest();
+        if ($request->attributes->get('application') instanceof Application) {
+            return;
+        }
+
+        if (str_starts_with($request->getPathInfo(), '/admin')) {
+            return;
+        }
+
+        $application = $this->applicationService->loadFromRoute((string) $request->attributes->get('_route', ''));
+        if ($application instanceof Application) {
+            $request->attributes->set('application', $application);
+        }
+    }
+
     public static function getSubscribedEvents(): array
     {
         return [
             KernelEvents::REQUEST => ['onKernelRequest', 2048],
+            KernelEvents::CONTROLLER => ['onKernelController', 0],
         ];
     }
 

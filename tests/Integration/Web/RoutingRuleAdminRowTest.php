@@ -33,6 +33,7 @@ final class RoutingRuleAdminRowTest extends SymfonicatKernelTestCase
     {
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_APPLICATION)
+            ->setApplicationType(RoutingRule::APPLICATION_TYPE_ARGUMENTS)
             ->setArguments(['symfonicat', '*', 'test*']);
 
         $this->entityManager()->persist($rule);
@@ -50,6 +51,7 @@ final class RoutingRuleAdminRowTest extends SymfonicatKernelTestCase
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_APPLICATION)
             ->setApplication($application)
+            ->setApplicationType(RoutingRule::APPLICATION_TYPE_ARGUMENTS)
             ->setArguments(['symfonicat', '*', 'test*']);
 
         $this->entityManager()->persist($application);
@@ -60,6 +62,25 @@ final class RoutingRuleAdminRowTest extends SymfonicatKernelTestCase
             'href="/symfonicat/*/test"',
             $this->renderRow($rule),
         );
+    }
+
+    public function testRowLinksRouteBasedApplicationRuleWhenApplicationExists(): void
+    {
+        $application = (new Application())->setId('test');
+        $rule = (new RoutingRule())
+            ->setType(RoutingRule::TYPE_APPLICATION)
+            ->setApplication($application)
+            ->setApplicationType(RoutingRule::APPLICATION_TYPE_ROUTE)
+            ->setRoute('app_project_test');
+
+        $this->entityManager()->persist($application);
+        $this->entityManager()->persist($rule);
+        $this->entityManager()->flush();
+
+        $html = $this->renderRow($rule);
+
+        self::assertStringContainsString('href="/test"', $html);
+        self::assertStringContainsString('route: app_project_test', $html);
     }
 
     private function renderRow(RoutingRule $rule): string

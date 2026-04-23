@@ -2,9 +2,19 @@
     <td>{{ rule.type }}</td>
     <td>
         {% if rule.type == 'application' and rule.application %}
-            <a href="{{ path_application(rule.application.id) }}">{{ rule.argumentsPath ?: '-' }}</a>
+            <a href="{{ rule.applicationType == 'route' and rule.route ? path(rule.route) : path_application(rule.application.id) }}">
+                {% if rule.applicationType == 'route' %}
+                    route: {{ rule.route ?: '-' }}
+                {% else %}
+                    {{ rule.argumentsPath ?: '-' }}
+                {% endif %}
+            </a>
         {% else %}
-            {{ rule.argumentsPath ?: '-' }}
+            {% if rule.type == 'application' and rule.applicationType == 'route' %}
+                route: {{ rule.route ?: '-' }}
+            {% else %}
+                {{ rule.argumentsPath ?: '-' }}
+            {% endif %}
         {% endif %}
     </td>
     <td>
@@ -15,7 +25,7 @@
         {% elseif rule.type == 'application' %}
             application:
             {% if rule.application %}
-                <a href="{{ path_application(rule.application.id) }}">{{ rule.application.id }}</a>
+                <a href="{{ rule.applicationType == 'route' and rule.route ? path(rule.route) : path_application(rule.application.id) }}">{{ rule.application.id }}</a> ({{ rule.applicationType }})
             {% else %}
                 -
             {% endif %}
@@ -31,7 +41,11 @@
         {% elseif rule.type == 'project' %}
             bypass project catch-all
         {% elseif rule.type == 'application' %}
-            render application shell
+            {% if rule.applicationType == 'route' %}
+                attach to route
+            {% else %}
+                render application shell
+            {% endif %}
         {% elseif rule.type == 'redirect' %}
             {{ rule.redirectTarget }}: {{ rule.redirectDomain ? rule.redirectDomain.id : (rule.redirectProject ? rule.redirectProject.id ~ ' ' ~ rule.redirectProject.name : '-') }}
         {% else %}

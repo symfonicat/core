@@ -29,6 +29,16 @@
                     }
                 }) }}
 
+                {{ form_row(form.applicationType, {
+                    attr: {
+                        'data-action': 'change->routing-rule-form#update',
+                        'data-routing-rule-form-target': 'applicationType'
+                    },
+                    row_attr: {
+                        'data-routing-rule-form-target': 'applicationTypeRow'
+                    }
+                }) }}
+
                 {{ form_row(form.redirectType, {
                     attr: {
                         'data-action': 'change->routing-rule-form#update',

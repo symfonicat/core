@@ -4,7 +4,7 @@ namespace Symfonicat\Controller;
 
 use Symfonicat\Entity\Application;
 use Symfonicat\Repository\ApplicationRepository;
-use Symfonicat\Service\ApplicationUrlService;
+use Symfonicat\Service\ApplicationService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -21,7 +21,7 @@ final class ApplicationController extends AbstractController
         string $id,
         string $path,
         ApplicationRepository $applicationRepository,
-        ApplicationUrlService $applicationUrlService,
+        ApplicationService $applicationService,
         Environment $twig,
     ): Response {
         $application = $applicationRepository->find($id);
@@ -29,11 +29,11 @@ final class ApplicationController extends AbstractController
             throw new NotFoundHttpException(sprintf('Application "%s" was not found.', $id));
         }
 
-        if ($applicationUrlService->getRuleForApplication($application) === null) {
+        if ($applicationService->getRuleForApplication($application) === null) {
             throw new NotFoundHttpException(sprintf('Application "%s" does not have an application routing rule.', $id));
         }
 
-        $applicationPath = $applicationUrlService->path($id, $path);
+        $applicationPath = $applicationService->path($id, $path);
 
         $request->attributes->set('application', $application);
         $request->attributes->set('symfonicat_application_path', $applicationPath);
