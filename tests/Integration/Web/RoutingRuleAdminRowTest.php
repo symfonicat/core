@@ -39,10 +39,12 @@ final class RoutingRuleAdminRowTest extends SymfonicatKernelTestCase
         $this->entityManager()->persist($rule);
         $this->entityManager()->flush();
 
-        self::assertStringContainsString(
-            'application:',
-            $this->renderRow($rule),
-        );
+        $html = $this->renderRow($rule);
+
+        self::assertStringContainsString('<td class="fw-semibold text-nowrap">application</td>', $html);
+        self::assertStringContainsString('<code>/symfonicat/*/test*</code>', $html);
+        self::assertStringContainsString('arguments', $html);
+        self::assertStringNotContainsString('application:', $html);
     }
 
     public function testRowLinksApplicationRuleWhenApplicationExists(): void
@@ -80,7 +82,10 @@ final class RoutingRuleAdminRowTest extends SymfonicatKernelTestCase
         $html = $this->renderRow($rule);
 
         self::assertStringContainsString('href="/test"', $html);
-        self::assertStringContainsString('route: app_project_test', $html);
+        self::assertStringContainsString('<a href="/test"><code>app_project_test</code></a>', $html);
+        self::assertStringContainsString('<a href="/test"><code>test</code></a>', $html);
+        self::assertStringContainsString('route', $html);
+        self::assertStringNotContainsString('route: app_project_test', $html);
     }
 
     private function renderRow(RoutingRule $rule): string
