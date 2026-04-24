@@ -28,6 +28,7 @@ class RoutingRule
 
     public const REDIRECT_TYPE_DOMAIN = 'domain';
     public const REDIRECT_TYPE_PROJECT = 'project';
+    public const REDIRECT_TYPE_DOMAIN_PROJECT = 'domain_project';
 
     public const TARGET_TYPE_DOMAIN = 'domain';
     public const TARGET_TYPE_PROJECT = 'project';
@@ -122,6 +123,7 @@ class RoutingRule
         return [
             'domain' => self::TARGET_TYPE_DOMAIN,
             'project' => self::TARGET_TYPE_PROJECT,
+            'domain and project' => self::REDIRECT_TYPE_DOMAIN_PROJECT,
         ];
     }
 
@@ -375,6 +377,11 @@ class RoutingRule
         return $this->redirectTarget === self::TARGET_TYPE_PROJECT;
     }
 
+    public function isDomainAndProjectRedirectTarget(): bool
+    {
+        return $this->redirectTarget === self::REDIRECT_TYPE_DOMAIN_PROJECT;
+    }
+
     public function isDomainRouteType(): bool
     {
         return $this->routeType === self::ROUTE_TYPE_DOMAIN;
@@ -456,6 +463,8 @@ class RoutingRule
                 $this->redirectProject = null;
             } elseif ($this->isProjectRedirectTarget()) {
                 $this->redirectDomain = null;
+            } elseif ($this->isDomainAndProjectRedirectTarget()) {
+                // Combined redirects keep both the explicit domain and project.
             } else {
                 $this->redirectDomain = null;
                 $this->redirectProject = null;
@@ -620,6 +629,18 @@ class RoutingRule
 
         if ($this->isProjectRedirectTarget() && $this->redirectProject === null) {
             $context->buildViolation('A project redirect target requires a redirect project.')
+                ->atPath('redirectProject')
+                ->addViolation();
+        }
+
+        if ($this->isDomainAndProjectRedirectTarget() && $this->redirectDomain === null) {
+            $context->buildViolation('A domain and project redirect target requires a redirect domain.')
+                ->atPath('redirectDomain')
+                ->addViolation();
+        }
+
+        if ($this->isDomainAndProjectRedirectTarget() && $this->redirectProject === null) {
+            $context->buildViolation('A domain and project redirect target requires a redirect project.')
                 ->atPath('redirectProject')
                 ->addViolation();
         }

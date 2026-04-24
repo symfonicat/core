@@ -66,8 +66,14 @@ export default class extends Controller {
             isProject || (isRedirect && redirectType === 'project') || (isRoute && routeType === 'project')
         )
         this.toggleRow(this.applicationRowTarget, isApplication)
-        this.toggleRow(this.redirectDomainRowTarget, isRedirect && redirectTarget === 'domain')
-        this.toggleRow(this.redirectProjectRowTarget, isRedirect && redirectTarget === 'project')
+        this.toggleRow(
+            this.redirectDomainRowTarget,
+            isRedirect && (redirectTarget === 'domain' || redirectTarget === 'domain_project')
+        )
+        this.toggleRow(
+            this.redirectProjectRowTarget,
+            isRedirect && (redirectTarget === 'project' || redirectTarget === 'domain_project')
+        )
         this.toggleRow(this.routeRowTarget, isRoute || isApplicationRoute)
     }
 

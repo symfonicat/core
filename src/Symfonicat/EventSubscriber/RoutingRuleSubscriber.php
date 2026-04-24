@@ -178,6 +178,8 @@ final class RoutingRuleSubscriber implements EventSubscriberInterface
             $host = $rule->getRedirectDomain()?->getId();
         } elseif ($rule->isProjectRedirectTarget()) {
             $host = $this->resolveProjectRedirectHost($request, $rule->getRedirectProject(), $currentDomain);
+        } elseif ($rule->isDomainAndProjectRedirectTarget()) {
+            $host = $this->resolveDomainAndProjectRedirectHost($rule->getRedirectProject(), $rule->getRedirectDomain());
         }
 
         $host = trim((string) $host);
@@ -227,6 +229,18 @@ final class RoutingRuleSubscriber implements EventSubscriberInterface
 
         $domainId = trim((string) $domainId);
         if ($domainId === '') {
+            return null;
+        }
+
+        return sprintf('%s.%s', $projectId, $domainId);
+    }
+
+    private function resolveDomainAndProjectRedirectHost(?Project $project, ?Domain $domain): ?string
+    {
+        $projectId = trim((string) $project?->getId());
+        $domainId = trim((string) $domain?->getId());
+
+        if ($projectId === '' || $domainId === '') {
             return null;
         }
 

@@ -49,6 +49,11 @@ final class RoutingRuleTest extends TestCase
             'arguments' => 'arguments',
             'route' => 'route',
         ], RoutingRule::getApplicationTypeChoices());
+        self::assertSame([
+            'domain' => 'domain',
+            'project' => 'project',
+            'domain and project' => 'domain_project',
+        ], RoutingRule::getRedirectTargetChoices());
     }
 
     public function testSetTypeRejectsUnknownTypes(): void
@@ -132,6 +137,26 @@ final class RoutingRuleTest extends TestCase
 
         self::assertSame([], $rule->getArguments());
         self::assertSame('app_project_test', $rule->getRoute());
+    }
+
+    public function testNormalizeScopeKeepsBothRedirectTargetsForCombinedRedirectTarget(): void
+    {
+        $matchDomain = (new Domain())->setId('example.com');
+        $targetDomain = (new Domain())->setId('other.example');
+        $project = (new Project())->setId('project2')->setName('Project 2');
+
+        $rule = (new RoutingRule())
+            ->setType(RoutingRule::TYPE_REDIRECT)
+            ->setRedirectType(RoutingRule::REDIRECT_TYPE_DOMAIN)
+            ->setDomain($matchDomain)
+            ->setRedirectTarget(RoutingRule::REDIRECT_TYPE_DOMAIN_PROJECT)
+            ->setRedirectDomain($targetDomain)
+            ->setRedirectProject($project);
+
+        $rule->normalizeScope();
+
+        self::assertSame($targetDomain, $rule->getRedirectDomain());
+        self::assertSame($project, $rule->getRedirectProject());
     }
 
     #[DataProvider('reservedArgumentProvider')]
@@ -231,6 +256,20 @@ final class RoutingRuleTest extends TestCase
 
         self::assertHasViolationMatching($violations, 'An application routing rule requires an application.');
         self::assertHasViolationMatching($violations, 'A route-based application rule requires a route.');
+    }
+
+    public function testValidateScopeRequiresBothRedirectDestinationsForCombinedRedirectTarget(): void
+    {
+        $rule = (new RoutingRule())
+            ->setType(RoutingRule::TYPE_REDIRECT)
+            ->setRedirectType(RoutingRule::REDIRECT_TYPE_DOMAIN)
+            ->setDomain((new Domain())->setId('example.com'))
+            ->setRedirectTarget(RoutingRule::REDIRECT_TYPE_DOMAIN_PROJECT);
+
+        $violations = $this->validator->validate($rule);
+
+        self::assertHasViolationMatching($violations, 'A domain and project redirect target requires a redirect domain.');
+        self::assertHasViolationMatching($violations, 'A domain and project redirect target requires a redirect project.');
     }
 
     private static function assertHasViolationMatching(ConstraintViolationListInterface $violations, string $needle, string $context = ''): void

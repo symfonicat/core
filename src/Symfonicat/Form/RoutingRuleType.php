@@ -71,7 +71,7 @@ class RoutingRuleType extends AbstractType
                 'label' => 'redirect target',
                 'required' => false,
                 'placeholder' => 'select redirect target',
-                'help' => 'Choose whether the redirect points to a domain or project.',
+                'help' => 'Choose whether the redirect points to a domain, a project, or a project on a specific domain.',
             ])
             ->add('domain', EntityType::class, [
                 'class' => Domain::class,
