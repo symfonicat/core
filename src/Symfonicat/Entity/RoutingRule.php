@@ -40,6 +40,8 @@ class RoutingRule
 
     public const RESERVED_ARGUMENTS = [
         'admin',
+        'm',
+        'application',
     ];
 
     #[ORM\Id]

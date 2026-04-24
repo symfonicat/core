@@ -2,7 +2,7 @@
 
 `symfonicat/core` is the full Symfonicat Symfony application. It ships the public runtime, admin runtime, Doctrine model, webpack integration, Electron-facing commands, and Docker/FrankenPHP starter shell in one repository.
 
-Bootstrap seeds `localhost`, `example.com`, `project1`, the `test` application, the `analytics` module, a `/symfonicat/*/test*` application routing rule, and sample `color` env values. The `test` application and `project1` project have Analytics enabled by default; the test application uses `color=red`.
+The Docker `php` entrypoint runs Composer install, bootstrap, `npm install`, and `npm run build` automatically. Bootstrap seeds `localhost`, `example.com`, `project1`, the `test` application, the `analytics` module, a `/symfonicat/*/test*` application routing rule, and sample `color` env values. The `test` application and `project1` project have Analytics enabled by default; the test application uses `color=red`.
 
 ## Runtime Shape
 
@@ -17,7 +17,7 @@ Bootstrap seeds `localhost`, `example.com`, `project1`, the `test` application, 
 
 ## Routing Rules
 
-`RoutingRule.arguments` is a multifield list of regex path segments. The segments are joined with `/` and matched against the full current path. Reserved arguments live in `RoutingRule::RESERVED_ARGUMENTS`; `admin` is reserved and ignored by runtime matching.
+`RoutingRule.arguments` is a multifield list of regex path segments. The segments are joined with `/` and matched against the full current path. Reserved arguments live in `RoutingRule::RESERVED_ARGUMENTS`; `admin`, `m`, and `application` are reserved and ignored by runtime matching.
 
 Supported rule types:
 
@@ -29,7 +29,7 @@ Supported rule types:
 
 Application rules use `applicationType`: `arguments` matches the regex segment list, and `route` uses the Symfony route name stored in `route`. For the seeded `test` application rule `/symfonicat/*/test*`, `path_application('test')` or `path_application(application)` returns `/symfonicat/*/test`, and `path_application('test', 'somepath/path2', ['tay'])` or `path_application(application, 'somepath/path2', ['tay'])` returns `/symfonicat/tay/test/somepath/path2`. Argument-based application rules define the base path, while route-based application rules generate the configured Symfony route path through `ApplicationService`.
 
-The routing-rule form keeps type selectors in the rule card, shows `applicationType` when the rule type is `application`, shows either the regex `arguments` collection or the `route` field based on that application type, keeps scope selectors in the match card, and keeps redirect target on the left with redirect destination on the right. The routing-rule list links application rows only when an application target exists.
+The routing-rule form keeps type selectors in the rule card, shows `applicationType` when the rule type is `application`, shows either the regex `arguments` collection or the `route` field based on that application type, keeps scope selectors in the match card, and keeps redirect target on the left with redirect destination on the right. The routing-rule list uses dedicated columns for arguments, route, domain, project, application, application mode, route type, and redirect destinations so type-specific values stay separated instead of being packed into shared cells.
 
 ## Env
 
@@ -75,7 +75,7 @@ Admin lives under `/admin`, uses its own `Admin` entity/table, and is isolated f
 Admins are managed with:
 
 ```bash
-bin/console symfonicat:admin:create <username>
+bin/console symfonicat:admin:create <email>
 bin/console symfonicat:admin:delete <email>
 ```
 

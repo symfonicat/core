@@ -45,6 +45,8 @@ services:
     environment:
       APP_ENV: ${APP_ENV:-dev}
       APP_DEBUG: ${APP_DEBUG:-1}
+      SYMFONICAT_AUTO_NPM_INSTALL: 0
+      SYMFONICAT_AUTO_NPM_BUILD: 0
       SYMFONICAT_AUTO_BOOTSTRAP: 0
       SYMFONICAT_AUTO_COMPOSER_INSTALL: 0
       DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-app}?serverVersion=16&charset=utf8

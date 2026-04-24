@@ -2,6 +2,7 @@
 
 namespace App\Tests\Unit\Service;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\Project;
@@ -16,13 +17,14 @@ use Symfony\Component\HttpFoundation\RequestStack;
  */
 final class RoutingRuleServiceTest extends TestCase
 {
-    public function testDomainLookupIgnoresReservedAdminArguments(): void
+    #[DataProvider('reservedArgumentProvider')]
+    public function testDomainLookupIgnoresReservedArguments(string $argument, string $path): void
     {
         $domain = (new Domain())->setId('example.com');
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_DOMAIN)
             ->setDomain($domain)
-            ->setArguments(['admin']);
+            ->setArguments([$argument]);
 
         $repo = $this->createMock(RoutingRuleRepository::class);
         $repo->expects(self::once())
@@ -32,16 +34,17 @@ final class RoutingRuleServiceTest extends TestCase
 
         $service = $this->service($repo);
 
-        self::assertNull($service->getTypeDomainByDomainAndPath($domain, '/admin'));
+        self::assertNull($service->getTypeDomainByDomainAndPath($domain, $path));
     }
 
-    public function testProjectLookupIgnoresReservedAdminArguments(): void
+    #[DataProvider('reservedArgumentProvider')]
+    public function testProjectLookupIgnoresReservedArguments(string $argument, string $path): void
     {
         $project = (new Project())->setId('project1')->setName('Project 1');
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_PROJECT)
             ->setProject($project)
-            ->setArguments(['ADMIN']);
+            ->setArguments([$argument]);
 
         $repo = $this->createMock(RoutingRuleRepository::class);
         $repo->expects(self::once())
@@ -51,7 +54,7 @@ final class RoutingRuleServiceTest extends TestCase
 
         $service = $this->service($repo);
 
-        self::assertNull($service->getTypeProjectByProjectAndPath($project, '/admin'));
+        self::assertNull($service->getTypeProjectByProjectAndPath($project, $path));
     }
 
     public function testDomainLookupReturnsFirstMatchingPathRule(): void
@@ -132,6 +135,16 @@ final class RoutingRuleServiceTest extends TestCase
         $service = $this->service($repo);
 
         self::assertSame($rule, $service->getApplicationRuleForRoute('app_project_test'));
+    }
+
+    /**
+     * @return iterable<string, array{string, string}>
+     */
+    public static function reservedArgumentProvider(): iterable
+    {
+        yield 'admin' => ['admin', '/admin'];
+        yield 'module' => ['m', '/m'];
+        yield 'application' => ['application', '/application'];
     }
 
     private function service(RoutingRuleRepository $repository): RoutingRuleService

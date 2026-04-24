@@ -17,8 +17,8 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
  *   1. normalizeScope() zeros the non-applicable FK before persist/update, so
  *      callers can over-populate and the row stays internally consistent.
  *   2. validateArguments() forbids reserved path arguments, which is the
- *      backstop that keeps /admin from being overridden by the route-inversion
- *      subscriber.
+ *      backstop that keeps /admin, /m, and /application from being overridden
+ *      by the route-inversion subscriber.
  *
  * We drive validation through a real ValidatorInterface so the
  * #[Assert\Callback] wiring is also exercised.
@@ -135,7 +135,7 @@ final class RoutingRuleTest extends TestCase
     }
 
     #[DataProvider('reservedArgumentProvider')]
-    public function testValidateArgumentBlocksReservedAdminArgument(string $argument): void
+    public function testValidateArgumentBlocksReservedArguments(string $argument): void
     {
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_DOMAIN)
@@ -152,9 +152,15 @@ final class RoutingRuleTest extends TestCase
      */
     public static function reservedArgumentProvider(): iterable
     {
-        yield 'exact match' => ['admin'];
-        yield 'uppercase' => ['ADMIN'];
-        yield 'with whitespace' => ['  admin  '];
+        yield 'admin exact match' => ['admin'];
+        yield 'admin uppercase' => ['ADMIN'];
+        yield 'admin with whitespace' => ['  admin  '];
+        yield 'module exact match' => ['m'];
+        yield 'module uppercase' => ['M'];
+        yield 'module with whitespace' => ['  m  '];
+        yield 'application exact match' => ['application'];
+        yield 'application uppercase' => ['APPLICATION'];
+        yield 'application with whitespace' => ['  application  '];
     }
 
     public function testValidateArgumentEmitsReservedViolationOnlyOnce(): void

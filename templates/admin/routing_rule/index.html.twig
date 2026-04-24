@@ -2,14 +2,23 @@
 {% block title %}Routing Rules{% endblock %}
 {% block body %}
 
-    <table class="table" id="routing-rules">
+    <div class="table-responsive">
+    <table class="table table-sm table-striped align-middle" id="routing-rules">
         <thead>
             <tr>
                 <th>type</th>
-                <th>match</th>
-                <th>scope</th>
-                <th>target</th>
-                <th>&nbsp;</th>
+                <th>arguments</th>
+                <th>route</th>
+                <th>domain</th>
+                <th>project</th>
+                <th>application</th>
+                <th>app mode</th>
+                <th>route type</th>
+                <th>redirect type</th>
+                <th>redirect target</th>
+                <th>redirect domain</th>
+                <th>redirect project</th>
+                <th class="text-end">&nbsp;</th>
             </tr>
         </thead>
         <tbody>
@@ -17,11 +26,12 @@
             {{ include('admin/routing_rule/_row.html.twig') }}
         {% else %}
             <tr>
-                <td colspan="5">no records found</td>
+                <td colspan="13">no records found</td>
             </tr>
         {% endfor %}
         </tbody>
     </table>
+    </div>
 
     <a href="{{ path('app_routing_rule_create') }}" class="btn btn-sm btn-success">create</a>
 

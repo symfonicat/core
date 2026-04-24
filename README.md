@@ -19,8 +19,6 @@ Run from a clone without requiring PHP or Composer on the host:
 git clone https://github.com/symfonicat/core symfonicat
 cd symfonicat
 docker compose up -d
-npm install
-npm run dev
 ```
 
 Or create the project with Composer on a PHP 8.4 host:
@@ -29,16 +27,16 @@ Or create the project with Composer on a PHP 8.4 host:
 composer create-project symfonicat/core symfonicat
 cd symfonicat
 docker compose up -d
-npm install
-npm run dev
 ```
 
-On first container boot the `php` service synchronizes the Doctrine schema and seeds the local development rows: `localhost`, `example.com`, `project1`, the `test` application, the `analytics` module, a `/symfonicat/*/test*` application routing rule, and sample `color` env values. The `test` application and `project1` project both have Analytics enabled by default; the test application uses `color=red`, the default domains use `color=blue`, and `project1` uses `color=green`. After the stack is up, create an admin and synchronize filesystem-backed rows:
+On container startup the `php` service self-installs PHP dependencies with Composer, synchronizes the Doctrine schema, seeds the local development rows, runs `npm install`, and then runs `npm run build`. The seeded rows include `localhost`, `example.com`, `project1`, the `test` application, the `analytics` module, a `/symfonicat/*/test*` application routing rule, and sample `color` env values. The `test` application and `project1` project both have Analytics enabled by default; the test application uses `color=red`, the default domains use `color=blue`, and `project1` uses `color=green`. After the stack is up, create an admin and synchronize filesystem-backed rows:
 
 ```bash
 docker exec -it php bin/console symfonicat:admin:create <username>
 docker exec -it php bin/console symfonicat:schema:update
 ```
+
+Set `SYMFONICAT_AUTO_NPM_INSTALL=0` or `SYMFONICAT_AUTO_NPM_BUILD=0` on the `php` service if you want to opt out of those automatic frontend steps. The messenger worker disables both by default.
 
 ## Core Model
 
@@ -86,7 +84,7 @@ The key runtime services and subscribers are:
 
 ## Routing Rules
 
-`RoutingRule.arguments` is an ordered list of regex path segments. The list is imploded with `/` and matched against the full current path. For example, arguments `u`, `*`, and `x*` are treated as the path regex `/u/*/x*`; a bare `*` segment is treated as a wildcard segment. Reserved arguments are listed in `RoutingRule::RESERVED_ARGUMENTS`; `admin` is reserved and ignored by runtime matching.
+`RoutingRule.arguments` is an ordered list of regex path segments. The list is imploded with `/` and matched against the full current path. For example, arguments `u`, `*`, and `x*` are treated as the path regex `/u/*/x*`; a bare `*` segment is treated as a wildcard segment. Reserved arguments are listed in `RoutingRule::RESERVED_ARGUMENTS`; `admin`, `m`, and `application` are reserved and ignored by runtime matching.
 
 Supported rule types:
 
@@ -98,7 +96,7 @@ Supported rule types:
 
 Redirect rules use `redirectType` to choose the matched scope (`domain` or `project`) and `redirectTarget` to choose the destination type (`domain` or `project`). Route rules use `routeType` to choose whether the root route applies to a domain or a project. Application rules use `applicationType`: `arguments` matches `RoutingRule.arguments`, while `route` uses `RoutingRule.route` as the Symfony route name that should receive the application context.
 
-The routing-rule admin form groups related fields into cards. The rule card contains `type`, `applicationType`, `redirectType`, `routeType`, and the relevant match settings. Application rules only show `arguments` for `applicationType=arguments`, and only show `route` for `applicationType=route`. The match card shows the relevant domain, project, or application selector. The redirect card keeps `redirectTarget` on the left and the selected redirect domain/project destination on the right. The routing-rule list links application rows through `path_application()` only when an application target exists.
+The routing-rule admin form groups related fields into cards. The rule card contains `type`, `applicationType`, `redirectType`, `routeType`, and the relevant match settings. Application rules only show `arguments` for `applicationType=arguments`, and only show `route` for `applicationType=route`. The match card shows the relevant domain, project, or application selector. The redirect card keeps `redirectTarget` on the left and the selected redirect domain/project destination on the right. The routing-rule list spreads rule data across dedicated columns for arguments, route, domain, project, application, application mode, route type, and redirect targets so type-specific values are not collapsed into one mixed cell.
 
 ## Env
 
@@ -189,7 +187,7 @@ Admin lives under `/admin` and is isolated from any host app user system.
 Useful commands:
 
 ```bash
-docker exec -it php bin/console symfonicat:admin:create <username>
+docker exec -it php bin/console symfonicat:admin:create <email>
 docker exec php bin/console symfonicat:admin:delete <email>
 ```
 

@@ -1,55 +1,106 @@
+{% set applicationHref = null %}
+{% if rule.type == 'application' and rule.application %}
+    {% if rule.applicationType == 'route' and rule.route %}
+        {% set applicationHref = path(rule.route) %}
+    {% else %}
+        {% set applicationHref = path_application(rule.application) %}
+    {% endif %}
+{% endif %}
+
 <tr id="routing_rule_{{ rule.id }}" class="btn-row">
-    <td>{{ rule.type }}</td>
+    <td class="fw-semibold text-nowrap">{{ rule.type }}</td>
     <td>
-        {% if rule.type == 'application' and rule.application %}
-            <a href="{{ rule.applicationType == 'route' and rule.route ? path(rule.route) : path_application(rule.application.id) }}">
-                {% if rule.applicationType == 'route' %}
-                    route: {{ rule.route ?: '-' }}
-                {% else %}
-                    {{ rule.argumentsPath ?: '-' }}
-                {% endif %}
-            </a>
+        {% if rule.argumentsPath %}
+            <code>{{ rule.argumentsPath }}</code>
         {% else %}
-            {% if rule.type == 'application' and rule.applicationType == 'route' %}
-                route: {{ rule.route ?: '-' }}
-            {% else %}
-                {{ rule.argumentsPath ?: '-' }}
-            {% endif %}
+            <span class="text-body-secondary">-</span>
         {% endif %}
     </td>
     <td>
-        {% if rule.type == 'domain' %}
-            domain: {{ rule.domain ? rule.domain.id : '-' }}
-        {% elseif rule.type == 'project' %}
-            project: {{ rule.project ? rule.project.id ~ ' ' ~ rule.project.name : '-' }}
-        {% elseif rule.type == 'application' %}
-            application:
-            {% if rule.application %}
-                <a href="{{ rule.applicationType == 'route' and rule.route ? path(rule.route) : path_application(rule.application.id) }}">{{ rule.application.id }}</a> ({{ rule.applicationType }})
+        {% if rule.route %}
+            {% if rule.type == 'application' and applicationHref %}
+                <a href="{{ applicationHref }}"><code>{{ rule.route }}</code></a>
             {% else %}
-                -
+                <code>{{ rule.route }}</code>
             {% endif %}
-        {% elseif rule.type == 'redirect' %}
-            {{ rule.redirectType }}: {{ rule.domain ? rule.domain.id : (rule.project ? rule.project.name : '-') }}
         {% else %}
-            {{ rule.routeType }}: {{ rule.domain ? rule.domain.id : (rule.project ? rule.project.id ~ ' ' ~ rule.project.name : '-') }}
+            <span class="text-body-secondary">-</span>
         {% endif %}
     </td>
-    <td>
-        {% if rule.type == 'domain' %}
-            force domain shell
-        {% elseif rule.type == 'project' %}
-            bypass project catch-all
-        {% elseif rule.type == 'application' %}
-            {% if rule.applicationType == 'route' %}
-                attach to route
-            {% else %}
-                render application shell
-            {% endif %}
-        {% elseif rule.type == 'redirect' %}
-            {{ rule.redirectTarget }}: {{ rule.redirectDomain ? rule.redirectDomain.id : (rule.redirectProject ? rule.redirectProject.id ~ ' ' ~ rule.redirectProject.name : '-') }}
+    <td class="text-nowrap">
+        {% if rule.domain %}
+            <code>{{ rule.domain.id }}</code>
         {% else %}
-            {{ rule.route ?: '-' }}
+            <span class="text-body-secondary">-</span>
+        {% endif %}
+    </td>
+    <td class="text-nowrap">
+        {% if rule.project %}
+            <div><code>{{ rule.project.id }}</code></div>
+            <div class="small text-body-secondary">{{ rule.project.name }}</div>
+        {% elseif rule.type == 'redirect' %}
+            {% if rule.redirectType == 'project' and rule.project %}
+                <div><code>{{ rule.project.id }}</code></div>
+                <div class="small text-body-secondary">{{ rule.project.name }}</div>
+            {% else %}
+                <span class="text-body-secondary">-</span>
+            {% endif %}
+        {% else %}
+            <span class="text-body-secondary">-</span>
+        {% endif %}
+    </td>
+    <td class="text-nowrap">
+        {% if rule.application %}
+            {% if applicationHref %}
+                <a href="{{ applicationHref }}"><code>{{ rule.application.id }}</code></a>
+            {% else %}
+                <code>{{ rule.application.id }}</code>
+            {% endif %}
+        {% else %}
+            <span class="text-body-secondary">-</span>
+        {% endif %}
+    </td>
+    <td class="text-nowrap">
+        {% if rule.type == 'application' %}
+            {{ rule.applicationType ?: '-' }}
+        {% else %}
+            <span class="text-body-secondary">-</span>
+        {% endif %}
+    </td>
+    <td class="text-nowrap">
+        {% if rule.type == 'route' and rule.routeType %}
+            {{ rule.routeType }}
+        {% else %}
+            <span class="text-body-secondary">-</span>
+        {% endif %}
+    </td>
+    <td class="text-nowrap">
+        {% if rule.type == 'redirect' and rule.redirectType %}
+            {{ rule.redirectType }}
+        {% else %}
+            <span class="text-body-secondary">-</span>
+        {% endif %}
+    </td>
+    <td class="text-nowrap">
+        {% if rule.type == 'redirect' and rule.redirectTarget %}
+            {{ rule.redirectTarget }}
+        {% else %}
+            <span class="text-body-secondary">-</span>
+        {% endif %}
+    </td>
+    <td class="text-nowrap">
+        {% if rule.redirectDomain %}
+            <code>{{ rule.redirectDomain.id }}</code>
+        {% else %}
+            <span class="text-body-secondary">-</span>
+        {% endif %}
+    </td>
+    <td class="text-nowrap">
+        {% if rule.redirectProject %}
+            <div><code>{{ rule.redirectProject.id }}</code></div>
+            <div class="small text-body-secondary">{{ rule.redirectProject.name }}</div>
+        {% else %}
+            <span class="text-body-secondary">-</span>
         {% endif %}
     </td>
     <td class="text-end btn-cell">
