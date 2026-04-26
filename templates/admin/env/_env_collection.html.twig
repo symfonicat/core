@@ -49,6 +49,11 @@
 
             collection.dataset.envCollectionIndex = String(index + 1);
             items.insertAdjacentHTML('beforeend', markup);
+
+            const item = items.lastElementChild;
+            if (item instanceof HTMLElement) {
+                syncCollectionItem(item);
+            }
         };
 
         const removeCollectionItem = (button) => {
@@ -59,6 +64,93 @@
 
             item.remove();
         };
+
+        const syncEnvOptions = (parentSelect, envSelect) => {
+            if (!(parentSelect instanceof HTMLSelectElement) || !(envSelect instanceof HTMLSelectElement)) {
+                return;
+            }
+
+            const selectedParent = parentSelect.value;
+
+            for (const option of envSelect.options) {
+                if (option.value === '') {
+                    option.hidden = false;
+                    option.disabled = false;
+
+                    continue;
+                }
+
+                const optionParent = option.dataset.envParent || '';
+                const visible = selectedParent === '' || optionParent === selectedParent;
+
+                option.hidden = !visible;
+                option.disabled = !visible;
+            }
+
+            const selectedOption = envSelect.options[envSelect.selectedIndex] || null;
+            if (selectedOption && selectedOption.value !== '' && selectedOption.disabled) {
+                envSelect.value = '';
+            }
+        };
+
+        const syncParentFromEnv = (parentSelect, envSelect) => {
+            if (!(parentSelect instanceof HTMLSelectElement) || !(envSelect instanceof HTMLSelectElement)) {
+                return;
+            }
+
+            const selectedOption = envSelect.options[envSelect.selectedIndex] || null;
+            if (!selectedOption || selectedOption.value === '') {
+                return;
+            }
+
+            const optionParent = selectedOption.dataset.envParent || '';
+            if (optionParent !== '') {
+                parentSelect.value = optionParent;
+            }
+        };
+
+        const syncCollectionItem = (item) => {
+            if (!(item instanceof HTMLElement)) {
+                return;
+            }
+
+            const parentSelect = item.querySelector('[data-env-parent-select]');
+            const envSelect = item.querySelector('[data-env-select]');
+
+            if (!(parentSelect instanceof HTMLSelectElement) || !(envSelect instanceof HTMLSelectElement)) {
+                return;
+            }
+
+            syncParentFromEnv(parentSelect, envSelect);
+            syncEnvOptions(parentSelect, envSelect);
+        };
+
+        const syncAllCollectionItems = () => {
+            document.querySelectorAll('[data-env-collection-items] [data-collection-item]').forEach((item) => {
+                syncCollectionItem(item);
+            });
+        };
+
+        document.addEventListener('change', (event) => {
+            const parentSelect = event.target.closest('[data-env-parent-select]');
+            if (parentSelect) {
+                const item = parentSelect.closest('[data-collection-item]');
+                const envSelect = item?.querySelector('[data-env-select]');
+                syncEnvOptions(parentSelect, envSelect);
+
+                return;
+            }
+
+            const envSelect = event.target.closest('[data-env-select]');
+            if (!envSelect) {
+                return;
+            }
+
+            const item = envSelect.closest('[data-collection-item]');
+            const parentSelectForEnv = item?.querySelector('[data-env-parent-select]');
+            syncParentFromEnv(parentSelectForEnv, envSelect);
+            syncEnvOptions(parentSelectForEnv, envSelect);
+        });
 
         document.addEventListener('click', (event) => {
             const addButton = event.target.closest('[data-env-collection-add]');
@@ -77,5 +169,7 @@
             event.preventDefault();
             removeCollectionItem(removeButton);
         });
+
+        syncAllCollectionItems();
     })();
 </script>

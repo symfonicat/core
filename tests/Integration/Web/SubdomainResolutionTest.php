@@ -16,7 +16,7 @@ final class SubdomainResolutionTest extends SymfonicatWebTestCase
     public function testBareDomainRendersDomainShellWithoutRedirect(): void
     {
         $domain = $this->createDomain('example.com');
-        $env = $this->createEnv('color');
+        $env = $this->createEnv('primary');
         $this->setDomainEnv($domain, $env, 'blue');
 
         $this->setHost('example.com');
@@ -43,7 +43,7 @@ final class SubdomainResolutionTest extends SymfonicatWebTestCase
     {
         $domain = $this->createDomain('example.com');
         $project = $this->createProject('project1', 'Project 1', $domain);
-        $color = $this->createEnv('color');
+        $color = $this->createEnv('primary');
         $this->setDomainEnv($domain, $color, 'blue');
         $this->setProjectEnv($project, $color, 'green');
 

@@ -11,6 +11,7 @@ use Symfonicat\Entity\ApplicationEnv;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\DomainEnv;
 use Symfonicat\Entity\Env;
+use Symfonicat\Entity\EnvParent;
 use Symfonicat\Entity\Module;
 use Symfonicat\Entity\Project;
 use Symfonicat\Entity\ProjectEnv;
@@ -147,15 +148,31 @@ final class BootstrapCommand extends Command
 
     private function seedLocalDefaults(): string
     {
-        $env = $this->envRepository->find('color');
+        $envParent = $this->entityManager->find(EnvParent::class, 'colors');
+        $createdEnvParent = false;
+
+        if (!$envParent instanceof EnvParent) {
+            $envParent = (new EnvParent())
+                ->setId('colors');
+
+            $this->entityManager->persist($envParent);
+            $createdEnvParent = true;
+        }
+
+        $env = $this->envRepository->find('primary');
         $createdEnv = false;
+        $updatedEnv = false;
 
         if (!$env instanceof Env) {
             $env = (new Env())
-                ->setId('color');
+                ->setId('primary')
+                ->setEnvParent($envParent);
 
             $this->entityManager->persist($env);
             $createdEnv = true;
+        } elseif ($env->getEnvParent()?->getId() !== $envParent->getId()) {
+            $env->setEnvParent($envParent);
+            $updatedEnv = true;
         }
 
         $localhost = $this->domainRepository->find('localhost');
@@ -213,7 +230,9 @@ final class BootstrapCommand extends Command
         $this->entityManager->flush();
 
         if (
-            $createdEnv
+            $createdEnvParent
+            || $createdEnv
+            || $updatedEnv
             || $createdLocalhost
             || $createdExampleDomain
             || $createdProject
@@ -246,10 +265,18 @@ final class BootstrapCommand extends Command
                 $messages[] = 'example.com domain already present';
             }
 
-            if ($createdEnv) {
-                $messages[] = 'seeded color env';
+            if ($createdEnvParent) {
+                $messages[] = 'seeded colors env parent';
             } else {
-                $messages[] = 'color env already present';
+                $messages[] = 'colors env parent already present';
+            }
+
+            if ($createdEnv) {
+                $messages[] = 'seeded primary env';
+            } elseif ($updatedEnv) {
+                $messages[] = 'updated primary env';
+            } else {
+                $messages[] = 'primary env already present';
             }
 
             if ($createdProject) {
@@ -305,35 +332,35 @@ final class BootstrapCommand extends Command
             }
 
             if ($localhostColor === 'created') {
-                $messages[] = 'seeded localhost color env value';
+                $messages[] = 'seeded localhost colors.primary env value';
             } elseif ($localhostColor === 'updated') {
-                $messages[] = 'updated localhost color env value';
+                $messages[] = 'updated localhost colors.primary env value';
             } else {
-                $messages[] = 'localhost color env value already present';
+                $messages[] = 'localhost colors.primary env value already present';
             }
 
             if ($exampleColor === 'created') {
-                $messages[] = 'seeded example.com color env value';
+                $messages[] = 'seeded example.com colors.primary env value';
             } elseif ($exampleColor === 'updated') {
-                $messages[] = 'updated example.com color env value';
+                $messages[] = 'updated example.com colors.primary env value';
             } else {
-                $messages[] = 'example.com color env value already present';
+                $messages[] = 'example.com colors.primary env value already present';
             }
 
             if ($projectColor === 'created') {
-                $messages[] = 'seeded Project 1 color env value';
+                $messages[] = 'seeded Project 1 colors.primary env value';
             } elseif ($projectColor === 'updated') {
-                $messages[] = 'updated Project 1 color env value';
+                $messages[] = 'updated Project 1 colors.primary env value';
             } else {
-                $messages[] = 'Project 1 color env value already present';
+                $messages[] = 'Project 1 colors.primary env value already present';
             }
 
             if ($applicationColor === 'created') {
-                $messages[] = 'seeded test application color env value';
+                $messages[] = 'seeded test application colors.primary env value';
             } elseif ($applicationColor === 'updated') {
-                $messages[] = 'updated test application color env value';
+                $messages[] = 'updated test application colors.primary env value';
             } else {
-                $messages[] = 'test application color env value already present';
+                $messages[] = 'test application colors.primary env value already present';
             }
 
             if ($createdApplicationRoutingRule) {

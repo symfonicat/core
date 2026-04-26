@@ -29,7 +29,7 @@ cd symfonicat
 docker compose up -d
 ```
 
-On container startup the `php` service self-installs PHP dependencies with Composer, synchronizes the Doctrine schema, seeds the local development rows, runs `npm install`, and then runs `npm run build`. The seeded rows include `localhost`, `example.com`, `project1`, the `test` application, the `analytics` module, a `/symfonicat/*/test*` application routing rule, and sample `color` env values. The `test` application and `project1` project both have Analytics enabled by default; the test application uses `color=red`, the default domains use `color=blue`, and `project1` uses `color=green`. After the stack is up, create an admin and synchronize filesystem-backed rows:
+On container startup the `php` service self-installs PHP dependencies with Composer, synchronizes the Doctrine schema, seeds the local development rows, runs `npm install`, and then runs `npm run build`. The Docker image installs Node/npm from the distro packages, installs the global `n` package, and then runs `n latest` so the Electron build toolchain uses the latest Node release inside the container. The seeded rows include `localhost`, `example.com`, `project1`, the `test` application, the `analytics` module, a `/symfonicat/*/test*` application routing rule, and sample `colors.primary` env values. The `test` application and `project1` project both have Analytics enabled by default; the test application uses `colors.primary=red`, the default domains use `colors.primary=blue`, and `project1` uses `colors.primary=green`. After the stack is up, create an admin and synchronize filesystem-backed rows:
 
 ```bash
 docker exec -it php bin/console symfonicat:admin:create <username>
@@ -48,12 +48,13 @@ Symfonicat owns these tables:
 - `DomainEnv` -> `symfonicat_domain_env`
 - `Project` -> `symfonicat_project`
 - `ProjectEnv` -> `symfonicat_project_env`
+- `EnvParent` -> `symfonicat_env_parent`
 - `Env` -> `symfonicat_env`
 - `Module` -> `symfonicat_module`
 - `RoutingRule` -> `symfonicat_routing_rule`
 - `Admin` -> `symfonicat_admin`
 
-`Application.id`, `Domain.id`, `Project.id`, `Module.id`, and `Env.id` are string identifiers. `Project.id` is immutable once created and is also the project subdomain, project asset key, and Electron/runtime key. `Module.id` is immutable and is the module backend and frontend entry key. `Application.id` is the application shell key and maps to `assets/applications/{id}` plus `templates/application/overrides/{id}.html.twig`.
+`Application.id`, `Domain.id`, `Project.id`, `Module.id`, `EnvParent.id`, and `Env.id` are string identifiers. `Project.id` is immutable once created and is also the project subdomain, project asset key, and Electron/runtime key. `Module.id` is immutable and is the module backend and frontend entry key. `Application.id` is the application shell key and maps to `assets/applications/{id}` plus `templates/application/overrides/{id}.html.twig`.
 
 `Domain`, `Project`, and `Application` can each attach `Module` rows. Modules are synchronized from `assets/modules/{id}/package.json`; deleted filesystem modules are only removed after the command shows referencing entity rows and receives confirmation.
 
@@ -100,7 +101,7 @@ The routing-rule admin form groups related fields into cards. The rule card cont
 
 ## Env
 
-`Env` defines keys; scoped env rows define values. Runtime env values are resolved through `EnvService` and exposed to Twig through `env()` and the global `env` array.
+`EnvParent` groups env keys, and `Env` defines the leaf keys within that parent. Scoped env rows define the values. Runtime env values are resolved through `EnvService` and exposed to Twig through `env()` plus the global `env` array.
 
 Precedence is:
 
@@ -108,7 +109,7 @@ Precedence is:
 2. `DomainEnv`
 3. `ProjectEnv`
 
-Project values overwrite domain values, and domain values overwrite application values. The base layout emits the merged env map into `window.env`.
+Project values overwrite domain values, and domain values overwrite application values. The merged runtime env map is nested by env parent, so Twig lookups use dotted ids such as `env('colors.primary')`, and the base layout emits the same grouped structure into `window.env`, for example `window.env.colors.primary`.
 
 ## Templates
 
@@ -180,7 +181,7 @@ Admin lives under `/admin` and is isolated from any host app user system.
 - application CRUD lives under `/admin/a*`
 - domain CRUD lives under `/admin/d*`
 - project CRUD lives under `/admin/p*`
-- env CRUD lives under `/admin/e*`
+- env CRUD lives under `/admin/e*`, with env parents listed on the left side of `/admin/e` with an inline create form underneath, and env values listed on the right with an inline create form that places env parent on the left and env on the right
 - routing-rule CRUD lives under `/admin/r*`
 - modules do not have admin CRUD; module rows come from `symfonicat:schema:update`
 

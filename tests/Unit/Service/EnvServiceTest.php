@@ -8,6 +8,7 @@ use Symfonicat\Entity\ApplicationEnv;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\DomainEnv;
 use Symfonicat\Entity\Env;
+use Symfonicat\Entity\EnvParent;
 use Symfonicat\Entity\Project;
 use Symfonicat\Entity\ProjectEnv;
 use Symfonicat\Service\ApplicationService;
@@ -27,24 +28,24 @@ final class EnvServiceTest extends TestCase
         $service = $this->makeService(null, null);
 
         self::assertSame([], $service->all());
-        self::assertNull($service->get('color'));
+        self::assertNull($service->get('colors.primary'));
     }
 
     public function testReturnsDomainValuesWhenOnlyDomainIsLoaded(): void
     {
-        $env = $this->makeEnv('color');
+        $env = $this->makeEnv('primary');
         $domain = $this->makeDomain('example.com', [$env->getId() => 'blue']);
 
         $service = $this->makeService($domain, null);
 
-        self::assertSame(['color' => 'blue'], $service->all());
-        self::assertSame('blue', $service->get('color'));
-        self::assertNull($service->get('missing'));
+        self::assertSame(['colors' => ['primary' => 'blue']], $service->all());
+        self::assertSame('blue', $service->get('colors.primary'));
+        self::assertNull($service->get('colors.missing'));
     }
 
     public function testProjectValuesOverlayDomainValuesWhenProjectBelongsToDomain(): void
     {
-        $color = $this->makeEnv('color');
+        $color = $this->makeEnv('primary');
         $theme = $this->makeEnv('theme');
 
         $domain = $this->makeDomain('example.com', [
@@ -61,17 +62,17 @@ final class EnvServiceTest extends TestCase
         $service = $this->makeService($domain, $project);
 
         self::assertSame(
-            ['color' => 'green', 'theme' => 'default'],
+            ['colors' => ['primary' => 'green', 'theme' => 'default']],
             $service->all(),
             'project values should overlay matching domain keys; non-overlapping domain keys remain',
         );
-        self::assertSame('green', $service->get('color'));
-        self::assertSame('default', $service->get('theme'));
+        self::assertSame('green', $service->get('colors.primary'));
+        self::assertSame('default', $service->get('colors.theme'));
     }
 
     public function testProjectValuesOverlayDomainAndApplicationValues(): void
     {
-        $color = $this->makeEnv('color');
+        $color = $this->makeEnv('primary');
         $theme = $this->makeEnv('theme');
         $mode = $this->makeEnv('mode');
 
@@ -92,26 +93,27 @@ final class EnvServiceTest extends TestCase
         $service = $this->makeService($domain, $project, $application);
 
         self::assertSame(
-            ['color' => 'green', 'theme' => 'domain', 'mode' => 'default'],
+            ['colors' => ['primary' => 'green', 'theme' => 'domain', 'mode' => 'default']],
             $service->all(),
         );
     }
 
     public function testGetTrimsLookupIdAndRejectsEmptyLookup(): void
     {
-        $env = $this->makeEnv('color');
+        $env = $this->makeEnv('primary');
         $domain = $this->makeDomain('example.com', [$env->getId() => 'blue']);
 
         $service = $this->makeService($domain, null);
 
         self::assertNull($service->get(''));
         self::assertNull($service->get('   '));
-        self::assertSame('blue', $service->get('  color  '));
+        self::assertNull($service->get('primary'));
+        self::assertSame('blue', $service->get('  colors.primary  '));
     }
 
     public function testExplicitProjectEntityIgnoresUnrelatedDomain(): void
     {
-        $color = $this->makeEnv('color');
+        $color = $this->makeEnv('primary');
 
         $matchedDomain = $this->makeDomain('example.com', [$color->getId() => 'blue']);
         $unmatchedDomain = $this->makeDomain('other.com', [$color->getId() => 'red']);
@@ -125,7 +127,7 @@ final class EnvServiceTest extends TestCase
         $service = $this->makeService($unmatchedDomain, null);
 
         self::assertSame(
-            ['color' => 'green'],
+            ['colors' => ['primary' => 'green']],
             $service->all($project),
             'unrelated ambient domain must not leak values when an explicit project is passed',
         );
@@ -133,7 +135,7 @@ final class EnvServiceTest extends TestCase
 
     public function testExplicitDomainIgnoresAmbientProject(): void
     {
-        $color = $this->makeEnv('color');
+        $color = $this->makeEnv('primary');
         $domain = $this->makeDomain('example.com', [$color->getId() => 'blue']);
         $project = $this->makeProject('project1', [$color->getId() => 'green']);
         $domain->addProject($project);
@@ -141,7 +143,7 @@ final class EnvServiceTest extends TestCase
         $service = $this->makeService($domain, $project);
 
         self::assertSame(
-            ['color' => 'blue'],
+            ['colors' => ['primary' => 'blue']],
             $service->all($domain),
             'passing a Domain explicitly must scope to domain-level env values only',
         );
@@ -149,7 +151,7 @@ final class EnvServiceTest extends TestCase
 
     public function testSkipsEnvRowsWithNullOrEmptyEnvIds(): void
     {
-        $valid = $this->makeEnv('color');
+        $valid = $this->makeEnv('primary');
 
         $domain = new Domain();
         $domain->setId('example.com');
@@ -163,7 +165,7 @@ final class EnvServiceTest extends TestCase
         $domain->addEnv($orphan);
 
         // Row with an empty-id Env — also skipped.
-        $emptyIdEnv = new Env();
+        $emptyIdEnv = (new Env())->setEnvParent((new EnvParent())->setId('colors'));
         $reflection = new \ReflectionProperty(Env::class, 'id');
         $reflection->setValue($emptyIdEnv, '');
         $blank = (new DomainEnv())->setEnv($emptyIdEnv)->setValue('nope');
@@ -171,7 +173,7 @@ final class EnvServiceTest extends TestCase
 
         $service = $this->makeService($domain, null);
 
-        self::assertSame(['color' => 'blue'], $service->all());
+        self::assertSame(['colors' => ['primary' => 'blue']], $service->all());
     }
 
     private function makeService(?Domain $domain, ?Project $project, ?Application $application = null): EnvService
@@ -238,6 +240,8 @@ final class EnvServiceTest extends TestCase
 
     private function makeEnv(string $id): Env
     {
-        return (new Env())->setId($id);
+        return (new Env())
+            ->setId($id)
+            ->setEnvParent((new EnvParent())->setId('colors'));
     }
 }

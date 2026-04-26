@@ -6,6 +6,7 @@ use App\Tests\Support\SymfonicatKernelTestCase;
 use Symfonicat\Entity\Application;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\Env;
+use Symfonicat\Entity\EnvParent;
 use Symfonicat\Entity\Module;
 use Symfonicat\Entity\Project;
 use Symfonicat\Entity\RoutingRule;
@@ -33,7 +34,8 @@ final class BootstrapCommandTest extends SymfonicatKernelTestCase
         $project = $em->getRepository(Project::class)->find('project1');
         $application = $em->getRepository(Application::class)->find('test');
         $analytics = $em->getRepository(Module::class)->find('analytics');
-        $color = $em->getRepository(Env::class)->find('color');
+        $envParent = $em->getRepository(EnvParent::class)->find('colors');
+        $color = $em->getRepository(Env::class)->find('primary');
         $applicationRules = $em->getRepository(RoutingRule::class)->findTypeApplication();
 
         self::assertInstanceOf(Domain::class, $localhost);
@@ -43,7 +45,9 @@ final class BootstrapCommandTest extends SymfonicatKernelTestCase
         self::assertInstanceOf(Application::class, $application);
         self::assertInstanceOf(Module::class, $analytics);
         self::assertSame('Analytics', $analytics->getName());
+        self::assertInstanceOf(EnvParent::class, $envParent);
         self::assertInstanceOf(Env::class, $color);
+        self::assertSame('colors', $color->getEnvParent()?->getId());
 
         self::assertTrue(
             $exampleCom->hasProject($project),
@@ -60,10 +64,10 @@ final class BootstrapCommandTest extends SymfonicatKernelTestCase
             'bootstrap must attach Analytics to Project 1 so project module routes work out of the box',
         );
 
-        self::assertSame('blue', $this->envValueFor($localhost, 'color'));
-        self::assertSame('blue', $this->envValueFor($exampleCom, 'color'));
-        self::assertSame('green', $this->projectEnvValueFor($project, 'color'));
-        self::assertSame('red', $this->applicationEnvValueFor($application, 'color'));
+        self::assertSame('blue', $this->envValueFor($localhost, 'primary'));
+        self::assertSame('blue', $this->envValueFor($exampleCom, 'primary'));
+        self::assertSame('green', $this->projectEnvValueFor($project, 'primary'));
+        self::assertSame('red', $this->applicationEnvValueFor($application, 'primary'));
         self::assertCount(1, $applicationRules);
         self::assertSame(['symfonicat', '*', 'test*'], $applicationRules[0]->getArguments());
         self::assertSame('test', $applicationRules[0]->getApplication()?->getId());
@@ -105,6 +109,7 @@ final class BootstrapCommandTest extends SymfonicatKernelTestCase
                 'application_env' => 0,
                 'domain' => 0,
                 'project' => 0,
+                'env_parent' => 0,
                 'env' => 0,
                 'domain_env' => 0,
                 'project_env' => 0,
@@ -122,21 +127,21 @@ final class BootstrapCommandTest extends SymfonicatKernelTestCase
     {
         self::assertSame(0, $this->runBootstrap());
 
-        // Manually tweak the localhost color so we can confirm the next bootstrap
-        // brings it back into line with the canonical seed.
+        // Manually tweak the localhost primary color so we can confirm the next
+        // bootstrap brings it back into line with the canonical seed.
         $em = $this->entityManager();
         $localhost = $em->getRepository(Domain::class)->find('localhost');
         self::assertNotNull($localhost);
 
         foreach ($localhost->getEnv() as $row) {
-            if ($row->getEnv()?->getId() === 'color') {
+            if ($row->getEnv()?->getId() === 'primary') {
                 $row->setValue('hot-pink');
                 break;
             }
         }
         $em->flush();
 
-        self::assertSame('hot-pink', $this->envValueFor($localhost, 'color'));
+        self::assertSame('hot-pink', $this->envValueFor($localhost, 'primary'));
 
         self::assertSame(0, $this->runBootstrap());
         $em->clear();
@@ -145,7 +150,7 @@ final class BootstrapCommandTest extends SymfonicatKernelTestCase
         self::assertNotNull($localhostAfter);
         self::assertSame(
             'blue',
-            $this->envValueFor($localhostAfter, 'color'),
+            $this->envValueFor($localhostAfter, 'primary'),
             'bootstrap must restore the canonical localhost color value on subsequent runs',
         );
     }
@@ -177,6 +182,7 @@ final class BootstrapCommandTest extends SymfonicatKernelTestCase
             'application_env' => $this->countTable('symfonicat_application_env'),
             'domain' => $this->countTable('symfonicat_domain'),
             'project' => $this->countTable('symfonicat_project'),
+            'env_parent' => $this->countTable('symfonicat_env_parent'),
             'env' => $this->countTable('symfonicat_env'),
             'domain_env' => $this->countTable('symfonicat_domain_env'),
             'project_env' => $this->countTable('symfonicat_project_env'),

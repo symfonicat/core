@@ -24,7 +24,7 @@ final class RoutingRuleInversionTest extends SymfonicatWebTestCase
     {
         $domain = $this->createDomain('example.com');
         $project = $this->createProject('project1', 'Project 1', $domain);
-        $env = $this->createEnv('color');
+        $env = $this->createEnv('primary');
         $this->setDomainEnv($domain, $env, 'blue');
         $this->setProjectEnv($project, $env, 'green');
 
@@ -51,7 +51,7 @@ final class RoutingRuleInversionTest extends SymfonicatWebTestCase
         );
         // NOTE: Env overlay is intentionally not asserted here. EnvService still
         // sees both the project and the domain (the rule only overrides which
-        // TEMPLATE renders, not which entity is loaded), so `env.color` stays
+        // TEMPLATE renders, not which entity is loaded), so `colors.primary` stays
         // at the project value. That's consistent with EnvServiceTest and is
         // captured explicitly there; calling it out here would double-pin the
         // same contract in two places.

@@ -19,6 +19,7 @@ final class EnvExtension extends AbstractExtension implements GlobalsInterface
         return [
             new TwigFunction('env', $this->render(...)),
             new TwigFunction('env_json', $this->renderJson(...), ['is_safe' => ['html']]),
+            new TwigFunction('env_helper', $this->renderHelper(...), ['is_safe' => ['html']]),
         ];
     }
 
@@ -35,6 +36,14 @@ final class EnvExtension extends AbstractExtension implements GlobalsInterface
     }
 
     public function renderJson(): string
+    {
+        return json_encode(
+            $this->envService->all(),
+            JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR,
+        );
+    }
+
+    public function renderHelper(): string
     {
         return json_encode(
             $this->envService->all(),

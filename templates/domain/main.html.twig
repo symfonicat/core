@@ -32,6 +32,6 @@
 
     <br />
 
-    color: {{ env.color|default('') }}
+    color: {{ env('colors.primary')|default('') }}
     
 {% endblock %}

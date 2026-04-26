@@ -3,41 +3,56 @@
 namespace Symfonicat\Controller\Admin;
 
 use Symfonicat\Entity\Env;
+use Symfonicat\Entity\EnvParent;
 use Symfonicat\Form\EnvType;
+use Symfonicat\Form\EnvParentType;
 use Symfonicat\Repository\EnvRepository;
+use Symfonicat\Repository\EnvParentRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Form\FormFactoryInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
 final class EnvController extends AbstractController
 {
-    #[Route('/admin/e/list', name: 'app_env_index', methods: ['GET'])]
-    public function index(EnvRepository $envRepository): Response
+    #[Route('/admin/e/list', name: 'app_env_index', methods: ['GET', 'POST'])]
+    public function index(
+        Request $request,
+        EnvRepository $envRepository,
+        EnvParentRepository $envParentRepository,
+        EntityManagerInterface $entityManager,
+        FormFactoryInterface $formFactory,
+    ): Response
     {
-        return $this->render('admin/env/index.html.twig', [
-            'envs' => $envRepository->findAllOrdered(),
-        ]);
-    }
+        $envParent = new EnvParent();
+        $envParentForm = $formFactory->createNamed('env_parent_create', EnvParentType::class, $envParent);
+        $envParentForm->handleRequest($request);
 
-    #[Route('/admin/e/create', name: 'app_env_create', methods: ['GET', 'POST'])]
-    public function new(Request $request, EntityManagerInterface $entityManager): Response
-    {
+        if ($envParentForm->isSubmitted() && $envParentForm->isValid()) {
+            $entityManager->persist($envParent);
+            $entityManager->flush();
+
+            return $this->redirectToRoute('app_env_index', [], Response::HTTP_SEE_OTHER);
+        }
+
         $env = new Env();
-        $form = $this->createForm(EnvType::class, $env);
-        $form->handleRequest($request);
+        $envForm = $formFactory->createNamed('env_create', EnvType::class, $env);
+        $envForm->handleRequest($request);
 
-        if ($form->isSubmitted() && $form->isValid()) {
+        if ($envForm->isSubmitted() && $envForm->isValid()) {
             $entityManager->persist($env);
             $entityManager->flush();
 
             return $this->redirectToRoute('app_env_index', [], Response::HTTP_SEE_OTHER);
         }
 
-        return $this->render('admin/env/create.html.twig', [
-            'env' => $env,
-            'form' => $form,
+        return $this->render('admin/env/index.html.twig', [
+            'env_parents' => $envParentRepository->findAllOrdered(),
+            'envs' => $envRepository->findAllOrdered(),
+            'env_parent_form' => $envParentForm,
+            'env_form' => $envForm,
         ]);
     }
 
@@ -76,6 +91,55 @@ final class EnvController extends AbstractController
 
         if ($this->isCsrfTokenValid('delete' . $env->getId(), $request->getPayload()->getString('_token'))) {
             $entityManager->remove($env);
+            $entityManager->flush();
+        }
+
+        return $this->redirectToRoute('app_env_index', [], Response::HTTP_SEE_OTHER);
+    }
+
+    #[Route('/admin/e/parent/{id}/edit', name: 'app_env_parent_edit', methods: ['GET', 'POST'])]
+    public function editParent(
+        Request $request,
+        string $id,
+        EnvParentRepository $envParentRepository,
+        EntityManagerInterface $entityManager,
+    ): Response {
+        $envParent = $envParentRepository->find($id);
+        if (!$envParent instanceof EnvParent) {
+            throw $this->createNotFoundException(sprintf('Env parent "%s" not found.', $id));
+        }
+
+        $form = $this->createForm(EnvParentType::class, $envParent, [
+            'is_edit' => true,
+        ]);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $entityManager->flush();
+
+            return $this->redirectToRoute('app_env_index', [], Response::HTTP_SEE_OTHER);
+        }
+
+        return $this->render('admin/env_parent/edit.html.twig', [
+            'env_parent' => $envParent,
+            'form' => $form,
+        ]);
+    }
+
+    #[Route('/admin/e/parent/{id}', name: 'app_env_parent_delete', methods: ['POST'])]
+    public function deleteParent(
+        Request $request,
+        string $id,
+        EnvParentRepository $envParentRepository,
+        EntityManagerInterface $entityManager,
+    ): Response {
+        $envParent = $envParentRepository->find($id);
+        if (!$envParent instanceof EnvParent) {
+            return $this->redirectToRoute('app_env_index', [], Response::HTTP_SEE_OTHER);
+        }
+
+        if ($this->isCsrfTokenValid('delete' . $envParent->getId(), $request->getPayload()->getString('_token'))) {
+            $entityManager->remove($envParent);
             $entityManager->flush();
         }
 

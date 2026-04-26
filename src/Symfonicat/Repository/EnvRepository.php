@@ -19,7 +19,32 @@ final class EnvRepository extends ServiceEntityRepository
     public function findAllOrdered(): array
     {
         return $this->createQueryBuilder('env')
-            ->orderBy('env.id', 'ASC')
+            ->leftJoin('env.envParent', 'envParent')
+            ->addSelect('envParent')
+            ->orderBy('envParent.id', 'ASC')
+            ->addOrderBy('env.id', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * @return Env[]
+     */
+    public function findAllForParent(?string $envParentId): array
+    {
+        $qb = $this->createQueryBuilder('env')
+            ->leftJoin('env.envParent', 'envParent')
+            ->addSelect('envParent');
+
+        if ($envParentId !== null && trim($envParentId) !== '') {
+            $qb
+                ->andWhere('envParent.id = :envParentId')
+                ->setParameter('envParentId', trim($envParentId));
+        }
+
+        return $qb
+            ->orderBy('envParent.id', 'ASC')
+            ->addOrderBy('env.id', 'ASC')
             ->getQuery()
             ->getResult();
     }

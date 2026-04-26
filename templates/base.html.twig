@@ -22,7 +22,7 @@
         <link href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&display=swap" rel="stylesheet">
 
         <script type="text/javascript">
-            window.env = {{ env_json() | indent_json(12) }}
+            window.env = {{ env_helper() | indent_json(12) }}
             console.log('[window.env]', window.env)
             console.log('----------------------')
 

@@ -1,9 +1,12 @@
 <div class="card card-body bg-body-tertiary" data-collection-item>
     <div class="row g-2 align-items-start">
-        <div class="col-md-4">
+        <div class="col-md-3">
+            {{ form_row(item_form.envParent) }}
+        </div>
+        <div class="col-md-3">
             {{ form_row(item_form.env) }}
         </div>
-        <div class="col-md-6">
+        <div class="col-md-4">
             {{ form_row(item_form.value) }}
         </div>
         <div class="col-md-2 d-grid">

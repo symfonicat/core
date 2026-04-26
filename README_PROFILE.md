@@ -2,7 +2,7 @@
 
 `symfonicat/core` is the full Symfonicat Symfony application. It ships the public runtime, admin runtime, Doctrine model, webpack integration, Electron-facing commands, and Docker/FrankenPHP starter shell in one repository.
 
-The Docker `php` entrypoint runs Composer install, bootstrap, `npm install`, and `npm run build` automatically. Bootstrap seeds `localhost`, `example.com`, `project1`, the `test` application, the `analytics` module, a `/symfonicat/*/test*` application routing rule, and sample `color` env values. The `test` application and `project1` project have Analytics enabled by default; the test application uses `color=red`.
+The Docker `php` entrypoint runs Composer install, bootstrap, `npm install`, and `npm run build` automatically. The Docker image installs Node/npm, installs the global `n` package, and runs `n latest` so the container uses the latest Node release for the Electron toolchain. Bootstrap seeds `localhost`, `example.com`, `project1`, the `test` application, the `analytics` module, a `/symfonicat/*/test*` application routing rule, and grouped sample env values under the `colors` parent. The `test` application and `project1` project have Analytics enabled by default; the test application uses `colors.primary=red`.
 
 ## Runtime Shape
 
@@ -43,6 +43,8 @@ Precedence is:
 
 Project values overwrite domain values, and domain values overwrite application values.
 
+Env values are grouped by `EnvParent`, so lookups use dotted ids such as `env('colors.primary')`. The same grouped structure is emitted into `window.env`.
+
 ## Assets
 
 Webpack entries are discovered from `symfonicat:data:webpack`, with database-backed rows and filesystem fallback under:
@@ -70,7 +72,7 @@ Run schema sync with an interactive terminal when confirmations may be needed. W
 
 ## Admin
 
-Admin lives under `/admin`, uses its own `Admin` entity/table, and is isolated from any host user system. Login is Symfony security session auth plus TOTP MFA, with admin lookups cached in Redis. Admin CRUD covers applications at `/admin/a*`, domains at `/admin/d*`, projects at `/admin/p*`, env keys at `/admin/e*`, and routing rules at `/admin/r*`.
+Admin lives under `/admin`, uses its own `Admin` entity/table, and is isolated from any host user system. Login is Symfony security session auth plus TOTP MFA, with admin lookups cached in Redis. Admin CRUD covers applications at `/admin/a*`, domains at `/admin/d*`, projects at `/admin/p*`, the combined env parent/env screen at `/admin/e*` with inline create forms for both lists and the env value form laid out env-parent-left/env-right, and routing rules at `/admin/r*`.
 
 Admins are managed with:
 

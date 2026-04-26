@@ -25,11 +25,26 @@ final class EnvService
             return null;
         }
 
-        return $this->all($entity)[$id] ?? null;
+        $segments = array_values(array_filter(array_map('trim', explode('.', $id))));
+        if (count($segments) < 2) {
+            return null;
+        }
+
+        $value = $this->all($entity);
+
+        foreach ($segments as $segment) {
+            if (!is_array($value) || !array_key_exists($segment, $value)) {
+                return null;
+            }
+
+            $value = $value[$segment];
+        }
+
+        return is_string($value) ? $value : null;
     }
 
     /**
-     * @return array<string, string>
+     * @return array<string, array<string, string>>
      */
     public function all(Application|Domain|Project|null $entity = null): array
     {
@@ -71,13 +86,17 @@ final class EnvService
     }
 
     /**
-     * @param array<string, string> ...$valueSets
+     * @param array<string, array<string, string>> ...$valueSets
      *
-     * @return array<string, string>
+     * @return array<string, array<string, string>>
      */
     private function mergeValues(array ...$valueSets): array
     {
-        return array_replace(...$valueSets);
+        if ($valueSets === []) {
+            return [];
+        }
+
+        return array_replace_recursive(...$valueSets);
     }
 
     private function resolveDomainForProject(Project $project): ?Domain
@@ -92,7 +111,7 @@ final class EnvService
     }
 
     /**
-     * @return array<string, string>
+     * @return array<string, array<string, string>>
      */
     private function collectApplicationValues(?Application $application): array
     {
@@ -107,19 +126,20 @@ final class EnvService
                 continue;
             }
 
+            $envParentId = $item->getEnv()?->getEnvParent()?->getId();
             $envId = $item->getEnv()?->getId();
-            if ($envId === null || $envId === '') {
+            if ($envParentId === null || $envParentId === '' || $envId === null || $envId === '') {
                 continue;
             }
 
-            $values[$envId] = $item->getValue();
+            $values[$envParentId][$envId] = $item->getValue();
         }
 
         return $values;
     }
 
     /**
-     * @return array<string, string>
+     * @return array<string, array<string, string>>
      */
     private function collectDomainValues(?Domain $domain): array
     {
@@ -134,19 +154,20 @@ final class EnvService
                 continue;
             }
 
+            $envParentId = $item->getEnv()?->getEnvParent()?->getId();
             $envId = $item->getEnv()?->getId();
-            if ($envId === null || $envId === '') {
+            if ($envParentId === null || $envParentId === '' || $envId === null || $envId === '') {
                 continue;
             }
 
-            $values[$envId] = $item->getValue();
+            $values[$envParentId][$envId] = $item->getValue();
         }
 
         return $values;
     }
 
     /**
-     * @return array<string, string>
+     * @return array<string, array<string, string>>
      */
     private function collectProjectValues(?Project $project): array
     {
@@ -161,12 +182,13 @@ final class EnvService
                 continue;
             }
 
+            $envParentId = $item->getEnv()?->getEnvParent()?->getId();
             $envId = $item->getEnv()?->getId();
-            if ($envId === null || $envId === '') {
+            if ($envParentId === null || $envParentId === '' || $envId === null || $envId === '') {
                 continue;
             }
 
-            $values[$envId] = $item->getValue();
+            $values[$envParentId][$envId] = $item->getValue();
         }
 
         return $values;

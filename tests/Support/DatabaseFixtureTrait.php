@@ -6,6 +6,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\DomainEnv;
 use Symfonicat\Entity\Env;
+use Symfonicat\Entity\EnvParent;
 use Symfonicat\Entity\Module;
 use Symfonicat\Entity\Project;
 use Symfonicat\Entity\ProjectEnv;
@@ -58,6 +59,7 @@ trait DatabaseFixtureTrait
             'symfonicat_project',
             'symfonicat_domain',
             'symfonicat_env',
+            'symfonicat_env_parent',
             'symfonicat_admin',
         ];
 
@@ -125,9 +127,19 @@ trait DatabaseFixtureTrait
         return $module;
     }
 
-    protected function createEnv(string $id): Env
+    protected function createEnv(string $id, string $envParentId = 'colors'): Env
     {
-        $env = (new Env())->setId($id);
+        $envParent = $this->entityManager()->find(EnvParent::class, $envParentId);
+
+        if (!$envParent instanceof EnvParent) {
+            $envParent = (new EnvParent())->setId($envParentId);
+            $this->entityManager()->persist($envParent);
+        }
+
+        $env = (new Env())
+            ->setId($id)
+            ->setEnvParent($envParent);
+
         $this->entityManager()->persist($env);
         $this->entityManager()->flush();
 

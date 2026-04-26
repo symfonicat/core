@@ -1,7 +1,9 @@
 FROM dunglas/frankenphp:php8.4
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends nodejs npm \
+    && apt-get install -y --no-install-recommends ca-certificates curl nodejs npm \
+    && npm install -g n \
+    && n latest \
     && rm -rf /var/lib/apt/lists/*
 
 RUN install-php-extensions \
