@@ -109,7 +109,7 @@ Precedence is:
 2. `DomainEnv`
 3. `ProjectEnv`
 
-Project values overwrite domain values, and domain values overwrite application values. The merged runtime env map is nested by env parent, so Twig lookups use dotted ids such as `env('colors.primary')`, and the base layout emits the same grouped structure into `window.env`, for example `window.env.colors.primary`. In the admin scoped env collection forms, the env dropdown is filtered live by the selected env parent so each row only offers env keys from that parent, and edit forms restore the saved env parent from the selected env key.
+Project values overwrite domain values, and domain values overwrite application values. The merged runtime env map is nested by env parent, so Twig lookups use dotted ids such as `env('colors.primary')`, and the base layout emits the same grouped structure into `window.env`, for example `window.env.colors.primary`. In the admin scoped env collection forms, the env dropdown is filtered live by the selected env parent so each row only offers env keys from that parent, shows no env options until a parent is chosen, and restores the saved env parent from the selected env key on edit.
 
 ## Templates
 

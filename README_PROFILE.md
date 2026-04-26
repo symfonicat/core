@@ -43,7 +43,7 @@ Precedence is:
 
 Project values overwrite domain values, and domain values overwrite application values.
 
-Env values are grouped by `EnvParent`, so lookups use dotted ids such as `env('colors.primary')`. The same grouped structure is emitted into `window.env`, and the admin scoped env forms filter each env dropdown by the selected parent while restoring the saved parent on edit.
+Env values are grouped by `EnvParent`, so lookups use dotted ids such as `env('colors.primary')`. The same grouped structure is emitted into `window.env`, and the admin scoped env forms hide env options until a parent is selected while restoring the saved parent on edit.
 
 ## Assets
 

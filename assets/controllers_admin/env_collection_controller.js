@@ -84,7 +84,7 @@ export default class extends Controller {
             }
 
             const optionParent = option.dataset.envParent || ''
-            const visible = selectedParent === '' || optionParent === selectedParent
+            const visible = selectedParent !== '' && optionParent === selectedParent
 
             option.hidden = !visible
             option.disabled = !visible
