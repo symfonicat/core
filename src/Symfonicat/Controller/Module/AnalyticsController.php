@@ -11,7 +11,7 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/m/analytics')]
 final class AnalyticsController extends AbstractModuleController
 {
-    #[Route('', name: 'app_module_analytics', methods: ['POST'])]
+    #[Route('', name: 'symfonicat_module_analytics', methods: ['POST'])]
     public function index(AnalyticsService $analyticsService): Response
     {
         return $this->module(new JsonResponse([

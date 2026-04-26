@@ -64,7 +64,7 @@ final class MakeModule extends AbstractMaker
         $controllerClass = Str::asClassName($name, 'Controller');
         $serviceClass = Str::asClassName($name, 'Service');
         $serviceVar = lcfirst($serviceClass);
-        $routeName = Str::asRouteName('app_module_'.$id);
+        $routeName = Str::asRouteName('symfonicat_module_'.$id);
 
         $controllerPath = 'src/Symfonicat/Controller/Module/'.$controllerClass.'.php';
         $controllerContents = <<<PHP
