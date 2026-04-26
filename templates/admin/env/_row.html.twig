@@ -1,11 +1,8 @@
 <tr id="env_{{ env.id }}" class="btn-row">
     <td class="fw-semibold">{{ env.envParent ? env.envParent.id : '-' }}</td>
-    <td><a href="{{ path('app_env_edit', {'id': env.id}) }}">{{ env.id }}</a></td>
+    <td>{{ env.id }}</td>
     <td class="text-end btn-cell">
         <div class="btn-group btn-group-sm">
-            <a href="{{ path('app_env_edit', {'id': env.id}) }}" class="btn btn-sm btn-warning">
-                <i class="fa fa-pencil">&nbsp;</i>
-            </a>
             {{ include('admin/env/_delete_form.html.twig') }}
         </div>
     </td>
