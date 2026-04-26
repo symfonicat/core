@@ -218,6 +218,7 @@ final class BootstrapCommand extends Command
         $localhostColor = $this->ensureDomainEnvValue($localhost, $env, 'blue');
         $exampleColor = $this->ensureDomainEnvValue($exampleDomain, $env, 'blue');
         $projectColor = $this->ensureProjectEnvValue($project, $env, 'green');
+        $projectColorParentUpdated = $this->ensureProjectEnvParent($project, $env, $envParent);
         [$analyticsModule, $createdAnalyticsModule, $updatedAnalyticsModule] = $this->ensureAnalyticsModule();
         [$application, $createdApplication] = $this->ensureTestApplication();
         $attachedAnalyticsToApplication = $this->attachModuleToApplication($application, $analyticsModule);
@@ -248,6 +249,7 @@ final class BootstrapCommand extends Command
             || $localhostColor !== 'unchanged'
             || $exampleColor !== 'unchanged'
             || $projectColor !== 'unchanged'
+            || $projectColorParentUpdated
             || $applicationColor !== 'unchanged'
             || $createdApplicationRoutingRule
         ) {
@@ -353,6 +355,10 @@ final class BootstrapCommand extends Command
                 $messages[] = 'updated Project 1 colors.primary env value';
             } else {
                 $messages[] = 'Project 1 colors.primary env value already present';
+            }
+
+            if ($projectColorParentUpdated) {
+                $messages[] = 'updated Project 1 colors.primary env parent';
             }
 
             if ($applicationColor === 'created') {
@@ -559,5 +565,25 @@ final class BootstrapCommand extends Command
         $this->entityManager->persist($projectEnv);
 
         return 'created';
+    }
+
+    private function ensureProjectEnvParent(Project $project, Env $env, EnvParent $envParent): bool
+    {
+        $updated = false;
+
+        foreach ($project->getEnv() as $item) {
+            if ($item->getEnv()?->getId() !== $env->getId()) {
+                continue;
+            }
+
+            if ($item->getEnv()?->getEnvParent()?->getId() === $envParent->getId()) {
+                continue;
+            }
+
+            $item->getEnv()?->setEnvParent($envParent);
+            $updated = true;
+        }
+
+        return $updated;
     }
 }

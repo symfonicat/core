@@ -8,16 +8,14 @@ use Symfonicat\Repository\EnvParentRepository;
 use Symfonicat\Repository\EnvRepository;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\FormEvent;
 use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\Form\FormEvents;
 
 abstract class AbstractScopedEnvType extends AbstractType
 {
     protected function buildEnvFields(FormBuilderInterface $builder): void
     {
-        $data = $builder->getData();
-        $selectedEnv = is_object($data) && method_exists($data, 'getEnv') ? $data->getEnv() : null;
-        $selectedEnvParent = $selectedEnv instanceof Env ? $selectedEnv->getEnvParent() : null;
-
         $builder
             ->add('envParent', EntityType::class, [
                 'class' => EnvParent::class,
@@ -26,12 +24,12 @@ abstract class AbstractScopedEnvType extends AbstractType
                 'required' => false,
                 'choice_label' => 'id',
                 'placeholder' => 'select env parent',
-                'data' => $selectedEnvParent,
                 'query_builder' => static fn (EnvParentRepository $repository) => $repository
                     ->createQueryBuilder('envParent')
                     ->orderBy('envParent.id', 'ASC'),
                 'attr' => [
                     'data-env-parent-select' => '',
+                    'data-action' => 'change->env-collection#syncFromParent',
                 ],
             ])
             ->add('env', EntityType::class, [
@@ -50,11 +48,25 @@ abstract class AbstractScopedEnvType extends AbstractType
                 ],
                 'attr' => [
                     'data-env-select' => '',
+                    'data-action' => 'change->env-collection#syncFromEnv',
                 ],
             ])
             ->add('value', null, [
                 'label' => false,
             ])
         ;
+
+        $builder->addEventListener(FormEvents::POST_SET_DATA, static function (FormEvent $event): void {
+            $data = $event->getData();
+            $form = $event->getForm();
+
+            if (!is_object($data) || !method_exists($data, 'getEnv') || !$form->has('envParent')) {
+                return;
+            }
+
+            $selectedEnv = $data->getEnv();
+            $selectedEnvParent = $selectedEnv instanceof Env ? $selectedEnv->getEnvParent() : null;
+            $form->get('envParent')->setData($selectedEnvParent);
+        });
     }
 }

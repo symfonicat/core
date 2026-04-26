@@ -12,164 +12,18 @@
 
     <div
         class="d-grid gap-2"
+        data-controller="env-collection"
         data-env-collection
-        data-env-collection-index="{{ form|length }}"
+        data-env-collection-index-value="{{ form|length }}"
     >
-        <div class="d-grid gap-2" data-env-collection-items>
+        <div class="d-grid gap-2" data-env-collection-target="items">
             {% for item_form in form %}
                 {{ include('admin/env/_env_collection_item.html.twig', { item_form: item_form }) }}
             {% endfor %}
         </div>
 
-        <template data-env-collection-prototype>{{ prototype_markup|raw }}</template>
+        <template data-env-collection-target="prototype">{{ prototype_markup|raw }}</template>
 
-        <button type="button" class="btn btn-sm btn-outline-secondary align-self-start" data-env-collection-add>add env</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary align-self-start" data-action="env-collection#add">add env</button>
     </div>
 </div>
-
-<script>
-    (() => {
-        if (window.__symfonicatEnvCollectionInitialized) {
-            return;
-        }
-
-        window.__symfonicatEnvCollectionInitialized = true;
-
-        const addCollectionItem = (button) => {
-            const collection = button.closest('[data-env-collection]');
-            const items = collection?.querySelector('[data-env-collection-items]');
-            const template = collection?.querySelector('template[data-env-collection-prototype]');
-
-            if (!collection || !items || !template) {
-                return;
-            }
-
-            const index = Number(collection.dataset.envCollectionIndex || 0);
-            const markup = template.innerHTML.replace(/__name__/g, String(index));
-
-            collection.dataset.envCollectionIndex = String(index + 1);
-            items.insertAdjacentHTML('beforeend', markup);
-
-            const item = items.lastElementChild;
-            if (item instanceof HTMLElement) {
-                syncCollectionItem(item);
-            }
-        };
-
-        const removeCollectionItem = (button) => {
-            const item = button.closest('[data-collection-item]');
-            if (!item) {
-                return;
-            }
-
-            item.remove();
-        };
-
-        const syncEnvOptions = (parentSelect, envSelect) => {
-            if (!(parentSelect instanceof HTMLSelectElement) || !(envSelect instanceof HTMLSelectElement)) {
-                return;
-            }
-
-            const selectedParent = parentSelect.value;
-
-            for (const option of envSelect.options) {
-                if (option.value === '') {
-                    option.hidden = false;
-                    option.disabled = false;
-
-                    continue;
-                }
-
-                const optionParent = option.dataset.envParent || '';
-                const visible = selectedParent === '' || optionParent === selectedParent;
-
-                option.hidden = !visible;
-                option.disabled = !visible;
-            }
-
-            const selectedOption = envSelect.options[envSelect.selectedIndex] || null;
-            if (selectedOption && selectedOption.value !== '' && selectedOption.disabled) {
-                envSelect.value = '';
-            }
-        };
-
-        const syncParentFromEnv = (parentSelect, envSelect) => {
-            if (!(parentSelect instanceof HTMLSelectElement) || !(envSelect instanceof HTMLSelectElement)) {
-                return;
-            }
-
-            const selectedOption = envSelect.options[envSelect.selectedIndex] || null;
-            if (!selectedOption || selectedOption.value === '') {
-                return;
-            }
-
-            const optionParent = selectedOption.dataset.envParent || '';
-            if (optionParent !== '') {
-                parentSelect.value = optionParent;
-            }
-        };
-
-        const syncCollectionItem = (item) => {
-            if (!(item instanceof HTMLElement)) {
-                return;
-            }
-
-            const parentSelect = item.querySelector('[data-env-parent-select]');
-            const envSelect = item.querySelector('[data-env-select]');
-
-            if (!(parentSelect instanceof HTMLSelectElement) || !(envSelect instanceof HTMLSelectElement)) {
-                return;
-            }
-
-            syncParentFromEnv(parentSelect, envSelect);
-            syncEnvOptions(parentSelect, envSelect);
-        };
-
-        const syncAllCollectionItems = () => {
-            document.querySelectorAll('[data-env-collection-items] [data-collection-item]').forEach((item) => {
-                syncCollectionItem(item);
-            });
-        };
-
-        document.addEventListener('change', (event) => {
-            const parentSelect = event.target.closest('[data-env-parent-select]');
-            if (parentSelect) {
-                const item = parentSelect.closest('[data-collection-item]');
-                const envSelect = item?.querySelector('[data-env-select]');
-                syncEnvOptions(parentSelect, envSelect);
-
-                return;
-            }
-
-            const envSelect = event.target.closest('[data-env-select]');
-            if (!envSelect) {
-                return;
-            }
-
-            const item = envSelect.closest('[data-collection-item]');
-            const parentSelectForEnv = item?.querySelector('[data-env-parent-select]');
-            syncParentFromEnv(parentSelectForEnv, envSelect);
-            syncEnvOptions(parentSelectForEnv, envSelect);
-        });
-
-        document.addEventListener('click', (event) => {
-            const addButton = event.target.closest('[data-env-collection-add]');
-            if (addButton) {
-                event.preventDefault();
-                addCollectionItem(addButton);
-
-                return;
-            }
-
-            const removeButton = event.target.closest('[data-collection-remove]');
-            if (!removeButton) {
-                return;
-            }
-
-            event.preventDefault();
-            removeCollectionItem(removeButton);
-        });
-
-        syncAllCollectionItems();
-    })();
-</script>

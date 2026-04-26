@@ -29,7 +29,7 @@ cd symfonicat
 docker compose up -d
 ```
 
-On container startup the `php` service self-installs PHP dependencies with Composer, synchronizes the Doctrine schema, seeds the local development rows, runs `npm install`, and then runs `npm run build`. The Docker image installs Node/npm from the distro packages, installs the global `n` package, and then runs `n latest` so the Electron build toolchain uses the latest Node release inside the container. The seeded rows include `localhost`, `example.com`, `project1`, the `test` application, the `analytics` module, a `/symfonicat/*/test*` application routing rule, and sample `colors.primary` env values. The `test` application and `project1` project both have Analytics enabled by default; the test application uses `colors.primary=red`, the default domains use `colors.primary=blue`, and `project1` uses `colors.primary=green`. After the stack is up, create an admin and synchronize filesystem-backed rows:
+On container startup the `php` service self-installs PHP dependencies with Composer, synchronizes the Doctrine schema, seeds the local development rows, runs `npm install`, and then runs `npm run build`. The Docker image installs Node/npm from the distro packages, installs the global `n` package, and then runs `n latest` so the Electron build toolchain uses the latest Node release inside the container. The seeded rows include `localhost`, `example.com`, `project1`, the `test` application, the `analytics` module, a `/symfonicat/*/test*` application routing rule, and sample `colors.primary` env values. The `test` application and `project1` project both have Analytics enabled by default; the test application uses `colors.primary=red`, the default domains use `colors.primary=blue`, and the bootstrapped `project1` env row is `colors.primary=green`. After the stack is up, create an admin and synchronize filesystem-backed rows:
 
 ```bash
 docker exec -it php bin/console symfonicat:admin:create <username>
@@ -109,7 +109,7 @@ Precedence is:
 2. `DomainEnv`
 3. `ProjectEnv`
 
-Project values overwrite domain values, and domain values overwrite application values. The merged runtime env map is nested by env parent, so Twig lookups use dotted ids such as `env('colors.primary')`, and the base layout emits the same grouped structure into `window.env`, for example `window.env.colors.primary`.
+Project values overwrite domain values, and domain values overwrite application values. The merged runtime env map is nested by env parent, so Twig lookups use dotted ids such as `env('colors.primary')`, and the base layout emits the same grouped structure into `window.env`, for example `window.env.colors.primary`. In the admin scoped env collection forms, the env dropdown is filtered live by the selected env parent so each row only offers env keys from that parent, and edit forms restore the saved env parent from the selected env key.
 
 ## Templates
 

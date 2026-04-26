@@ -1,4 +1,4 @@
-<div class="card card-body bg-body-tertiary" data-collection-item>
+<div class="card card-body bg-body-tertiary" data-env-collection-item>
     <div class="row g-2 align-items-start">
         <div class="col-md-3">
             {{ form_row(item_form.envParent) }}
@@ -10,7 +10,7 @@
             {{ form_row(item_form.value) }}
         </div>
         <div class="col-md-2 d-grid">
-            <button type="button" class="btn btn-sm btn-outline-danger" data-collection-remove>remove</button>
+            <button type="button" class="btn btn-sm btn-outline-danger" data-action="env-collection#remove">remove</button>
         </div>
     </div>
 </div>

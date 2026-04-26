@@ -18,14 +18,14 @@ final class EnvType extends AbstractType
             ->add('envParent', EntityType::class, [
                 'class' => EnvParent::class,
                 'choice_label' => 'id',
-                'label' => 'env parent',
+                'label' => FALSE,
                 'placeholder' => 'select env parent',
                 'query_builder' => static fn (EnvParentRepository $repository) => $repository
                     ->createQueryBuilder('envParent')
                     ->orderBy('envParent.id', 'ASC'),
             ])
             ->add('id', null, [
-                'label' => 'env',
+                'label' => FALSE,
                 'disabled' => $options['is_edit'],
             ])
         ;

@@ -67,6 +67,7 @@ final class BootstrapCommandTest extends SymfonicatKernelTestCase
         self::assertSame('blue', $this->envValueFor($localhost, 'primary'));
         self::assertSame('blue', $this->envValueFor($exampleCom, 'primary'));
         self::assertSame('green', $this->projectEnvValueFor($project, 'primary'));
+        self::assertSame('colors', $this->projectEnvParentIdFor($project, 'primary'));
         self::assertSame('red', $this->applicationEnvValueFor($application, 'primary'));
         self::assertCount(1, $applicationRules);
         self::assertSame(['symfonicat', '*', 'test*'], $applicationRules[0]->getArguments());
@@ -216,6 +217,17 @@ final class BootstrapCommandTest extends SymfonicatKernelTestCase
         foreach ($project->getEnv() as $row) {
             if ($row->getEnv()?->getId() === $envId) {
                 return $row->getValue();
+            }
+        }
+
+        return null;
+    }
+
+    private function projectEnvParentIdFor(Project $project, string $envId): ?string
+    {
+        foreach ($project->getEnv() as $row) {
+            if ($row->getEnv()?->getId() === $envId) {
+                return $row->getEnv()?->getEnvParent()?->getId();
             }
         }
 

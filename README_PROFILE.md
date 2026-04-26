@@ -2,7 +2,7 @@
 
 `symfonicat/core` is the full Symfonicat Symfony application. It ships the public runtime, admin runtime, Doctrine model, webpack integration, Electron-facing commands, and Docker/FrankenPHP starter shell in one repository.
 
-The Docker `php` entrypoint runs Composer install, bootstrap, `npm install`, and `npm run build` automatically. The Docker image installs Node/npm, installs the global `n` package, and runs `n latest` so the container uses the latest Node release for the Electron toolchain. Bootstrap seeds `localhost`, `example.com`, `project1`, the `test` application, the `analytics` module, a `/symfonicat/*/test*` application routing rule, and grouped sample env values under the `colors` parent. The `test` application and `project1` project have Analytics enabled by default; the test application uses `colors.primary=red`.
+The Docker `php` entrypoint runs Composer install, bootstrap, `npm install`, and `npm run build` automatically. The Docker image installs Node/npm, installs the global `n` package, and runs `n latest` so the container uses the latest Node release for the Electron toolchain. Bootstrap seeds `localhost`, `example.com`, `project1`, the `test` application, the `analytics` module, a `/symfonicat/*/test*` application routing rule, and grouped sample env values under the `colors` parent. The `test` application and `project1` project have Analytics enabled by default; the test application uses `colors.primary=red`, and the bootstrapped `project1` env row uses `colors.primary=green`.
 
 ## Runtime Shape
 
@@ -43,7 +43,7 @@ Precedence is:
 
 Project values overwrite domain values, and domain values overwrite application values.
 
-Env values are grouped by `EnvParent`, so lookups use dotted ids such as `env('colors.primary')`. The same grouped structure is emitted into `window.env`.
+Env values are grouped by `EnvParent`, so lookups use dotted ids such as `env('colors.primary')`. The same grouped structure is emitted into `window.env`, and the admin scoped env forms filter each env dropdown by the selected parent while restoring the saved parent on edit.
 
 ## Assets
 
