@@ -2,7 +2,7 @@
     <td class="fw-semibold"><a href="{{ app.request.scheme }}://{{ domain.id }}">{{ domain.id }}</a></td>
     <td>
         {% for project in domain.projects %}
-            {{ project.name }}{% if not loop.last %}, {% endif %}
+            <a href="{{ path('app_project_edit', {'id': project.id}) }}">{{ project.name }}</a>{% if not loop.last %}, {% endif %}
         {% else %}
             -
         {% endfor %}
