@@ -1,17 +1,9 @@
 <tr id="electron_{{ electron.id }}" class="btn-row">
     <td class="fw-semibold">{{ electron.name }}</td>
     <td>{{ electron.type }}</td>
-    <td>
-        {% if electron.type == 'domain' %}
-            {{ electron.domain ? electron.domain.id : '-' }}
-        {% elseif electron.type == 'project' %}
-            {{ electron.project ? electron.project.id ~ ' ' ~ electron.project.name : '-' }}
-        {% elseif electron.type == 'application' %}
-            {{ electron.application ? electron.application.id : '-' }}
-        {% else %}
-            -
-        {% endif %}
-    </td>
+    <td>{{ electron.domain ? electron.domain.id : '-' }}</td>
+    <td>{{ electron.project ? electron.project.name : '-' }}</td>
+    <td>{{ electron.application ? electron.application.id : '-' }}</td>
     <td>
         {% if electron.favicon %}
             <code>{{ electron.favicon|replace({'electron/favicon/': ''}) }}</code>

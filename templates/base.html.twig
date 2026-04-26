@@ -4,32 +4,28 @@
         
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-        {% if electron and electron_icon %}
-            {% if asset_base_url is not empty %}
-            {% set icon_url = asset_base_url ~ '/' ~ electron_icon %}
-            {% else %}
-            {% set icon_url = asset(electron_icon) %}
-            {% endif %}
-        {% else %}
-        {% set icon_url = asset('favicon.png') %}
-        {% endif %}
 
-        <link rel="icon" href="{{ icon_url }}" />
+        <link rel="icon" href="{{ asset('favicon.png') }}" />
         <title>{% block title %}Symfonicat{% endblock %}</title>
 
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&display=swap" rel="stylesheet">
 
+        <!-- Symfonicat -->
         <script type="text/javascript">
             window.env = {{ env_helper() | indent_json(12) }}
             console.log('[window.env]', window.env)
             console.log('----------------------')
 
-            window.symfonicatApplication = {{ applicationHelper() | indent_json(12) }}
-            console.log('[window.symfonicatApplication]', window.symfonicatApplication)
+            window.electron = {{ electron | json_encode }}
+            console.log('[window.electron]', window.electron)
             console.log('----------------------')
+
+            {{ application_helper() | raw | indent_json(12) }}
+
         </script>
+        <!-- -->
 
 {% block stylesheets -%}
 {{- encore_entry_link_tags('symfonicat') | indent_links(8) -}}

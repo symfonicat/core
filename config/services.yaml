@@ -58,10 +58,6 @@ services:
         arguments:
             $cache: '@cache.app'
 
-    Symfonicat\Twig\ElectronExtension:
-        arguments:
-            $assetBaseUrl: '%symfonicat.asset_base_url%'
-
     Symfonicat\Twig\EncoreEntryTagsExtension:
         arguments:
             $entryFilesTwigExtension: '@webpack_encore.twig_entry_files_extension'

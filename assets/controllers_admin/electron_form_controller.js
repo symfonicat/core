@@ -14,7 +14,7 @@ export default class extends Controller {
 
         const type = this.typeTarget.value
 
-        this.toggleRow(this.domainRowTarget, type === 'domain')
+        this.toggleRow(this.domainRowTarget, type === 'domain' || type === 'project')
         this.toggleRow(this.projectRowTarget, type === 'project')
         this.toggleRow(this.applicationRowTarget, type === 'application')
     }

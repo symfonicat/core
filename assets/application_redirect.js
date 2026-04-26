@@ -9,7 +9,7 @@ function redirectApplicationUrl() {
         return;
     }
 
-    const context = window.symfonicatApplication ?? {};
+    const context = window.application ?? {};
     const redirectTo = normalizePath(context.redirectTo ?? '');
 
     if (redirectTo === '') {

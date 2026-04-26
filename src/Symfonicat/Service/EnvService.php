@@ -7,6 +7,8 @@ use Symfonicat\Entity\ApplicationEnv;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\Project;
 use Symfonicat\Entity\DomainEnv;
+use Symfonicat\Entity\Electron;
+use Symfonicat\Entity\ElectronEnv;
 use Symfonicat\Entity\ProjectEnv;
 
 final class EnvService
@@ -14,6 +16,7 @@ final class EnvService
     public function __construct(
         private readonly ApplicationService $applicationService,
         private readonly DomainService $domainService,
+        private readonly ElectronService $electronService,
         private readonly ProjectService $projectService,
     ) {
     }
@@ -64,24 +67,28 @@ final class EnvService
                 $this->collectApplicationValues($this->applicationService->load()),
                 $this->collectDomainValues($this->resolveDomainForProject($entity)),
                 $this->collectProjectValues($entity),
+                $this->collectElectronValues($this->electronService->loadForContext(null, $this->resolveDomainForProject($entity), $entity)),
             );
         }
 
         $application = $this->applicationService->load();
         $domain = $this->domainService->load();
         $project = $this->projectService->load();
+        $electron = $this->electronService->load();
 
         if ($project instanceof Project) {
             return $this->mergeValues(
                 $this->collectApplicationValues($application),
                 $this->collectDomainValues($domain),
                 $this->collectProjectValues($project),
+                $this->collectElectronValues($electron),
             );
         }
 
         return $this->mergeValues(
             $this->collectApplicationValues($application),
             $this->collectDomainValues($domain),
+            $this->collectElectronValues($electron),
         );
     }
 
@@ -179,6 +186,34 @@ final class EnvService
 
         foreach ($project->getEnv() as $item) {
             if (!$item instanceof ProjectEnv) {
+                continue;
+            }
+
+            $envParentId = $item->getEnv()?->getEnvParent()?->getId();
+            $envId = $item->getEnv()?->getId();
+            if ($envParentId === null || $envParentId === '' || $envId === null || $envId === '') {
+                continue;
+            }
+
+            $values[$envParentId][$envId] = $item->getValue();
+        }
+
+        return $values;
+    }
+
+    /**
+     * @return array<string, array<string, string>>
+     */
+    private function collectElectronValues(?Electron $electron): array
+    {
+        if (!$electron instanceof Electron) {
+            return [];
+        }
+
+        $values = [];
+
+        foreach ($electron->getEnv() as $item) {
+            if (!$item instanceof ElectronEnv) {
                 continue;
             }
 

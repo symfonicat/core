@@ -109,7 +109,6 @@ final class ElectronController extends AbstractController
         }
 
         if ($electron->isProjectType()) {
-            $electron->setDomain(null);
             $electron->setApplication(null);
 
             return;

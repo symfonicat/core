@@ -52,6 +52,15 @@ final class ElectronRepository extends ServiceEntityRepository
         ]);
     }
 
+    public function findOneForProjectAndDomain(Project $project, Domain $domain): ?Electron
+    {
+        return $this->findOneBy([
+            'type' => Electron::TYPE_PROJECT,
+            'project' => $project,
+            'domain' => $domain,
+        ]);
+    }
+
     public function findOneForApplication(Application $application): ?Electron
     {
         return $this->findOneBy([

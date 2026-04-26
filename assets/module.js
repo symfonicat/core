@@ -31,7 +31,7 @@ function getApplicationContextHeaders() {
         return {};
     }
 
-    const context = window.symfonicatApplication ?? {};
+    const context = window.application ?? {};
     const applicationId = String(context.id ?? '').trim();
     const csrfToken = String(context.csrfToken ?? '').trim();
     const headers = {};

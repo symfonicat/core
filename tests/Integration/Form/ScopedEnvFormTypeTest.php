@@ -7,11 +7,13 @@ use Symfonicat\Entity\Application;
 use Symfonicat\Entity\ApplicationEnv;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\DomainEnv;
+use Symfonicat\Entity\Electron;
 use Symfonicat\Entity\Env;
 use Symfonicat\Entity\Project;
 use Symfonicat\Entity\ProjectEnv;
 use Symfonicat\Form\ApplicationType;
 use Symfonicat\Form\DomainType;
+use Symfonicat\Form\ElectronType;
 use Symfonicat\Form\ProjectType;
 use Symfony\Component\Form\FormFactoryInterface;
 
@@ -72,6 +74,25 @@ final class ScopedEnvFormTypeTest extends SymfonicatKernelTestCase
 
         $view = $this->formFactory()
             ->create(ApplicationType::class, $application, ['id_editable' => false])
+            ->createView();
+
+        self::assertSame('colors', $view['env'][0]['envParent']->vars['value']);
+        self::assertSame('primary', $view['env'][0]['env']->vars['value']);
+    }
+
+    public function testElectronFormRestoresSelectedEnvParent(): void
+    {
+        $env = $this->createEnv('primary', 'colors');
+        $domain = $this->createDomain('example.com');
+        $project = $this->createProject('project1', 'Project 1', $domain);
+        $electron = $this->createElectron('Example Electron', Electron::TYPE_PROJECT, $domain, $project);
+        $this->setElectronEnv($electron, $env, 'purple');
+
+        $electron = $this->entityManager()->getRepository(Electron::class)->find($electron->getId());
+        self::assertInstanceOf(Electron::class, $electron);
+
+        $view = $this->formFactory()
+            ->create(ElectronType::class, $electron)
             ->createView();
 
         self::assertSame('colors', $view['env'][0]['envParent']->vars['value']);

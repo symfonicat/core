@@ -101,8 +101,9 @@ Runtime precedence is:
 1. application env
 2. domain env
 3. project env
+4. electron env, but only for Electron requests
 
-Project values overwrite domain values, and domain values overwrite application values.
+Project values overwrite domain values, domain values overwrite application values, and Electron values overwrite the merged result only when the current request is running in Electron.
 
 Twig uses dotted lookups such as:
 
@@ -121,6 +122,7 @@ window.env = {
 ```
 
 Scoped env forms on domains, projects, and applications filter the env dropdown by the selected env parent and restore the saved parent when editing existing rows.
+Electron rows use the same scoped env collection UI, and Electron env values override all lower layers for Electron requests only.
 
 ## Assets
 
@@ -159,7 +161,9 @@ Frontend helpers from `assets/module.js` support:
 - `''.html(path, payload)`
 - `''.log(...args)`
 
-Application shells expose a signed application request context through `applicationHelper()`, and application-backed module requests send the application id plus signed headers so `/m/{id}` can execute when the module is attached to that application.
+Application shells expose a signed application request context through `application_helper()`, which writes `window.application` plus debug logs into the base layout script block. Application-backed module requests send the application id plus signed headers so `/m/{id}` can execute when the module is attached to that application.
+
+The base layout also writes `window.electron` from the Twig `electron` global. That value is a boolean flag indicating whether the current request is running in Electron mode.
 
 ## Admin
 
@@ -193,12 +197,16 @@ Each `Electron` row has:
 
 - `name`
 - `type` (`domain`, `project`, or `application`)
-- one matching relation field
+- one matching relation field, except `project` rows which carry both `project` and `domain`
 - an optional favicon upload stored at `public/electron/favicon/{type}/{targetId}.png`
+- an `env` collection using the same `EnvParent` + `Env` selectors as domains, projects, and applications
+
+For project Electron rows, `targetId` is `projectId.domainId`.
+That same `projectId.domainId` target id is used for both override templates and build output paths.
 
 The Electron index shows that favicon path without the leading `electron/favicon/` prefix.
 
-The admin form shows only the relation field that matches the selected type.
+The admin form shows only the relation field that matches the selected type, except project rows which show both the project and domain selectors.
 
 Electron build templates live under:
 
@@ -207,6 +215,11 @@ Electron build templates live under:
 - `templates/electron/application/main.twig.js`
 - `templates/electron/{type}/overrides/{targetId}.twig.js`
 
+For project Electron rows specifically:
+
+- override templates live at `templates/electron/project/overrides/{projectId}.{domainId}.twig.js`
+- generated files live under `electron/project/{projectId}.{domainId}/`
+
 Build Electron outputs with:
 
 ```bash
@@ -214,7 +227,7 @@ docker exec php bin/console symfonicat:electron:build
 docker exec php bin/console symfonicat:electron:build <name>
 ```
 
-For each Electron row, the command renders the override template if present, otherwise the type-specific main `*.twig.js` template, writes `electron/{type}/{targetId}/app.js`, writes a local `package.json` with a fixed Electron version derived from the root package, and runs `electron-builder` into `electron/{type}/{targetId}/build`. Those `build` directories are generated outputs and are ignored by Git.
+For each Electron row, the command renders the override template if present, otherwise the type-specific main `*.twig.js` template, writes `electron/{type}/{targetId}/app.js`, writes a local `package.json` with a fixed Electron version derived from the root package, and runs `electron-builder` into `electron/{type}/{targetId}/build`. For project Electron rows that means `electron/project/{projectId}.{domainId}/...`. The generated Electron package points at the matching domain host, `project.domain` host, or application path and appends `?electron` to the start URL. Those `build` directories are generated outputs and are ignored by Git.
 
 Electron requests keep using the Twig Electron globals. When a request is flagged as Electron, the extension loads the matching `Electron` row for the active application, project, or domain and exposes its favicon to the base layout.
 
@@ -229,7 +242,7 @@ Electron requests keep using the Twig Electron globals. When a request is flagge
 - `analytics` module
 - `Example Test` Electron row bound to `example.com`
 - `/symfonicat/*/test*` application routing rule
-- grouped sample env values under `colors.primary`
+- grouped sample env values under `colors.primary`, including an Electron override of `yellow` for the seeded `Example Test` Electron row
 
 `symfonicat:schema:update` synchronizes:
 

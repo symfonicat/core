@@ -3,6 +3,8 @@
 namespace Symfonicat\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Validator\Context\ExecutionContextInterface;
 use Symfonicat\Repository\ElectronRepository;
@@ -40,6 +42,17 @@ class Electron
 
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $favicon = null;
+
+    /**
+     * @var Collection<int, ElectronEnv>
+     */
+    #[ORM\OneToMany(targetEntity: ElectronEnv::class, mappedBy: 'electron', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $env;
+
+    public function __construct()
+    {
+        $this->env = new ArrayCollection();
+    }
 
     public static function typeChoices(): array
     {
@@ -127,6 +140,33 @@ class Electron
         return $this;
     }
 
+    /**
+     * @return Collection<int, ElectronEnv>
+     */
+    public function getEnv(): Collection
+    {
+        return $this->env;
+    }
+
+    public function addEnv(ElectronEnv $env): static
+    {
+        if (!$this->env->contains($env)) {
+            $this->env->add($env);
+            $env->setElectron($this);
+        }
+
+        return $this;
+    }
+
+    public function removeEnv(ElectronEnv $env): static
+    {
+        if ($this->env->removeElement($env) && $env->getElectron() === $this) {
+            $env->setElectron(null);
+        }
+
+        return $this;
+    }
+
     public function isDomainType(): bool
     {
         return $this->type === self::TYPE_DOMAIN;
@@ -146,10 +186,25 @@ class Electron
     {
         return match ($this->type) {
             self::TYPE_DOMAIN => $this->domain?->getId(),
-            self::TYPE_PROJECT => $this->project?->getId(),
+            self::TYPE_PROJECT => $this->projectTargetId(),
             self::TYPE_APPLICATION => $this->application?->getId(),
             default => null,
         };
+    }
+
+    public function projectTargetId(): ?string
+    {
+        $projectId = trim((string) $this->project?->getId());
+        if ($projectId === '') {
+            return null;
+        }
+
+        $domainId = trim((string) $this->domain?->getId());
+        if ($domainId === '') {
+            return null;
+        }
+
+        return sprintf('%s.%s', $projectId, $domainId);
     }
 
     #[Assert\Callback]
@@ -174,6 +229,12 @@ class Electron
         if ($type === self::TYPE_PROJECT && !$this->project instanceof Project) {
             $context->buildViolation('Select a project.')
                 ->atPath('project')
+                ->addViolation();
+        }
+
+        if ($type === self::TYPE_PROJECT && !$this->domain instanceof Domain) {
+            $context->buildViolation('Select a domain.')
+                ->atPath('domain')
                 ->addViolation();
         }
 

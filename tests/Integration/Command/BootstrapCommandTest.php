@@ -54,6 +54,7 @@ final class BootstrapCommandTest extends SymfonicatKernelTestCase
         self::assertSame(Electron::TYPE_DOMAIN, $electron->getType());
         self::assertSame('example.com', $electron->getDomain()?->getId());
         self::assertSame('electron/favicon/domain/example.com.png', $electron->getFavicon());
+        self::assertSame('yellow', $this->electronEnvValueFor($electron, 'primary'));
 
         self::assertTrue(
             $exampleCom->hasProject($project),
@@ -117,6 +118,7 @@ final class BootstrapCommandTest extends SymfonicatKernelTestCase
                 'domain' => 0,
                 'project' => 0,
                 'electron' => 0,
+                'electron_env' => 0,
                 'env_parent' => 0,
                 'env' => 0,
                 'domain_env' => 0,
@@ -191,6 +193,7 @@ final class BootstrapCommandTest extends SymfonicatKernelTestCase
             'domain' => $this->countTable('symfonicat_domain'),
             'project' => $this->countTable('symfonicat_project'),
             'electron' => $this->countTable('symfonicat_electron'),
+            'electron_env' => $this->countTable('symfonicat_electron_env'),
             'env_parent' => $this->countTable('symfonicat_env_parent'),
             'env' => $this->countTable('symfonicat_env'),
             'domain_env' => $this->countTable('symfonicat_domain_env'),
@@ -207,6 +210,17 @@ final class BootstrapCommandTest extends SymfonicatKernelTestCase
         return (int) $this->entityManager()
             ->getConnection()
             ->fetchOne(sprintf('SELECT COUNT(*) FROM %s', $table));
+    }
+
+    private function electronEnvValueFor(Electron $electron, string $envId): ?string
+    {
+        foreach ($electron->getEnv() as $row) {
+            if ($row->getEnv()?->getId() === $envId) {
+                return $row->getValue();
+            }
+        }
+
+        return null;
     }
 
     private function envValueFor(Domain $domain, string $envId): ?string

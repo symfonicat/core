@@ -11,6 +11,7 @@ use Symfonicat\Entity\ApplicationEnv;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\DomainEnv;
 use Symfonicat\Entity\Electron;
+use Symfonicat\Entity\ElectronEnv;
 use Symfonicat\Entity\Env;
 use Symfonicat\Entity\EnvParent;
 use Symfonicat\Entity\Module;
@@ -230,6 +231,7 @@ final class BootstrapCommand extends Command
         $attachedAnalyticsToExample = $this->attachModuleToDomain($exampleDomain, $analyticsModule);
         $attachedAnalyticsToLocalhost = $this->attachModuleToDomain($localhost, $analyticsModule);
         $applicationColor = $this->ensureApplicationEnvValue($application, $env, 'red');
+        $electronColor = $this->ensureElectronEnvValue($exampleElectron, $env, 'yellow');
         $createdApplicationRoutingRule = $this->ensureTestApplicationRoutingRule($application);
 
         $this->entityManager->flush();
@@ -257,6 +259,7 @@ final class BootstrapCommand extends Command
             || $projectColor !== 'unchanged'
             || $projectColorParentUpdated
             || $applicationColor !== 'unchanged'
+            || $electronColor !== 'unchanged'
             || $createdApplicationRoutingRule
         ) {
             $messages = [];
@@ -381,6 +384,14 @@ final class BootstrapCommand extends Command
                 $messages[] = 'updated test application colors.primary env value';
             } else {
                 $messages[] = 'test application colors.primary env value already present';
+            }
+
+            if ($electronColor === 'created') {
+                $messages[] = 'seeded Example Test electron colors.primary env value';
+            } elseif ($electronColor === 'updated') {
+                $messages[] = 'updated Example Test electron colors.primary env value';
+            } else {
+                $messages[] = 'Example Test electron colors.primary env value already present';
             }
 
             if ($createdApplicationRoutingRule) {
@@ -617,6 +628,32 @@ final class BootstrapCommand extends Command
 
         $project->addEnv($projectEnv);
         $this->entityManager->persist($projectEnv);
+
+        return 'created';
+    }
+
+    private function ensureElectronEnvValue(Electron $electron, Env $env, string $value): string
+    {
+        foreach ($electron->getEnv() as $item) {
+            if ($item->getEnv()?->getId() !== $env->getId()) {
+                continue;
+            }
+
+            if ($item->getValue() === $value) {
+                return 'unchanged';
+            }
+
+            $item->setValue($value);
+
+            return 'updated';
+        }
+
+        $electronEnv = (new ElectronEnv())
+            ->setEnv($env)
+            ->setValue($value);
+
+        $electron->addEnv($electronEnv);
+        $this->entityManager->persist($electronEnv);
 
         return 'created';
     }

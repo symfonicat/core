@@ -145,10 +145,10 @@ final class ElectronBuildCommand extends Command
         $baseUrl = $this->normalizedBaseUrl();
 
         return match ($electron->getType()) {
-            Electron::TYPE_DOMAIN => $this->urlForHost($electron->getDomain()?->getId() ?? '', '/?electron=1'),
-            Electron::TYPE_PROJECT => $this->urlForHost($this->projectHost($electron->getProject()), '/?electron=1'),
-            Electron::TYPE_APPLICATION => $baseUrl.$this->applicationService->path($electron->getApplication() ?? throw new \RuntimeException('Application is required for Electron application builds.')).'?electron=1',
-            default => $baseUrl.'/?electron=1',
+            Electron::TYPE_DOMAIN => $this->appendElectronQuery($this->urlForHost($electron->getDomain()?->getId() ?? '', '/')),
+            Electron::TYPE_PROJECT => $this->appendElectronQuery($this->urlForHost($this->projectHost($electron), '/')),
+            Electron::TYPE_APPLICATION => $this->appendElectronQuery($baseUrl.$this->applicationService->path($electron->getApplication() ?? throw new \RuntimeException('Application is required for Electron application builds.'))),
+            default => $this->appendElectronQuery($baseUrl.'/'),
         };
     }
 
@@ -176,8 +176,14 @@ final class ElectronBuildCommand extends Command
         return sprintf('%s://%s%s%s', $scheme, $host, $port, $path);
     }
 
-    private function projectHost(?Project $project): string
+    private function appendElectronQuery(string $url): string
     {
+        return str_contains($url, '?') ? $url.'&electron' : $url.'?electron';
+    }
+
+    private function projectHost(Electron $electron): string
+    {
+        $project = $electron->getProject();
         if (!$project instanceof Project) {
             throw new \RuntimeException('Project is required for Electron project builds.');
         }
@@ -187,16 +193,10 @@ final class ElectronBuildCommand extends Command
             throw new \RuntimeException('Project id is required for Electron project builds.');
         }
 
-        $domainIds = [];
-        foreach ($project->getDomains() as $domain) {
-            $domainId = trim((string) $domain->getId());
-            if ($domainId !== '') {
-                $domainIds[] = $domainId;
-            }
+        $domainId = trim((string) $electron->getDomain()?->getId());
+        if ($domainId === '') {
+            throw new \RuntimeException('Domain is required for Electron project builds.');
         }
-
-        sort($domainIds, SORT_STRING);
-        $domainId = $domainIds[0] ?? 'localhost';
 
         return sprintf('%s.%s', $projectId, $domainId);
     }

@@ -2,7 +2,7 @@
 
 `symfonicat/core` is the full Symfonicat Symfony application. Public routing, admin CRUD, module runtime, application shells, Electron packaging, and Docker/FrankenPHP all live in this repository.
 
-The Docker `php` service installs Composer dependencies, bootstraps the schema, runs `npm install`, and runs `npm run build` automatically. The image also installs `n` and runs `n latest`, so the container uses a current Node runtime for webpack and Electron packaging. Bootstrap seeds the default domains, `project1`, the `test` application, grouped `colors.primary` env values, and an `Example Test` Electron row for `example.com`.
+The Docker `php` service installs Composer dependencies, bootstraps the schema, runs `npm install`, and runs `npm run build` automatically. The image also installs `n` and runs `n latest`, so the container uses a current Node runtime for webpack and Electron packaging. Bootstrap seeds the default domains, `project1`, the `test` application, grouped `colors.primary` env values, and an `Example Test` Electron row for `example.com` with its own Electron env override.
 
 ## Runtime
 
@@ -26,6 +26,8 @@ Twig lookups use dotted keys such as:
 ```
 
 The same grouped structure is emitted into `window.env`.
+
+Runtime precedence is application, then domain, then project, then Electron for Electron requests only.
 
 ## Assets
 
@@ -63,13 +65,20 @@ The command prompts for a hidden password.
 
 Electron rows are managed from `/admin/e`.
 
-Each row points at one domain, project, or application and can upload a favicon to:
+Each row points at one domain, one `project + domain` pair, or one application and can upload a favicon to:
 
 ```text
 public/electron/favicon/{type}/{targetId}.png
 ```
 
+For project Electron rows, `targetId` is `projectId.domainId`.
+That same `projectId.domainId` target id is used for both project override templates and generated `electron/project/{projectId}.{domainId}/` output folders.
+
+Electron rows also own an `env` collection. Electron env values override the merged application/domain/project env stack, but only while the current request is running in Electron mode.
+
 The Electron admin list trims the leading `electron/favicon/` prefix when it displays that stored path.
+
+The Twig `electron` global is a boolean flag for Electron requests, and the base layout exposes that same state as `window.electron`.
 
 Build outputs with:
 
@@ -78,7 +87,7 @@ docker exec php bin/console symfonicat:electron:build
 docker exec php bin/console symfonicat:electron:build <name>
 ```
 
-The command renders `templates/electron/{type}/main.twig.js` or `templates/electron/{type}/overrides/{targetId}.twig.js`, writes `electron/{type}/{targetId}/app.js`, writes a local package manifest with a fixed Electron version derived from the root package, and runs `electron-builder` into `electron/{type}/{targetId}/build`. Those `build` directories are generated outputs and are ignored by Git.
+The command renders `templates/electron/{type}/main.twig.js` or `templates/electron/{type}/overrides/{targetId}.twig.js`, writes `electron/{type}/{targetId}/app.js`, writes a local package manifest with a fixed Electron version derived from the root package, and runs `electron-builder` into `electron/{type}/{targetId}/build`. For project Electron rows that means `templates/electron/project/overrides/{projectId}.{domainId}.twig.js` and `electron/project/{projectId}.{domainId}/...`. The generated Electron package points at the matching domain host, `project.domain` host, or application path and appends `?electron` to the start URL. Those `build` directories are generated outputs and are ignored by Git.
 
 ## Sync
 

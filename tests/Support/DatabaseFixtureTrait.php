@@ -5,6 +5,8 @@ namespace App\Tests\Support;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\DomainEnv;
+use Symfonicat\Entity\Electron;
+use Symfonicat\Entity\ElectronEnv;
 use Symfonicat\Entity\Env;
 use Symfonicat\Entity\EnvParent;
 use Symfonicat\Entity\Module;
@@ -47,6 +49,7 @@ trait DatabaseFixtureTrait
         $tables = [
             // Children first to keep the intent readable even though FK checks are off.
             'symfonicat_routing_rule',
+            'symfonicat_electron_env',
             'symfonicat_application_env',
             'symfonicat_project_env',
             'symfonicat_domain_env',
@@ -54,6 +57,7 @@ trait DatabaseFixtureTrait
             'symfonicat_module_project',
             'symfonicat_module_domain',
             'symfonicat_domain_project',
+            'symfonicat_electron',
             'symfonicat_application',
             'symfonicat_module',
             'symfonicat_project',
@@ -127,6 +131,20 @@ trait DatabaseFixtureTrait
         return $module;
     }
 
+    protected function createElectron(string $name, string $type, ?Domain $domain = null, ?Project $project = null): Electron
+    {
+        $electron = (new Electron())
+            ->setName($name)
+            ->setType($type)
+            ->setDomain($domain)
+            ->setProject($project);
+
+        $this->entityManager()->persist($electron);
+        $this->entityManager()->flush();
+
+        return $electron;
+    }
+
     protected function createEnv(string $id, string $envParentId = 'colors'): Env
     {
         $envParent = $this->entityManager()->find(EnvParent::class, $envParentId);
@@ -170,6 +188,19 @@ trait DatabaseFixtureTrait
         $this->entityManager()->flush();
 
         return $projectEnv;
+    }
+
+    protected function setElectronEnv(Electron $electron, Env $env, string $value): ElectronEnv
+    {
+        $electronEnv = (new ElectronEnv())
+            ->setEnv($env)
+            ->setValue($value);
+
+        $electron->addEnv($electronEnv);
+        $this->entityManager()->persist($electronEnv);
+        $this->entityManager()->flush();
+
+        return $electronEnv;
     }
 
     protected function createDomainRoutingRule(Domain $domain, string $argument): RoutingRule

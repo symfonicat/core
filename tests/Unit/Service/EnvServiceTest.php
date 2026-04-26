@@ -7,12 +7,15 @@ use Symfonicat\Entity\Application;
 use Symfonicat\Entity\ApplicationEnv;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\DomainEnv;
+use Symfonicat\Entity\Electron;
+use Symfonicat\Entity\ElectronEnv;
 use Symfonicat\Entity\Env;
 use Symfonicat\Entity\EnvParent;
 use Symfonicat\Entity\Project;
 use Symfonicat\Entity\ProjectEnv;
 use Symfonicat\Service\ApplicationService;
 use Symfonicat\Service\DomainService;
+use Symfonicat\Service\ElectronService;
 use Symfonicat\Service\EnvService;
 use Symfonicat\Service\ProjectService;
 
@@ -98,6 +101,34 @@ final class EnvServiceTest extends TestCase
         );
     }
 
+    public function testElectronValuesOverlayProjectWhenElectronContextIsLoaded(): void
+    {
+        $color = $this->makeEnv('primary');
+        $theme = $this->makeEnv('theme');
+
+        $application = $this->makeApplication('test', [
+            $color->getId() => 'red',
+        ]);
+        $domain = $this->makeDomain('example.com', [
+            $color->getId() => 'blue',
+            $theme->getId() => 'domain',
+        ]);
+        $project = $this->makeProject('project1', [
+            $color->getId() => 'green',
+        ]);
+        $electron = $this->makeElectron('Example Electron', [
+            $color->getId() => 'purple',
+        ]);
+        $domain->addProject($project);
+
+        $service = $this->makeService($domain, $project, $application, $electron);
+
+        self::assertSame(
+            ['colors' => ['primary' => 'purple', 'theme' => 'domain']],
+            $service->all(),
+        );
+    }
+
     public function testGetTrimsLookupIdAndRejectsEmptyLookup(): void
     {
         $env = $this->makeEnv('primary');
@@ -176,7 +207,7 @@ final class EnvServiceTest extends TestCase
         self::assertSame(['colors' => ['primary' => 'blue']], $service->all());
     }
 
-    private function makeService(?Domain $domain, ?Project $project, ?Application $application = null): EnvService
+    private function makeService(?Domain $domain, ?Project $project, ?Application $application = null, ?Electron $electron = null): EnvService
     {
         $applicationService = $this->createStub(ApplicationService::class);
         $applicationService->method('load')->willReturn($application);
@@ -187,7 +218,10 @@ final class EnvServiceTest extends TestCase
         $projectService = $this->createStub(ProjectService::class);
         $projectService->method('load')->willReturn($project);
 
-        return new EnvService($applicationService, $domainService, $projectService);
+        $electronService = $this->createStub(ElectronService::class);
+        $electronService->method('load')->willReturn($electron);
+
+        return new EnvService($applicationService, $domainService, $electronService, $projectService);
     }
 
     /**
@@ -243,5 +277,23 @@ final class EnvServiceTest extends TestCase
         return (new Env())
             ->setId($id)
             ->setEnvParent((new EnvParent())->setId('colors'));
+    }
+
+    /**
+     * @param array<string, string> $values
+     */
+    private function makeElectron(string $name, array $values): Electron
+    {
+        $electron = (new Electron())
+            ->setName($name)
+            ->setType(Electron::TYPE_DOMAIN);
+
+        foreach ($values as $envId => $value) {
+            $env = $this->makeEnv($envId);
+            $electronEnv = (new ElectronEnv())->setEnv($env)->setValue($value);
+            $electron->addEnv($electronEnv);
+        }
+
+        return $electron;
     }
 }
