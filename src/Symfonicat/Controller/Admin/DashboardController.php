@@ -11,6 +11,6 @@ final class DashboardController extends AbstractController
     #[Route('/admin', name: 'symfonicat_admin_dashboard', methods: ['GET'])]
     public function index(): RedirectResponse
     {
-        return $this->redirectToRoute('app_domain_index');
+        return $this->redirectToRoute('symfonicat_domain_index');
     }
 }

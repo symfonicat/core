@@ -2,7 +2,7 @@
     <td class="fw-semibold"><a href="{{ app.request.scheme }}://{{ domain.id }}">{{ domain.id }}</a></td>
     <td>
         {% for project in domain.projects %}
-            <a href="{{ path('app_project_edit', {'id': project.id}) }}">{{ project.name }}</a>{% if not loop.last %}, {% endif %}
+            <a href="{{ path('symfonicat_project_edit', {'id': project.id}) }}">{{ project.name }}</a>{% if not loop.last %}, {% endif %}
         {% else %}
             -
         {% endfor %}
@@ -10,7 +10,7 @@
     <td class="text-end btn-cell">
 
         <div class="btn-group btn-group-sm">
-            <a href="{{ path('app_domain_edit', {'id': domain.id}) }}" class="btn btn-sm btn-warning">
+            <a href="{{ path('symfonicat_domain_edit', {'id': domain.id}) }}" class="btn btn-sm btn-warning">
                 <i class="fa fa-pencil">&nbsp;</i>
             </a>
             {{ include('admin/domain/_delete_form.html.twig') }}

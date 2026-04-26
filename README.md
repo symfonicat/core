@@ -74,6 +74,8 @@ The default public routes are:
 - `/{path}` for the project shell when a project subdomain is active
 - `/application/{id}/{path}` as the internal application entry route used to render an application and redirect client-side history to its public rule-backed path
 
+Package-owned Symfony route names are prefixed with `symfonicat_`.
+
 ## Routing Rules
 
 `RoutingRule.arguments` is an ordered list of regex path segments. The list is joined with `/` and matched against the full request path. Reserved arguments live in `RoutingRule::RESERVED_ARGUMENTS`; `admin`, `m`, and `application` are reserved.
@@ -193,6 +195,7 @@ docker exec php bin/console symfonicat:admin:delete <username>
 ## Electron
 
 Electron rows are managed from `/admin/e`.
+Create and edit stay on the row path, and deletes post to a dedicated `/admin/e/{id}/delete` endpoint so Electron row deletes do not collide with the edit form submit.
 
 Each `Electron` row has:
 

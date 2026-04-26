@@ -59,7 +59,7 @@ final class ApplicationRouteTest extends SymfonicatWebTestCase
             ->setType(RoutingRule::TYPE_APPLICATION)
             ->setApplication($application)
             ->setApplicationType(RoutingRule::APPLICATION_TYPE_ROUTE)
-            ->setRoute('app_project_test');
+            ->setRoute('symfonicat_project_test');
 
         $this->entityManager()->persist($application);
         $this->entityManager()->persist($rule);
@@ -116,7 +116,7 @@ final class ApplicationRouteTest extends SymfonicatWebTestCase
             ->setType(RoutingRule::TYPE_APPLICATION)
             ->setApplication($application)
             ->setApplicationType(RoutingRule::APPLICATION_TYPE_ROUTE)
-            ->setRoute('app_project_test');
+            ->setRoute('symfonicat_project_test');
 
         $this->entityManager()->persist($application);
         $this->entityManager()->persist($rule);

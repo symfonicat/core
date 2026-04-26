@@ -9,7 +9,7 @@ use Symfony\Component\Routing\Attribute\Route;
 
 final class TestController extends AbstractController
 {
-    #[Route('/test', name: 'app_project_test', methods: ['GET'])]
+    #[Route('/test', name: 'symfonicat_project_test', methods: ['GET'])]
     public function main(?Application $application = null): Response
     {
         if ($application instanceof Application) {

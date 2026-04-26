@@ -24,7 +24,7 @@ security:
                 csrf_token_id: symfonicat_admin_login
             logout:
                 path: /admin/logout/clear
-                target: app_project_root
+                target: symfonicat_project_root
         main:
             lazy: true
 

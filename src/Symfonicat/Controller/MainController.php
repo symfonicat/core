@@ -29,8 +29,8 @@ final class MainController extends AbstractController
         $this->project = $this->projectService->load();
     }
 
-    #[Route('/', name: 'app_project_root', methods: ['GET'], defaults: ['path' => ''], condition: 'not request.attributes.get("project")')]
-    #[Route('/{path}', name: 'app_project', methods: ['GET'], requirements: ['path' => '(?!m(?:/|$)).*'], defaults: ['path' => ''], priority: -1000, condition: 'request.attributes.get("project") and request.attributes.get("symfonicat_use_project_catch_all", true)')]
+    #[Route('/', name: 'symfonicat_project_root', methods: ['GET'], defaults: ['path' => ''], condition: 'not request.attributes.get("project")')]
+    #[Route('/{path}', name: 'symfonicat_project', methods: ['GET'], requirements: ['path' => '(?!m(?:/|$)).*'], defaults: ['path' => ''], priority: -1000, condition: 'request.attributes.get("project") and request.attributes.get("symfonicat_use_project_catch_all", true)')]
     public function main(Request $request, string $path = ''): Response
     {
         if ($request->attributes->getBoolean('symfonicat_force_domain_main')) {

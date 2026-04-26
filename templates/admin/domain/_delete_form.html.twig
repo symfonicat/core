@@ -1,4 +1,4 @@
-<form class="btn btn-sm btn-danger" method="post" action="{{ path('app_domain_delete', {'id': domain.id}) }}" onsubmit="return confirm('Are you sure you want to delete this item?');">
+<form class="btn btn-sm btn-danger" method="post" action="{{ path('symfonicat_domain_delete', {'id': domain.id}) }}" onsubmit="return confirm('Are you sure you want to delete this item?');">
     <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ domain.id) }}">
     <a onclick="const f=this.closest('form'); if (f.requestSubmit) { f.requestSubmit(); } else { if (f.onsubmit ? f.onsubmit() !== false : true) { f.submit(); } } return false;">
         <i class="fa fa-x"></i>

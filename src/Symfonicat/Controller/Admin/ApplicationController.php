@@ -14,7 +14,7 @@ use Symfony\Component\Routing\Attribute\Route;
 
 final class ApplicationController extends AbstractController
 {
-    #[Route('/admin/a/list', name: 'app_application_index', methods: ['GET'])]
+    #[Route('/admin/a/list', name: 'symfonicat_application_index', methods: ['GET'])]
     public function index(ApplicationRepository $applicationRepository): Response
     {
         return $this->render('admin/application/index.html.twig', [
@@ -22,7 +22,7 @@ final class ApplicationController extends AbstractController
         ]);
     }
 
-    #[Route('/admin/a/{id}', name: 'app_application_edit', methods: ['GET', 'POST'])]
+    #[Route('/admin/a/{id}', name: 'symfonicat_application_edit', methods: ['GET', 'POST'])]
     public function edit(
         Request $request,
         string $id,
@@ -42,7 +42,7 @@ final class ApplicationController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $entityManager->flush();
 
-            return $this->redirectToRoute('app_application_index', [], Response::HTTP_SEE_OTHER);
+            return $this->redirectToRoute('symfonicat_application_index', [], Response::HTTP_SEE_OTHER);
         }
 
         return $this->render('admin/application/edit.html.twig', [

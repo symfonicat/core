@@ -117,7 +117,7 @@ final class RoutingRuleTest extends TestCase
             ->setType(RoutingRule::TYPE_APPLICATION)
             ->setApplicationType(RoutingRule::APPLICATION_TYPE_ARGUMENTS)
             ->setArguments(['symfonicat', '*', 'test*'])
-            ->setRoute('app_project_test');
+            ->setRoute('symfonicat_project_test');
 
         $rule->normalizeScope();
 
@@ -131,12 +131,12 @@ final class RoutingRuleTest extends TestCase
             ->setType(RoutingRule::TYPE_APPLICATION)
             ->setApplicationType(RoutingRule::APPLICATION_TYPE_ROUTE)
             ->setArguments(['symfonicat', '*', 'test*'])
-            ->setRoute('app_project_test');
+            ->setRoute('symfonicat_project_test');
 
         $rule->normalizeScope();
 
         self::assertSame([], $rule->getArguments());
-        self::assertSame('app_project_test', $rule->getRoute());
+        self::assertSame('symfonicat_project_test', $rule->getRoute());
     }
 
     public function testNormalizeScopeKeepsBothRedirectTargetsForCombinedRedirectTarget(): void

@@ -17,7 +17,7 @@ use Symfony\Component\Routing\Attribute\Route;
 
 final class ElectronController extends AbstractController
 {
-    #[Route('/admin/e', name: 'app_electron_index', methods: ['GET'])]
+    #[Route('/admin/e', name: 'symfonicat_electron_index', methods: ['GET'])]
     public function index(ElectronRepository $electronRepository): Response
     {
         return $this->render('admin/electron/index.html.twig', [
@@ -25,7 +25,7 @@ final class ElectronController extends AbstractController
         ]);
     }
 
-    #[Route('/admin/e/create', name: 'app_electron_create', methods: ['GET', 'POST'])]
+    #[Route('/admin/e/create', name: 'symfonicat_electron_create', methods: ['GET', 'POST'])]
     public function create(
         Request $request,
         EntityManagerInterface $entityManager,
@@ -47,7 +47,7 @@ final class ElectronController extends AbstractController
                 $entityManager->persist($electron);
                 $entityManager->flush();
 
-                return $this->redirectToRoute('app_electron_index', [], Response::HTTP_SEE_OTHER);
+                return $this->redirectToRoute('symfonicat_electron_index', [], Response::HTTP_SEE_OTHER);
             }
         }
 
@@ -57,7 +57,7 @@ final class ElectronController extends AbstractController
         ]);
     }
 
-    #[Route('/admin/e/{id}', name: 'app_electron_edit', methods: ['GET', 'POST'])]
+    #[Route('/admin/e/{id}', name: 'symfonicat_electron_edit', methods: ['GET', 'POST'])]
     public function edit(
         Request $request,
         Electron $electron,
@@ -78,7 +78,7 @@ final class ElectronController extends AbstractController
             if ($form->isValid()) {
                 $entityManager->flush();
 
-                return $this->redirectToRoute('app_electron_index', [], Response::HTTP_SEE_OTHER);
+                return $this->redirectToRoute('symfonicat_electron_index', [], Response::HTTP_SEE_OTHER);
             }
         }
 
@@ -88,7 +88,7 @@ final class ElectronController extends AbstractController
         ]);
     }
 
-    #[Route('/admin/e/{id}', name: 'app_electron_delete', methods: ['POST'])]
+    #[Route('/admin/e/{id}/delete', name: 'symfonicat_electron_delete', methods: ['POST'])]
     public function delete(Request $request, Electron $electron, EntityManagerInterface $entityManager): Response
     {
         if ($this->isCsrfTokenValid('delete'.$electron->getId(), $request->getPayload()->getString('_token'))) {
@@ -96,7 +96,7 @@ final class ElectronController extends AbstractController
             $entityManager->flush();
         }
 
-        return $this->redirectToRoute('app_electron_index', [], Response::HTTP_SEE_OTHER);
+        return $this->redirectToRoute('symfonicat_electron_index', [], Response::HTTP_SEE_OTHER);
     }
 
     private function normalizeTypeSelection(Electron $electron): void

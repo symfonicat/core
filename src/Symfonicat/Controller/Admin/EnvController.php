@@ -17,7 +17,7 @@ use Symfony\Component\Routing\Attribute\Route;
 
 final class EnvController extends AbstractController
 {
-    #[Route('/admin/env', name: 'app_env_index', methods: ['GET', 'POST'])]
+    #[Route('/admin/env', name: 'symfonicat_env_index', methods: ['GET', 'POST'])]
     public function index(
         Request $request,
         EnvRepository $envRepository,
@@ -34,7 +34,7 @@ final class EnvController extends AbstractController
             $entityManager->persist($envParent);
             $entityManager->flush();
 
-            return $this->redirectToRoute('app_env_index', [], Response::HTTP_SEE_OTHER);
+            return $this->redirectToRoute('symfonicat_env_index', [], Response::HTTP_SEE_OTHER);
         }
 
         $env = new Env();
@@ -45,7 +45,7 @@ final class EnvController extends AbstractController
             $entityManager->persist($env);
             $entityManager->flush();
 
-            return $this->redirectToRoute('app_env_index', [], Response::HTTP_SEE_OTHER);
+            return $this->redirectToRoute('symfonicat_env_index', [], Response::HTTP_SEE_OTHER);
         }
 
         return $this->render('admin/env/index.html.twig', [
@@ -56,12 +56,12 @@ final class EnvController extends AbstractController
         ]);
     }
 
-    #[Route('/admin/env/{id}', name: 'app_env_delete', methods: ['POST'])]
+    #[Route('/admin/env/{id}', name: 'symfonicat_env_delete', methods: ['POST'])]
     public function delete(Request $request, string $id, EnvRepository $envRepository, EntityManagerInterface $entityManager): Response
     {
         $env = $envRepository->find($id);
         if (!$env instanceof Env) {
-            return $this->redirectToRoute('app_env_index', [], Response::HTTP_SEE_OTHER);
+            return $this->redirectToRoute('symfonicat_env_index', [], Response::HTTP_SEE_OTHER);
         }
 
         if ($this->isCsrfTokenValid('delete' . $env->getId(), $request->getPayload()->getString('_token'))) {
@@ -69,10 +69,10 @@ final class EnvController extends AbstractController
             $entityManager->flush();
         }
 
-        return $this->redirectToRoute('app_env_index', [], Response::HTTP_SEE_OTHER);
+        return $this->redirectToRoute('symfonicat_env_index', [], Response::HTTP_SEE_OTHER);
     }
 
-    #[Route('/admin/env/parent/{id}', name: 'app_env_parent_delete', methods: ['POST'])]
+    #[Route('/admin/env/parent/{id}', name: 'symfonicat_env_parent_delete', methods: ['POST'])]
     public function deleteParent(
         Request $request,
         string $id,
@@ -81,7 +81,7 @@ final class EnvController extends AbstractController
     ): Response {
         $envParent = $envParentRepository->find($id);
         if (!$envParent instanceof EnvParent) {
-            return $this->redirectToRoute('app_env_index', [], Response::HTTP_SEE_OTHER);
+            return $this->redirectToRoute('symfonicat_env_index', [], Response::HTTP_SEE_OTHER);
         }
 
         if ($this->isCsrfTokenValid('delete' . $envParent->getId(), $request->getPayload()->getString('_token'))) {
@@ -89,6 +89,6 @@ final class EnvController extends AbstractController
             $entityManager->flush();
         }
 
-        return $this->redirectToRoute('app_env_index', [], Response::HTTP_SEE_OTHER);
+        return $this->redirectToRoute('symfonicat_env_index', [], Response::HTTP_SEE_OTHER);
     }
 }

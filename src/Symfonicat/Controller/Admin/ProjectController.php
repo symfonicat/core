@@ -14,7 +14,7 @@ use Symfony\Component\Routing\Attribute\Route;
 final class ProjectController extends AbstractController
 {
 
-    #[Route('/admin/p/list', name: 'app_project_index', methods: ['GET'])]
+    #[Route('/admin/p/list', name: 'symfonicat_project_index', methods: ['GET'])]
     public function index(ProjectRepository $projectRepository): Response
     {
         return $this->render('admin/project/index.html.twig', [
@@ -22,7 +22,7 @@ final class ProjectController extends AbstractController
         ]);
     }
 
-    #[Route('/admin/p/{id}', name: 'app_project_edit', methods: ['GET', 'POST'])]
+    #[Route('/admin/p/{id}', name: 'symfonicat_project_edit', methods: ['GET', 'POST'])]
     public function edit(
         Request $request,
         string $id,
@@ -43,7 +43,7 @@ final class ProjectController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $entityManager->flush();
 
-            return $this->redirectToRoute('app_project_index', [], Response::HTTP_SEE_OTHER);
+            return $this->redirectToRoute('symfonicat_project_index', [], Response::HTTP_SEE_OTHER);
         }
 
         return $this->render('admin/project/edit.html.twig', [

@@ -124,17 +124,17 @@ final class RoutingRuleServiceTest extends TestCase
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_APPLICATION)
             ->setApplicationType(RoutingRule::APPLICATION_TYPE_ROUTE)
-            ->setRoute('app_project_test');
+            ->setRoute('symfonicat_project_test');
 
         $repo = $this->createMock(RoutingRuleRepository::class);
         $repo->expects(self::once())
             ->method('findOneTypeApplicationByRoute')
-            ->with('app_project_test')
+            ->with('symfonicat_project_test')
             ->willReturn($rule);
 
         $service = $this->service($repo);
 
-        self::assertSame($rule, $service->getApplicationRuleForRoute('app_project_test'));
+        self::assertSame($rule, $service->getApplicationRuleForRoute('symfonicat_project_test'));
     }
 
     /**

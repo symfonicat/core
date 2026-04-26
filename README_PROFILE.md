@@ -13,6 +13,8 @@ The Docker `php` service installs Composer dependencies, bootstraps the schema, 
 - `/{path}` renders the project shell when a project subdomain is active.
 - application shells can also bind directly to Symfony routes through `RoutingRule.applicationType=route`.
 
+Package-owned Symfony route names are prefixed with `symfonicat_`.
+
 `path_application('test')`, `path_application(application)`, and `path('symfonicat_application', {id: 'test'})` all generate the public application URL from the matching routing rule.
 
 ## Env
@@ -64,6 +66,7 @@ The command prompts for a hidden password.
 ## Electron
 
 Electron rows are managed from `/admin/e`.
+Electron deletes use a dedicated `/admin/e/{id}/delete` POST endpoint so row deletion does not conflict with edit submits.
 
 Each row points at one domain, one `project + domain` pair, or one application and can upload a favicon to:
 
