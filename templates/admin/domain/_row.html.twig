@@ -1,5 +1,5 @@
 <tr id="domain_{{ domain.id }}" class="btn-row">
-    <td class="fw-semibold"><a href="{{ path('app_domain_edit', {'id': domain.id}) }}">{{ domain.id }}</a></td>
+    <td class="fw-semibold"><a href="{{ app.request.scheme }}://{{ domain.id }}">{{ domain.id }}</a></td>
     <td>
         {% for project in domain.projects %}
             {{ project.name }}{% if not loop.last %}, {% endif %}
