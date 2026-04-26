@@ -16,17 +16,6 @@
             <span class="text-body-secondary">-</span>
         {% endif %}
     </td>
-    <td>
-        {% if rule.route %}
-            {% if rule.type == 'application' and applicationHref %}
-                <a href="{{ applicationHref }}"><code>{{ rule.route }}</code></a>
-            {% else %}
-                <code>{{ rule.route }}</code>
-            {% endif %}
-        {% else %}
-            <span class="text-body-secondary">-</span>
-        {% endif %}
-    </td>
     <td class="text-nowrap">
         {% if rule.domain %}
             <code>{{ rule.domain.id }}</code>
@@ -63,6 +52,17 @@
     <td class="text-nowrap">
         {% if rule.type == 'application' %}
             {{ rule.applicationType ?: '-' }}
+        {% else %}
+            <span class="text-body-secondary">-</span>
+        {% endif %}
+    </td>
+    <td>
+        {% if rule.route %}
+            {% if rule.type == 'application' and applicationHref %}
+                <a href="{{ applicationHref }}"><code>{{ rule.route }}</code></a>
+            {% else %}
+                <code>{{ rule.route }}</code>
+            {% endif %}
         {% else %}
             <span class="text-body-secondary">-</span>
         {% endif %}
