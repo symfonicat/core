@@ -48,6 +48,7 @@ Symfonicat owns these tables:
 - `symfonicat_domain`
 - `symfonicat_domain_env`
 - `symfonicat_electron`
+- `symfonicat_electron_env`
 - `symfonicat_env`
 - `symfonicat_env_parent`
 - `symfonicat_module`
