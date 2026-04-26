@@ -1,0 +1,30 @@
+{% extends 'admin/base.html.twig' %}
+{% block title %}Electron{% endblock %}
+{% block body %}
+
+    <div class="d-flex justify-content-end mb-3">
+        <a href="{{ path('app_electron_create') }}" class="btn btn-sm btn-success">create electron</a>
+    </div>
+
+    <table class="table table-sm align-middle">
+        <thead>
+            <tr>
+                <th>name</th>
+                <th>type</th>
+                <th>target</th>
+                <th>favicon</th>
+                <th class="text-end">&nbsp;</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for electron in electrons %}
+            {{ include('admin/electron/_row.html.twig') }}
+        {% else %}
+            <tr>
+                <td colspan="5">no records found</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+{% endblock %}

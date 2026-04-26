@@ -10,6 +10,7 @@ use Symfonicat\Entity\Application;
 use Symfonicat\Entity\ApplicationEnv;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\DomainEnv;
+use Symfonicat\Entity\Electron;
 use Symfonicat\Entity\Env;
 use Symfonicat\Entity\EnvParent;
 use Symfonicat\Entity\Module;
@@ -18,6 +19,7 @@ use Symfonicat\Entity\ProjectEnv;
 use Symfonicat\Entity\RoutingRule;
 use Symfonicat\Repository\ApplicationRepository;
 use Symfonicat\Repository\DomainRepository;
+use Symfonicat\Repository\ElectronRepository;
 use Symfonicat\Repository\EnvRepository;
 use Symfonicat\Repository\ModuleRepository;
 use Symfonicat\Repository\ProjectRepository;
@@ -42,6 +44,7 @@ final class BootstrapCommand extends Command
         private readonly EntityManagerInterface $entityManager,
         private readonly ApplicationRepository $applicationRepository,
         private readonly DomainRepository $domainRepository,
+        private readonly ElectronRepository $electronRepository,
         private readonly EnvRepository $envRepository,
         private readonly ModuleRepository $moduleRepository,
         private readonly ProjectRepository $projectRepository,
@@ -214,6 +217,7 @@ final class BootstrapCommand extends Command
         }
 
         $attachedProjectToExample = $this->attachProjectToDomain($exampleDomain, $project);
+        [$exampleElectron, $createdExampleElectron, $updatedExampleElectron] = $this->ensureExampleDomainElectron($exampleDomain);
 
         $localhostColor = $this->ensureDomainEnvValue($localhost, $env, 'blue');
         $exampleColor = $this->ensureDomainEnvValue($exampleDomain, $env, 'blue');
@@ -239,6 +243,8 @@ final class BootstrapCommand extends Command
             || $createdProject
             || $updatedProject
             || $attachedProjectToExample
+            || $createdExampleElectron
+            || $updatedExampleElectron
             || $createdAnalyticsModule
             || $updatedAnalyticsModule
             || $createdApplication
@@ -293,6 +299,14 @@ final class BootstrapCommand extends Command
                 $messages[] = 'attached Project 1 to example.com';
             } else {
                 $messages[] = 'Project 1 already attached to example.com';
+            }
+
+            if ($createdExampleElectron) {
+                $messages[] = 'seeded Example Test electron';
+            } elseif ($updatedExampleElectron) {
+                $messages[] = 'updated Example Test electron';
+            } else {
+                $messages[] = 'Example Test electron already present';
             }
 
             if ($createdAnalyticsModule) {
@@ -422,6 +436,46 @@ final class BootstrapCommand extends Command
         }
 
         return [$application, $created];
+    }
+
+    /**
+     * @return array{0: Electron, 1: bool, 2: bool}
+     */
+    private function ensureExampleDomainElectron(Domain $domain): array
+    {
+        $electron = $this->electronRepository->findOneForDomain($domain);
+        $created = false;
+        $updated = false;
+
+        if (!$electron instanceof Electron) {
+            $electron = (new Electron())
+                ->setType(Electron::TYPE_DOMAIN)
+                ->setDomain($domain);
+
+            $this->entityManager->persist($electron);
+            $created = true;
+        }
+
+        if ($electron->getName() !== 'Example Test') {
+            $electron->setName('Example Test');
+            $updated = true;
+        }
+
+        if ($electron->getFavicon() !== 'electron/favicon/domain/example.com.png') {
+            $electron->setFavicon('electron/favicon/domain/example.com.png');
+            $updated = true;
+        }
+
+        if (!$electron->isDomainType() || $electron->getDomain()?->getId() !== $domain->getId()) {
+            $electron
+                ->setType(Electron::TYPE_DOMAIN)
+                ->setDomain($domain)
+                ->setProject(null)
+                ->setApplication(null);
+            $updated = true;
+        }
+
+        return [$electron, $created, $updated];
     }
 
     private function attachProjectToDomain(Domain $domain, Project $project): bool

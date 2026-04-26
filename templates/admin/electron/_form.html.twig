@@ -1,0 +1,48 @@
+{{ form_start(form, {
+    attr: {
+        'data-controller': 'electron-form',
+        'data-action': 'change->electron-form#update',
+    }
+}) }}
+
+<div class="d-flex justify-content-end">
+    <button class="btn btn-sm btn-success">{{ button_label|default('save') }}</button>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-3">
+        {{ form_row(form.name) }}
+    </div>
+
+    <div class="col-md-3">
+        {{ form_row(form.type, {
+            attr: {
+                'data-electron-form-target': 'type',
+            }
+        }) }}
+    </div>
+
+    <div class="col-md-6">
+        {{ form_row(form.favicon) }}
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-6" data-electron-form-target="domainRow">
+        {{ form_row(form.domain) }}
+    </div>
+
+    <div class="col-md-6" data-electron-form-target="projectRow">
+        {{ form_row(form.project) }}
+    </div>
+
+    <div class="col-md-6" data-electron-form-target="applicationRow">
+        {{ form_row(form.application) }}
+    </div>
+</div>
+
+{% if form._token is defined %}
+    {{ form_widget(form._token) }}
+{% endif %}
+
+{{ form_end(form, { render_rest: false }) }}

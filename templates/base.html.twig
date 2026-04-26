@@ -6,9 +6,9 @@
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
         {% if electron and electron_icon %}
             {% if asset_base_url is not empty %}
-            {% set icon_url = asset_base_url ~ '/icons/' ~ electron_icon | url_encode ~ '.png' %}
+            {% set icon_url = asset_base_url ~ '/' ~ electron_icon %}
             {% else %}
-            {% set icon_url = asset('icons/' ~ electron_icon ~ '.png') %}
+            {% set icon_url = asset(electron_icon) %}
             {% endif %}
         {% else %}
         {% set icon_url = asset('favicon.png') %}

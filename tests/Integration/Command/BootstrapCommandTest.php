@@ -5,6 +5,7 @@ namespace App\Tests\Integration\Command;
 use App\Tests\Support\SymfonicatKernelTestCase;
 use Symfonicat\Entity\Application;
 use Symfonicat\Entity\Domain;
+use Symfonicat\Entity\Electron;
 use Symfonicat\Entity\Env;
 use Symfonicat\Entity\EnvParent;
 use Symfonicat\Entity\Module;
@@ -34,6 +35,7 @@ final class BootstrapCommandTest extends SymfonicatKernelTestCase
         $project = $em->getRepository(Project::class)->find('project1');
         $application = $em->getRepository(Application::class)->find('test');
         $analytics = $em->getRepository(Module::class)->find('analytics');
+        $electron = $em->getRepository(Electron::class)->findOneBy(['name' => 'Example Test']);
         $envParent = $em->getRepository(EnvParent::class)->find('colors');
         $color = $em->getRepository(Env::class)->find('primary');
         $applicationRules = $em->getRepository(RoutingRule::class)->findTypeApplication();
@@ -44,10 +46,14 @@ final class BootstrapCommandTest extends SymfonicatKernelTestCase
         self::assertSame('Project 1', $project->getName());
         self::assertInstanceOf(Application::class, $application);
         self::assertInstanceOf(Module::class, $analytics);
+        self::assertInstanceOf(Electron::class, $electron);
         self::assertSame('Analytics', $analytics->getName());
         self::assertInstanceOf(EnvParent::class, $envParent);
         self::assertInstanceOf(Env::class, $color);
         self::assertSame('colors', $color->getEnvParent()?->getId());
+        self::assertSame(Electron::TYPE_DOMAIN, $electron->getType());
+        self::assertSame('example.com', $electron->getDomain()?->getId());
+        self::assertSame('electron/favicon/domain/example.com.png', $electron->getFavicon());
 
         self::assertTrue(
             $exampleCom->hasProject($project),
@@ -110,6 +116,7 @@ final class BootstrapCommandTest extends SymfonicatKernelTestCase
                 'application_env' => 0,
                 'domain' => 0,
                 'project' => 0,
+                'electron' => 0,
                 'env_parent' => 0,
                 'env' => 0,
                 'domain_env' => 0,
@@ -183,6 +190,7 @@ final class BootstrapCommandTest extends SymfonicatKernelTestCase
             'application_env' => $this->countTable('symfonicat_application_env'),
             'domain' => $this->countTable('symfonicat_domain'),
             'project' => $this->countTable('symfonicat_project'),
+            'electron' => $this->countTable('symfonicat_electron'),
             'env_parent' => $this->countTable('symfonicat_env_parent'),
             'env' => $this->countTable('symfonicat_env'),
             'domain_env' => $this->countTable('symfonicat_domain_env'),

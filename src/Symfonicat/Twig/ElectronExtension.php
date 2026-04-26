@@ -2,7 +2,11 @@
 
 namespace Symfonicat\Twig;
 
+use Symfonicat\Entity\Application;
+use Symfonicat\Entity\Domain;
+use Symfonicat\Entity\Electron;
 use Symfonicat\Entity\Project;
+use Symfonicat\Repository\ElectronRepository;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Twig\Extension\AbstractExtension;
@@ -11,6 +15,7 @@ use Twig\Extension\GlobalsInterface;
 final class ElectronExtension extends AbstractExtension implements GlobalsInterface
 {
     public function __construct(
+        private readonly ElectronRepository $electronRepository,
         private readonly RequestStack $requestStack,
         private readonly string $assetBaseUrl = '',
     ) {
@@ -28,8 +33,8 @@ final class ElectronExtension extends AbstractExtension implements GlobalsInterf
         }
 
         $electron = $this->isElectronRequest($request);
-        $project = $request->attributes->get('project');
-        $electronIcon = ($project instanceof Project) ? $project->getId() : null;
+        $electronConfig = $electron ? $this->resolveElectronConfig($request) : null;
+        $electronIcon = $electronConfig?->getFavicon();
 
         return [
             'electron' => $electron,
@@ -60,5 +65,25 @@ final class ElectronExtension extends AbstractExtension implements GlobalsInterf
         }
 
         return '';
+    }
+
+    private function resolveElectronConfig(Request $request): ?Electron
+    {
+        $application = $request->attributes->get('application');
+        if ($application instanceof Application) {
+            return $this->electronRepository->findOneForApplication($application);
+        }
+
+        $project = $request->attributes->get('project');
+        if ($project instanceof Project) {
+            return $this->electronRepository->findOneForProject($project);
+        }
+
+        $domain = $request->attributes->get('domain');
+        if ($domain instanceof Domain) {
+            return $this->electronRepository->findOneForDomain($domain);
+        }
+
+        return null;
     }
 }

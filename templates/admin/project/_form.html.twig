@@ -2,18 +2,17 @@
 
 <div class="row g-3">
 
-    <div class="col-md-6">
+    <div class="col-md-3">
         {{ form_row(form.name) }}
     </div>
-
-    <div class="col-md-6">
-        {{ form_row(form.icon) }}
-    </div>
-
 </div>
 
 {% if form.id is defined %}
-    {{ form_row(form.id) }}
+    <div class="row g-3">
+        <div class="col-md-12">
+            {{ form_row(form.id) }}
+        </div>
+    </div>
 {% endif %}
 
 <div class="row g-3">

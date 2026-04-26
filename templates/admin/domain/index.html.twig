@@ -2,6 +2,10 @@
 {% block title %}Domains{% endblock %}
 {% block body %}
 
+    <div class="d-flex justify-content-end">
+        <a href="{{ path('app_domain_create') }}" class="btn btn-sm btn-success">create domain</a>
+    </div>
+
     <table class="table" id="domains">
         <thead>
             <tr>
@@ -21,6 +25,5 @@
         </tbody>
     </table>
 
-    <a href="{{ path('app_domain_create') }}" class="btn btn-sm btn-success">create</a>
 
 {% endblock %}

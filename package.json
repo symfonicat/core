@@ -5,12 +5,7 @@
         "dev-server": "encore dev-server",
         "dev": "encore dev",
         "watch": "encore dev --watch",
-        "build": "encore production --progress",
-        "symfonicat:electron:data": "docker exec php bin/console symfonicat:data:electron",
-        "symfonicat:electron:prepare": "docker exec php bin/console symfonicat:electron:prepare",
-        "electron:dev": "node electron.js --prepare-only",
-        "electron:build": "node electron.js --prepare-only",
-        "electron:package": "node electron.js"
+        "build": "encore production --progress"
     },
     "dependencies": {
         "@fortawesome/fontawesome-free": "^7.1.0",

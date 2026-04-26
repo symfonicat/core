@@ -2,6 +2,10 @@
 {% block title %}Routing Rules{% endblock %}
 {% block body %}
 
+    <div class="d-flex justify-content-end mb-3">
+        <a href="{{ path('app_routing_rule_create') }}" class="btn btn-sm btn-success">create routing rule</a>
+    </div>
+
     <div class="table-responsive">
     <table class="table table-sm table-striped align-middle" id="routing-rules">
         <thead>
@@ -14,10 +18,10 @@
                 <th>application</th>
                 <th>app mode</th>
                 <th>route type</th>
-                <th>redirect type</th>
-                <th>redirect target</th>
-                <th>redirect domain</th>
-                <th>redirect project</th>
+                <th>redir type</th>
+                <th>redir target</th>
+                <th>redir domain</th>
+                <th>redir project</th>
                 <th class="text-end">&nbsp;</th>
             </tr>
         </thead>
@@ -32,7 +36,5 @@
         </tbody>
     </table>
     </div>
-
-    <a href="{{ path('app_routing_rule_create') }}" class="btn btn-sm btn-success">create</a>
 
 {% endblock %}
