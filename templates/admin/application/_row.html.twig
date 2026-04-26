@@ -7,6 +7,16 @@
             -
         {% endfor %}
     </td>
+    {% for env_parent in env_parents %}
+        <td>
+            {% set entries = env_parent_entries(application.env, env_parent) %}
+            {% for entry in entries %}
+                <div><code>{{ entry }}</code></div>
+            {% else %}
+                <span class="text-body-secondary">-</span>
+            {% endfor %}
+        </td>
+    {% endfor %}
     <td class="text-end btn-cell">
         <div class="btn-group btn-group-sm">
             <a href="{{ path('symfonicat_application_edit', {'id': application.id}) }}" class="btn btn-sm btn-warning">

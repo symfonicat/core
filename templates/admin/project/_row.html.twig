@@ -1,6 +1,16 @@
 <tr id="project_{{ project.id }}" class="btn-row">
     <td class="fw-semibold"><a href="{{ path('symfonicat_project_edit', {'id': project.id}) }}">{{ project.name }}</a></td>
     <td>{{ project.id }}</td>
+    {% for env_parent in env_parents %}
+        <td>
+            {% set entries = env_parent_entries(project.env, env_parent) %}
+            {% for entry in entries %}
+                <div><code>{{ entry }}</code></div>
+            {% else %}
+                <span class="text-body-secondary">-</span>
+            {% endfor %}
+        </td>
+    {% endfor %}
     <td class="text-end btn-cell">
         
         <div class="btn-group btn-group-sm">

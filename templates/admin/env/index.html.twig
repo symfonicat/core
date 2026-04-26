@@ -26,9 +26,23 @@
                     </table>
 
                     {{ form_start(env_parent_form) }}
-                        {{ form_widget(env_parent_form) }}
-                        <button class="btn btn-sm btn-success">create env parent</button>
+                        <div class="d-flex align-items-start gap-2">
+                            <div class="flex-grow-1">
+                                {{ form_row(env_parent_form.id, {
+                                    row_attr: {
+                                        class: 'mb-0'
+                                    },
+                                    attr: {
+                                        class: 'form-control-sm'
+                                    }
+                                }) }}
+                            </div>
+                            <div class="flex-shrink-0 d-flex flex-column">
+                                <button class="btn btn-sm btn-success">create env parent</button>
+                            </div>
+                        </div>
                     {{ form_end(env_parent_form) }}
+
                 </div>
             </div>
         </div>
@@ -57,14 +71,28 @@
                     </table>
 
                     {{ form_start(env_form) }}
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                {{ form_row(env_form.envParent) }}
+                        <div class="d-flex align-items-start gap-2 flex-wrap">
+                            <div class="flex-grow-1">
+                                {{ form_row(env_form.envParent, {
+                                    row_attr: {
+                                        class: 'mb-0'
+                                    },
+                                    attr: {
+                                        class: 'form-select-sm'
+                                    }
+                                }) }}
                             </div>
-                            <div class="col-md-6">
-                                {{ form_row(env_form.id) }}
+                            <div class="flex-grow-1">
+                                {{ form_row(env_form.id, {
+                                    row_attr: {
+                                        class: 'mb-0'
+                                    },
+                                    attr: {
+                                        class: 'form-control-sm'
+                                    }
+                                }) }}
                             </div>
-                            <div class="col-12 mt-0">
+                            <div class="flex-shrink-0 d-flex flex-column">
                                 <button class="btn btn-sm btn-success">create env</button>
                             </div>
                         </div>

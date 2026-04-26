@@ -4,6 +4,7 @@ namespace Symfonicat\Controller\Admin;
 
 use Symfonicat\Entity\Project;
 use Symfonicat\Form\ProjectType;
+use Symfonicat\Repository\EnvParentRepository;
 use Symfonicat\Repository\ProjectRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -15,10 +16,11 @@ final class ProjectController extends AbstractController
 {
 
     #[Route('/admin/p/list', name: 'symfonicat_project_index', methods: ['GET'])]
-    public function index(ProjectRepository $projectRepository): Response
+    public function index(ProjectRepository $projectRepository, EnvParentRepository $envParentRepository): Response
     {
         return $this->render('admin/project/index.html.twig', [
             'projects' => $projectRepository->findAll(),
+            'env_parents' => $envParentRepository->findAllOrdered(),
         ]);
     }
 

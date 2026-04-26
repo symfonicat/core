@@ -1,6 +1,6 @@
 <form method="post" action="{{ path('symfonicat_electron_delete', {id: electron.id}) }}" onsubmit="return confirm('Are you sure?');" class="d-inline-block">
     <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ electron.id) }}">
     <button class="btn btn-sm btn-danger">
-        <i class="fa fa-trash">&nbsp;</i>
+        <i class="fa fa-times">&nbsp;</i>
     </button>
 </form>

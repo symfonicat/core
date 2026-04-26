@@ -5,6 +5,7 @@ namespace Symfonicat\Controller\Admin;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Form\DomainType;
 use Symfonicat\Repository\DomainRepository;
+use Symfonicat\Repository\EnvParentRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -13,10 +14,11 @@ use Symfony\Component\Routing\Attribute\Route;
 final class DomainController extends AbstractController
 {
     #[Route('/admin/d/list', name: 'symfonicat_domain_index', methods: ['GET'])]
-    public function index(DomainRepository $domainRepository): Response
+    public function index(DomainRepository $domainRepository, EnvParentRepository $envParentRepository): Response
     {
         return $this->render('admin/domain/index.html.twig', [
             'domains' => $domainRepository->findAll(),
+            'env_parents' => $envParentRepository->findAllOrdered(),
         ]);
     }
 

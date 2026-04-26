@@ -7,6 +7,9 @@
             <tr>
                 <th>name</th>
                 <th>id</th>
+                {% for env_parent in env_parents %}
+                    <th>{{ env_parent.id }}</th>
+                {% endfor %}
                 <th>&nbsp;</th>
             </tr>
         </thead>
@@ -15,7 +18,7 @@
             {{ include('admin/project/_row.html.twig') }}
         {% else %}
             <tr id="project-empty">
-                <td colspan="3">no records found</td>
+                <td colspan="{{ 3 + env_parents|length }}">no records found</td>
             </tr>
         {% endfor %}
         </tbody>

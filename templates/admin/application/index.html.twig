@@ -7,6 +7,9 @@
             <tr>
                 <th>application</th>
                 <th>modules</th>
+                {% for env_parent in env_parents %}
+                    <th>{{ env_parent.id }}</th>
+                {% endfor %}
                 <th>&nbsp;</th>
             </tr>
         </thead>
@@ -15,7 +18,7 @@
             {{ include('admin/application/_row.html.twig') }}
         {% else %}
             <tr id="applications-empty">
-                <td colspan="3">no records found</td>
+                <td colspan="{{ 3 + env_parents|length }}">no records found</td>
             </tr>
         {% endfor %}
         </tbody>

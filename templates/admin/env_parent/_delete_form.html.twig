@@ -1,6 +1,6 @@
 <form method="post" action="{{ path('symfonicat_env_parent_delete', {'id': env_parent.id}) }}" onsubmit="return confirm('are you sure you want to delete this item?');">
     <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ env_parent.id) }}">
     <button class="btn btn-sm btn-danger">
-        <i class="fa fa-trash">&nbsp;</i>
+        <i class="fa fa-times">&nbsp;</i>
     </button>
 </form>

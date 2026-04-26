@@ -6,6 +6,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfonicat\Entity\Application;
 use Symfonicat\Form\ApplicationType;
 use Symfonicat\Repository\ApplicationRepository;
+use Symfonicat\Repository\EnvParentRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\Request;
@@ -15,10 +16,11 @@ use Symfony\Component\Routing\Attribute\Route;
 final class ApplicationController extends AbstractController
 {
     #[Route('/admin/a/list', name: 'symfonicat_application_index', methods: ['GET'])]
-    public function index(ApplicationRepository $applicationRepository): Response
+    public function index(ApplicationRepository $applicationRepository, EnvParentRepository $envParentRepository): Response
     {
         return $this->render('admin/application/index.html.twig', [
             'applications' => $applicationRepository->findAllOrderedById(),
+            'env_parents' => $envParentRepository->findAllOrdered(),
         ]);
     }
 
