@@ -123,5 +123,6 @@ These instructions apply to the main app repo at `/home/t/www/symfonicat/core`.
 - Every change to this repository must include corresponding rewrites of both `README.md` and `README_PROFILE.md`.
 - Exception: template-only changes do not require README rewrites unless they change documented behavior, routing, commands, or another user-facing contract that the README already describes.
 - Rewrite the README files as clean current-state snapshots rather than appending to or layering on top of prior wording.
+- Prefer concise, practical README writing over exhaustive internal inventory. Favor setup, runtime behavior, and the commands/features a user actually needs; avoid duplicating minor implementation details, meta references, long table/entity inventories, and other low-signal material unless it is necessary to use or operate the project correctly.
 - Do not preserve stale wording, historical notes, or old code references unless they are still true in the current tree.
 - Keep `README.md` as the full core-repository README and `README_PROFILE.md` as the slimmed-down public-profile README.

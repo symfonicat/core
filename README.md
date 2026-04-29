@@ -2,8 +2,6 @@
 
 `symfonicat/core` is the full Symfony application for Symfonicat. Public routing, admin CRUD, Doctrine entities, webpack wiring, Docker/FrankenPHP, module runtime, application shells, and Electron packaging all live in this repository.
 
-Canonical README: <https://github.com/symfonicat/core/blob/main/README.md>
-
 ## Install
 
 For local development, point the seeded hosts at your Docker host:
@@ -12,19 +10,16 @@ For local development, point the seeded hosts at your Docker host:
 127.0.0.1 example.com
 127.0.0.1 project1.example.com
 ```
-
-Start from a clone:
-
 ```bash
+# clone repo
 git clone https://github.com/symfonicat/core symfonicat
-cd symfonicat
-docker compose up -d
-```
 
-Or create it with Composer on a PHP 8.4 host:
+# or
 
-```bash
+# composer w/php8.4 on host
 composer create-project symfonicat/core symfonicat
+
+# init
 cd symfonicat
 docker compose up -d
 ```
@@ -37,27 +32,6 @@ After the stack is up:
 docker exec -it php bin/console symfonicat:admin:create <username>
 docker exec -it php bin/console symfonicat:schema:update
 ```
-
-## Data Model
-
-Symfonicat owns these tables:
-
-- `symfonicat_admin`
-- `symfonicat_application`
-- `symfonicat_application_env`
-- `symfonicat_domain`
-- `symfonicat_domain_env`
-- `symfonicat_electron`
-- `symfonicat_electron_env`
-- `symfonicat_env`
-- `symfonicat_env_parent`
-- `symfonicat_module`
-- `symfonicat_project`
-- `symfonicat_project_env`
-- `symfonicat_routing_rule`
-
-`Application.id`, `Domain.id`, `Env.id`, `EnvParent.id`, `Module.id`, and `Project.id` are string identifiers. `Project.id` and `Module.id` are immutable once created.
-
 ## Public Runtime
 
 Runtime resolution is layered:
@@ -74,11 +48,9 @@ The default public routes are:
 - `/{path}` for the project shell when a project subdomain is active
 - `/application/{id}/{path}` as the internal application entry route used to render an application and redirect client-side history to its public rule-backed path
 
-Package-owned Symfony route names are prefixed with `symfonicat_`.
+Symfonicat-owned Symfony route and table names are prefixed with `symfonicat_`.
 
 ## Routing Rules
-
-`RoutingRule.arguments` is an ordered list of regex path segments. The list is joined with `/` and matched against the full request path. Reserved arguments live in `RoutingRule::RESERVED_ARGUMENTS`; `admin`, `m`, and `application` are reserved.
 
 Supported rule types:
 
@@ -93,8 +65,6 @@ Application rules use `applicationType`:
 - `arguments`: use the regex argument list
 - `route`: use `RoutingRule.route` as the Symfony route name
 
-`path_application('test')`, `path_application(application)`, and `path('symfonicat_application', {id: 'test'})` all resolve through the application routing rule, not the internal `/application/{id}` path.
-
 ## Env
 
 Env is grouped by `EnvParent`, with leaf keys stored in `Env`.
@@ -108,12 +78,6 @@ Runtime precedence is:
 
 Project values overwrite domain values, domain values overwrite application values, and Electron values overwrite the merged result only when the current request is running in Electron.
 
-Twig uses dotted lookups such as:
-
-```twig
-{{ env('colors.primary') }}
-```
-
 The same grouped structure is emitted directly into `window.env`:
 
 ```js
@@ -126,6 +90,16 @@ window.env = {
 
 Scoped env forms on domains, projects, and applications filter the env dropdown by the selected env parent and restore the saved parent when editing existing rows.
 Electron rows use the same scoped env collection UI, and Electron env values override all lower layers for Electron requests only.
+
+There is also `EnvService` for env lookups. Use `->get($id, $entity)` or `->all($entity)` and omit `$entity` to let the other retrieval services pull the correct env values for the URL you're using it for.
+
+## Twig
+
+Twig, for the `env` helper, uses dotted lookups such as:
+
+```twig
+{{ env('colors.primary') }}
+```
 
 ## Assets
 
@@ -142,13 +116,6 @@ Public assets live on:
 - `assets/stimulus.js`
 - `assets/controllers.json`
 - `assets/controllers/`
-
-Admin assets live on:
-
-- `assets/symfonicat_admin.js`
-- `assets/stimulus_admin.js`
-- `assets/controllers_admin.json`
-- `assets/controllers_admin/`
 
 Admin-only JavaScript belongs on the admin asset stack.
 
@@ -170,32 +137,13 @@ The base layout also writes `window.electron` from the Twig `electron` global. T
 
 ## Admin
 
-Admin is isolated from any host user system and uses its own `Admin` entity plus Symfony security and TOTP MFA.
-
-CRUD surfaces:
-
-- `/admin/a*` for applications
-- `/admin/d*` for domains
-- `/admin/e*` for Electron rows
-- `/admin/env*` for env parents and env keys
-- `/admin/p*` for projects
-- `/admin/r*` for routing rules
+Admin is isolated from any host user system and uses its own `Admin` entity plus Symfony security and TOTP MFA at `/admin`.
 
 Modules do not have admin CRUD. Module rows are synchronized from `assets/modules/{id}/package.json`.
-
-Useful commands:
-
-```bash
-docker exec -it php bin/console symfonicat:admin:create <username>
-docker exec php bin/console symfonicat:admin:delete <username>
-```
 
 `symfonicat:admin:create` prompts for the password with hidden input, so Docker usage should include `-it`.
 
 ## Electron
-
-Electron rows are managed from `/admin/e`.
-Create and edit stay on the row path, and deletes post to a dedicated `/admin/e/{id}/delete` endpoint so Electron row deletes do not collide with the edit form submit.
 
 Each `Electron` row has:
 
@@ -207,8 +155,6 @@ Each `Electron` row has:
 
 For project Electron rows, `targetId` is `projectId.domainId`.
 That same `projectId.domainId` target id is used for both override templates and build output paths.
-
-The Electron index shows that favicon path without the leading `electron/favicon/` prefix.
 
 The admin form shows only the relation field that matches the selected type, except project rows which show both the project and domain selectors.
 
@@ -259,13 +205,3 @@ Run schema sync with an interactive terminal when confirmations may be needed:
 ```bash
 docker exec -it php bin/console symfonicat:schema:update
 ```
-
-## Other Commands
-
-Important commands include:
-
-- `symfonicat:bootstrap`
-- `symfonicat:data:webpack`
-- `symfonicat:electron:build`
-- `symfonicat:public-suffix:refresh`
-- `symfonicat:redis:debug`
