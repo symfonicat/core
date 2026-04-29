@@ -106,6 +106,9 @@ There is also a `path_application` helper that works like this:
 {# https://example.com/symfony/*/test #}
 {{ path_application(application) }}
 
+{# https://example.com/symfony/PARAM/test #}
+{{ path_application(application, ['PARAM']) }}
+
 {# https://example.com/symfony/*/test/somepath/testpath #}
 {{ path_application(application, 'somepath/testpath') }}
 
