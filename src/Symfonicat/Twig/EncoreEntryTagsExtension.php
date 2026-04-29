@@ -117,7 +117,7 @@ final class EncoreEntryTagsExtension extends AbstractExtension
     {
         $id = trim((string) $application?->getId());
 
-        return $id === '' ? null : 'application/'.$id;
+        return $id === '' ? null : 'applications/'.$id;
     }
 
     private function projectEntryName(?Project $project): ?string

@@ -63,7 +63,7 @@ module.exports = function configureSymfonicat(Encore, options = __dirname) {
             return;
         }
 
-        Encore.addEntry('application/' + applicationId, `./assets/applications/${applicationId}/index.js`);
+        Encore.addEntry('applications/' + applicationId, `./assets/applications/${applicationId}/index.js`);
     });
 
     moduleData.projects.forEach((projectId) => {

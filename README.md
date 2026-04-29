@@ -100,12 +100,27 @@ Twig, for the `env` helper, uses dotted lookups such as:
 ```twig
 {{ env('colors.primary') }}
 ```
+There is also a `path_application` helper that works like this:
+
+```twig
+{# https://example.com/symfony/*/test #}
+{{ path_application(application) }}
+
+{# https://example.com/symfony/*/test/somepath/testpath #}
+{{ path_application(application, 'somepath/testpath') }}
+
+{# https://example.com/symfony/PARAM/test/somepath/testpath #}
+{{ path_application(application, 'somepath/testpath', ['PARAM']) }}
+
+{# application ID also works #}
+{{ path_application('test', 'somepath/testpath', ['PARAM']) }}
+```
 
 ## Assets
 
 Webpack entry discovery is driven by `symfonicat:data:webpack`, with database-backed rows and filesystem fallback:
 
-- `assets/applications/{id}` -> `application/{id}`
+- `assets/applications/{id}` -> `applications/{id}`
 - `assets/domains/{id}` -> `domains/{id}`
 - `assets/projects/{id}` -> `projects/{id}`
 - `assets/modules/{id}` -> `modules/{id}`
@@ -117,7 +132,7 @@ Public assets live on:
 - `assets/controllers.json`
 - `assets/controllers/`
 
-Admin-only JavaScript belongs on the admin asset stack.
+Admin-only JavaScript belongs on the admin asset stack, `assets/*_admin*`.
 
 ## Module Runtime
 
