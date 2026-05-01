@@ -44,7 +44,7 @@ final class DomainController extends AbstractController
         ]);
     }
 
-    #[Route('/admin/d/{id}/edit', name: 'symfonicat_domain_edit', methods: ['GET', 'POST'])]
+    #[Route('/admin/d/{id}/edit', name: 'symfonicat_domain_edit', methods: ['GET', 'POST'], requirements: ['id' => '.+'])]
     public function edit(Request $request, string $id, DomainRepository $domainRepository, EntityManagerInterface $entityManager): Response
     {
         $domain = $domainRepository->find($id);
@@ -68,7 +68,7 @@ final class DomainController extends AbstractController
         ]);
     }
 
-    #[Route('/admin/d/{id}', name: 'symfonicat_domain_delete', methods: ['POST'])]
+    #[Route('/admin/d/{id}', name: 'symfonicat_domain_delete', methods: ['POST'], requirements: ['id' => '.+'])]
     public function delete(Request $request, string $id, DomainRepository $domainRepository, EntityManagerInterface $entityManager): Response
     {
         $domain = $domainRepository->find($id);
