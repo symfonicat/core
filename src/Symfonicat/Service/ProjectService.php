@@ -17,7 +17,7 @@ class ProjectService
         private readonly SubdomainService $subdomainService,
         private readonly ProjectRepository $projectRepository,
         private readonly EntityManagerInterface $entityManager,
-        private readonly string $projectDir,
+        private readonly PackageDiscoveryService $packageDiscoveryService,
 
     ) {
     }
@@ -45,10 +45,10 @@ class ProjectService
      */
     public function sync(?callable $confirmProjectCreation = null): array
     {
-        $filesystemProjects = $this->discoverFilesystemProjects();
+        $packageProjects = $this->discoverPackageProjects();
         $databaseProjects = $this->indexDatabaseProjects();
 
-        $missingProjectIds = array_values(array_diff($filesystemProjects, array_keys($databaseProjects)));
+        $missingProjectIds = array_values(array_diff($packageProjects, array_keys($databaseProjects)));
         sort($missingProjectIds, SORT_STRING);
 
         if ($missingProjectIds === []) {
@@ -76,12 +76,9 @@ class ProjectService
     /**
      * @return list<string>
      */
-    private function discoverFilesystemProjects(): array
+    private function discoverPackageProjects(): array
     {
-        $projectDirectories = glob($this->projectDir.'/assets/projects/*', GLOB_ONLYDIR) ?: [];
-        sort($projectDirectories, SORT_STRING);
-
-        return array_values(array_map('basename', $projectDirectories));
+        return array_keys($this->packageDiscoveryService->discoverEntryDirectories('projects'));
     }
 
     /**

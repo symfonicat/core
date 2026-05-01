@@ -48,6 +48,7 @@ final class BootstrapCommandTest extends SymfonicatKernelTestCase
         self::assertInstanceOf(Module::class, $analytics);
         self::assertInstanceOf(Electron::class, $electron);
         self::assertSame('Analytics', $analytics->getName());
+        self::assertSame('analytics', $analytics->getPackage());
         self::assertInstanceOf(EnvParent::class, $envParent);
         self::assertInstanceOf(Env::class, $color);
         self::assertSame('colors', $color->getEnvParent()?->getId());

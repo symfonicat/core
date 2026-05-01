@@ -83,7 +83,7 @@ These instructions apply to the main app repo at `/home/t/www/symfonicat/core`.
 - Asset source lives at `assets`
 - Build target remains `public/build`
 - `webpack.symfonicat.js` defines the package entrypoints and is the source of truth for how frontend bundles are wired.
-- `symfonicat:data:webpack` is the canonical webpack data source for domain/project/module entries, with filesystem fallback under `assets/...`
+- `symfonicat:data:webpack` is the canonical webpack data source for domain/project/module entries, discovering package-owned entries from the root `symfonicat/core` package plus installed `symfonicat/*` packages.
 - Public runtime/frontend work should use the public asset stack:
   - `assets/symfonicat.js`
   - `assets/stimulus.js`

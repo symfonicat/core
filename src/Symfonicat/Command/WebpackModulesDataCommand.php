@@ -6,6 +6,7 @@ use Symfonicat\Repository\ApplicationRepository;
 use Symfonicat\Repository\DomainRepository;
 use Symfonicat\Repository\ModuleRepository;
 use Symfonicat\Repository\ProjectRepository;
+use Symfonicat\Service\PackageDiscoveryService;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -13,7 +14,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 #[AsCommand(
     name: 'symfonicat:data:webpack',
-    description: 'Output application, domain, project, and module data for webpack.',
+    description: 'Output application, domain, project, and module package entry data for webpack.',
 )]
 final class WebpackModulesDataCommand extends Command
 {
@@ -22,7 +23,7 @@ final class WebpackModulesDataCommand extends Command
         private readonly DomainRepository $domainRepository,
         private readonly ModuleRepository $moduleRepository,
         private readonly ProjectRepository $projectRepository,
-        private readonly string $projectDir,
+        private readonly PackageDiscoveryService $packageDiscoveryService,
     ) {
         parent::__construct();
     }
@@ -30,21 +31,21 @@ final class WebpackModulesDataCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $output->writeln(json_encode([
-            'applications' => $this->idsFromRepositoryOrAssets(
+            'applications' => $this->entriesFromRepositoryOrPackages(
                 fn (): array => $this->applicationRepository->findAll(),
-                'assets/applications',
+                'applications',
             ),
-            'modules' => $this->idsFromRepositoryOrAssets(
+            'modules' => $this->entriesFromRepositoryOrPackages(
                 fn (): array => $this->moduleRepository->findAll(),
-                'assets/modules',
+                'modules',
             ),
-            'domains' => $this->idsFromRepositoryOrAssets(
+            'domains' => $this->entriesFromRepositoryOrPackages(
                 fn (): array => $this->domainRepository->findAll(),
-                'assets/domains',
+                'domains',
             ),
-            'projects' => $this->idsFromRepositoryOrAssets(
+            'projects' => $this->entriesFromRepositoryOrPackages(
                 fn (): array => $this->projectRepository->findAll(),
-                'assets/projects',
+                'projects',
             ),
         ], JSON_THROW_ON_ERROR));
 
@@ -54,10 +55,17 @@ final class WebpackModulesDataCommand extends Command
     /**
      * @param callable(): iterable<object> $loader
      *
-     * @return list<string>
+     * @return list<array{
+     *     entry: string,
+     *     id: string,
+     *     package: string,
+     *     packageName: string
+     * }>
      */
-    private function idsFromRepositoryOrAssets(callable $loader, string $assetDirectory): array
+    private function entriesFromRepositoryOrPackages(callable $loader, string $type): array
     {
+        $entries = $this->packageDiscoveryService->discoverEntryDirectories($type);
+
         try {
             $ids = [];
 
@@ -75,22 +83,61 @@ final class WebpackModulesDataCommand extends Command
             $ids = array_values(array_unique($ids));
             sort($ids, SORT_STRING);
 
-            return $ids;
+            $resolvedEntries = [];
+
+            foreach ($ids as $id) {
+                $entry = $entries[$id] ?? null;
+                if ($entry === null || !is_file($entry['entry'])) {
+                    continue;
+                }
+
+                $resolvedEntries[] = [
+                    'entry' => $entry['entry'],
+                    'id' => $entry['id'],
+                    'package' => $entry['package'],
+                    'packageName' => $entry['packageName'],
+                ];
+            }
+
+            return $resolvedEntries;
         } catch (\Throwable) {
-            return $this->idsFromAssets($assetDirectory);
+            return $this->entriesFromPackages($entries);
         }
     }
 
     /**
-     * @return list<string>
+     * @param array<string, array{
+     *     directory: string,
+     *     entry: string,
+     *     id: string,
+     *     package: string,
+     *     packageName: string
+     * }> $entries
+     *
+     * @return list<array{
+     *     entry: string,
+     *     id: string,
+     *     package: string,
+     *     packageName: string
+     * }>
      */
-    private function idsFromAssets(string $assetDirectory): array
+    private function entriesFromPackages(array $entries): array
     {
-        $directories = glob($this->projectDir.'/'.$assetDirectory.'/*', GLOB_ONLYDIR) ?: [];
-        $ids = array_map('basename', $directories);
-        $ids = array_values(array_unique($ids));
-        sort($ids, SORT_STRING);
+        $resolvedEntries = [];
 
-        return $ids;
+        foreach ($entries as $entry) {
+            if (!is_file($entry['entry'])) {
+                continue;
+            }
+
+            $resolvedEntries[] = [
+                'entry' => $entry['entry'],
+                'id' => $entry['id'],
+                'package' => $entry['package'],
+                'packageName' => $entry['packageName'],
+            ];
+        }
+
+        return $resolvedEntries;
     }
 }

@@ -1,3 +1,6 @@
+imports:
+    - { resource: '../vendor/symfonicat/*/config/services.yaml', ignore_errors: true }
+
 parameters:
 
 services:
@@ -23,7 +26,7 @@ services:
         arguments:
             $projectDir: '%kernel.project_dir%'
 
-    Symfonicat\Service\ModuleService:
+    Symfonicat\Service\PackageDiscoveryService:
         arguments:
             $projectDir: '%kernel.project_dir%'
 
@@ -31,20 +34,11 @@ services:
         arguments:
             $appSecret: '%kernel.secret%'
             $frameworkRouter: '@Symfonicat\Routing\ApplicationRouter.inner'
-            $projectDir: '%kernel.project_dir%'
-
-    Symfonicat\Service\ProjectService:
-        arguments:
-            $projectDir: '%kernel.project_dir%'
 
     Symfonicat\Routing\ApplicationRouter:
         decorates: 'router.default'
         arguments:
             $inner: '@Symfonicat\Routing\ApplicationRouter.inner'
-
-    Symfonicat\Command\WebpackModulesDataCommand:
-        arguments:
-            $projectDir: '%kernel.project_dir%'
 
     Symfonicat\Service\SubdomainService:
         arguments:

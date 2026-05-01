@@ -13,6 +13,7 @@ use Symfonicat\Repository\ModuleRepository;
 use Symfonicat\Repository\ProjectRepository;
 use Symfonicat\Service\DomainService;
 use Symfonicat\Service\ModuleService;
+use Symfonicat\Service\PackageDiscoveryService;
 use Symfonicat\Service\PathService;
 use Symfonicat\Service\ProjectService;
 use Symfonicat\Service\SubdomainService;
@@ -139,7 +140,9 @@ final class AbstractModuleControllerTest extends TestCase
 
         $domainRepository = $this->createStub(DomainRepository::class);
         $domainRepository->method('find')->willReturn($domain);
-        $domainService = new DomainService($projectDir, $requestStack, $domainRepository);
+        $packageDiscoveryService = new PackageDiscoveryService($projectDir);
+        $entityManager = $this->createStub(EntityManagerInterface::class);
+        $domainService = new DomainService($projectDir, $requestStack, $domainRepository, $entityManager, $packageDiscoveryService);
 
         $projectRepository = $this->createStub(ProjectRepository::class);
         $projectRepository->method('find')->willReturn($project);
@@ -149,8 +152,8 @@ final class AbstractModuleControllerTest extends TestCase
             $domainService,
             $subdomainService,
             $projectRepository,
-            $this->createStub(EntityManagerInterface::class),
-            $projectDir,
+            $entityManager,
+            $packageDiscoveryService,
         );
 
         $pathService = new PathService($requestStack);
@@ -160,8 +163,8 @@ final class AbstractModuleControllerTest extends TestCase
             $requestStack,
             $pathService,
             $moduleRepository,
-            $this->createStub(EntityManagerInterface::class),
-            $projectDir,
+            $entityManager,
+            $packageDiscoveryService,
         );
 
         return new class($domainService, $moduleService, $projectService, $pathService) extends AbstractModuleController {

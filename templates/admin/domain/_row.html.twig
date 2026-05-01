@@ -1,5 +1,5 @@
 <tr id="domain_{{ domain.id }}" class="btn-row">
-    <td class="fw-semibold"><a href="{{ app.request.scheme }}://{{ domain.id }}">{{ domain.id }}</a></td>
+    <td class="fw-semibold"><a href="{{ app.request.scheme }}://{{ domain.id | split('/')[1] }}">{{ domain.id }}</a></td>
     <td>
         {% for project in domain.projects %}
             <a href="{{ path('symfonicat_project_edit', {'id': project.id}) }}">{{ project.name }}</a>{% if not loop.last %}, {% endif %}

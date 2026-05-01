@@ -119,11 +119,12 @@ trait DatabaseFixtureTrait
         return $project;
     }
 
-    protected function createModule(string $id, string $name): Module
+    protected function createModule(string $id, string $name, ?string $package = null): Module
     {
         $module = (new Module())
             ->setId($id)
-            ->setName($name);
+            ->setName($name)
+            ->setPackage($package ?? $id);
 
         $this->entityManager()->persist($module);
         $this->entityManager()->flush();

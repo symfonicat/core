@@ -4,6 +4,7 @@ namespace Symfonicat\Command;
 
 use Symfonicat\Service\ApplicationService;
 use Symfonicat\Entity\Module;
+use Symfonicat\Service\DomainService;
 use Symfonicat\Service\ModuleService;
 use Symfonicat\Service\ProjectService;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -14,12 +15,13 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
     name: 'symfonicat:schema:update',
-    description: 'Synchronize filesystem modules, applications, and projects with database rows.',
+    description: 'Synchronize installed symfonicat/* package entries with database rows.',
 )]
 final class SchemaUpdateCommand extends Command
 {
     public function __construct(
         private readonly ApplicationService $applicationService,
+        private readonly DomainService $domainService,
         private readonly ModuleService $moduleService,
         private readonly ProjectService $projectService,
     ) {
@@ -33,7 +35,7 @@ final class SchemaUpdateCommand extends Command
         try {
             $moduleResult = $this->moduleService->sync(function (Module $module, array $references) use ($input, $io): bool {
                 $io->warning(sprintf(
-                    'Module "%s" no longer exists under assets/modules and still has referencing entity rows.',
+                    'Module "%s" is no longer provided by an installed Symfonicat package and still has referencing entity rows.',
                     $module->getId(),
                 ));
 
@@ -58,10 +60,20 @@ final class SchemaUpdateCommand extends Command
                 );
             });
 
+            $domainResult = $this->domainService->sync(function (array $domainIds) use ($input, $io): bool {
+                $io->section('Missing domains');
+                $io->listing(array_map(
+                    static fn (string $domainId): string => sprintf('%s from installed Symfonicat package assets', $domainId),
+                    $domainIds,
+                ));
+
+                return $this->confirmRequired($input, $io, 'Create these domain rows?', false);
+            });
+
             $applicationResult = $this->applicationService->sync(function (array $applicationIds) use ($input, $io): bool {
                 $io->section('Missing applications');
                 $io->listing(array_map(
-                    static fn (string $applicationId): string => sprintf('%s from assets/applications/%s', $applicationId, $applicationId),
+                    static fn (string $applicationId): string => sprintf('%s from installed Symfonicat package assets', $applicationId),
                     $applicationIds,
                 ));
 
@@ -71,7 +83,7 @@ final class SchemaUpdateCommand extends Command
             $projectResult = $this->projectService->sync(function (array $projectIds) use ($input, $io): bool {
                 $io->section('Missing projects');
                 $io->listing(array_map(
-                    static fn (string $projectId): string => sprintf('%s from assets/projects/%s', $projectId, $projectId),
+                    static fn (string $projectId): string => sprintf('%s from installed Symfonicat package assets', $projectId),
                     $projectIds,
                 ));
 
@@ -94,7 +106,7 @@ final class SchemaUpdateCommand extends Command
         if ($moduleResult['updated'] !== []) {
             $io->section('Updated modules');
             $io->listing(array_map(
-                static fn (array $module): string => sprintf('%s: "%s" -> "%s"', $module['id'], $module['from'], $module['to']),
+                static fn (array $module): string => sprintf('%s %s: "%s" -> "%s"', $module['id'], $module['field'], $module['from'], $module['to']),
                 $moduleResult['updated'],
             ));
         }
@@ -127,6 +139,14 @@ final class SchemaUpdateCommand extends Command
             ));
         }
 
+        if ($domainResult['created'] !== []) {
+            $io->section('Created domains');
+            $io->listing(array_map(
+                static fn (array $domain): string => $domain['id'],
+                $domainResult['created'],
+            ));
+        }
+
         if ($projectResult['created'] !== []) {
             $io->section('Created projects');
             $io->listing(array_map(
@@ -140,14 +160,15 @@ final class SchemaUpdateCommand extends Command
             && $moduleResult['updated'] === []
             && $moduleResult['deleted'] === []
             && $applicationResult['created'] === []
+            && $domainResult['created'] === []
             && $projectResult['created'] === []
         ) {
-            $io->success('Module, application, and project rows already match filesystem assets.');
+            $io->success('Module, application, domain, and project rows already match installed Symfonicat packages.');
 
             return Command::SUCCESS;
         }
 
-        $io->success('Module, application, and project rows synchronized from filesystem assets.');
+        $io->success('Module, application, domain, and project rows synchronized from installed Symfonicat packages.');
 
         return Command::SUCCESS;
     }

@@ -8,15 +8,15 @@ use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Component\Console\Tester\CommandTester;
 
 /**
- * End-to-end coverage of the filesystem ⇆ database module sync command.
+ * End-to-end coverage of the installed-package ⇆ database module sync command.
  *
- * The command is the contract between assets/modules/* (developer-authored)
+ * The command is the contract between installed symfonicat/* packages
  * and the symfonicat_module table (runtime-authoritative). These tests make
  * sure that contract holds for the three transitions that matter in practice:
- *   - filesystem module with no matching row -> row is created
- *   - package.json name change              -> row is updated
- *   - row with no filesystem module         -> row is deleted (or blocked if
- *                                               rows still reference it)
+ *   - package-provided module with no matching row -> row is created
+ *   - package metadata change                      -> row is updated
+ *   - row with no backing package                  -> row is deleted (or blocked
+ *                                                     if rows still reference it)
  */
 final class SchemaUpdateCommandTest extends SymfonicatKernelTestCase
 {
@@ -32,6 +32,7 @@ final class SchemaUpdateCommandTest extends SymfonicatKernelTestCase
         $analytics = $em->getRepository(Module::class)->find('analytics');
         self::assertInstanceOf(Module::class, $analytics);
         self::assertSame('Analytics', $analytics->getName());
+        self::assertSame('analytics', $analytics->getPackage());
     }
 
     public function testUpdatesRowNameWhenPackageJsonNameDivergesFromDatabase(): void
@@ -45,13 +46,14 @@ final class SchemaUpdateCommandTest extends SymfonicatKernelTestCase
         $analytics = $this->entityManager()->getRepository(Module::class)->find('analytics');
 
         self::assertInstanceOf(Module::class, $analytics);
-        self::assertSame('Analytics', $analytics->getName(), 'package.json "name" should win over the database row');
+        self::assertSame('Analytics', $analytics->getName(), 'package metadata "name" should win over the database row');
+        self::assertSame('analytics', $analytics->getPackage());
         self::assertStringContainsString('Updated modules', $tester->getDisplay());
     }
 
     public function testRemovesUnreferencedRowsThatNoLongerExistOnDisk(): void
     {
-        // An orphan module — exists in the DB, no corresponding assets/modules/* dir.
+        // An orphan module — exists in the DB, no corresponding installed symfonicat/* package module.
         $this->createModule('orphan', 'Orphan Module');
 
         $tester = $this->runCommand();
@@ -81,8 +83,8 @@ final class SchemaUpdateCommandTest extends SymfonicatKernelTestCase
         $application->setAutoExit(false);
         $command = $application->find('symfonicat:schema:update');
         $tester = new CommandTester($command);
-        // Schema update now requires confirmation when creating application/project rows.
-        $tester->setInputs(['yes', 'yes']);
+        // Schema update now requires confirmation when creating domain/application/project rows.
+        $tester->setInputs(['yes', 'yes', 'yes']);
         $tester->execute([], ['interactive' => true]);
 
         return $tester;

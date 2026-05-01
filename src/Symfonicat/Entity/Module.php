@@ -18,6 +18,9 @@ class Module
     #[ORM\Column(length: 255)]
     private ?string $name = null;
 
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $package = null;
+
     /**
      * @var Collection<int, Project>
      */
@@ -72,6 +75,19 @@ class Module
     public function setName(string $name): static
     {
         $this->name = $name;
+
+        return $this;
+    }
+
+    public function getPackage(): ?string
+    {
+        return $this->package;
+    }
+
+    public function setPackage(?string $package): static
+    {
+        $package = $package === null ? null : trim($package);
+        $this->package = $package === '' ? null : $package;
 
         return $this;
     }

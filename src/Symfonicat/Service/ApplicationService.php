@@ -25,8 +25,8 @@ class ApplicationService
         private readonly RequestStack $requestStack,
         private readonly RouterInterface $frameworkRouter,
         private readonly RoutingRuleService $routingRuleService,
+        private readonly PackageDiscoveryService $packageDiscoveryService,
         private readonly string $appSecret,
-        private readonly string $projectDir,
     ) {
     }
 
@@ -210,10 +210,10 @@ class ApplicationService
      */
     public function sync(?callable $confirmApplicationCreation = null): array
     {
-        $filesystemApplications = $this->discoverFilesystemApplications();
+        $packageApplications = $this->discoverPackageApplications();
         $databaseApplications = $this->indexDatabaseApplications();
 
-        $missingApplicationIds = array_values(array_diff($filesystemApplications, array_keys($databaseApplications)));
+        $missingApplicationIds = array_values(array_diff($packageApplications, array_keys($databaseApplications)));
         sort($missingApplicationIds, SORT_STRING);
 
         if ($missingApplicationIds === []) {
@@ -241,12 +241,9 @@ class ApplicationService
     /**
      * @return list<string>
      */
-    private function discoverFilesystemApplications(): array
+    private function discoverPackageApplications(): array
     {
-        $applicationDirectories = glob($this->projectDir.'/assets/applications/*', GLOB_ONLYDIR) ?: [];
-        sort($applicationDirectories, SORT_STRING);
-
-        return array_values(array_map('basename', $applicationDirectories));
+        return array_keys($this->packageDiscoveryService->discoverEntryDirectories('applications'));
     }
 
     /**
