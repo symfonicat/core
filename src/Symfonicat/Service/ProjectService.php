@@ -30,11 +30,43 @@ class ProjectService
             return null;
         }
 
+        // First try the literal project id (e.g. "project1") so explicitly
+        // created DB rows win over any package-prefixed discovery.
         if ($domain) {
-            return $this->projectRepository->findOneByIdForDomain($projectId, $domain->getId());
+            $found = $this->projectRepository->findOneByIdForDomain($projectId, $domain->getId());
+            if ($found) {
+                return $found;
+            }
+        } else {
+            $found = $this->projectRepository->find($projectId);
+            if ($found) {
+                return $found;
+            }
         }
 
-        return $this->projectRepository->find($projectId);
+        // If the literal id didn't match, resolve short subdomain names like
+        // "project1" to package-prefixed project ids such as "core/project1"
+        // when there is exactly one match among discovered package entries.
+        if (strpos($projectId, '/') === false) {
+            $packages = $this->packageDiscoveryService->discoverEntryDirectories('projects');
+            $matches = [];
+            foreach (array_keys($packages) as $pkgId) {
+                $parts = explode('/', $pkgId);
+                if (end($parts) === $projectId) {
+                    $matches[] = $pkgId;
+                }
+            }
+            if (count($matches) === 1) {
+                $resolved = $matches[0];
+                if ($domain) {
+                    return $this->projectRepository->findOneByIdForDomain($resolved, $domain->getId());
+                }
+
+                return $this->projectRepository->find($resolved);
+            }
+        }
+
+        return null;
 
     }
 
