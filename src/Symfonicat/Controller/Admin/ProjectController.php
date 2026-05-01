@@ -24,7 +24,7 @@ final class ProjectController extends AbstractController
         ]);
     }
 
-    #[Route('/admin/p/{id}', name: 'symfonicat_project_edit', methods: ['GET', 'POST'])]
+    #[Route('/admin/p/{id}', name: 'symfonicat_project_edit', methods: ['GET', 'POST'], requirements: ['id' => '.+'])]
     public function edit(
         Request $request,
         string $id,
