@@ -211,33 +211,33 @@ final class BootstrapCommand extends Command
             $updatedEnv = true;
         }
 
-        $localhost = $this->domainRepository->find('localhost');
+        $localhost = $this->domainRepository->find('core/localhost');
         $createdLocalhost = false;
         if (!$localhost instanceof Domain) {
             $localhost = (new Domain())
-                ->setId('localhost');
+                ->setId('core/localhost');
 
             $this->entityManager->persist($localhost);
             $createdLocalhost = true;
         }
 
-        $exampleDomain = $this->domainRepository->find('example.com');
+        $exampleDomain = $this->domainRepository->find('core/example.com');
         $createdExampleDomain = false;
         if (!$exampleDomain instanceof Domain) {
             $exampleDomain = (new Domain())
-                ->setId('example.com');
+                ->setId('core/example.com');
 
             $this->entityManager->persist($exampleDomain);
             $createdExampleDomain = true;
         }
 
-        $project = $this->projectRepository->find('project1');
+        $project = $this->projectRepository->find('core/project1');
         $createdProject = false;
         $updatedProject = false;
 
         if (!$project instanceof Project) {
             $project = (new Project())
-                ->setId('project1')
+                ->setId('core/project1')
                 ->setName('Project 1');
 
             $this->entityManager->persist($project);
@@ -494,12 +494,12 @@ final class BootstrapCommand extends Command
      */
     private function ensureTestApplication(): array
     {
-        $application = $this->applicationRepository->find('test');
+        $application = $this->applicationRepository->find('core/test');
         $created = false;
 
         if (!$application instanceof Application) {
             $application = (new Application())
-                ->setId('test');
+                ->setId('core/test');
 
             $this->entityManager->persist($application);
             $created = true;
