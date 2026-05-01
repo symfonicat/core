@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "59f43aebbae5c4698886de004b74a177",
+    "content-hash": "612a87c65990ef84a3c7bac6e7f6ff77",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -1881,16 +1881,16 @@
         },
         {
             "name": "symfonicat/analytics",
-            "version": "v1.0.3",
+            "version": "v1.0.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfonicat/analytics.git",
-                "reference": "b03d67ce6f913eeca0027972ccc3678f62a67cb1"
+                "reference": "fa30e2c9a5d93701352a9d5a090d2dc5ccfbc08f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfonicat/analytics/zipball/b03d67ce6f913eeca0027972ccc3678f62a67cb1",
-                "reference": "b03d67ce6f913eeca0027972ccc3678f62a67cb1",
+                "url": "https://api.github.com/repos/symfonicat/analytics/zipball/fa30e2c9a5d93701352a9d5a090d2dc5ccfbc08f",
+                "reference": "fa30e2c9a5d93701352a9d5a090d2dc5ccfbc08f",
                 "shasum": ""
             },
             "require": {
@@ -1914,9 +1914,9 @@
             "description": "Analytics package for Symfonicat.",
             "support": {
                 "issues": "https://github.com/symfonicat/analytics/issues",
-                "source": "https://github.com/symfonicat/analytics/tree/v1.0.3"
+                "source": "https://github.com/symfonicat/analytics/tree/v1.0.4"
             },
-            "time": "2026-05-01T03:34:13+00:00"
+            "time": "2026-05-01T04:51:02+00:00"
         },
         {
             "name": "symfony/asset",
