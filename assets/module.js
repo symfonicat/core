@@ -3,9 +3,19 @@ function trimSlashes(value = '') {
 }
 
 function buildModulePath(moduleName, path = '') {
-    const moduleSlug = trimSlashes(moduleName);
-    if (moduleSlug === '') {
+    const raw = trimSlashes(moduleName);
+    if (raw === '') {
         throw new Error('Missing module name.');
+    }
+
+    // Normalize vendor package names like "symfonicat/analytics" to "analytics/main",
+    // and preserve existing "analytics/main" or simple "analytics" names.
+    let moduleSlug = raw;
+    if (moduleSlug.startsWith('symfonicat/')) {
+        moduleSlug = moduleSlug.replace(/^symfonicat\//, '');
+        if (!moduleSlug.includes('/')) {
+            moduleSlug = `${moduleSlug}/main`;
+        }
     }
 
     const modulePath = trimSlashes(path);
