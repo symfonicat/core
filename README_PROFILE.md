@@ -2,7 +2,7 @@
 
 `symfonicat/core` is the full Symfonicat Symfony application. Public routing, admin CRUD, module runtime, application shells, Electron packaging, and Docker/FrankenPHP all live in this repository.
 
-The Docker `php` service installs Composer dependencies, bootstraps the schema, runs `npm install`, and runs `npm run build` automatically. The image also installs `n` and runs `n latest`, so the container uses a current Node runtime for webpack and Electron packaging. Bootstrap seeds the default domains, `project1`, the `test` application, grouped `colors.primary` env values, and an `Example Test` Electron row for `example.com` with its own Electron env override.
+The Docker `php` service installs Composer dependencies, bootstraps the schema, runs `npm install`, and runs `npm run build` automatically. The image also installs `n` and runs `n latest`, so the container uses a current Node runtime for webpack and Electron packaging. Bootstrap now seeds package-prefixed defaults (for example `core/example.com`, `core/localhost`, `core/project1`, `core/test`) and synchronizes installed `symfonicat/*` package entries such as the `analytics/*` module before applying local seeding.
 
 ## Runtime
 
@@ -33,7 +33,8 @@ Runtime precedence is application, then domain, then project, then Electron for 
 
 ## Assets
 
-Webpack entry discovery comes from `symfonicat:data:webpack`, with database-backed rows and filesystem fallback under:
+Webpack entry discovery comes from `symfonicat:data:webpack`.
+It scans the root `symfonicat/core` package plus installed `symfonicat/*` packages and resolves entry files from `assets/{type}/{id}` inside each package. Discovery uses package-prefixed ids when appropriate (for example `analytics/main` or `core/example.com`) so database rows and webpack entries align.
 
 - `assets/applications/{id}`
 - `assets/domains/{id}`
@@ -94,11 +95,7 @@ The command renders `templates/electron/{type}/main.twig.js` or `templates/elect
 
 ## Sync
 
-`symfonicat:schema:update` synchronizes:
-
-- modules from `assets/modules/{id}/package.json`
-- applications from `assets/applications/{id}`
-- projects from `assets/projects/{id}`
+`symfonicat:schema:update` synchronizes discovered package entries into database rows (modules, domains, applications, projects). Discovery emits package-prefixed ids when appropriate (for example `analytics/main` or `core/example.com`) and `symfonicat:schema:update` will create, update, or delete rows to match installed `symfonicat/*` package assets.
 
 Run it interactively when confirmation may be required:
 

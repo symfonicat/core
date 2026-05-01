@@ -121,12 +121,13 @@ There is also a `path_application` helper that works like this:
 
 ## Assets
 
-Webpack entry discovery is driven by `symfonicat:data:webpack`, with database-backed rows and filesystem fallback:
+Webpack entry discovery is driven by `symfonicat:data:webpack`.
+It scans the root `symfonicat/core` package plus any installed `symfonicat/*` packages and resolves entry files from `assets/{type}/{id}` inside each package. Note: discovered entry IDs are package-prefixed when appropriate (for example `analytics/main` or `core/example.com`) so the database stores package-qualified ids and the webpack data pipeline emits matching ids.
 
-- `assets/applications/{id}` -> `applications/{id}`
-- `assets/domains/{id}` -> `domains/{id}`
-- `assets/projects/{id}` -> `projects/{id}`
-- `assets/modules/{id}` -> `modules/{id}`
+- `assets/applications/{id}`
+- `assets/domains/{id}`
+- `assets/projects/{id}`
+- `assets/modules/{id}`
 
 Public assets live on:
 
@@ -139,7 +140,7 @@ Admin-only JavaScript belongs on the admin asset stack, `assets/*_admin*`.
 
 ## Module Runtime
 
-Backend module controllers live under `/m/{id}` and should extend `Symfonicat\Controller\AbstractModuleController`.
+Backend module controllers are exposed under `/m/{id}` and also support package-prefixed module URLs such as `/m/{package}/{name}` (for example `/m/analytics/main`). Controllers should extend `Symfonicat\Controller\AbstractModuleController`.
 
 Frontend helpers from `assets/module.js` support:
 
@@ -149,7 +150,7 @@ Frontend helpers from `assets/module.js` support:
 - `''.html(path, payload)`
 - `''.log(...args)`
 
-Application shells expose a signed application request context through `application_helper()`, which writes `window.application` plus debug logs into the base layout script block. Application-backed module requests send the application id plus signed headers so `/m/{id}` can execute when the module is attached to that application.
+Application shells expose a signed application request context through `application_helper()`, which writes `window.application` plus debug logs into the base layout script block. Application-backed module requests send the application id plus signed headers so `/m/{id}` or `/m/{package}/{name}` can execute when the module is attached to that application.
 
 The base layout also writes `window.electron` from the Twig `electron` global. That value is a boolean flag indicating whether the current request is running in Electron mode.
 
@@ -157,7 +158,7 @@ The base layout also writes `window.electron` from the Twig `electron` global. T
 
 Admin is isolated from any host user system and uses its own `Admin` entity plus Symfony security and TOTP MFA at `/admin`.
 
-Modules do not have admin CRUD. Module rows are synchronized from `assets/modules/{id}/package.json`.
+Modules do not have admin CRUD. Module rows are synchronized from installed `symfonicat/*` packages, and each module row stores a `package` field derived from the package name suffix.
 
 `symfonicat:admin:create` prompts for the password with hidden input, so Docker usage should include `-it`.
 
@@ -201,24 +202,27 @@ Electron requests keep using the Twig Electron globals. When a request is flagge
 
 ## Sync and Bootstrap
 
-`symfonicat:bootstrap` seeds local defaults, including:
+`symfonicat:bootstrap` seeds local defaults (now using package-prefixed ids for seeded package-owned rows). Seeded entries include:
 
-- `localhost`
-- `example.com`
-- `project1`
-- `test` application
-- `analytics` module
-- `Example Test` Electron row bound to `example.com`
+- `core/localhost` (domain)
+- `core/example.com` (domain)
+- `core/project1` (project)
+- `core/test` (application)
+- the `analytics/*` module rows discovered from the installed `symfonicat/analytics` package (for example `analytics/main`)
+- `Example Test` Electron row bound to `core/example.com`
 - `/symfonicat/*/test*` application routing rule
 - grouped sample env values under `colors.primary`, including an Electron override of `yellow` for the seeded `Example Test` Electron row
 
-`symfonicat:schema:update` synchronizes:
+During bootstrap the command now non-interactively synchronizes installed package entries (modules, domains, applications, and projects) so package-owned rows are present before local seeding runs.
 
-- modules from `assets/modules/{id}/package.json`
-- applications from `assets/applications/{id}`
-- projects from `assets/projects/{id}`
+`symfonicat:schema:update` synchronizes discovered entries from installed `symfonicat/*` packages into database rows. Discovery uses package-prefixed ids when appropriate (for example `analytics/main` or `core/example.com`) and `symfonicat:schema:update` will create, update, or remove database rows to match installed package assets:
 
-Run schema sync with an interactive terminal when confirmations may be needed:
+- modules from installed `symfonicat/*` package `assets/modules/{id}/package.json` (emits package-prefixed ids)
+- domains from installed `symfonicat/*` package `assets/domains/{id}` (emits package-prefixed ids)
+- applications from installed `symfonicat/*` package `assets/applications/{id}` (emits package-prefixed ids)
+- projects from installed `symfonicat/*` package `assets/projects/{id}` (emits package-prefixed ids)
+
+Run schema sync with an interactive terminal when confirmations may be required:
 
 ```bash
 docker exec -it php bin/console symfonicat:schema:update
