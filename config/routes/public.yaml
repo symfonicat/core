@@ -9,7 +9,3 @@ symfonicat_public_controllers:
         - ../../src/Symfonicat/Controller/Admin/
         - ../../src/Symfonicat/Controller/MainController.php
     condition: 'not request.attributes.get("project") or not request.attributes.get("symfonicat_use_project_catch_all", true)'
-
-symfonicat_vendor_controllers:
-    resource: '../../vendor/symfonicat/*/src/Controller/*.php'
-    type: attribute

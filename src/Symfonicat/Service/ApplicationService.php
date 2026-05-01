@@ -110,7 +110,7 @@ class ApplicationService
             $path = null;
         }
 
-        $applicationId = $application instanceof Application ? (string) $application->getId() : trim((string) $application);
+        $applicationId = $application instanceof Application ? (string) $application->getId(true) : trim((string) $application);
         $applicationId = trim($applicationId);
         if ($applicationId === '') {
             throw new MissingMandatoryParametersException('The "id" parameter is required for the "symfonicat_application" route.');
@@ -147,7 +147,7 @@ class ApplicationService
 
     public function getRuleForApplication(Application|string $application, ?string $applicationType = null): ?RoutingRule
     {
-        $applicationId = $application instanceof Application ? (string) $application->getId() : trim((string) $application);
+        $applicationId = $application instanceof Application ? (string) $application->getId(true) : trim((string) $application);
         if ($applicationId === '') {
             return null;
         }
@@ -254,7 +254,7 @@ class ApplicationService
         $applications = [];
 
         foreach ($this->applicationRepository->findAllOrderedById() as $application) {
-            $applicationId = $application->getId();
+            $applicationId = $application->getId(true);
             if ($applicationId === null || $applicationId === '') {
                 continue;
             }
@@ -315,7 +315,7 @@ class ApplicationService
             return null;
         }
 
-        $application = $this->applicationRepository->find($applicationId);
+        $application = $this->applicationRepository->findOneByFullOrCleanId($applicationId);
 
         if ($application instanceof Application) {
             $request->attributes->set('application', $application);

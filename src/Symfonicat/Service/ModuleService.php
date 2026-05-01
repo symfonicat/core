@@ -22,24 +22,15 @@ final class ModuleService
 
     public function load(): mixed
     {
-        $arg0 = $this->pathService->arg(0);
-        $arg1 = $this->pathService->arg(1);
-        $arg2 = $this->pathService->arg(2);
+        $args = $this->pathService->args();
+        $arg0 = $args[0] ?? null;
+        $moduleId = implode('/', array_slice($args, 1));
 
-        if ($arg0 !== 'm' || $arg1 === NULL) {
+        if ($arg0 !== 'm' || $moduleId === '') {
             return NULL;
         }
 
-        // Support package-prefixed module ids like "analytics/main" represented in the URL as /m/analytics/main
-        if ($arg2 !== NULL) {
-            $composed = sprintf('%s/%s', $arg1, $arg2);
-            $module = $this->moduleRepository->find($composed);
-            if ($module instanceof Module) {
-                return $module;
-            }
-        }
-
-        return $this->moduleRepository->find($arg1);
+        return $this->moduleRepository->findOneByFullOrCleanId($moduleId);
     }
 
     /**
@@ -114,7 +105,7 @@ final class ModuleService
         $modules = [];
 
         foreach ($this->moduleRepository->findAllOrderedById() as $module) {
-            $moduleId = $module->getId();
+            $moduleId = $module->getId(true);
             if ($moduleId === null) {
                 continue;
             }
@@ -275,7 +266,7 @@ final class ModuleService
      */
     private function findModuleReferences(Module $module): array
     {
-        $moduleId = $module->getId();
+        $moduleId = $module->getId(true);
         if ($moduleId === null) {
             throw new \RuntimeException('Cannot synchronize a module without an id.');
         }
@@ -458,7 +449,7 @@ final class ModuleService
      */
     private function deleteModuleReferences(Module $module, array $references): void
     {
-        $moduleId = $module->getId();
+        $moduleId = $module->getId(true);
         if ($moduleId === null) {
             throw new \RuntimeException('Cannot delete references for a module without an id.');
         }

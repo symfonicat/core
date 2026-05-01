@@ -29,14 +29,18 @@ class DomainRepository extends ServiceEntityRepository
 
     public function findOneByHost(string $host): ?Domain
     {
-        $qb = $this->createQueryBuilder('domain')
-            ->andWhere('domain.id = :host')
-            ->setParameter('host', $host)
-            ->setMaxResults(1);
+        $host = trim($host);
+        if ($host === '') {
+            return null;
+        }
 
-        // Also allow package-prefixed ids that end with "/$host"
-        $qb->orWhere('domain.id LIKE :hostSuffix')
-            ->setParameter('hostSuffix', '%/'.$host);
+        $qb = $this->createQueryBuilder('domain')
+            ->andWhere('domain.id = :coreHost OR domain.id LIKE :hostSuffix')
+            ->setParameter('coreHost', 'core/'.$host)
+            ->setParameter('hostSuffix', '%/'.$host)
+            ->orderBy('CASE WHEN domain.id = :coreHost THEN 0 ELSE 1 END', 'ASC')
+            ->addOrderBy('domain.id', 'ASC')
+            ->setMaxResults(1);
 
         return $qb->getQuery()->getOneOrNullResult();
     }

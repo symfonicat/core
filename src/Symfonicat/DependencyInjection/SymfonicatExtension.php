@@ -41,8 +41,21 @@ final class SymfonicatExtension extends Extension implements PrependExtensionInt
         $config = $this->processConfiguration($configuration, $configs);
 
         $container->setParameter('symfonicat.asset_base_url', $config['asset_base_url']);
+        $vendors = array_values(array_unique(array_filter(array_map(
+            static fn (mixed $vendor): string => trim((string) $vendor),
+            $config['vendors'],
+        ))));
+        $container->setParameter('symfonicat.vendors', $vendors);
 
-        $loader = new YamlFileLoader($container, new FileLocator(dirname(__DIR__, 3).'/config'));
+        $root = dirname(__DIR__, 3);
+        $loader = new YamlFileLoader($container, new FileLocator($root.'/config'));
         $loader->load('services.yaml');
+
+        foreach ($vendors as $vendor) {
+            foreach (glob($root.'/vendor/'.trim($vendor, '/').'/*/config/services.yaml') ?: [] as $serviceConfig) {
+                $packageLoader = new YamlFileLoader($container, new FileLocator(dirname($serviceConfig)));
+                $packageLoader->load(basename($serviceConfig));
+            }
+        }
     }
 }

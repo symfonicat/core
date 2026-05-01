@@ -57,7 +57,7 @@ final class ElectronController extends AbstractController
         ]);
     }
 
-    #[Route('/admin/e/{id}', name: 'symfonicat_electron_edit', methods: ['GET', 'POST'])]
+    #[Route('/admin/e/{id}', name: 'symfonicat_electron_edit', methods: ['GET', 'POST'], requirements: ['id' => '.+'])]
     public function edit(
         Request $request,
         Electron $electron,
@@ -88,10 +88,10 @@ final class ElectronController extends AbstractController
         ]);
     }
 
-    #[Route('/admin/e/{id}/delete', name: 'symfonicat_electron_delete', methods: ['POST'])]
+    #[Route('/admin/e/{id}/delete', name: 'symfonicat_electron_delete', methods: ['POST'], requirements: ['id' => '.+'])]
     public function delete(Request $request, Electron $electron, EntityManagerInterface $entityManager): Response
     {
-        if ($this->isCsrfTokenValid('delete'.$electron->getId(), $request->getPayload()->getString('_token'))) {
+        if ($this->isCsrfTokenValid('delete'.$electron->getId(true), $request->getPayload()->getString('_token'))) {
             $entityManager->remove($electron);
             $entityManager->flush();
         }
@@ -128,7 +128,7 @@ final class ElectronController extends AbstractController
         }
 
         $type = trim($electron->getType());
-        $targetId = trim((string) $electron->getTargetId());
+        $targetId = trim((string) $electron->getTargetId(true));
         if ($type === '' || $targetId === '') {
             throw new \RuntimeException('Select the Electron target before uploading a favicon.');
         }

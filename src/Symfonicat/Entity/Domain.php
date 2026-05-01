@@ -11,6 +11,8 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Table(name: 'symfonicat_domain')]
 class Domain
 {
+    use VendorScopedIdTrait;
+
     #[ORM\Id]
     #[ORM\Column(length: 255)]
     private ?string $id = null;
@@ -41,18 +43,6 @@ class Domain
         $this->projects = new ArrayCollection();
         $this->modules = new ArrayCollection();
         $this->env = new ArrayCollection();
-    }
-
-    public function getId(): ?string
-    {
-        return $this->id;
-    }
-
-    public function setId(string $id): static
-    {
-        $this->id = $id;
-
-        return $this;
     }
 
     /**
@@ -122,7 +112,7 @@ class Domain
                 return true;
             }
 
-            if ($existingProject->getId() !== null && $project->getId() !== null && $existingProject->getId() === $project->getId()) {
+            if ($existingProject->getId(true) !== null && $project->getId(true) !== null && $existingProject->getId(true) === $project->getId(true)) {
                 return true;
             }
         }
@@ -137,7 +127,7 @@ class Domain
                 return true;
             }
 
-            if ($existingModule->getId() !== null && $module->getId() !== null && $existingModule->getId() === $module->getId()) {
+            if ($existingModule->getId(true) !== null && $module->getId(true) !== null && $existingModule->getId(true) === $module->getId(true)) {
                 return true;
             }
         }

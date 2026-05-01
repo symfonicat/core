@@ -62,7 +62,7 @@ final class ElectronBuildCommand extends Command
         $success = true;
 
         foreach ($electrons as $electron) {
-            $targetId = trim((string) $electron->getTargetId());
+            $targetId = trim((string) $electron->getTargetId(true));
             if ($targetId === '') {
                 $io->warning(sprintf('Skipping Electron "%s" because its %s target is missing.', (string) $electron->getName(), $electron->getType()));
                 $success = false;

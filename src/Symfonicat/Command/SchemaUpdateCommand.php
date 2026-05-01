@@ -15,7 +15,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
     name: 'symfonicat:schema:update',
-    description: 'Synchronize installed symfonicat/* package entries with database rows.',
+    description: 'Synchronize installed configured-vendor package entries with database rows.',
 )]
 final class SchemaUpdateCommand extends Command
 {
@@ -35,8 +35,8 @@ final class SchemaUpdateCommand extends Command
         try {
             $moduleResult = $this->moduleService->sync(function (Module $module, array $references) use ($input, $io): bool {
                 $io->warning(sprintf(
-                    'Module "%s" is no longer provided by an installed Symfonicat package and still has referencing entity rows.',
-                    $module->getId(),
+                    'Module "%s" is no longer provided by an installed configured-vendor package and still has referencing entity rows.',
+                    $module->getId(true),
                 ));
 
                 $io->table(
@@ -55,7 +55,7 @@ final class SchemaUpdateCommand extends Command
                 return $this->confirmRequired(
                     $input,
                     $io,
-                    sprintf('Delete those rows and remove module "%s"?', $module->getId()),
+                    sprintf('Delete those rows and remove module "%s"?', $module->getId(true)),
                     false,
                 );
             });
@@ -63,7 +63,7 @@ final class SchemaUpdateCommand extends Command
             $domainResult = $this->domainService->sync(function (array $domainIds) use ($input, $io): bool {
                 $io->section('Missing domains');
                 $io->listing(array_map(
-                    static fn (string $domainId): string => sprintf('%s from installed Symfonicat package assets', $domainId),
+                    static fn (string $domainId): string => sprintf('%s from installed package assets', $domainId),
                     $domainIds,
                 ));
 
@@ -73,7 +73,7 @@ final class SchemaUpdateCommand extends Command
             $applicationResult = $this->applicationService->sync(function (array $applicationIds) use ($input, $io): bool {
                 $io->section('Missing applications');
                 $io->listing(array_map(
-                    static fn (string $applicationId): string => sprintf('%s from installed Symfonicat package assets', $applicationId),
+                    static fn (string $applicationId): string => sprintf('%s from installed package assets', $applicationId),
                     $applicationIds,
                 ));
 
@@ -83,7 +83,7 @@ final class SchemaUpdateCommand extends Command
             $projectResult = $this->projectService->sync(function (array $projectIds) use ($input, $io): bool {
                 $io->section('Missing projects');
                 $io->listing(array_map(
-                    static fn (string $projectId): string => sprintf('%s from installed Symfonicat package assets', $projectId),
+                    static fn (string $projectId): string => sprintf('%s from installed package assets', $projectId),
                     $projectIds,
                 ));
 
@@ -163,12 +163,12 @@ final class SchemaUpdateCommand extends Command
             && $domainResult['created'] === []
             && $projectResult['created'] === []
         ) {
-            $io->success('Module, application, domain, and project rows already match installed Symfonicat packages.');
+            $io->success('Module, application, domain, and project rows already match installed configured-vendor packages.');
 
             return Command::SUCCESS;
         }
 
-        $io->success('Module, application, domain, and project rows synchronized from installed Symfonicat packages.');
+        $io->success('Module, application, domain, and project rows synchronized from installed configured-vendor packages.');
 
         return Command::SUCCESS;
     }

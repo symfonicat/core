@@ -92,7 +92,7 @@ trait DatabaseFixtureTrait
     protected function createDomain(string $id): Domain
     {
         $domain = (new Domain())
-            ->setId($id);
+            ->setId($this->vendorScopedId($id));
 
         $this->entityManager()->persist($domain);
         $this->entityManager()->flush();
@@ -106,7 +106,7 @@ trait DatabaseFixtureTrait
         ?Domain $domain = null,
     ): Project {
         $project = (new Project())
-            ->setId($id)
+            ->setId($this->vendorScopedId($id))
             ->setName($name);
 
         if ($domain instanceof Domain) {
@@ -122,7 +122,7 @@ trait DatabaseFixtureTrait
     protected function createModule(string $id, string $name, ?string $package = null): Module
     {
         $module = (new Module())
-            ->setId($id)
+            ->setId($this->vendorScopedId($id))
             ->setName($name)
             ->setPackage($package ?? $id);
 
@@ -135,6 +135,7 @@ trait DatabaseFixtureTrait
     protected function createElectron(string $name, string $type, ?Domain $domain = null, ?Project $project = null): Electron
     {
         $electron = (new Electron())
+            ->setId('core/'.strtolower(str_replace(' ', '-', $name)))
             ->setName($name)
             ->setType($type)
             ->setDomain($domain)
@@ -144,6 +145,11 @@ trait DatabaseFixtureTrait
         $this->entityManager()->flush();
 
         return $electron;
+    }
+
+    private function vendorScopedId(string $id): string
+    {
+        return str_contains($id, '/') ? $id : 'core/'.$id;
     }
 
     protected function createEnv(string $id, string $envParentId = 'colors'): Env

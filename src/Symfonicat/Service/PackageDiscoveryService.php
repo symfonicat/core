@@ -11,8 +11,12 @@ final class PackageDiscoveryService
         'projects',
     ];
 
+    /**
+     * @param list<string> $vendors
+     */
     public function __construct(
         private readonly string $projectDir,
+        private readonly array $vendors = ['symfonicat'],
     ) {
     }
 
@@ -20,7 +24,8 @@ final class PackageDiscoveryService
      * @return list<array{
      *     installPath: string,
      *     name: string,
-     *     package: string
+     *     package: string,
+     *     vendor: string
      * }>
      */
     public function findSymfonicatPackages(): array
@@ -31,11 +36,12 @@ final class PackageDiscoveryService
         if (is_file($rootComposerPath)) {
             $rootComposer = $this->decodeJsonFile($rootComposerPath);
             $packageName = trim((string) ($rootComposer['name'] ?? 'symfonicat/core'));
-            if (str_starts_with($packageName, 'symfonicat/')) {
+            if ($packageName !== '' && $this->isConfiguredVendorPackage($packageName)) {
                 $packages[$packageName] = [
                     'installPath' => $this->projectDir,
                     'name' => $packageName,
                     'package' => $this->shortPackageName($packageName),
+                    'vendor' => 'core',
                 ];
             }
         }
@@ -55,7 +61,7 @@ final class PackageDiscoveryService
 
             $packageName = trim((string) ($package['name'] ?? ''));
             $relativeInstallPath = trim((string) ($package['install-path'] ?? ''));
-            if ($packageName === '' || $relativeInstallPath === '' || !str_starts_with($packageName, 'symfonicat/')) {
+            if ($packageName === '' || $relativeInstallPath === '' || !$this->isConfiguredVendorPackage($packageName)) {
                 continue;
             }
 
@@ -68,6 +74,7 @@ final class PackageDiscoveryService
                 'installPath' => $installPath,
                 'name' => $packageName,
                 'package' => $this->shortPackageName($packageName),
+                'vendor' => $this->vendorName($packageName),
             ];
         }
 
@@ -82,13 +89,14 @@ final class PackageDiscoveryService
      *     entry: string,
      *     id: string,
      *     package: string,
-     *     packageName: string
+     *     packageName: string,
+     *     vendor: string
      * }>
      */
     public function discoverEntryDirectories(string $type): array
     {
         if (!in_array($type, self::SUPPORTED_ENTRY_TYPES, true)) {
-            throw new \InvalidArgumentException(sprintf('Unsupported Symfonicat package entry type "%s".', $type));
+            throw new \InvalidArgumentException(sprintf('Unsupported package entry type "%s".', $type));
         }
 
         $entries = [];
@@ -104,8 +112,8 @@ final class PackageDiscoveryService
                     continue;
                 }
 
-                // Use package-prefixed ids so database ids like "analytics/main" match discovered entries.
-                $id = $package['package'].'/'.$name;
+                $idPrefix = $package['vendor'] === 'core' ? 'core' : $package['vendor'].'/'.$package['package'];
+                $id = $idPrefix.'/'.$name;
 
                 if (isset($entries[$id])) {
                     throw new \RuntimeException(sprintf(
@@ -123,6 +131,7 @@ final class PackageDiscoveryService
                     'id' => $id,
                     'package' => $package['package'],
                     'packageName' => $package['name'],
+                    'vendor' => $package['vendor'],
                 ];
             }
         }
@@ -139,7 +148,8 @@ final class PackageDiscoveryService
      *     id: string,
      *     name: string,
      *     package: string,
-     *     packageName: string
+     *     packageName: string,
+     *     vendor: string
      * }>
      */
     public function discoverModules(): array
@@ -169,6 +179,33 @@ final class PackageDiscoveryService
         $parts = explode('/', $packageName);
 
         return trim((string) end($parts));
+    }
+
+    private function vendorName(string $packageName): string
+    {
+        $parts = explode('/', $packageName, 2);
+
+        return trim($parts[0] ?? '');
+    }
+
+    private function isConfiguredVendorPackage(string $packageName): bool
+    {
+        $vendor = $this->vendorName($packageName);
+
+        return $vendor !== '' && in_array($vendor, $this->normalizedVendors(), true);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function normalizedVendors(): array
+    {
+        $vendors = array_values(array_unique(array_filter(array_map(
+            static fn (mixed $vendor): string => trim((string) $vendor),
+            $this->vendors,
+        ))));
+
+        return $vendors === [] ? ['symfonicat'] : $vendors;
     }
 
     /**

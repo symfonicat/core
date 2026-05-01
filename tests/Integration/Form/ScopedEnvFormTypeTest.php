@@ -25,7 +25,7 @@ final class ScopedEnvFormTypeTest extends SymfonicatKernelTestCase
         $project = $this->createProject('project1', 'Project 1');
         $this->setProjectEnv($project, $env, 'green');
 
-        $project = $this->entityManager()->getRepository(Project::class)->find('project1');
+        $project = $this->entityManager()->getRepository(Project::class)->find('core/project1');
         self::assertInstanceOf(Project::class, $project);
 
         $view = $this->formFactory()
@@ -42,7 +42,7 @@ final class ScopedEnvFormTypeTest extends SymfonicatKernelTestCase
         $domain = $this->createDomain('example.com');
         $this->setDomainEnv($domain, $env, 'blue');
 
-        $domain = $this->entityManager()->getRepository(Domain::class)->find('example.com');
+        $domain = $this->entityManager()->getRepository(Domain::class)->find('core/example.com');
         self::assertInstanceOf(Domain::class, $domain);
 
         $view = $this->formFactory()
@@ -57,7 +57,7 @@ final class ScopedEnvFormTypeTest extends SymfonicatKernelTestCase
     {
         $env = $this->createEnv('primary', 'colors');
         $application = (new Application())
-            ->setId('test');
+            ->setId('core/test');
         $applicationEnv = (new ApplicationEnv())
             ->setEnv($env)
             ->setValue('red');
@@ -69,7 +69,7 @@ final class ScopedEnvFormTypeTest extends SymfonicatKernelTestCase
         $this->entityManager()->flush();
         $this->entityManager()->clear();
 
-        $application = $this->entityManager()->getRepository(Application::class)->find('test');
+        $application = $this->entityManager()->getRepository(Application::class)->find('core/test');
         self::assertInstanceOf(Application::class, $application);
 
         $view = $this->formFactory()
@@ -88,7 +88,7 @@ final class ScopedEnvFormTypeTest extends SymfonicatKernelTestCase
         $electron = $this->createElectron('Example Electron', Electron::TYPE_PROJECT, $domain, $project);
         $this->setElectronEnv($electron, $env, 'purple');
 
-        $electron = $this->entityManager()->getRepository(Electron::class)->find($electron->getId());
+        $electron = $this->entityManager()->getRepository(Electron::class)->find($electron->getId(true));
         self::assertInstanceOf(Electron::class, $electron);
 
         $view = $this->formFactory()

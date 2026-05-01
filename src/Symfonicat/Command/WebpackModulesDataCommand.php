@@ -74,7 +74,7 @@ final class WebpackModulesDataCommand extends Command
                     continue;
                 }
 
-                $id = trim((string) $entity->getId());
+                $id = trim((string) $entity->getId(true));
                 if ($id !== '') {
                     $ids[] = $id;
                 }

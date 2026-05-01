@@ -25,16 +25,58 @@ const shortPackageName = (packageName) => {
     return parts[parts.length - 1];
 };
 
+const vendorName = (packageName) => packageName.split('/')[0] || '';
+
+const loadConfiguredVendors = (projectDir) => {
+    const configPath = path.join(projectDir, 'config', 'packages', 'symfonicat.yaml');
+    const fallback = ['symfonicat'];
+
+    if (!fs.existsSync(configPath)) {
+        return fallback;
+    }
+
+    const lines = fs.readFileSync(configPath, 'utf8').split(/\r?\n/);
+    const vendors = [];
+    let inVendors = false;
+
+    lines.forEach((line) => {
+        if (/^\s*vendors\s*:/.test(line)) {
+            inVendors = true;
+            return;
+        }
+
+        if (!inVendors) {
+            return;
+        }
+
+        const item = line.match(/^\s*-\s*([A-Za-z0-9_.-]+)\s*$/);
+        if (item) {
+            vendors.push(item[1]);
+            return;
+        }
+
+        if (/^\S/.test(line)) {
+            inVendors = false;
+        }
+    });
+
+    return vendors.length > 0 ? Array.from(new Set(vendors)) : fallback;
+};
+
+const isConfiguredVendorPackage = (packageName, vendors) => vendors.includes(vendorName(packageName));
+
 const loadSymfonicatPackages = (projectDir) => {
     const packages = new Map();
+    const vendors = loadConfiguredVendors(projectDir);
     const rootComposer = readJson(path.join(projectDir, 'composer.json'));
     const rootPackageName = typeof rootComposer?.name === 'string' ? rootComposer.name.trim() : '';
 
-    if (rootPackageName.startsWith('symfonicat/')) {
+    if (isConfiguredVendorPackage(rootPackageName, vendors)) {
         packages.set(rootPackageName, {
             installPath: projectDir,
             name: rootPackageName,
             package: shortPackageName(rootPackageName),
+            vendor: 'core',
         });
     }
 
@@ -45,7 +87,7 @@ const loadSymfonicatPackages = (projectDir) => {
         const packageName = typeof pkg?.name === 'string' ? pkg.name.trim() : '';
         const installPath = typeof pkg?.['install-path'] === 'string' ? pkg['install-path'].trim() : '';
 
-        if (!packageName.startsWith('symfonicat/') || installPath === '') {
+        if (!isConfiguredVendorPackage(packageName, vendors) || installPath === '') {
             return;
         }
 
@@ -53,6 +95,7 @@ const loadSymfonicatPackages = (projectDir) => {
             installPath: path.resolve(projectDir, 'vendor', 'composer', installPath),
             name: packageName,
             package: shortPackageName(packageName),
+            vendor: vendorName(packageName),
         });
     });
 
@@ -66,7 +109,8 @@ const discoverPackageEntries = (projectDir, type) => {
         const baseDir = path.join(pkg.installPath, 'assets', type);
 
         listDirEntries(baseDir).forEach((entry) => {
-            const id = `${pkg.package}/${entry.name}`;
+            const idPrefix = pkg.vendor === 'core' ? 'core' : `${pkg.vendor}/${pkg.package}`;
+            const id = `${idPrefix}/${entry.name}`;
 
             if (entries.has(id)) {
                 const existing = entries.get(id);
@@ -79,6 +123,7 @@ const discoverPackageEntries = (projectDir, type) => {
                 id: id,
                 package: pkg.package,
                 packageName: pkg.name,
+                vendor: pkg.vendor,
             });
         });
     });
@@ -95,7 +140,7 @@ const loadModuleData = (projectDir) => {
 
         return JSON.parse(raw);
     } catch (error) {
-        console.warn('[webpack] symfonicat:data:webpack failed; falling back to installed symfonicat/* packages.');
+        console.warn('[webpack] symfonicat:data:webpack failed; falling back to configured package vendors.');
 
         return {
             applications: discoverPackageEntries(projectDir, 'applications'),

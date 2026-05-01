@@ -459,14 +459,9 @@ final class BootstrapCommand extends Command
         $moduleName = $packageModule['name'] ?? 'Analytics';
         $modulePackage = $packageModule['package'] ?? 'analytics';
 
-        // Fall back to legacy id lookup if no package-scoped module found.
-        if (!$module instanceof Module) {
-            $module = $this->moduleRepository->find('analytics');
-        }
-
         if (!$module instanceof Module) {
             $module = (new Module())
-                ->setId('analytics')
+                ->setId($packageModule['id'] ?? 'core/analytics')
                 ->setName($moduleName)
                 ->setPackage($modulePackage);
 
@@ -519,6 +514,7 @@ final class BootstrapCommand extends Command
 
         if (!$electron instanceof Electron) {
             $electron = (new Electron())
+                ->setId('core/example-test')
                 ->setType(Electron::TYPE_DOMAIN)
                 ->setDomain($domain);
 

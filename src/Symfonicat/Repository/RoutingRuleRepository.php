@@ -26,7 +26,7 @@ class RoutingRuleRepository extends ServiceEntityRepository
             ->andWhere('IDENTITY(rule.domain) = :domainId')
             ->setParameter('type', RoutingRule::TYPE_REDIRECT)
             ->setParameter('redirectType', RoutingRule::REDIRECT_TYPE_DOMAIN)
-            ->setParameter('domainId', $domain->getId())
+            ->setParameter('domainId', $domain->getId(true))
             ->setMaxResults(1)
             ->getQuery()
             ->getOneOrNullResult();
@@ -41,7 +41,7 @@ class RoutingRuleRepository extends ServiceEntityRepository
             ->andWhere('rule.type = :type')
             ->andWhere('IDENTITY(rule.domain) = :domainId')
             ->setParameter('type', RoutingRule::TYPE_DOMAIN)
-            ->setParameter('domainId', $domain->getId())
+            ->setParameter('domainId', $domain->getId(true))
             ->getQuery()
             ->getResult();
     }
@@ -54,7 +54,7 @@ class RoutingRuleRepository extends ServiceEntityRepository
             ->andWhere('IDENTITY(rule.project) = :projectId')
             ->setParameter('type', RoutingRule::TYPE_REDIRECT)
             ->setParameter('redirectType', RoutingRule::REDIRECT_TYPE_PROJECT)
-            ->setParameter('projectId', $project->getId())
+            ->setParameter('projectId', $project->getId(true))
             ->setMaxResults(1)
             ->getQuery()
             ->getOneOrNullResult();
@@ -69,7 +69,7 @@ class RoutingRuleRepository extends ServiceEntityRepository
             ->andWhere('rule.type = :type')
             ->andWhere('IDENTITY(rule.project) = :projectId')
             ->setParameter('type', RoutingRule::TYPE_PROJECT)
-            ->setParameter('projectId', $project->getId())
+            ->setParameter('projectId', $project->getId(true))
             ->getQuery()
             ->getResult();
     }
@@ -82,7 +82,7 @@ class RoutingRuleRepository extends ServiceEntityRepository
             ->andWhere('IDENTITY(rule.domain) = :domainId')
             ->setParameter('type', RoutingRule::TYPE_ROUTE)
             ->setParameter('routeType', RoutingRule::ROUTE_TYPE_DOMAIN)
-            ->setParameter('domainId', $domain->getId())
+            ->setParameter('domainId', $domain->getId(true))
             ->setMaxResults(1)
             ->getQuery()
             ->getOneOrNullResult();
@@ -96,7 +96,7 @@ class RoutingRuleRepository extends ServiceEntityRepository
             ->andWhere('IDENTITY(rule.project) = :projectId')
             ->setParameter('type', RoutingRule::TYPE_ROUTE)
             ->setParameter('routeType', RoutingRule::ROUTE_TYPE_PROJECT)
-            ->setParameter('projectId', $project->getId())
+            ->setParameter('projectId', $project->getId(true))
             ->setMaxResults(1)
             ->getQuery()
             ->getOneOrNullResult();

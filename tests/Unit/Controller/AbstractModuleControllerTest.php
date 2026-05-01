@@ -35,7 +35,7 @@ final class AbstractModuleControllerTest extends TestCase
     public function testProjectWithInstalledModuleAllowsExecution(): void
     {
         $module = $this->makeModule('analytics');
-        $project = (new Project())->setId('project1');
+        $project = (new Project())->setId('core/project1');
         $project->addModule($module);
 
         $controller = $this->makeController(
@@ -51,7 +51,7 @@ final class AbstractModuleControllerTest extends TestCase
     public function testProjectWithoutModuleThrowsNotFound(): void
     {
         $module = $this->makeModule('analytics');
-        $project = (new Project())->setId('project1');
+        $project = (new Project())->setId('core/project1');
 
         $controller = $this->makeController(
             domain: $this->makeDomain('example.com'),
@@ -105,7 +105,7 @@ final class AbstractModuleControllerTest extends TestCase
         $module = $this->makeModule('analytics');
         $domain = $this->makeDomain('example.com');
         $domain->addModule($module);
-        $project = (new Project())->setId('project1');
+        $project = (new Project())->setId('core/project1');
 
         $controller = $this->makeController(
             domain: $domain,
@@ -134,12 +134,13 @@ final class AbstractModuleControllerTest extends TestCase
     {
         $projectDir = dirname(__DIR__, 3);
         $requestStack = new RequestStack();
-        $requestStack->push(Request::create('/m/analytics', 'POST', [], [], [], [
+        $requestStack->push(Request::create('/m/symfonicat/analytics/main', 'POST', [], [], [], [
             'HTTP_HOST' => $this->makeHost($domain, $project),
         ]));
 
         $domainRepository = $this->createStub(DomainRepository::class);
         $domainRepository->method('find')->willReturn($domain);
+        $domainRepository->method('findOneByHost')->willReturn($domain);
         $packageDiscoveryService = new PackageDiscoveryService($projectDir);
         $entityManager = $this->createStub(EntityManagerInterface::class);
         $domainService = new DomainService($projectDir, $requestStack, $domainRepository, $entityManager, $packageDiscoveryService);
@@ -159,6 +160,7 @@ final class AbstractModuleControllerTest extends TestCase
         $pathService = new PathService($requestStack);
         $moduleRepository = $this->createStub(ModuleRepository::class);
         $moduleRepository->method('find')->willReturn($module);
+        $moduleRepository->method('findOneByFullOrCleanId')->willReturn($module);
         $moduleService = new ModuleService(
             $requestStack,
             $pathService,
@@ -177,12 +179,12 @@ final class AbstractModuleControllerTest extends TestCase
 
     private function makeModule(string $id): Module
     {
-        return (new Module())->setId($id)->setName(ucfirst($id));
+        return (new Module())->setId(str_contains($id, '/') ? $id : 'symfonicat/'.$id.'/main')->setName(ucfirst($id));
     }
 
     private function makeDomain(string $id): Domain
     {
-        return (new Domain())->setId($id);
+        return (new Domain())->setId(str_contains($id, '/') ? $id : 'core/'.$id);
     }
 
     private function makeHost(?Domain $domain, ?Project $project): string

@@ -13,14 +13,15 @@ use Symfonicat\Repository\ElectronRepository;
 #[ORM\Table(name: 'symfonicat_electron')]
 class Electron
 {
+    use VendorScopedIdTrait;
+
     public const TYPE_DOMAIN = 'domain';
     public const TYPE_PROJECT = 'project';
     public const TYPE_APPLICATION = 'application';
 
     #[ORM\Id]
-    #[ORM\GeneratedValue]
-    #[ORM\Column]
-    private ?int $id = null;
+    #[ORM\Column(length: 255)]
+    private ?string $id = null;
 
     #[ORM\Column(length: 255)]
     private ?string $name = null;
@@ -61,11 +62,6 @@ class Electron
             'project' => self::TYPE_PROJECT,
             'application' => self::TYPE_APPLICATION,
         ];
-    }
-
-    public function getId(): ?int
-    {
-        return $this->id;
     }
 
     public function getName(): ?string
@@ -182,24 +178,24 @@ class Electron
         return $this->type === self::TYPE_APPLICATION;
     }
 
-    public function getTargetId(): ?string
+    public function getTargetId(bool $includeVendor = false): ?string
     {
         return match ($this->type) {
-            self::TYPE_DOMAIN => $this->domain?->getId(),
-            self::TYPE_PROJECT => $this->projectTargetId(),
-            self::TYPE_APPLICATION => $this->application?->getId(),
+            self::TYPE_DOMAIN => $this->domain?->getId($includeVendor),
+            self::TYPE_PROJECT => $this->projectTargetId($includeVendor),
+            self::TYPE_APPLICATION => $this->application?->getId($includeVendor),
             default => null,
         };
     }
 
-    public function projectTargetId(): ?string
+    public function projectTargetId(bool $includeVendor = false): ?string
     {
-        $projectId = trim((string) $this->project?->getId());
+        $projectId = trim((string) $this->project?->getId($includeVendor));
         if ($projectId === '') {
             return null;
         }
 
-        $domainId = trim((string) $this->domain?->getId());
+        $domainId = trim((string) $this->domain?->getId($includeVendor));
         if ($domainId === '') {
             return null;
         }

@@ -185,7 +185,7 @@ final class EnvServiceTest extends TestCase
         $valid = $this->makeEnv('primary');
 
         $domain = new Domain();
-        $domain->setId('example.com');
+        $domain->setId('core/example.com');
 
         // Valid row:
         $good = (new DomainEnv())->setEnv($valid)->setValue('blue');
@@ -229,7 +229,7 @@ final class EnvServiceTest extends TestCase
      */
     private function makeApplication(string $id, array $values): Application
     {
-        $application = (new Application())->setId($id);
+        $application = (new Application())->setId(str_contains($id, '/') ? $id : 'core/'.$id);
 
         foreach ($values as $envId => $value) {
             $env = $this->makeEnv($envId);
@@ -245,7 +245,7 @@ final class EnvServiceTest extends TestCase
      */
     private function makeDomain(string $id, array $values): Domain
     {
-        $domain = (new Domain())->setId($id);
+        $domain = (new Domain())->setId(str_contains($id, '/') ? $id : 'core/'.$id);
 
         foreach ($values as $envId => $value) {
             $env = $this->makeEnv($envId);
@@ -261,7 +261,7 @@ final class EnvServiceTest extends TestCase
      */
     private function makeProject(string $id, array $values): Project
     {
-        $project = (new Project())->setId($id)->setName(ucfirst($id));
+        $project = (new Project())->setId(str_contains($id, '/') ? $id : 'core/'.$id)->setName(ucfirst($id));
 
         foreach ($values as $envId => $value) {
             $env = $this->makeEnv($envId);
@@ -285,6 +285,7 @@ final class EnvServiceTest extends TestCase
     private function makeElectron(string $name, array $values): Electron
     {
         $electron = (new Electron())
+            ->setId('core/'.strtolower(str_replace(' ', '-', $name)))
             ->setName($name)
             ->setType(Electron::TYPE_DOMAIN);
 

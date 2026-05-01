@@ -11,8 +11,10 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Table(name: 'symfonicat_module')]
 class Module
 {
+    use VendorScopedIdTrait;
+
     #[ORM\Id]
-    #[ORM\Column(length: 50)]
+    #[ORM\Column(length: 255)]
     private ?string $id = null;
 
     #[ORM\Column(length: 255)]
@@ -53,18 +55,6 @@ class Module
         $this->projects = new ArrayCollection();
         $this->domains = new ArrayCollection();
         $this->applications = new ArrayCollection();
-    }
-
-    public function getId(): ?string
-    {
-        return $this->id;
-    }
-
-    public function setId(string $id): static
-    {
-        $this->id = $id;
-
-        return $this;
     }
 
     public function getName(): ?string
@@ -159,7 +149,7 @@ class Module
                 return true;
             }
 
-            if ($existingProject->getId() !== null && $project->getId() !== null && $existingProject->getId() === $project->getId()) {
+            if ($existingProject->getId(true) !== null && $project->getId(true) !== null && $existingProject->getId(true) === $project->getId(true)) {
                 return true;
             }
         }
@@ -174,7 +164,7 @@ class Module
                 return true;
             }
 
-            if ($existingDomain->getId() !== null && $domain->getId() !== null && $existingDomain->getId() === $domain->getId()) {
+            if ($existingDomain->getId(true) !== null && $domain->getId(true) !== null && $existingDomain->getId(true) === $domain->getId(true)) {
                 return true;
             }
         }
@@ -219,7 +209,7 @@ class Module
                 return true;
             }
 
-            if ($existingApplication->getId() !== null && $application->getId() !== null && $existingApplication->getId() === $application->getId()) {
+            if ($existingApplication->getId(true) !== null && $application->getId(true) !== null && $existingApplication->getId(true) === $application->getId(true)) {
                 return true;
             }
         }

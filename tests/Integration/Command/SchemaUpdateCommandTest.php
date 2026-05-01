@@ -10,7 +10,7 @@ use Symfony\Component\Console\Tester\CommandTester;
 /**
  * End-to-end coverage of the installed-package ⇆ database module sync command.
  *
- * The command is the contract between installed symfonicat/* packages
+ * The command is the contract between installed configured-vendor packages
  * and the symfonicat_module table (runtime-authoritative). These tests make
  * sure that contract holds for the three transitions that matter in practice:
  *   - package-provided module with no matching row -> row is created
@@ -29,7 +29,7 @@ final class SchemaUpdateCommandTest extends SymfonicatKernelTestCase
         $em = $this->entityManager();
         $em->clear();
 
-        $analytics = $em->getRepository(Module::class)->find('analytics');
+        $analytics = $em->getRepository(Module::class)->find('symfonicat/analytics/main');
         self::assertInstanceOf(Module::class, $analytics);
         self::assertSame('Analytics', $analytics->getName());
         self::assertSame('analytics', $analytics->getPackage());
@@ -37,13 +37,13 @@ final class SchemaUpdateCommandTest extends SymfonicatKernelTestCase
 
     public function testUpdatesRowNameWhenPackageJsonNameDivergesFromDatabase(): void
     {
-        $this->createModule('analytics', 'Stale Old Name');
+        $this->createModule('symfonicat/analytics/main', 'Stale Old Name');
 
         $tester = $this->runCommand();
         self::assertSame(0, $tester->getStatusCode());
 
         $this->entityManager()->clear();
-        $analytics = $this->entityManager()->getRepository(Module::class)->find('analytics');
+        $analytics = $this->entityManager()->getRepository(Module::class)->find('symfonicat/analytics/main');
 
         self::assertInstanceOf(Module::class, $analytics);
         self::assertSame('Analytics', $analytics->getName(), 'package metadata "name" should win over the database row');
@@ -53,7 +53,7 @@ final class SchemaUpdateCommandTest extends SymfonicatKernelTestCase
 
     public function testRemovesUnreferencedRowsThatNoLongerExistOnDisk(): void
     {
-        // An orphan module — exists in the DB, no corresponding installed symfonicat/* package module.
+        // An orphan module exists in the DB with no corresponding installed configured-vendor package module.
         $this->createModule('orphan', 'Orphan Module');
 
         $tester = $this->runCommand();
@@ -61,7 +61,7 @@ final class SchemaUpdateCommandTest extends SymfonicatKernelTestCase
 
         $this->entityManager()->clear();
         self::assertNull(
-            $this->entityManager()->getRepository(Module::class)->find('orphan'),
+            $this->entityManager()->getRepository(Module::class)->find('core/orphan'),
             'an orphan module with no references should be removed without prompting',
         );
     }

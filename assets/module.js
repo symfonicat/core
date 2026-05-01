@@ -8,18 +8,8 @@ function buildModulePath(moduleName, path = '') {
         throw new Error('Missing module name.');
     }
 
-    // Normalize vendor package names like "symfonicat/analytics" to "analytics/main",
-    // and preserve existing "analytics/main" or simple "analytics" names.
-    let moduleSlug = raw;
-    if (moduleSlug.startsWith('symfonicat/')) {
-        moduleSlug = moduleSlug.replace(/^symfonicat\//, '');
-        if (!moduleSlug.includes('/')) {
-            moduleSlug = `${moduleSlug}/main`;
-        }
-    }
-
     const modulePath = trimSlashes(path);
-    return modulePath === '' ? `/m/${moduleSlug}` : `/m/${moduleSlug}/${modulePath}`;
+    return modulePath === '' ? `/m/${raw}` : `/m/${raw}/${modulePath}`;
 }
 
 function normalizeRequestArguments(pathOrPayload, payload) {
@@ -115,17 +105,36 @@ function installPrototypeLogMethod() {
                 return;
             }
 
-            const moduleName = trimSlashes(String(this));
+            const moduleName = parseModuleName(String(this));
 
             console.log(
-                '%c[module]%c[%s]:',
-                'color: #6ec1ff',
-                'font-weight: 700',
-                moduleName,
+                '%c[mod]%c[%s]%c[%s]:',
+                'color: #6ec1ff; font-weight: 700',
+                'color: #fff; font-weight: 700',
+                moduleName.packageName,
+                'color: #8eea8e',
+                moduleName.modName,
                 ...args,
             );
         },
     });
+}
+
+function parseModuleName(value = '') {
+    const raw = trimSlashes(value);
+    const parts = raw.split('/').filter(Boolean);
+
+    if (parts.length >= 3) {
+        return {
+            packageName: `${parts[0]}/${parts[1]}`,
+            modName: parts.slice(2).join('/'),
+        };
+    }
+
+    return {
+        packageName: raw,
+        modName: '',
+    };
 }
 
 installPrototypeMethod('json');

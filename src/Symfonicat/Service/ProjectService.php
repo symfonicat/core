@@ -33,12 +33,12 @@ class ProjectService
         // First try the literal project id (e.g. "project1") so explicitly
         // created DB rows win over any package-prefixed discovery.
         if ($domain) {
-            $found = $this->projectRepository->findOneByIdForDomain($projectId, $domain->getId());
+            $found = $this->projectRepository->findOneByIdForDomain($projectId, (string) $domain->getId(true));
             if ($found) {
                 return $found;
             }
         } else {
-            $found = $this->projectRepository->find($projectId);
+            $found = $this->projectRepository->findOneByFullOrCleanId($projectId);
             if ($found) {
                 return $found;
             }
@@ -59,7 +59,7 @@ class ProjectService
             if (count($matches) === 1) {
                 $resolved = $matches[0];
                 if ($domain) {
-                    return $this->projectRepository->findOneByIdForDomain($resolved, $domain->getId());
+                    return $this->projectRepository->findOneByIdForDomain($resolved, (string) $domain->getId(true));
                 }
 
                 return $this->projectRepository->find($resolved);
@@ -121,7 +121,7 @@ class ProjectService
         $projects = [];
 
         foreach ($this->projectRepository->findAllOrderedById() as $project) {
-            $projectId = $project->getId();
+            $projectId = $project->getId(true);
             if ($projectId === null || $projectId === '') {
                 continue;
             }

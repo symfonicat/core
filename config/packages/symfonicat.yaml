@@ -1,1 +1,3 @@
-symfonicat: ~
+symfonicat:
+    vendors:
+        - symfonicat

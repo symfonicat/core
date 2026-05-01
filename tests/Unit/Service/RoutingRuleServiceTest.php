@@ -20,7 +20,7 @@ final class RoutingRuleServiceTest extends TestCase
     #[DataProvider('reservedArgumentProvider')]
     public function testDomainLookupIgnoresReservedArguments(string $argument, string $path): void
     {
-        $domain = (new Domain())->setId('example.com');
+        $domain = (new Domain())->setId('core/example.com');
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_DOMAIN)
             ->setDomain($domain)
@@ -40,7 +40,7 @@ final class RoutingRuleServiceTest extends TestCase
     #[DataProvider('reservedArgumentProvider')]
     public function testProjectLookupIgnoresReservedArguments(string $argument, string $path): void
     {
-        $project = (new Project())->setId('project1')->setName('Project 1');
+        $project = (new Project())->setId('core/project1')->setName('Project 1');
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_PROJECT)
             ->setProject($project)
@@ -59,7 +59,7 @@ final class RoutingRuleServiceTest extends TestCase
 
     public function testDomainLookupReturnsFirstMatchingPathRule(): void
     {
-        $domain = (new Domain())->setId('example.com');
+        $domain = (new Domain())->setId('core/example.com');
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_DOMAIN)
             ->setDomain($domain)
@@ -78,7 +78,7 @@ final class RoutingRuleServiceTest extends TestCase
 
     public function testProjectLookupReturnsFirstMatchingPathRule(): void
     {
-        $project = (new Project())->setId('project1')->setName('Project 1');
+        $project = (new Project())->setId('core/project1')->setName('Project 1');
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_PROJECT)
             ->setProject($project)
@@ -97,8 +97,8 @@ final class RoutingRuleServiceTest extends TestCase
 
     public function testCollectionLookupsAreStraightPassThrough(): void
     {
-        $domain = (new Domain())->setId('example.com');
-        $project = (new Project())->setId('project1')->setName('Project 1');
+        $domain = (new Domain())->setId('core/example.com');
+        $project = (new Project())->setId('core/project1')->setName('Project 1');
 
         $domainRules = [new RoutingRule(), new RoutingRule()];
         $projectRules = [new RoutingRule()];

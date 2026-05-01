@@ -30,11 +30,11 @@ final class BootstrapCommandTest extends SymfonicatKernelTestCase
         $em = $this->entityManager();
         $em->clear();
 
-        $localhost = $em->getRepository(Domain::class)->find('localhost');
-        $exampleCom = $em->getRepository(Domain::class)->find('example.com');
-        $project = $em->getRepository(Project::class)->find('project1');
-        $application = $em->getRepository(Application::class)->find('test');
-        $analytics = $em->getRepository(Module::class)->find('analytics');
+        $localhost = $em->getRepository(Domain::class)->find('core/localhost');
+        $exampleCom = $em->getRepository(Domain::class)->find('core/example.com');
+        $project = $em->getRepository(Project::class)->find('core/project1');
+        $application = $em->getRepository(Application::class)->find('core/test');
+        $analytics = $em->getRepository(Module::class)->find('symfonicat/analytics/main');
         $electron = $em->getRepository(Electron::class)->findOneBy(['name' => 'Example Test']);
         $envParent = $em->getRepository(EnvParent::class)->find('colors');
         $color = $em->getRepository(Env::class)->find('primary');
@@ -114,23 +114,23 @@ final class BootstrapCommandTest extends SymfonicatKernelTestCase
 
         self::assertSame(
             [
-                'application' => 0,
+                'application' => 1,
                 'application_env' => 0,
-                'domain' => 0,
-                'project' => 0,
+                'domain' => 2,
+                'project' => 1,
                 'electron' => 0,
                 'electron_env' => 0,
                 'env_parent' => 0,
                 'env' => 0,
                 'domain_env' => 0,
                 'project_env' => 0,
-                'module' => 0,
+                'module' => 1,
                 'module_application' => 0,
                 'module_project' => 0,
                 'routing_rule' => 0,
             ],
             $this->countAll(),
-            '--no-seed-localhost must skip ALL defaults, not just the localhost domain',
+            '--no-seed-localhost must skip local seed data while package-discovered rows may still sync',
         );
     }
 
@@ -141,7 +141,7 @@ final class BootstrapCommandTest extends SymfonicatKernelTestCase
         // Manually tweak the localhost primary color so we can confirm the next
         // bootstrap brings it back into line with the canonical seed.
         $em = $this->entityManager();
-        $localhost = $em->getRepository(Domain::class)->find('localhost');
+        $localhost = $em->getRepository(Domain::class)->find('core/localhost');
         self::assertNotNull($localhost);
 
         foreach ($localhost->getEnv() as $row) {
@@ -157,7 +157,7 @@ final class BootstrapCommandTest extends SymfonicatKernelTestCase
         self::assertSame(0, $this->runBootstrap());
         $em->clear();
 
-        $localhostAfter = $em->getRepository(Domain::class)->find('localhost');
+        $localhostAfter = $em->getRepository(Domain::class)->find('core/localhost');
         self::assertNotNull($localhostAfter);
         self::assertSame(
             'blue',

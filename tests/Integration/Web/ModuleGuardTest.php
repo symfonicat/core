@@ -19,7 +19,7 @@ use Symfonicat\Entity\RoutingRule;
  *   2. The project catch-all route declares `requirements: ['path' => '(?!m(?:/|$)).*']`
  *      so that the generic {path} wildcard never shadows the more specific
  *      /m/* controllers. That regex is the only thing keeping any request for
- *      /m/analytics from being absorbed by MainController::main().
+ *      /m/symfonicat/analytics/main from being absorbed by MainController::main().
  */
 final class ModuleGuardTest extends SymfonicatWebTestCase
 {
@@ -29,10 +29,10 @@ final class ModuleGuardTest extends SymfonicatWebTestCase
         $this->createProject('project1', 'Project 1', $domain);
         // Module exists in the DB (so ModuleService::load() returns it) but is
         // NOT associated with project1. Guard must refuse to execute.
-        $this->createModule('analytics', 'Analytics');
+        $this->createModule('symfonicat/analytics/main', 'Analytics');
 
         $this->setHost('project1.example.com');
-        $this->client()->request('POST', '/m/analytics');
+        $this->client()->request('POST', '/m/symfonicat/analytics/main');
 
         self::assertResponseStatusCodeSame(
             404,
@@ -44,12 +44,12 @@ final class ModuleGuardTest extends SymfonicatWebTestCase
     {
         $domain = $this->createDomain('example.com');
         $project = $this->createProject('project1', 'Project 1', $domain);
-        $module = $this->createModule('analytics', 'Analytics');
+        $module = $this->createModule('symfonicat/analytics/main', 'Analytics');
         $project->addModule($module);
         $this->entityManager()->flush();
 
         $this->setHost('project1.example.com');
-        $this->client()->request('POST', '/m/analytics');
+        $this->client()->request('POST', '/m/symfonicat/analytics/main');
 
         self::assertResponseIsSuccessful();
         self::assertJson((string) $this->client()->getResponse()->getContent());
@@ -63,8 +63,8 @@ final class ModuleGuardTest extends SymfonicatWebTestCase
     public function testModuleRouteSucceedsWhenModuleInstalledOnApplicationContext(): void
     {
         $this->createDomain('example.com');
-        $module = $this->createModule('analytics', 'Analytics');
-        $application = (new Application())->setId('test');
+        $module = $this->createModule('symfonicat/analytics/main', 'Analytics');
+        $application = (new Application())->setId('core/test');
         $application->addModule($module);
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_APPLICATION)
@@ -81,7 +81,7 @@ final class ModuleGuardTest extends SymfonicatWebTestCase
         self::assertResponseIsSuccessful('application routing rule should render the test application');
         $token = $this->applicationCsrfTokenFromLastResponse();
 
-        $this->client()->request('POST', '/m/analytics', [], [], [
+        $this->client()->request('POST', '/m/symfonicat/analytics/main', [], [], [
             'HTTP_X_SYMFONICAT_APPLICATION_REQUEST' => '1',
             'HTTP_X_SYMFONICAT_APPLICATION' => 'test',
             'HTTP_X_SYMFONICAT_APPLICATION_TOKEN' => $token,
@@ -100,8 +100,8 @@ final class ModuleGuardTest extends SymfonicatWebTestCase
     public function testModuleRouteRejectsUnknownApplicationContext(): void
     {
         $this->createDomain('example.com');
-        $module = $this->createModule('analytics', 'Analytics');
-        $application = (new Application())->setId('test');
+        $module = $this->createModule('symfonicat/analytics/main', 'Analytics');
+        $application = (new Application())->setId('core/test');
         $application->addModule($module);
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_APPLICATION)
@@ -118,7 +118,7 @@ final class ModuleGuardTest extends SymfonicatWebTestCase
         self::assertResponseIsSuccessful('application routing rule should render the test application');
         $token = $this->applicationCsrfTokenFromLastResponse();
 
-        $this->client()->request('POST', '/m/analytics', [], [], [
+        $this->client()->request('POST', '/m/symfonicat/analytics/main', [], [], [
             'HTTP_X_SYMFONICAT_APPLICATION_REQUEST' => '1',
             'HTTP_X_SYMFONICAT_APPLICATION' => 'does-not-exist',
             'HTTP_X_SYMFONICAT_APPLICATION_TOKEN' => $token,
@@ -134,8 +134,8 @@ final class ModuleGuardTest extends SymfonicatWebTestCase
     public function testModuleRouteRejectsApplicationContextWithoutValidCsrfToken(): void
     {
         $this->createDomain('example.com');
-        $module = $this->createModule('analytics', 'Analytics');
-        $application = (new Application())->setId('test');
+        $module = $this->createModule('symfonicat/analytics/main', 'Analytics');
+        $application = (new Application())->setId('core/test');
         $application->addModule($module);
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_APPLICATION)
@@ -148,7 +148,7 @@ final class ModuleGuardTest extends SymfonicatWebTestCase
         $this->entityManager()->flush();
 
         $this->setHost('example.com');
-        $this->client()->request('POST', '/m/analytics', [], [], [
+        $this->client()->request('POST', '/m/symfonicat/analytics/main', [], [], [
             'HTTP_X_SYMFONICAT_APPLICATION_REQUEST' => '1',
             'HTTP_X_SYMFONICAT_APPLICATION' => 'test',
             'HTTP_X_SYMFONICAT_APPLICATION_TOKEN' => 'invalid',
@@ -161,12 +161,12 @@ final class ModuleGuardTest extends SymfonicatWebTestCase
     {
         $domain = $this->createDomain('example.com');
         $project = $this->createProject('project1', 'Project 1', $domain);
-        $module = $this->createModule('analytics', 'Analytics');
+        $module = $this->createModule('symfonicat/analytics/main', 'Analytics');
         $project->addModule($module);
         $this->entityManager()->flush();
 
         $this->setHost('project1.example.com');
-        $this->client()->request('GET', '/m/analytics');
+        $this->client()->request('GET', '/m/symfonicat/analytics/main');
 
         // Analytics controller is declared POST-only. GET must 405 instead of
         // being swallowed by the project catch-all (which would return 200).
@@ -174,7 +174,7 @@ final class ModuleGuardTest extends SymfonicatWebTestCase
         self::assertContains(
             $status,
             [404, 405],
-            sprintf('GET /m/analytics must not render the project shell; got %d', $status),
+            sprintf('GET /m/symfonicat/analytics/main must not render the project shell; got %d', $status),
         );
         self::assertStringNotContainsString(
             'Project 1',

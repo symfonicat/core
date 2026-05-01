@@ -1,8 +1,8 @@
 <tr id="domain_{{ domain.id }}" class="btn-row">
-    <td class="fw-semibold"><a href="{{ app.request.scheme }}://{{ domain.id | split('/')[1] }}">{{ domain.id }}</a></td>
+    <td class="fw-semibold"><a href="{{ app.request.scheme }}://{{ domain.id }}">{{ domain.id }}</a></td>
     <td>
         {% for project in domain.projects %}
-            <a href="{{ path('symfonicat_project_edit', {'id': project.id}) }}">{{ project.name }}</a>{% if not loop.last %}, {% endif %}
+            <a href="{{ path('symfonicat_project_edit', {'id': project.id(true)}) }}">{{ project.name }}</a>{% if not loop.last %}, {% endif %}
         {% else %}
             -
         {% endfor %}
@@ -20,7 +20,7 @@
     <td class="text-end btn-cell">
 
         <div class="btn-group btn-group-sm">
-            <a href="{{ path('symfonicat_domain_edit', {'id': domain.id}) }}" class="btn btn-sm btn-warning">
+            <a href="{{ path('symfonicat_domain_edit', {'id': domain.id(true)}) }}" class="btn btn-sm btn-warning">
                 <i class="fa fa-pencil">&nbsp;</i>
             </a>
             {{ include('admin/domain/_delete_form.html.twig') }}

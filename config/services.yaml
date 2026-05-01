@@ -1,6 +1,3 @@
-imports:
-    - { resource: '../vendor/symfonicat/*/config/services.yaml', ignore_errors: true }
-
 parameters:
 
 services:
@@ -29,6 +26,7 @@ services:
     Symfonicat\Service\PackageDiscoveryService:
         arguments:
             $projectDir: '%kernel.project_dir%'
+            $vendors: '%symfonicat.vendors%'
 
     Symfonicat\Service\ApplicationService:
         arguments:

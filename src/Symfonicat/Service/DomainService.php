@@ -113,7 +113,7 @@ class DomainService
         $domains = [];
 
         foreach ($this->domainRepository->findAllOrderedById() as $domain) {
-            $domainId = $domain->getId();
+            $domainId = $domain->getId(true);
             if ($domainId === null || $domainId === '') {
                 continue;
             }

@@ -76,7 +76,7 @@ final class DomainController extends AbstractController
             return $this->redirectToRoute('symfonicat_domain_index', [], Response::HTTP_SEE_OTHER);
         }
 
-        if ($this->isCsrfTokenValid('delete'.$domain->getId(), $request->getPayload()->getString('_token'))) {
+        if ($this->isCsrfTokenValid('delete'.$domain->getId(true), $request->getPayload()->getString('_token'))) {
             $entityManager->remove($domain);
             $entityManager->flush();
         }

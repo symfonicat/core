@@ -26,4 +26,22 @@ final class ApplicationRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
+
+    public function findOneByFullOrCleanId(string $id): ?Application
+    {
+        $id = trim($id);
+        if ($id === '') {
+            return null;
+        }
+
+        return $this->createQueryBuilder('application')
+            ->andWhere('application.id = :id OR application.id LIKE :idSuffix')
+            ->setParameter('id', $id)
+            ->setParameter('idSuffix', '%/'.$id)
+            ->orderBy('CASE WHEN application.id = :id THEN 0 ELSE 1 END', 'ASC')
+            ->addOrderBy('application.id', 'ASC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
 }

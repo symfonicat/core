@@ -12,7 +12,7 @@ final class ElectronTest extends TestCase
     public function testProjectTargetIdRequiresBothProjectAndDomain(): void
     {
         $project = (new Project())
-            ->setId('project1')
+            ->setId('core/project1')
             ->setName('Project 1');
 
         $electron = (new Electron())
@@ -26,10 +26,10 @@ final class ElectronTest extends TestCase
     public function testProjectTargetIdUsesProjectAndDomainIds(): void
     {
         $project = (new Project())
-            ->setId('project1')
+            ->setId('core/project1')
             ->setName('Project 1');
         $domain = (new Domain())
-            ->setId('example.com');
+            ->setId('core/example.com');
 
         $electron = (new Electron())
             ->setType(Electron::TYPE_PROJECT)

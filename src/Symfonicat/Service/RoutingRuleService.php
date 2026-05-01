@@ -97,7 +97,7 @@ final class RoutingRuleService
 
     public function getApplicationRuleForApplication(Application|string $application): ?RoutingRule
     {
-        $applicationId = $application instanceof Application ? (string) $application->getId() : $application;
+        $applicationId = $application instanceof Application ? (string) $application->getId(true) : $application;
 
         return $this->routingRuleRepository->findOneTypeApplicationByApplicationId($applicationId);
     }

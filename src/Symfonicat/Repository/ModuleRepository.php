@@ -28,6 +28,24 @@ class ModuleRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    public function findOneByFullOrCleanId(string $id): ?Module
+    {
+        $id = trim($id);
+        if ($id === '') {
+            return null;
+        }
+
+        return $this->createQueryBuilder('m')
+            ->andWhere('m.id = :id OR m.id LIKE :idSuffix')
+            ->setParameter('id', $id)
+            ->setParameter('idSuffix', '%/'.$id)
+            ->orderBy('CASE WHEN m.id = :id THEN 0 ELSE 1 END', 'ASC')
+            ->addOrderBy('m.id', 'ASC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
     /**
      * @return Module[]
      */

@@ -49,7 +49,7 @@ final class RoutingRuleAdminRowTest extends SymfonicatKernelTestCase
 
     public function testRowLinksApplicationRuleWhenApplicationExists(): void
     {
-        $application = (new Application())->setId('test');
+        $application = (new Application())->setId('core/test');
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_APPLICATION)
             ->setApplication($application)
@@ -68,7 +68,7 @@ final class RoutingRuleAdminRowTest extends SymfonicatKernelTestCase
 
     public function testRowLinksRouteBasedApplicationRuleWhenApplicationExists(): void
     {
-        $application = (new Application())->setId('test');
+        $application = (new Application())->setId('core/test');
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_APPLICATION)
             ->setApplication($application)

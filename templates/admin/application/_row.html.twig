@@ -1,5 +1,5 @@
 <tr id="application_{{ application.id }}" class="btn-row">
-    <td class="fw-semibold"><a href="{{ path('symfonicat_application_edit', {'id': application.id}) }}">{{ application.id }}</a></td>
+    <td class="fw-semibold"><a href="{{ path('symfonicat_application_edit', {'id': application.id(true)}) }}">{{ application.id }}</a></td>
     <td>
         {% for module in application.modules %}
             {{ module.name }}{% if not loop.last %}, {% endif %}
@@ -19,7 +19,7 @@
     {% endfor %}
     <td class="text-end btn-cell">
         <div class="btn-group btn-group-sm">
-            <a href="{{ path('symfonicat_application_edit', {'id': application.id}) }}" class="btn btn-sm btn-warning">
+            <a href="{{ path('symfonicat_application_edit', {'id': application.id(true)}) }}" class="btn btn-sm btn-warning">
                 <i class="fa fa-pencil">&nbsp;</i>
             </a>
         </div>

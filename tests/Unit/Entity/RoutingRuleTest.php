@@ -79,8 +79,8 @@ final class RoutingRuleTest extends TestCase
 
     public function testNormalizeScopeClearsProjectWhenRuleIsDomainTyped(): void
     {
-        $domain = (new Domain())->setId('example.com');
-        $project = (new Project())->setId('project1')->setName('Project 1');
+        $domain = (new Domain())->setId('core/example.com');
+        $project = (new Project())->setId('core/project1')->setName('Project 1');
 
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_DOMAIN)
@@ -96,8 +96,8 @@ final class RoutingRuleTest extends TestCase
 
     public function testNormalizeScopeClearsDomainWhenRuleIsProjectTyped(): void
     {
-        $domain = (new Domain())->setId('example.com');
-        $project = (new Project())->setId('project1')->setName('Project 1');
+        $domain = (new Domain())->setId('core/example.com');
+        $project = (new Project())->setId('core/project1')->setName('Project 1');
 
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_PROJECT)
@@ -141,9 +141,9 @@ final class RoutingRuleTest extends TestCase
 
     public function testNormalizeScopeKeepsBothRedirectTargetsForCombinedRedirectTarget(): void
     {
-        $matchDomain = (new Domain())->setId('example.com');
-        $targetDomain = (new Domain())->setId('other.example');
-        $project = (new Project())->setId('project2')->setName('Project 2');
+        $matchDomain = (new Domain())->setId('core/example.com');
+        $targetDomain = (new Domain())->setId('core/other.example');
+        $project = (new Project())->setId('core/project2')->setName('Project 2');
 
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_REDIRECT)
@@ -164,7 +164,7 @@ final class RoutingRuleTest extends TestCase
     {
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_DOMAIN)
-            ->setDomain((new Domain())->setId('example.com'))
+            ->setDomain((new Domain())->setId('core/example.com'))
             ->setArguments([$argument]);
 
         $violations = $this->validator->validate($rule);
@@ -195,7 +195,7 @@ final class RoutingRuleTest extends TestCase
         // twice in the admin UI. The entity is the single source of truth.
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_DOMAIN)
-            ->setDomain((new Domain())->setId('example.com'))
+            ->setDomain((new Domain())->setId('core/example.com'))
             ->setArguments(['admin']);
 
         $violations = $this->validator->validate($rule);
@@ -218,7 +218,7 @@ final class RoutingRuleTest extends TestCase
     {
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_DOMAIN)
-            ->setDomain((new Domain())->setId('example.com'))
+            ->setDomain((new Domain())->setId('core/example.com'))
             ->setArguments(['blog']);
 
         self::assertCount(0, $this->validator->validate($rule));
@@ -263,7 +263,7 @@ final class RoutingRuleTest extends TestCase
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_REDIRECT)
             ->setRedirectType(RoutingRule::REDIRECT_TYPE_DOMAIN)
-            ->setDomain((new Domain())->setId('example.com'))
+            ->setDomain((new Domain())->setId('core/example.com'))
             ->setRedirectTarget(RoutingRule::REDIRECT_TYPE_DOMAIN_PROJECT);
 
         $violations = $this->validator->validate($rule);

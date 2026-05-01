@@ -24,7 +24,7 @@ final class ApplicationController extends AbstractController
         ApplicationService $applicationService,
         Environment $twig,
     ): Response {
-        $application = $applicationRepository->find($id);
+        $application = $applicationRepository->findOneByFullOrCleanId($id);
         if (!$application instanceof Application) {
             throw new NotFoundHttpException(sprintf('Application "%s" was not found.', $id));
         }

@@ -54,7 +54,7 @@ final class ApplicationRouteTest extends SymfonicatWebTestCase
 
     public function testRouteBasedApplicationRuleUsesConfiguredSymfonyRoute(): void
     {
-        $application = (new Application())->setId('test');
+        $application = (new Application())->setId('core/test');
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_APPLICATION)
             ->setApplication($application)
@@ -111,7 +111,7 @@ final class ApplicationRouteTest extends SymfonicatWebTestCase
 
     public function testRouteBasedApplicationRuleInjectsApplicationIntoController(): void
     {
-        $application = (new Application())->setId('test');
+        $application = (new Application())->setId('core/test');
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_APPLICATION)
             ->setApplication($application)
@@ -131,7 +131,7 @@ final class ApplicationRouteTest extends SymfonicatWebTestCase
 
     private function seedApplicationRule(): Application
     {
-        $application = (new Application())->setId('test');
+        $application = (new Application())->setId('core/test');
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_APPLICATION)
             ->setApplication($application)

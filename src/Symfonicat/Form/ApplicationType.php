@@ -12,10 +12,14 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 
 final class ApplicationType extends AbstractType
 {
+    use VendorScopedIdFormTrait;
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $application = $builder->getData();
         $applicationId = $application instanceof Application ? trim((string) $application->getId()) : '';
+
+        $this->addDisabledVendorField($builder);
 
         if ($applicationId === '') {
             $builder->add('id', null, [
@@ -43,6 +47,8 @@ final class ApplicationType extends AbstractType
                 'prototype' => true,
             ])
         ;
+
+        $this->addVendorPrefixSubmitListener($builder, $options);
     }
 
     public function configureOptions(OptionsResolver $resolver): void
@@ -50,8 +56,10 @@ final class ApplicationType extends AbstractType
         $resolver->setDefaults([
             'data_class' => Application::class,
             'id_editable' => true,
+            'default_vendor' => 'core',
         ]);
 
         $resolver->setAllowedTypes('id_editable', 'bool');
+        $resolver->setAllowedTypes('default_vendor', 'string');
     }
 }

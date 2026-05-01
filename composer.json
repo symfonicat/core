@@ -17,7 +17,7 @@
         "predis/predis": "^3.4.2",
         "scheb/2fa-bundle": "^8.5",
         "scheb/2fa-totp": "^8.5",
-        "symfonicat/analytics": "^1.0.4",
+        "symfonicat/analytics": "^2.0.0",
         "symfony/asset": "8.0.*",
         "symfony/console": "8.0.*",
         "symfony/dotenv": "8.0.*",

@@ -16,9 +16,20 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 
 final class ElectronType extends AbstractType
 {
+    use VendorScopedIdFormTrait;
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
+        $electron = $builder->getData();
+        $electronId = $electron instanceof Electron ? trim((string) $electron->getId()) : '';
+
+        $this->addDisabledVendorField($builder);
+
         $builder
+            ->add('id', null, [
+                'label' => 'id',
+                'disabled' => $electronId !== '' || !$options['id_editable'],
+            ])
             ->add('name', null, [
                 'label' => 'name',
             ])
@@ -62,12 +73,19 @@ final class ElectronType extends AbstractType
                 'prototype' => true,
             ])
         ;
+
+        $this->addVendorPrefixSubmitListener($builder, $options);
     }
 
     public function configureOptions(OptionsResolver $resolver): void
     {
         $resolver->setDefaults([
             'data_class' => Electron::class,
+            'id_editable' => true,
+            'default_vendor' => 'core',
         ]);
+
+        $resolver->setAllowedTypes('id_editable', 'bool');
+        $resolver->setAllowedTypes('default_vendor', 'string');
     }
 }

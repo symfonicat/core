@@ -47,6 +47,24 @@ class ProjectRepository extends ServiceEntityRepository
         return $qb->getQuery()->getOneOrNullResult();
     }
 
+    public function findOneByFullOrCleanId(string $id): ?Project
+    {
+        $id = trim($id);
+        if ($id === '') {
+            return null;
+        }
+
+        return $this->createQueryBuilder('project')
+            ->andWhere('project.id = :id OR project.id LIKE :idSuffix')
+            ->setParameter('id', $id)
+            ->setParameter('idSuffix', '%/'.$id)
+            ->orderBy('CASE WHEN project.id = :id THEN 0 ELSE 1 END', 'ASC')
+            ->addOrderBy('project.id', 'ASC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
     /**
      * @return Project[]
      */
