@@ -24,7 +24,7 @@ final class ApplicationController extends AbstractController
         ]);
     }
 
-    #[Route('/admin/a/{id}', name: 'symfonicat_application_edit', methods: ['GET', 'POST'])]
+    #[Route('/admin/a/{id}', name: 'symfonicat_application_edit', methods: ['GET', 'POST'], requirements: ['id' => '.+'])]
     public function edit(
         Request $request,
         string $id,
