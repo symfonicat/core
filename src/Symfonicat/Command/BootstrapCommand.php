@@ -25,6 +25,11 @@ use Symfonicat\Repository\EnvRepository;
 use Symfonicat\Repository\ModuleRepository;
 use Symfonicat\Repository\ProjectRepository;
 use Symfonicat\Repository\RoutingRuleRepository;
+use Symfonicat\Service\PackageDiscoveryService;
+use Symfonicat\Service\ModuleService;
+use Symfonicat\Service\DomainService;
+use Symfonicat\Service\ApplicationService;
+use Symfonicat\Service\ProjectService;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -50,6 +55,11 @@ final class BootstrapCommand extends Command
         private readonly ModuleRepository $moduleRepository,
         private readonly ProjectRepository $projectRepository,
         private readonly RoutingRuleRepository $routingRuleRepository,
+        private readonly PackageDiscoveryService $packageDiscoveryService,
+        private readonly ModuleService $moduleService,
+        private readonly DomainService $domainService,
+        private readonly ApplicationService $applicationService,
+        private readonly ProjectService $projectService,
     ) {
         parent::__construct();
     }
@@ -76,6 +86,28 @@ final class BootstrapCommand extends Command
         $this->runWithBootstrapLock(function () use ($input, $io): void {
             $this->synchronizeSchema();
             $io->success('Database schema is synchronized.');
+
+            // Synchronize installed package entries (modules, domains, applications, projects)
+            try {
+                $this->moduleService->sync(static fn ($module, $references): bool => true);
+            } catch (\Throwable $e) {
+                // ignore sync errors during bootstrap
+            }
+
+            try {
+                $this->domainService->sync(static fn ($ids): bool => true);
+            } catch (\Throwable $e) {
+            }
+
+            try {
+                $this->applicationService->sync(static fn ($ids): bool => true);
+            } catch (\Throwable $e) {
+            }
+
+            try {
+                $this->projectService->sync(static fn ($ids): bool => true);
+            } catch (\Throwable $e) {
+            }
 
             if ((bool) $input->getOption('seed-localhost')) {
                 $seeded = $this->seedLocalDefaults();
@@ -411,19 +443,46 @@ final class BootstrapCommand extends Command
      */
     private function ensureAnalyticsModule(): array
     {
-        $module = $this->moduleRepository->find('analytics');
+        // Prefer finding an installed package module by package name (e.g. "analytics/main").
+        $module = $this->moduleRepository->findOneBy(['package' => 'analytics']);
         $created = false;
         $updated = false;
+
+        $packageModule = null;
+        foreach ($this->packageDiscoveryService->discoverModules() as $pkgModule) {
+            if (($pkgModule['package'] ?? '') === 'analytics') {
+                $packageModule = $pkgModule;
+                break;
+            }
+        }
+
+        $moduleName = $packageModule['name'] ?? 'Analytics';
+        $modulePackage = $packageModule['package'] ?? 'analytics';
+
+        // Fall back to legacy id lookup if no package-scoped module found.
+        if (!$module instanceof Module) {
+            $module = $this->moduleRepository->find('analytics');
+        }
 
         if (!$module instanceof Module) {
             $module = (new Module())
                 ->setId('analytics')
-                ->setName('Analytics');
+                ->setName($moduleName)
+                ->setPackage($modulePackage);
 
             $this->entityManager->persist($module);
             $created = true;
-        } elseif ($module->getName() !== 'Analytics') {
-            $module->setName('Analytics');
+
+            return [$module, $created, $updated];
+        }
+
+        if ($module->getName() !== $moduleName) {
+            $module->setName($moduleName);
+            $updated = true;
+        }
+
+        if ($module->getPackage() !== $modulePackage) {
+            $module->setPackage($modulePackage);
             $updated = true;
         }
 
