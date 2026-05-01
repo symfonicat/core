@@ -2,6 +2,7 @@
 
 namespace Symfonicat\Service;
 
+use Doctrine\ORM\EntityManagerInterface;
 use Symfonicat\Repository\DomainRepository;
 use Pdp\Domain;
 use Pdp\Rules;
@@ -13,6 +14,8 @@ class DomainService
         private readonly string $projectDir,
         private readonly RequestStack $requestStack,
         private readonly DomainRepository $domainRepository,
+        private readonly EntityManagerInterface $entityManager,
+        private readonly PackageDiscoveryService $packageDiscoveryService,
     ) {
     }
 
@@ -23,7 +26,7 @@ class DomainService
             return null;
         }
 
-        return $this->domainRepository->find($host);
+        return $this->domainRepository->findOneByHost($host);
     }
 
     public function host() : ?string
@@ -57,5 +60,67 @@ class DomainService
         }
 
         return $list;
+    }
+
+    /**
+     * @param (callable(list<string>): bool)|null $confirmDomainCreation
+     *
+     * @return array{created: list<array{id: string}>}
+     */
+    public function sync(?callable $confirmDomainCreation = null): array
+    {
+        $packageDomains = $this->discoverPackageDomains();
+        $databaseDomains = $this->indexDatabaseDomains();
+
+        $missingDomainIds = array_values(array_diff($packageDomains, array_keys($databaseDomains)));
+        sort($missingDomainIds, SORT_STRING);
+
+        if ($missingDomainIds === []) {
+            return ['created' => []];
+        }
+
+        if ($confirmDomainCreation !== null && !(bool) $confirmDomainCreation($missingDomainIds)) {
+            throw new \RuntimeException('Aborted creating missing domain rows.');
+        }
+
+        $created = [];
+
+        foreach ($missingDomainIds as $domainId) {
+            $domain = (new \Symfonicat\Entity\Domain())->setId($domainId);
+
+            $this->entityManager->persist($domain);
+            $created[] = ['id' => $domainId];
+        }
+
+        $this->entityManager->flush();
+
+        return ['created' => $created];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function discoverPackageDomains(): array
+    {
+        return array_keys($this->packageDiscoveryService->discoverEntryDirectories('domains'));
+    }
+
+    /**
+     * @return array<string, \Symfonicat\Entity\Domain>
+     */
+    private function indexDatabaseDomains(): array
+    {
+        $domains = [];
+
+        foreach ($this->domainRepository->findAllOrderedById() as $domain) {
+            $domainId = $domain->getId();
+            if ($domainId === null || $domainId === '') {
+                continue;
+            }
+
+            $domains[$domainId] = $domain;
+        }
+
+        return $domains;
     }
 }

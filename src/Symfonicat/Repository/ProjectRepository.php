@@ -33,14 +33,18 @@ class ProjectRepository extends ServiceEntityRepository
 
     public function findOneByIdForDomain(string $id, string $domainId): ?Project
     {
-        return $this->createQueryBuilder('p')
+        $qb = $this->createQueryBuilder('p')
             ->innerJoin('p.domains', 'd')
-            ->andWhere('p.id = :id')
             ->andWhere('d.id = :domainId')
-            ->setParameter('id', $id)
             ->setParameter('domainId', $domainId)
-            ->getQuery()
-            ->getOneOrNullResult();
+            ->setMaxResults(1);
+
+        // Match either exact id or package-prefixed id that ends with "/{id}"
+        $qb->andWhere($qb->expr()->orX('p.id = :id', 'p.id LIKE :idSuffix'))
+            ->setParameter('id', $id)
+            ->setParameter('idSuffix', '%/'.$id);
+
+        return $qb->getQuery()->getOneOrNullResult();
     }
 
     /**

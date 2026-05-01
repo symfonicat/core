@@ -16,28 +16,28 @@ class DomainRepository extends ServiceEntityRepository
         parent::__construct($registry, Domain::class);
     }
 
-    //    /**
-    //     * @return Domain[] Returns an array of Domain objects
-    //     */
-    //    public function findByExampleField($value): array
-    //    {
-    //        return $this->createQueryBuilder('d')
-    //            ->andWhere('d.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->orderBy('d.id', 'ASC')
-    //            ->setMaxResults(10)
-    //            ->getQuery()
-    //            ->getResult()
-    //        ;
-    //    }
+    /**
+     * @return Domain[]
+     */
+    public function findAllOrderedById(): array
+    {
+        return $this->createQueryBuilder('domain')
+            ->orderBy('domain.id', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
 
-    //    public function findOneBySomeField($value): ?Domain
-    //    {
-    //        return $this->createQueryBuilder('d')
-    //            ->andWhere('d.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->getQuery()
-    //            ->getOneOrNullResult()
-    //        ;
-    //    }
+    public function findOneByHost(string $host): ?Domain
+    {
+        $qb = $this->createQueryBuilder('domain')
+            ->andWhere('domain.id = :host')
+            ->setParameter('host', $host)
+            ->setMaxResults(1);
+
+        // Also allow package-prefixed ids that end with "/$host"
+        $qb->orWhere('domain.id LIKE :hostSuffix')
+            ->setParameter('hostSuffix', '%/'.$host);
+
+        return $qb->getQuery()->getOneOrNullResult();
+    }
 }
