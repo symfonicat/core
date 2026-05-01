@@ -10,11 +10,13 @@ use Symfony\WebpackEncoreBundle\Exception\EntrypointNotFoundException;
 use Symfony\WebpackEncoreBundle\Twig\EntryFilesTwigExtension;
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFunction;
+use Symfonicat\Service\PackageDiscoveryService;
 
 final class EncoreEntryTagsExtension extends AbstractExtension
 {
     public function __construct(
         private readonly EntryFilesTwigExtension $entryFilesTwigExtension,
+        private readonly PackageDiscoveryService $packageDiscoveryService,
     ) {
     }
 
@@ -109,28 +111,128 @@ final class EncoreEntryTagsExtension extends AbstractExtension
     private function domainEntryName(?Domain $domain): ?string
     {
         $id = trim((string) $domain?->getId());
+        if ($id === '') {
+            return null;
+        }
 
-        return $id === '' ? null : 'domains/'.$id;
+        $entryName = 'domains/'.$id;
+        if ($this->entryFilesTwigExtension->entryExists($entryName)) {
+            return $entryName;
+        }
+
+        if (strpos($id, '/') !== false) {
+            return $entryName;
+        }
+
+        $packages = $this->packageDiscoveryService->discoverEntryDirectories('domains');
+        $matches = [];
+        foreach (array_keys($packages) as $pkgId) {
+            $parts = explode('/', $pkgId);
+            if (end($parts) === $id) {
+                $matches[] = $pkgId;
+            }
+        }
+
+        if (count($matches) === 1) {
+            return 'domains/'.$matches[0];
+        }
+
+        return $entryName;
     }
 
     private function applicationEntryName(?Application $application): ?string
     {
         $id = trim((string) $application?->getId());
+        if ($id === '') {
+            return null;
+        }
 
-        return $id === '' ? null : 'applications/'.$id;
+        $entryName = 'applications/'.$id;
+        if ($this->entryFilesTwigExtension->entryExists($entryName)) {
+            return $entryName;
+        }
+
+        if (strpos($id, '/') !== false) {
+            return $entryName;
+        }
+
+        $packages = $this->packageDiscoveryService->discoverEntryDirectories('applications');
+        $matches = [];
+        foreach (array_keys($packages) as $pkgId) {
+            $parts = explode('/', $pkgId);
+            if (end($parts) === $id) {
+                $matches[] = $pkgId;
+            }
+        }
+
+        if (count($matches) === 1) {
+            return 'applications/'.$matches[0];
+        }
+
+        return $entryName;
     }
 
     private function projectEntryName(?Project $project): ?string
     {
         $id = trim((string) $project?->getId());
+        if ($id === '') {
+            return null;
+        }
 
-        return $id === '' ? null : 'projects/'.$id;
+        $entryName = 'projects/'.$id;
+        if ($this->entryFilesTwigExtension->entryExists($entryName)) {
+            return $entryName;
+        }
+
+        if (strpos($id, '/') !== false) {
+            return $entryName;
+        }
+
+        $packages = $this->packageDiscoveryService->discoverEntryDirectories('projects');
+        $matches = [];
+        foreach (array_keys($packages) as $pkgId) {
+            $parts = explode('/', $pkgId);
+            if (end($parts) === $id) {
+                $matches[] = $pkgId;
+            }
+        }
+
+        if (count($matches) === 1) {
+            return 'projects/'.$matches[0];
+        }
+
+        return $entryName;
     }
 
     private function moduleEntryName(?Module $module): ?string
     {
         $id = trim((string) $module?->getId());
+        if ($id === '') {
+            return null;
+        }
 
-        return $id === '' ? null : 'modules/'.$id;
+        $entryName = 'modules/'.$id;
+        if ($this->entryFilesTwigExtension->entryExists($entryName)) {
+            return $entryName;
+        }
+
+        if (strpos($id, '/') !== false) {
+            return $entryName;
+        }
+
+        $packages = $this->packageDiscoveryService->discoverEntryDirectories('modules');
+        $matches = [];
+        foreach (array_keys($packages) as $pkgId) {
+            $parts = explode('/', $pkgId);
+            if (end($parts) === $id) {
+                $matches[] = $pkgId;
+            }
+        }
+
+        if (count($matches) === 1) {
+            return 'modules/'.$matches[0];
+        }
+
+        return $entryName;
     }
 }
