@@ -16,7 +16,7 @@ final class ModuleService
         private readonly PathService $pathService,
         private readonly ModuleRepository $moduleRepository,
         private readonly EntityManagerInterface $entityManager,
-        private readonly string $projectDir,
+        private readonly PackageDiscoveryService $packageDiscoveryService,
     ) {
     }
 
@@ -24,9 +24,19 @@ final class ModuleService
     {
         $arg0 = $this->pathService->arg(0);
         $arg1 = $this->pathService->arg(1);
+        $arg2 = $this->pathService->arg(2);
 
         if ($arg0 !== 'm' || $arg1 === NULL) {
             return NULL;
+        }
+
+        // Support package-prefixed module ids like "analytics/main" represented in the URL as /m/analytics/main
+        if ($arg2 !== NULL) {
+            $composed = sprintf('%s/%s', $arg1, $arg2);
+            $module = $this->moduleRepository->find($composed);
+            if ($module instanceof Module) {
+                return $module;
+            }
         }
 
         return $this->moduleRepository->find($arg1);
@@ -58,17 +68,17 @@ final class ModuleService
      *             type: string
      *         }>
      *     }>,
-     *     updated: list<array{id: string, from: string, to: string}>
+     *     updated: list<array{id: string, field: string, from: string, to: string}>
      * }
      */
     public function sync(?callable $confirmModuleDeletion = null): array
     {
-        $filesystemModules = $this->discoverFilesystemModules();
+        $packageModules = $this->discoverPackageModules();
         $databaseModules = $this->indexDatabaseModules();
 
-        $created = $this->createMissingModules($filesystemModules, $databaseModules);
-        $updated = $this->updateExistingModules($filesystemModules, $databaseModules);
-        $deleted = $this->deleteMissingFilesystemModules($filesystemModules, $databaseModules, $confirmModuleDeletion);
+        $created = $this->createMissingModules($packageModules, $databaseModules);
+        $updated = $this->updateExistingModules($packageModules, $databaseModules);
+        $deleted = $this->deleteMissingPackageModules($packageModules, $databaseModules, $confirmModuleDeletion);
 
         $this->entityManager->flush();
 
@@ -80,41 +90,17 @@ final class ModuleService
     }
 
     /**
-     * @return array<string, string>
+     * @return array<string, array{name: string, package: string}>
      */
-    private function discoverFilesystemModules(): array
+    private function discoverPackageModules(): array
     {
-        $moduleDirectories = glob($this->projectDir.'/assets/modules/*', GLOB_ONLYDIR) ?: [];
-        sort($moduleDirectories, SORT_STRING);
-
         $modules = [];
 
-        foreach ($moduleDirectories as $moduleDirectory) {
-            $moduleId = basename($moduleDirectory);
-            $packagePath = $moduleDirectory.'/package.json';
-
-            if (!is_file($packagePath)) {
-                throw new \RuntimeException(sprintf('Module "%s" is missing "%s".', $moduleId, $packagePath));
-            }
-
-            $packageJson = file_get_contents($packagePath);
-
-            if ($packageJson === false) {
-                throw new \RuntimeException(sprintf('Unable to read module package file "%s".', $packagePath));
-            }
-
-            try {
-                $package = json_decode($packageJson, true, 512, JSON_THROW_ON_ERROR);
-            } catch (\JsonException $exception) {
-                throw new \RuntimeException(sprintf('Module package "%s" does not contain valid JSON.', $packagePath), 0, $exception);
-            }
-
-            $name = is_array($package) ? trim((string) ($package['name'] ?? '')) : '';
-            if ($name === '') {
-                throw new \RuntimeException(sprintf('Module package "%s" must define a non-empty "name".', $packagePath));
-            }
-
-            $modules[$moduleId] = $name;
+        foreach ($this->packageDiscoveryService->discoverModules() as $moduleId => $module) {
+            $modules[$moduleId] = [
+                'name' => $module['name'],
+                'package' => $module['package'],
+            ];
         }
 
         return $modules;
@@ -140,29 +126,30 @@ final class ModuleService
     }
 
     /**
-     * @param array<string, string> $filesystemModules
+     * @param array<string, array{name: string, package: string}> $packageModules
      * @param array<string, Module> $databaseModules
      *
      * @return list<array{id: string, name: string}>
      */
-    private function createMissingModules(array $filesystemModules, array &$databaseModules): array
+    private function createMissingModules(array $packageModules, array &$databaseModules): array
     {
         $created = [];
 
-        foreach ($filesystemModules as $moduleId => $moduleName) {
+        foreach ($packageModules as $moduleId => $moduleData) {
             if (isset($databaseModules[$moduleId])) {
                 continue;
             }
 
             $module = (new Module())
                 ->setId($moduleId)
-                ->setName($moduleName);
+                ->setName($moduleData['name'])
+                ->setPackage($moduleData['package']);
 
             $this->entityManager->persist($module);
             $databaseModules[$moduleId] = $module;
             $created[] = [
                 'id' => $moduleId,
-                'name' => $moduleName,
+                'name' => $moduleData['name'],
             ];
         }
 
@@ -170,39 +157,49 @@ final class ModuleService
     }
 
     /**
-     * @param array<string, string> $filesystemModules
+     * @param array<string, array{name: string, package: string}> $packageModules
      * @param array<string, Module> $databaseModules
      *
-     * @return list<array{id: string, from: string, to: string}>
+     * @return list<array{id: string, field: string, from: string, to: string}>
      */
-    private function updateExistingModules(array $filesystemModules, array $databaseModules): array
+    private function updateExistingModules(array $packageModules, array $databaseModules): array
     {
         $updated = [];
 
-        foreach ($filesystemModules as $moduleId => $moduleName) {
+        foreach ($packageModules as $moduleId => $moduleData) {
             $module = $databaseModules[$moduleId] ?? null;
             if (!$module instanceof Module) {
                 continue;
             }
 
             $currentName = $module->getName() ?? '';
-            if ($currentName === $moduleName) {
-                continue;
+            if ($currentName !== $moduleData['name']) {
+                $module->setName($moduleData['name']);
+                $updated[] = [
+                    'id' => $moduleId,
+                    'field' => 'name',
+                    'from' => $currentName,
+                    'to' => $moduleData['name'],
+                ];
             }
 
-            $module->setName($moduleName);
-            $updated[] = [
-                'id' => $moduleId,
-                'from' => $currentName,
-                'to' => $moduleName,
-            ];
+            $currentPackage = $module->getPackage() ?? '';
+            if ($currentPackage !== $moduleData['package']) {
+                $module->setPackage($moduleData['package']);
+                $updated[] = [
+                    'id' => $moduleId,
+                    'field' => 'package',
+                    'from' => $currentPackage,
+                    'to' => $moduleData['package'],
+                ];
+            }
         }
 
         return $updated;
     }
 
     /**
-     * @param array<string, string> $filesystemModules
+     * @param array<string, array{name: string, package: string}> $packageModules
      * @param array<string, Module> $databaseModules
      * @param (callable(Module, list<array{
      *     association: string,
@@ -228,12 +225,12 @@ final class ModuleService
      *     }>
      * }>
      */
-    private function deleteMissingFilesystemModules(array $filesystemModules, array $databaseModules, ?callable $confirmModuleDeletion): array
+    private function deleteMissingPackageModules(array $packageModules, array $databaseModules, ?callable $confirmModuleDeletion): array
     {
         $deleted = [];
 
         foreach ($databaseModules as $moduleId => $module) {
-            if (isset($filesystemModules[$moduleId])) {
+            if (isset($packageModules[$moduleId])) {
                 continue;
             }
 
