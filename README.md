@@ -15,7 +15,7 @@ For local development, point the seeded hosts at your Docker host:
 git clone https://github.com/symfonicat/core symfonicat
 cd symfonicat
 docker compose up -d
-docker exec -it php bin/console symfonicat:admin:create <username>
+docker exec -it php bin/console symfonicat:admin:create <email>
 ```
 
 The `php` container installs Composer dependencies, synchronizes the schema, seeds local defaults, runs `npm install`, and builds assets.
@@ -25,8 +25,8 @@ The `php` container installs Composer dependencies, synchronizes the schema, see
 `Domain`, `Project`, `Application`, `Module`, and `Electron` store ids with a vendor prefix and expose the clean id by default:
 
 ```twig
-{{ domain.id }}       {# example.com #}
-{{ domain.id(true) }} {# core/example.com #}
+{{ project.id }}       {# project1 #}
+{{ project.id(true) }} {# core/project1 #}
 ```
 
 The separate `vendor` field is read-only in admin forms. Manually created rows use `core`; package-discovered rows use their Composer vendor. New ids must be vendor-prefixed internally.
@@ -93,7 +93,7 @@ There is also a `path_application` helper that generates URL's for Application e
 {{ path_application(application, 'somepath/testpath', ['PARAM']) }}
 
 {# application ID also works #}
-{{ path_application('test', 'somepath/testpath', ['PARAM']) }}
+{{ path_application('core/test', 'somepath/testpath', ['PARAM']) }}
 ```
 
 ## Assets
@@ -110,6 +110,28 @@ Public assets use `assets/symfonicat.js`, `assets/stimulus.js`, `assets/controll
 ## Module Runtime
 
 Backend module controllers live in installed packages and are exposed under their full-qualified package routes, for example `/m/symfonicat/analytics/main`. Frontend module code should keep a full qualifier such as `const mod = 'symfonicat/analytics/main'`; `mod.json()` and `mod.html()` call that full `/m` endpoint and module event subscribers resolve the same full id.
+
+Here is the example Symfonicat module that ships via the `symfonicat/analytics` package:
+
+```javascript
+const mod = 'symfonicat/analytics/main'
+
+mod.log('module active!')
+
+const run = async () => {
+    
+    const result = await mod.json({
+        test: true,
+    })
+
+    mod.log('/m/symfonicat/analytics/main result:', result)
+}
+
+await run()
+
+```
+
+This is the recommended usage pattern. Symfonicat modules are multi-tiered, meaning that in this example `symfonicat` is the vendor, `analytics` is the package, and `main` is the module. Any given Symfonicat composer package can ship with multiple modules.
 
 Controllers should extend `Symfonicat\Controller\AbstractModuleController`, which only runs a module when it is attached to the active project, domain, or application context.
 
