@@ -124,19 +124,8 @@ final class EncoreEntryTagsExtension extends AbstractExtension
             return $entryName;
         }
 
-        $packages = $this->packageDiscoveryService->discoverEntryDirectories('domains');
-        $matches = [];
-        foreach (array_keys($packages) as $pkgId) {
-            $parts = explode('/', $pkgId);
-            if (end($parts) === $id) {
-                $matches[] = $pkgId;
-            }
-        }
-
-        if (count($matches) === 1) {
-            return 'domains/'.$matches[0];
-        }
-
+        // Do not attempt to discover domain entries from installed packages.
+        // Domains are created only via bootstrap; fall back to the default entry name.
         return $entryName;
     }
 

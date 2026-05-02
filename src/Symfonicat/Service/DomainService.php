@@ -102,7 +102,10 @@ class DomainService
      */
     private function discoverPackageDomains(): array
     {
-        return array_keys($this->packageDiscoveryService->discoverEntryDirectories('domains'));
+        // Domain rows are intentionally *not* discovered from installed packages here.
+        // Domains are only created programmatically during the symfonicat:bootstrap
+        // command to avoid auto-creation during runtime.
+        return [];
     }
 
     /**

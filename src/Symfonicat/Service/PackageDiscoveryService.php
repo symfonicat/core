@@ -6,7 +6,6 @@ final class PackageDiscoveryService
 {
     private const SUPPORTED_ENTRY_TYPES = [
         'applications',
-        'domains',
         'modules',
         'projects',
     ];
