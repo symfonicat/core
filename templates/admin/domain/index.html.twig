@@ -11,6 +11,7 @@
             <tr>
                 <th>domain</th>
                 <th>projects</th>
+                <th>modules</th>
                 {% for env_parent in env_parents %}
                     <th>{{ env_parent.id }}</th>
                 {% endfor %}
@@ -22,7 +23,7 @@
             {{ include('admin/domain/_row.html.twig') }}
         {% else %}
             <tr id="domains-empty">
-                <td colspan="{{ 3 + env_parents|length }}">no records found</td>
+                <td colspan="{{ 4 + env_parents|length }}">no records found</td>
             </tr>
         {% endfor %}
         </tbody>

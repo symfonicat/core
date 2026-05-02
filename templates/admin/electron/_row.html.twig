@@ -1,16 +1,19 @@
 <tr id="electron_{{ electron.id }}" class="btn-row">
     <td class="fw-semibold">{{ electron.name }}</td>
     <td>{{ electron.type }}</td>
-    <td>{{ electron.domain ? electron.domain.id : '-' }}</td>
-    <td>{{ electron.project ? electron.project.name : '-' }}</td>
-    <td>{{ electron.application ? electron.application.id : '-' }}</td>
-    <td>
-        {% if electron.favicon %}
-            <code>{{ electron.favicon|replace({'electron/favicon/': ''}) }}</code>
-        {% else %}
-            <span class="text-body-secondary">-</span>
-        {% endif %}
-    </td>
+    <td><b>{% if electron.domain %}{{ electron.domain.id }}{% else %}<i class="fa fa-fw fa-times"></i>{% endif %}</b></td>
+    <td><b>{% if electron.project %}{{ electron.project.id(true) }}{% else %}<i class="fa fa-fw fa-times"></i>{% endif %}</b></td>
+    <td><b>{% if electron.application %}{{ electron.application.id(true) }}{% else %}<i class="fa fa-fw fa-times"></i>{% endif %}</b></td>
+    {% for env_parent in env_parents %}
+        <td>
+            {% set entries = env_parent_entries(electron.env, env_parent) %}
+            {% for entry in entries %}
+                <div><code>{{ entry }}</code></div>
+            {% else %}
+                <i class="fa fa-fw fa-times"></i>
+            {% endfor %}
+        </td>
+    {% endfor %}
     <td class="text-end btn-cell">
         <div class="btn-group btn-group-sm">
             <a href="{{ path('symfonicat_electron_edit', { id: electron.id(true) }) }}" class="btn btn-sm btn-warning">

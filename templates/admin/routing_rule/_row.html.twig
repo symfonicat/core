@@ -13,29 +13,28 @@
         {% if rule.argumentsPath %}
             <code>{{ rule.argumentsPath }}</code>
         {% else %}
-            <span class="text-body-secondary">-</span>
+            <i class="fa fa-fw fa-times"></i>
         {% endif %}
     </td>
     <td class="text-nowrap">
         {% if rule.domain %}
             <code>{{ rule.domain.id }}</code>
         {% else %}
-            <span class="text-body-secondary">-</span>
+            <i class="fa fa-fw fa-times"></i>
         {% endif %}
     </td>
     <td class="text-nowrap">
         {% if rule.project %}
             <div><code>{{ rule.project.id }}</code></div>
-            <div class="small text-body-secondary">{{ rule.project.name }}</div>
         {% elseif rule.type == 'redirect' %}
             {% if rule.redirectType == 'project' and rule.project %}
                 <div><code>{{ rule.project.id }}</code></div>
-                <div class="small text-body-secondary">{{ rule.project.name }}</div>
+
             {% else %}
-                <span class="text-body-secondary">-</span>
+                <i class="fa fa-fw fa-times"></i>
             {% endif %}
         {% else %}
-            <span class="text-body-secondary">-</span>
+            <i class="fa fa-fw fa-times"></i>
         {% endif %}
     </td>
     <td class="text-nowrap">
@@ -46,14 +45,14 @@
                 <code>{{ rule.application.id }}</code>
             {% endif %}
         {% else %}
-            <span class="text-body-secondary">-</span>
+            <i class="fa fa-fw fa-times"></i>
         {% endif %}
     </td>
     <td class="text-nowrap">
         {% if rule.type == 'application' %}
-            {{ rule.applicationType ?: '-' }}
+            {{ (rule.applicationType ?: '<i class="fa fa-fw fa-times"></i>')|raw }}
         {% else %}
-            <span class="text-body-secondary">-</span>
+            <i class="fa fa-fw fa-times"></i>
         {% endif %}
     </td>
     <td>
@@ -64,43 +63,42 @@
                 <code>{{ rule.route }}</code>
             {% endif %}
         {% else %}
-            <span class="text-body-secondary">-</span>
+            <i class="fa fa-fw fa-times"></i>
         {% endif %}
     </td>
     <td class="text-nowrap">
         {% if rule.type == 'route' and rule.routeType %}
             {{ rule.routeType }}
         {% else %}
-            <span class="text-body-secondary">-</span>
+            <i class="fa fa-fw fa-times"></i>
         {% endif %}
     </td>
     <td class="text-nowrap">
         {% if rule.type == 'redirect' and rule.redirectType %}
             {{ rule.redirectType }}
         {% else %}
-            <span class="text-body-secondary">-</span>
+            <i class="fa fa-fw fa-times"></i>
         {% endif %}
     </td>
     <td class="text-nowrap">
         {% if rule.type == 'redirect' and rule.redirectTarget %}
             {{ rule.redirectTarget }}
         {% else %}
-            <span class="text-body-secondary">-</span>
+            <i class="fa fa-fw fa-times"></i>
         {% endif %}
     </td>
     <td class="text-nowrap">
         {% if rule.redirectDomain %}
             <code>{{ rule.redirectDomain.id }}</code>
         {% else %}
-            <span class="text-body-secondary">-</span>
+            <i class="fa fa-fw fa-times"></i>
         {% endif %}
     </td>
     <td class="text-nowrap">
         {% if rule.redirectProject %}
             <div><code>{{ rule.redirectProject.id }}</code></div>
-            <div class="small text-body-secondary">{{ rule.redirectProject.name }}</div>
         {% else %}
-            <span class="text-body-secondary">-</span>
+            <i class="fa fa-fw fa-times"></i>
         {% endif %}
     </td>
     <td class="text-end btn-cell">

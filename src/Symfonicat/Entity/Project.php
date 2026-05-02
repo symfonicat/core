@@ -17,8 +17,7 @@ class Project
     #[ORM\Column(length: 255)]
     private ?string $id = null;
 
-    #[ORM\Column(length: 255, nullable: true)]
-    private ?string $name = null;
+
 
     /**
      * @var Collection<int, Domain>
@@ -45,17 +44,6 @@ class Project
         $this->env = new ArrayCollection();
     }
 
-    public function getName(): ?string
-    {
-        return $this->name;
-    }
-
-    public function setName(?string $name): static
-    {
-        $this->name = $name;
-
-        return $this;
-    }
 
     /**
      * @return Collection<int, Domain>

@@ -46,7 +46,7 @@ final class ElectronType extends AbstractType
             ])
             ->add('project', EntityType::class, [
                 'class' => Project::class,
-                'choice_label' => static fn (Project $project): string => trim(sprintf('%s %s', (string) $project->getId(), (string) $project->getName())),
+                'choice_label' => static fn (Project $project): string => (string) $project->getId(true),
                 'label' => 'project',
                 'required' => false,
                 'placeholder' => 'select project',

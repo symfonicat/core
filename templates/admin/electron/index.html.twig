@@ -14,7 +14,9 @@
                 <th>domain</th>
                 <th>project</th>
                 <th>application</th>
-                <th>favicon</th>
+                {% for env_parent in env_parents %}
+                    <th>{{ env_parent.id }}</th>
+                {% endfor %}
                 <th class="text-end">&nbsp;</th>
             </tr>
         </thead>
@@ -23,7 +25,7 @@
             {{ include('admin/electron/_row.html.twig') }}
         {% else %}
             <tr>
-                <td colspan="5">no records found</td>
+                <td colspan="{{ 6 + env_parents|length }}">no records found</td>
             </tr>
         {% endfor %}
         </tbody>

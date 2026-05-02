@@ -163,17 +163,6 @@ final class ModuleService
                 continue;
             }
 
-            $currentName = $module->getName() ?? '';
-            if ($currentName !== $moduleData['name']) {
-                $module->setName($moduleData['name']);
-                $updated[] = [
-                    'id' => $moduleId,
-                    'field' => 'name',
-                    'from' => $currentName,
-                    'to' => $moduleData['name'],
-                ];
-            }
-
             $currentPackage = $module->getPackage() ?? '';
             if ($currentPackage !== $moduleData['package']) {
                 $module->setPackage($moduleData['package']);
@@ -245,7 +234,7 @@ final class ModuleService
             $this->entityManager->remove($module);
             $deleted[] = [
                 'id' => $moduleId,
-                'name' => $module->getName() ?? $moduleId,
+                'package' => $module->getPackage() ?? $moduleId,
                 'references' => $references,
             ];
         }

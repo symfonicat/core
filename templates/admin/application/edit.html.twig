@@ -2,7 +2,7 @@
 {% block title %}Edit Application{% endblock %}
 {% block body %}
     
-    <h3>{{ application.id }}</h3>
+    <h3>{{ application.id(true) }}</h3>
     <hr />
     {{ include('admin/application/_form.html.twig', { form: form, button_label: 'save' }) }}
 

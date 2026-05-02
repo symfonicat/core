@@ -1,11 +1,27 @@
 <tr id="application_{{ application.id }}" class="btn-row">
-    <td class="fw-semibold"><a href="{{ path('symfonicat_application_edit', {'id': application.id(true)}) }}">{{ application.id }}</a></td>
+    <td class="fw-semibold"><a href="{{ path_application(application) }}">{{ application.id(true) }}</a></td>
     <td>
+        {% set groups = {} %}
         {% for module in application.modules %}
-            {{ module.name }}{% if not loop.last %}, {% endif %}
+            {% set parts = (module.id(true) | split('/')) %}
+            {% set tail = parts | last %}
+            {% set groupKey = module.package ? (module.vendor ~ '/' ~ module.package) : module.vendor %}
+            {% if groups[groupKey] is defined %}
+                {% set groups = groups | merge({ (groupKey): groups[groupKey] | merge([tail]) }) %}
+            {% else %}
+                {% set groups = groups | merge({ (groupKey): [tail] }) %}
+            {% endif %}
         {% else %}
-            -
+            {% set groups = {} %}
         {% endfor %}
+
+        {% if groups is empty %}
+            <i class="fa fa-fw fa-times"></i>
+        {% else %}
+            {% for g, tails in groups %}
+                <b>{{ g }}:</b>&nbsp;&nbsp;<code>{{ tails | join(', ') }}</code>{% if not loop.last %}<br />{% endif %}
+            {% endfor %}
+        {% endif %}
     </td>
     {% for env_parent in env_parents %}
         <td>
@@ -13,7 +29,7 @@
             {% for entry in entries %}
                 <div><code>{{ entry }}</code></div>
             {% else %}
-                <span class="text-body-secondary">-</span>
+                <i class="fa fa-fw fa-times"></i>
             {% endfor %}
         </td>
     {% endfor %}

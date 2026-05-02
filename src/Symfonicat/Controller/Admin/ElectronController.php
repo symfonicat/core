@@ -18,10 +18,11 @@ use Symfony\Component\Routing\Attribute\Route;
 final class ElectronController extends AbstractController
 {
     #[Route('/admin/e', name: 'symfonicat_electron_index', methods: ['GET'])]
-    public function index(ElectronRepository $electronRepository): Response
+    public function index(ElectronRepository $electronRepository, \Symfonicat\Repository\EnvParentRepository $envParentRepository): Response
     {
         return $this->render('admin/electron/index.html.twig', [
             'electrons' => $electronRepository->findAllOrdered(),
+            'env_parents' => $envParentRepository->findAllOrdered(),
         ]);
     }
 

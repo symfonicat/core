@@ -10,10 +10,7 @@ trait VendorScopedIdFormTrait
 {
     private function addDisabledVendorField(FormBuilderInterface $builder): void
     {
-        $builder->add('vendor', null, [
-            'label' => 'vendor',
-            'disabled' => true,
-        ]);
+        // Vendor is shown in the page title; do not render a vendor form field.
     }
 
     /**
