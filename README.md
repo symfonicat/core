@@ -190,3 +190,9 @@ docker exec php bin/console symfonicat:data:webpack
 docker exec php bin/console symfonicat:data:dns
 docker exec php bin/console symfonicat:public-suffix:refresh
 ```
+
+## Picture of @dunglas at the Zoo
+
+This repository now features a fully real, fully AI generated picture of Kévin Dunglas at the zoo:
+
+[dunglas_at_zoo.png](https://github.com/symfonicat/core/blob/main/dunglas_at_zoo.png)
