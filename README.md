@@ -76,9 +76,19 @@ Env resolution is application, then domain, then project, then Electron for Elec
 `path_application()` generates URLs for application routing rules:
 
 ```twig
+{# for the test application #}
+{# which has a catch-all routing rule pointing it to /symfonicat/*/test* #}
+
+{# /symfonicat/*/test #}
 {{ path_application(application) }}
+
+{# /symfonicat/PARAM/test #}
 {{ path_application(application, ['PARAM']) }}
+
+{# /symfonicat/*/test/somepath/testpath #}
 {{ path_application(application, 'somepath/testpath') }}
+
+{# /symfonicat/PARAM/test/somepath/testpath #}
 {{ path_application('core/test', 'somepath/testpath', ['PARAM']) }}
 ```
 
