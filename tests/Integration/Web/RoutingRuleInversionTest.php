@@ -23,7 +23,7 @@ final class RoutingRuleInversionTest extends SymfonicatWebTestCase
     public function testDomainRuleForcesDomainShellEvenUnderProjectSubdomain(): void
     {
         $domain = $this->createDomain('example.com');
-        $project = $this->createProject('project1', 'Project 1', $domain);
+        $project = $this->createProject('project1', $domain);
         $env = $this->createEnv('primary');
         $this->setDomainEnv($domain, $env, 'blue');
         $this->setProjectEnv($project, $env, 'green');
@@ -34,7 +34,7 @@ final class RoutingRuleInversionTest extends SymfonicatWebTestCase
         $this->client()->request('GET', '/docs');
 
         self::assertResponseIsSuccessful();
-        self::assertSelectorTextContains('body', 'Project 1', 'project shell is the pre-rule default');
+        self::assertSelectorTextContains('body', 'core/project1', 'project shell is the pre-rule default');
 
         // Now install a domain rule for "docs" and repeat the request. The
         // RoutingRuleSubscriber should rewrite the controller target to the
@@ -60,7 +60,7 @@ final class RoutingRuleInversionTest extends SymfonicatWebTestCase
     public function testDomainRuleIsScopedToItsDomain(): void
     {
         $exampleCom = $this->createDomain('example.com');
-        $this->createProject('project1', 'Project 1', $exampleCom);
+        $this->createProject('project1', $exampleCom);
 
         $otherDomain = $this->createDomain('other.example');
         $this->createDomainRoutingRule($otherDomain, 'docs');
@@ -72,7 +72,7 @@ final class RoutingRuleInversionTest extends SymfonicatWebTestCase
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains(
             'body',
-            'Project 1',
+            'core/project1',
             'rules on foreign domains must not leak across domains',
         );
     }
@@ -80,7 +80,7 @@ final class RoutingRuleInversionTest extends SymfonicatWebTestCase
     public function testProjectRuleDisablesCatchAllSoRequestCan404(): void
     {
         $domain = $this->createDomain('example.com');
-        $project = $this->createProject('project1', 'Project 1', $domain);
+        $project = $this->createProject('project1', $domain);
 
         // Baseline confirms the project catch-all does match /foo-bar.
         $this->setHost('project1.example.com');

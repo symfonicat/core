@@ -80,7 +80,7 @@ final class RoutingRuleTest extends TestCase
     public function testNormalizeScopeClearsProjectWhenRuleIsDomainTyped(): void
     {
         $domain = (new Domain())->setId('core/example.com');
-        $project = (new Project())->setId('core/project1')->setName('Project 1');
+        $project = (new Project())->setId('core/project1');
 
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_DOMAIN)
@@ -97,7 +97,7 @@ final class RoutingRuleTest extends TestCase
     public function testNormalizeScopeClearsDomainWhenRuleIsProjectTyped(): void
     {
         $domain = (new Domain())->setId('core/example.com');
-        $project = (new Project())->setId('core/project1')->setName('Project 1');
+        $project = (new Project())->setId('core/project1');
 
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_PROJECT)
@@ -143,7 +143,7 @@ final class RoutingRuleTest extends TestCase
     {
         $matchDomain = (new Domain())->setId('core/example.com');
         $targetDomain = (new Domain())->setId('core/other.example');
-        $project = (new Project())->setId('core/project2')->setName('Project 2');
+        $project = (new Project())->setId('core/project2');
 
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_REDIRECT)

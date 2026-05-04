@@ -98,7 +98,7 @@ final class SchemaUpdateCommand extends Command
         if ($moduleResult['created'] !== []) {
             $io->section('Created modules');
             $io->listing(array_map(
-                static fn (array $module): string => sprintf('%s (%s)', $module['id'], $module['name']),
+                static fn (array $module): string => sprintf('%s (%s)', $module['id'], $module['package']),
                 $moduleResult['created'],
             ));
         }
@@ -115,7 +115,7 @@ final class SchemaUpdateCommand extends Command
             $io->section('Deleted modules');
             $io->listing(array_map(
                 static function (array $module): string {
-                    $details = sprintf('%s (%s)', $module['id'], $module['name']);
+                    $details = sprintf('%s (%s)', $module['id'], $module['package']);
                     if ($module['references'] === []) {
                         return $details;
                     }

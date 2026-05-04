@@ -11,7 +11,7 @@ final class RoutingRuleRedirectTest extends SymfonicatWebTestCase
     {
         $sourceDomain = $this->createDomain('example.com');
         $targetDomain = $this->createDomain('other.example');
-        $targetProject = $this->createProject('project2', 'Project 2', $targetDomain);
+        $targetProject = $this->createProject('project2', $targetDomain);
 
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_REDIRECT)

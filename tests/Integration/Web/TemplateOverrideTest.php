@@ -94,7 +94,7 @@ final class TemplateOverrideTest extends SymfonicatWebTestCase
     public function testProjectOverrideTemplateReplacesDefaultShell(): void
     {
         $domain = $this->createDomain('example.com');
-        $this->createProject('project1', 'Project 1', $domain);
+        $this->createProject('project1', $domain);
 
         $this->writeTemplate(
             'project/overrides/project1.html.twig',

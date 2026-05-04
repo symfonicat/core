@@ -73,13 +73,18 @@
             "assets:install %PUBLIC_DIR%": "symfony-cmd"
         },
         "symfonicat:public-suffix-install": "@php bin/public-suffix",
+        "symfonicat:load": "Symfonicat\\Composer\\AdminYamlPlugin::postInstall",
+        "symfonicat:schema": "@php bin/console symfonicat:schema:update",
         "post-install-cmd": [
             "@auto-scripts",
-            "@symfonicat:public-suffix-install"
+            "@symfonicat:public-suffix-install",
+            "@symfonicat:schema",
+            "@symfonicat:load"
         ],
         "post-update-cmd": [
             "@auto-scripts",
-            "@symfonicat:public-suffix-install"
+            "@symfonicat:public-suffix-install",
+            "@symfonicat:schema"
         ]
     },
     "extra": {

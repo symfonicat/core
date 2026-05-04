@@ -45,10 +45,10 @@ final class ModuleService
      * }>): bool)|null $confirmModuleDeletion
      *
      * @return array{
-     *     created: list<array{id: string, name: string}>,
+     *     created: list<array{id: string, package: string}>,
      *     deleted: list<array{
      *         id: string,
-     *         name: string,
+     *         package: string,
      *         references: list<array{
      *             association: string,
      *             count: int,
@@ -81,7 +81,7 @@ final class ModuleService
     }
 
     /**
-     * @return array<string, array{name: string, package: string}>
+     * @return array<string, array{package: string}>
      */
     private function discoverPackageModules(): array
     {
@@ -89,7 +89,6 @@ final class ModuleService
 
         foreach ($this->packageDiscoveryService->discoverModules() as $moduleId => $module) {
             $modules[$moduleId] = [
-                'name' => $module['name'],
                 'package' => $module['package'],
             ];
         }
@@ -117,10 +116,10 @@ final class ModuleService
     }
 
     /**
-     * @param array<string, array{name: string, package: string}> $packageModules
+     * @param array<string, array{package: string}> $packageModules
      * @param array<string, Module> $databaseModules
      *
-     * @return list<array{id: string, name: string}>
+     * @return list<array{id: string, package: string}>
      */
     private function createMissingModules(array $packageModules, array &$databaseModules): array
     {
@@ -133,14 +132,13 @@ final class ModuleService
 
             $module = (new Module())
                 ->setId($moduleId)
-                ->setName($moduleData['name'])
                 ->setPackage($moduleData['package']);
 
             $this->entityManager->persist($module);
             $databaseModules[$moduleId] = $module;
             $created[] = [
                 'id' => $moduleId,
-                'name' => $moduleData['name'],
+                'package' => $moduleData['package'],
             ];
         }
 
@@ -148,7 +146,7 @@ final class ModuleService
     }
 
     /**
-     * @param array<string, array{name: string, package: string}> $packageModules
+     * @param array<string, array{package: string}> $packageModules
      * @param array<string, Module> $databaseModules
      *
      * @return list<array{id: string, field: string, from: string, to: string}>
@@ -179,7 +177,7 @@ final class ModuleService
     }
 
     /**
-     * @param array<string, array{name: string, package: string}> $packageModules
+     * @param array<string, array{package: string}> $packageModules
      * @param array<string, Module> $databaseModules
      * @param (callable(Module, list<array{
      *     association: string,
@@ -193,7 +191,7 @@ final class ModuleService
      *
      * @return list<array{
      *     id: string,
-     *     name: string,
+     *     package: string,
      *     references: list<array{
      *         association: string,
      *         count: int,

@@ -18,6 +18,9 @@
     </head>
     <body data-controller="symfony--ux-turbo--turbo-core" data-turbo-suppress-warning>
         {% block flashes %}
+            {% for message in app.flashes('success') %}
+            <aside class="alert alert-success">{{ message }}</aside>
+            {% endfor %}
             {% for message in app.flashes('debug') %}
             <aside class="alert alert-warning">{{ message }}</aside>
             {% endfor %}
@@ -42,6 +45,18 @@
                     <a href="{{ path('symfonicat_electron_index') }}" class="btn btn-sm btn-outline-light {{ active('symfonicat_electron_*', 'btn-light active') }}">electron</a>
                     <a href="{{ path('symfonicat_env_index') }}" class="btn btn-sm btn-outline-light {{ active('symfonicat_env_*', 'btn-light active') }}">env</a>
                     <a href="{{ path('symfonicat_routing_rule_index') }}" class="btn btn-sm btn-outline-light {{ active('symfonicat_routing_rule*', 'btn-light active') }}">routing rules</a>
+                    <div class="btn-group">
+                        <button
+                            type="button"
+                            class="btn btn-sm btn-outline-light dropdown-toggle {{ active('symfonicat_admin_yaml_*', 'btn-light active') }}"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false"
+                        >yaml</button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{{ path('symfonicat_admin_yaml_dump') }}">dump</a></li>
+                            <li><a class="dropdown-item" href="{{ path('symfonicat_admin_yaml_load') }}">load</a></li>
+                        </ul>
+                    </div>
                     <a
                         class="btn btn-sm btn-secondary"
                         data-no-prefetch

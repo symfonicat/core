@@ -83,7 +83,7 @@ class RoutingRuleType extends AbstractType
             ])
             ->add('project', EntityType::class, [
                 'class' => Project::class,
-                'choice_label' => static fn (Project $project): string => sprintf('%s %s', $project->getId(), $project->getName()),
+                'choice_label' => 'id',
                 'label' => 'project',
                 'required' => false,
                 'placeholder' => 'select a project',
@@ -107,7 +107,7 @@ class RoutingRuleType extends AbstractType
             ])
             ->add('redirectProject', EntityType::class, [
                 'class' => Project::class,
-                'choice_label' => static fn (Project $project): string => sprintf('%s %s', $project->getId(), $project->getName()),
+                'choice_label' => 'id',
                 'label' => 'redirect project',
                 'required' => false,
                 'placeholder' => 'select a redirect project',

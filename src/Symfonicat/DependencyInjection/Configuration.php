@@ -18,6 +18,10 @@ final class Configuration implements ConfigurationInterface
                     ->scalarPrototype()->end()
                     ->defaultValue(['symfonicat'])
                 ->end()
+                ->arrayNode('admin')
+                    ->ignoreExtraKeys(false)
+                    ->variablePrototype()->end()
+                ->end()
             ->end();
 
         return $treeBuilder;

@@ -16,6 +16,10 @@ if [ "${SYMFONICAT_AUTO_BOOTSTRAP:-1}" = "1" ] && [ -f /app/bin/console ]; then
     php /app/bin/console symfonicat:bootstrap --no-interaction --wait="${SYMFONICAT_BOOTSTRAP_WAIT:-60}"
 fi
 
+if [ "${SYMFONICAT_AUTO_BOOTSTRAP:-1}" = "1" ] && [ -f /app/bin/console ]; then
+    php /app/bin/console symfonicat:load --no-interaction
+fi
+
 # Self-install frontend dependencies and build Encore assets on boot so
 # `git clone && docker compose up` works without Node.js on the host. Set
 # SYMFONICAT_AUTO_NPM_INSTALL=0 and/or SYMFONICAT_AUTO_NPM_BUILD=0 to opt out.

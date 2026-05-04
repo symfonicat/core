@@ -100,14 +100,10 @@ trait DatabaseFixtureTrait
         return $domain;
     }
 
-    protected function createProject(
-        string $id,
-        string $name,
-        ?Domain $domain = null,
-    ): Project {
+    protected function createProject(string $id, ?Domain $domain = null): Project
+    {
         $project = (new Project())
-            ->setId($this->vendorScopedId($id))
-            ->setName($name);
+            ->setId($this->vendorScopedId($id));
 
         if ($domain instanceof Domain) {
             $domain->addProject($project);
@@ -119,11 +115,10 @@ trait DatabaseFixtureTrait
         return $project;
     }
 
-    protected function createModule(string $id, string $name, ?string $package = null): Module
+    protected function createModule(string $id, ?string $package = null): Module
     {
         $module = (new Module())
             ->setId($this->vendorScopedId($id))
-            ->setName($name)
             ->setPackage($package ?? $id);
 
         $this->entityManager()->persist($module);

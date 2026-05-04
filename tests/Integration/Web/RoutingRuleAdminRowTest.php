@@ -83,7 +83,7 @@ final class RoutingRuleAdminRowTest extends SymfonicatKernelTestCase
 
         self::assertStringContainsString('href="/test"', $html);
         self::assertStringContainsString('<a href="/test"><code>symfonicat_project_test</code></a>', $html);
-        self::assertStringContainsString('<a href="/test"><code>test</code></a>', $html);
+        self::assertStringContainsString('<a href="/test"><code>core/test</code></a>', $html);
         self::assertStringContainsString('route', $html);
         self::assertStringNotContainsString('route: symfonicat_project_test', $html);
     }

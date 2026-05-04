@@ -261,7 +261,7 @@ final class EnvServiceTest extends TestCase
      */
     private function makeProject(string $id, array $values): Project
     {
-        $project = (new Project())->setId(str_contains($id, '/') ? $id : 'core/'.$id)->setName(ucfirst($id));
+        $project = (new Project())->setId(str_contains($id, '/') ? $id : 'core/'.$id);
 
         foreach ($values as $envId => $value) {
             $env = $this->makeEnv($envId);

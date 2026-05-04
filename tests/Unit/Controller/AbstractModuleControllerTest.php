@@ -179,7 +179,7 @@ final class AbstractModuleControllerTest extends TestCase
 
     private function makeModule(string $id): Module
     {
-        return (new Module())->setId(str_contains($id, '/') ? $id : 'symfonicat/'.$id.'/main')->setName(ucfirst($id));
+        return (new Module())->setId(str_contains($id, '/') ? $id : 'symfonicat/'.$id.'/main');
     }
 
     private function makeDomain(string $id): Domain

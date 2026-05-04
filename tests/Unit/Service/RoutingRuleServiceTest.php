@@ -40,7 +40,7 @@ final class RoutingRuleServiceTest extends TestCase
     #[DataProvider('reservedArgumentProvider')]
     public function testProjectLookupIgnoresReservedArguments(string $argument, string $path): void
     {
-        $project = (new Project())->setId('core/project1')->setName('Project 1');
+        $project = (new Project())->setId('core/project1');
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_PROJECT)
             ->setProject($project)
@@ -78,7 +78,7 @@ final class RoutingRuleServiceTest extends TestCase
 
     public function testProjectLookupReturnsFirstMatchingPathRule(): void
     {
-        $project = (new Project())->setId('core/project1')->setName('Project 1');
+        $project = (new Project())->setId('core/project1');
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_PROJECT)
             ->setProject($project)
@@ -98,7 +98,7 @@ final class RoutingRuleServiceTest extends TestCase
     public function testCollectionLookupsAreStraightPassThrough(): void
     {
         $domain = (new Domain())->setId('core/example.com');
-        $project = (new Project())->setId('core/project1')->setName('Project 1');
+        $project = (new Project())->setId('core/project1');
 
         $domainRules = [new RoutingRule(), new RoutingRule()];
         $projectRules = [new RoutingRule()];

@@ -31,13 +31,12 @@ final class SchemaUpdateCommandTest extends SymfonicatKernelTestCase
 
         $analytics = $em->getRepository(Module::class)->find('symfonicat/analytics/main');
         self::assertInstanceOf(Module::class, $analytics);
-        self::assertSame('Analytics', $analytics->getName());
         self::assertSame('analytics', $analytics->getPackage());
     }
 
-    public function testUpdatesRowNameWhenPackageJsonNameDivergesFromDatabase(): void
+    public function testUpdatesRowPackageWhenPackageMetadataDivergesFromDatabase(): void
     {
-        $this->createModule('symfonicat/analytics/main', 'Stale Old Name');
+        $this->createModule('symfonicat/analytics/main', 'stale-package');
 
         $tester = $this->runCommand();
         self::assertSame(0, $tester->getStatusCode());
@@ -46,7 +45,6 @@ final class SchemaUpdateCommandTest extends SymfonicatKernelTestCase
         $analytics = $this->entityManager()->getRepository(Module::class)->find('symfonicat/analytics/main');
 
         self::assertInstanceOf(Module::class, $analytics);
-        self::assertSame('Analytics', $analytics->getName(), 'package metadata "name" should win over the database row');
         self::assertSame('analytics', $analytics->getPackage());
         self::assertStringContainsString('Updated modules', $tester->getDisplay());
     }
@@ -54,7 +52,7 @@ final class SchemaUpdateCommandTest extends SymfonicatKernelTestCase
     public function testRemovesUnreferencedRowsThatNoLongerExistOnDisk(): void
     {
         // An orphan module exists in the DB with no corresponding installed configured-vendor package module.
-        $this->createModule('orphan', 'Orphan Module');
+        $this->createModule('orphan');
 
         $tester = $this->runCommand();
         self::assertSame(0, $tester->getStatusCode());

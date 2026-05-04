@@ -22,7 +22,7 @@ final class ScopedEnvFormTypeTest extends SymfonicatKernelTestCase
     public function testProjectFormRestoresSelectedEnvParent(): void
     {
         $env = $this->createEnv('primary', 'colors');
-        $project = $this->createProject('project1', 'Project 1');
+        $project = $this->createProject('project1');
         $this->setProjectEnv($project, $env, 'green');
 
         $project = $this->entityManager()->getRepository(Project::class)->find('core/project1');
@@ -84,7 +84,7 @@ final class ScopedEnvFormTypeTest extends SymfonicatKernelTestCase
     {
         $env = $this->createEnv('primary', 'colors');
         $domain = $this->createDomain('example.com');
-        $project = $this->createProject('project1', 'Project 1', $domain);
+        $project = $this->createProject('project1', $domain);
         $electron = $this->createElectron('Example Electron', Electron::TYPE_PROJECT, $domain, $project);
         $this->setElectronEnv($electron, $env, 'purple');
 

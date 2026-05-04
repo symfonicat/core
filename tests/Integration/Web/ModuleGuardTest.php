@@ -26,10 +26,10 @@ final class ModuleGuardTest extends SymfonicatWebTestCase
     public function testModuleRouteReturns404WhenModuleNotInstalledOnProject(): void
     {
         $domain = $this->createDomain('example.com');
-        $this->createProject('project1', 'Project 1', $domain);
+        $this->createProject('project1', $domain);
         // Module exists in the DB (so ModuleService::load() returns it) but is
         // NOT associated with project1. Guard must refuse to execute.
-        $this->createModule('symfonicat/analytics/main', 'Analytics');
+        $this->createModule('symfonicat/analytics/main');
 
         $this->setHost('project1.example.com');
         $this->client()->request('POST', '/m/symfonicat/analytics/main');
@@ -43,8 +43,8 @@ final class ModuleGuardTest extends SymfonicatWebTestCase
     public function testModuleRouteSucceedsWhenModuleInstalledOnProject(): void
     {
         $domain = $this->createDomain('example.com');
-        $project = $this->createProject('project1', 'Project 1', $domain);
-        $module = $this->createModule('symfonicat/analytics/main', 'Analytics');
+        $project = $this->createProject('project1', $domain);
+        $module = $this->createModule('symfonicat/analytics/main');
         $project->addModule($module);
         $this->entityManager()->flush();
 
@@ -63,7 +63,7 @@ final class ModuleGuardTest extends SymfonicatWebTestCase
     public function testModuleRouteSucceedsWhenModuleInstalledOnApplicationContext(): void
     {
         $this->createDomain('example.com');
-        $module = $this->createModule('symfonicat/analytics/main', 'Analytics');
+        $module = $this->createModule('symfonicat/analytics/main');
         $application = (new Application())->setId('core/test');
         $application->addModule($module);
         $rule = (new RoutingRule())
@@ -100,7 +100,7 @@ final class ModuleGuardTest extends SymfonicatWebTestCase
     public function testModuleRouteRejectsUnknownApplicationContext(): void
     {
         $this->createDomain('example.com');
-        $module = $this->createModule('symfonicat/analytics/main', 'Analytics');
+        $module = $this->createModule('symfonicat/analytics/main');
         $application = (new Application())->setId('core/test');
         $application->addModule($module);
         $rule = (new RoutingRule())
@@ -134,7 +134,7 @@ final class ModuleGuardTest extends SymfonicatWebTestCase
     public function testModuleRouteRejectsApplicationContextWithoutValidCsrfToken(): void
     {
         $this->createDomain('example.com');
-        $module = $this->createModule('symfonicat/analytics/main', 'Analytics');
+        $module = $this->createModule('symfonicat/analytics/main');
         $application = (new Application())->setId('core/test');
         $application->addModule($module);
         $rule = (new RoutingRule())
@@ -160,8 +160,8 @@ final class ModuleGuardTest extends SymfonicatWebTestCase
     public function testModuleRouteRespectsHttpMethodWhitelist(): void
     {
         $domain = $this->createDomain('example.com');
-        $project = $this->createProject('project1', 'Project 1', $domain);
-        $module = $this->createModule('symfonicat/analytics/main', 'Analytics');
+        $project = $this->createProject('project1', $domain);
+        $module = $this->createModule('symfonicat/analytics/main');
         $project->addModule($module);
         $this->entityManager()->flush();
 
@@ -177,9 +177,9 @@ final class ModuleGuardTest extends SymfonicatWebTestCase
             sprintf('GET /m/symfonicat/analytics/main must not render the project shell; got %d', $status),
         );
         self::assertStringNotContainsString(
-            'Project 1',
+            'core/project1',
             (string) $this->client()->getResponse()->getContent(),
-            'the project catch-all (which emits "Project 1") must not absorb /m/* requests',
+            'the project catch-all (which emits "core/project1") must not absorb /m/* requests',
         );
     }
 
@@ -188,7 +188,7 @@ final class ModuleGuardTest extends SymfonicatWebTestCase
         // Bare "m" and "m/something" must not be consumed by the project
         // catch-all requirement `(?!m(?:/|$)).*`.
         $domain = $this->createDomain('example.com');
-        $this->createProject('project1', 'Project 1', $domain);
+        $this->createProject('project1', $domain);
 
         $this->setHost('project1.example.com');
 

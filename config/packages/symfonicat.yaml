@@ -1,3 +1,107 @@
 symfonicat:
     vendors:
         - symfonicat
+    admin:
+        symfonicat_application:
+            -
+                id: core/test
+                vendor: core
+        symfonicat_env_parent:
+            -
+                id: colors
+        symfonicat_env:
+            -
+                id: primary
+                env_parent_id: colors
+        symfonicat_application_env:
+            -
+                id: 1
+                value: red
+                application_id: core/test
+                env_id: primary
+        symfonicat_domain:
+            -
+                id: core/example.com
+                vendor: core
+            -
+                id: core/localhost
+                vendor: core
+        symfonicat_domain_env:
+            -
+                id: 1
+                value: blue
+                domain_id: core/localhost
+                env_id: primary
+            -
+                id: 2
+                value: blue
+                domain_id: core/example.com
+                env_id: primary
+        symfonicat_project:
+            -
+                id: core/project1
+                vendor: core
+        symfonicat_domain_project:
+            -
+                domain_id: core/example.com
+                project_id: core/project1
+        symfonicat_electron:
+            -
+                id: core/example-test
+                name: 'Example Test'
+                type: domain
+                favicon: electron/favicon/domain/example.com.png
+                vendor: core
+                domain_id: core/example.com
+                project_id: null
+                application_id: null
+        symfonicat_electron_env:
+            -
+                id: 1
+                value: yellow
+                electron_id: core/example-test
+                env_id: primary
+        symfonicat_module:
+            -
+                id: symfonicat/analytics/main
+                package: analytics
+                vendor: symfonicat
+        symfonicat_module_application:
+            -
+                module_id: symfonicat/analytics/main
+                application_id: core/test
+        symfonicat_module_domain:
+            -
+                module_id: symfonicat/analytics/main
+                domain_id: core/example.com
+            -
+                module_id: symfonicat/analytics/main
+                domain_id: core/localhost
+        symfonicat_module_project:
+            -
+                module_id: symfonicat/analytics/main
+                project_id: core/project1
+        symfonicat_project_env:
+            -
+                id: 1
+                value: green
+                project_id: core/project1
+                env_id: primary
+        symfonicat_routing_rule:
+            -
+                id: 1
+                arguments:
+                    - symfonicat
+                    - '*'
+                    - 'test*'
+                type: application
+                redirect_type: null
+                redirect_target: null
+                route_type: null
+                application_type: arguments
+                route: null
+                domain_id: null
+                project_id: null
+                application_id: core/test
+                redirect_domain_id: null
+                redirect_project_id: null

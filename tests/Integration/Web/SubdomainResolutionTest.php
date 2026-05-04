@@ -30,19 +30,19 @@ final class SubdomainResolutionTest extends SymfonicatWebTestCase
     public function testProjectSubdomainRendersProjectShellWhenProjectIsAttachedToDomain(): void
     {
         $domain = $this->createDomain('example.com');
-        $project = $this->createProject('project1', 'Project 1', $domain);
+        $project = $this->createProject('project1', $domain);
 
         $this->setHost('project1.example.com');
         $this->client()->request('GET', '/');
 
         self::assertResponseIsSuccessful();
-        self::assertSelectorTextContains('body', 'Project 1');
+        self::assertSelectorTextContains('body', 'core/project1');
     }
 
     public function testProjectEnvOverlaysDomainEnvInProjectShell(): void
     {
         $domain = $this->createDomain('example.com');
-        $project = $this->createProject('project1', 'Project 1', $domain);
+        $project = $this->createProject('project1', $domain);
         $color = $this->createEnv('primary');
         $this->setDomainEnv($domain, $color, 'blue');
         $this->setProjectEnv($project, $color, 'green');
@@ -97,7 +97,7 @@ final class SubdomainResolutionTest extends SymfonicatWebTestCase
     public function testWwwPrefixIsStrippedButInnerSubdomainSurvives(): void
     {
         $domain = $this->createDomain('example.com');
-        $this->createProject('project1', 'Project 1', $domain);
+        $this->createProject('project1', $domain);
 
         // www.project1.example.com should lose the `www` but keep `project1.`
         $this->setHost('www.project1.example.com');
@@ -115,7 +115,7 @@ final class SubdomainResolutionTest extends SymfonicatWebTestCase
     public function testDeepSubdomainFoldsDownToTheInnermostProject(): void
     {
         $domain = $this->createDomain('example.com');
-        $this->createProject('project1', 'Project 1', $domain);
+        $this->createProject('project1', $domain);
 
         // Two subdomain segments: foo.project1.example.com should fold to
         // project1.example.com (the innermost subdomain wins).

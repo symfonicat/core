@@ -1,6 +1,6 @@
 # Symfonicat
 
-`symfonicat/core` is the full Symfonicat Symfony application: public routing, admin CRUD, package module runtime, Electron packaging, webpack wiring, and Docker/FrankenPHP are all in this repository.
+`symfonicat/core` is the full Symfonicat Symfony application: public routing, admin CRUD, package module runtime, Electron packaging, webpack wiring, and Docker/FrankenPHP live in this repository.
 
 ## Runtime
 
@@ -27,9 +27,20 @@ symfonicat:
 
 Webpack and schema sync discover package entries under configured Composer vendors. The root package is emitted as `core/...`; installed package entries use ids such as `symfonicat/analytics/main`. The same vendor list is used for package service imports and package controller route imports.
 
+## Admin YAML
+
+Admin YAML snapshots live in `config/packages/symfonicat.yaml` under `symfonicat.admin`. Dump and load them with:
+
+```bash
+docker exec php bin/console symfonicat:dump
+docker exec php bin/console symfonicat:load
+```
+
+`symfonicat:dump` writes Symfonicat admin rows to YAML (excluding `symfonicat_admin`) and preserves `symfonicat.vendors`. `symfonicat:load` is also run after `composer install`; without a `symfonicat.admin` section it exits without changing the database. The admin header has a `yaml` dropdown linking to `/admin/y/dump` and `/admin/y/load`.
+
 ## Admin
 
-Admin is isolated from host users and uses Symfonicat-owned admin rows with HTTP basic plus TOTP MFA. The main surfaces are applications, domains, Electron rows, env keys, projects, and routing rules. Vendor fields are read-only in admin forms.
+Admin is isolated from host users and uses Symfonicat-owned admin rows with HTTP basic plus TOTP MFA. The main surfaces are applications, domains, Electron rows, env keys, projects, routing rules, and YAML dump/load. Vendor fields are read-only in admin forms.
 
 Create an admin with:
 
@@ -54,7 +65,7 @@ Build output and favicon paths use vendor-prefixed target ids; generated start U
 
 ## Sync
 
-`symfonicat:bootstrap` synchronizes package rows and seeds local defaults such as `core/example.com`, `core/project1`, `core/test`, `symfonicat/analytics/main`, and the sample Electron row.
+`symfonicat:bootstrap` waits for the database, synchronizes the schema and package rows, then runs `symfonicat:load` to import admin YAML and seed local defaults.
 
 `symfonicat:schema:update` synchronizes package-provided modules, domains, applications, and projects:
 
