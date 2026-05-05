@@ -8,17 +8,16 @@ services:
     App\:
         resource: '../src/'
         exclude:
-            - '../src/Symfonicat/'
             - '../src/Kernel.php'
 
     Symfonicat\:
-        resource: '../src/Symfonicat/'
+        resource: '../admin/src/'
         exclude:
-            - '../src/Symfonicat/Composer/'
-            - '../src/Symfonicat/DependencyInjection/'
-            - '../src/Symfonicat/Entity/'
-            - '../src/Symfonicat/Maker/'
-            - '../src/Symfonicat/SymfonicatBundle.php'
+            - '../admin/src/Composer/'
+            - '../admin/src/DependencyInjection/'
+            - '../admin/src/Entity/'
+            - '../admin/src/Maker/'
+            - '../admin/src/SymfonicatBundle.php'
 
     Symfonicat\Service\DomainService:
         arguments:

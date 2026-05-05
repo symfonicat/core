@@ -5,9 +5,13 @@
  * (and its CSS file) in your base layout (base.html.twig).
  */
 
+// Font Awesome
 import '@fortawesome/fontawesome-free/css/all.css'
-import './bootstrap/index.esm.js'
-import './style.scss'
+
+// Bootstrap ______________________
+import './bootstrap/js/index.esm.js'
+import './scss/bootstrap.scss'
+// --------------------------
 
 import './module'
 import './application_redirect'

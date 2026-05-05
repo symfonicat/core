@@ -15,6 +15,10 @@ Ids for `Domain`, `Project`, `Application`, `Module`, and `Electron` are stored 
 
 Manual rows use the special `core` vendor. Package rows use their Composer vendor.
 
+## Source Layout
+
+The app kernel stays in `src/Kernel.php`. Symfonicat-owned PHP classes live in `admin/src` under the `Symfonicat\` namespace; services and Doctrine entity mappings are loaded from that tree.
+
 ## Package Discovery
 
 Configured package vendors live in `config/packages/symfonicat.yaml`:
@@ -40,13 +44,14 @@ docker exec php bin/console symfonicat:load
 
 ## Admin
 
-Admin is isolated from host users and uses Symfonicat-owned admin rows with HTTP basic plus TOTP MFA. The main surfaces are applications, domains, Electron rows, env keys, projects, routing rules, and YAML dump/load. Vendor fields are read-only in admin forms.
-
 Create an admin with:
 
 ```bash
 docker exec -it php bin/console symfonicat:admin:create <username>
 ```
+
+and then visit `/admin`.
+
 
 ## Modules
 
@@ -64,8 +69,6 @@ docker exec php bin/console symfonicat:electron:build <name>
 Build output and favicon paths use vendor-prefixed target ids; generated start URLs use clean host/path ids.
 
 ## Sync
-
-`symfonicat:bootstrap` waits for the database, synchronizes the schema and package rows, then runs `symfonicat:load` to import admin YAML and seed local defaults.
 
 `symfonicat:schema:update` synchronizes package-provided modules, domains, applications, and projects:
 

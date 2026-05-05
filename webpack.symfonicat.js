@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
-const CONSOLE_PREFIX = 'docker exec php bin/console';
+const CONSOLE_PREFIX = 'bin/console';
 
 const readJson = (filePath) => {
     try {
@@ -205,7 +205,7 @@ module.exports = function configureSymfonicat(Encore, options = __dirname) {
     Encore
         .enableStimulusBridge('./assets/controllers.json')
         .addEntry('symfonicat', toEntryPath(projectDir, path.join(packageDir, 'assets', 'symfonicat.js')))
-        .addEntry('symfonicat_admin', toEntryPath(projectDir, path.join(packageDir, 'assets', 'symfonicat_admin.js')))
+        .addEntry('symfonicat_admin', toEntryPath(projectDir, path.join(packageDir, 'admin', 'assets', 'symfonicat_admin.js')))
         .splitEntryChunks()
         .enableSingleRuntimeChunk()
         .cleanupOutputBeforeBuild()

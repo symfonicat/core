@@ -47,7 +47,7 @@
     "autoload": {
         "psr-4": {
             "App\\": "src/",
-            "Symfonicat\\": "src/Symfonicat/"
+            "Symfonicat\\": "admin/src/"
         }
     },
     "autoload-dev": {
