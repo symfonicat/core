@@ -7,6 +7,7 @@ use Symfonicat\Entity\Module;
 use Symfonicat\Service\DomainService;
 use Symfonicat\Service\ModuleService;
 use Symfonicat\Service\ProjectService;
+use Symfonicat\Service\SchemaSynchronizer;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -15,7 +16,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
     name: 'symfonicat:schema:update',
-    description: 'Synchronize installed configured-vendor package entries with database rows.',
+    description: 'Synchronize the Doctrine schema and installed configured-vendor package rows.',
 )]
 final class SchemaUpdateCommand extends Command
 {
@@ -24,6 +25,7 @@ final class SchemaUpdateCommand extends Command
         private readonly DomainService $domainService,
         private readonly ModuleService $moduleService,
         private readonly ProjectService $projectService,
+        private readonly SchemaSynchronizer $schemaSynchronizer,
     ) {
         parent::__construct();
     }
@@ -33,7 +35,10 @@ final class SchemaUpdateCommand extends Command
         $io = new SymfonyStyle($input, $output);
 
         try {
-            $moduleResult = $this->moduleService->sync(function (Module $module, array $references) use ($input, $io): bool {
+            $this->schemaSynchronizer->synchronize();
+            $shouldAskForConfirmation = $this->shouldAskForConfirmation($input);
+
+            $moduleResult = $this->moduleService->sync($shouldAskForConfirmation ? function (Module $module, array $references) use ($input, $io): bool {
                 $io->warning(sprintf(
                     'Module "%s" is no longer provided by an installed configured-vendor package and still has referencing entity rows.',
                     $module->getId(true),
@@ -58,9 +63,9 @@ final class SchemaUpdateCommand extends Command
                     sprintf('Delete those rows and remove module "%s"?', $module->getId(true)),
                     false,
                 );
-            });
+            } : null);
 
-            $domainResult = $this->domainService->sync(function (array $domainIds) use ($input, $io): bool {
+            $domainResult = $this->domainService->sync($shouldAskForConfirmation ? function (array $domainIds) use ($input, $io): bool {
                 $io->section('Missing domains');
                 $io->listing(array_map(
                     static fn (string $domainId): string => sprintf('%s from installed package assets', $domainId),
@@ -68,9 +73,9 @@ final class SchemaUpdateCommand extends Command
                 ));
 
                 return $this->confirmRequired($input, $io, 'Create these domain rows?', false);
-            });
+            } : null);
 
-            $applicationResult = $this->applicationService->sync(function (array $applicationIds) use ($input, $io): bool {
+            $applicationResult = $this->applicationService->sync($shouldAskForConfirmation ? function (array $applicationIds) use ($input, $io): bool {
                 $io->section('Missing applications');
                 $io->listing(array_map(
                     static fn (string $applicationId): string => sprintf('%s from installed package assets', $applicationId),
@@ -78,9 +83,9 @@ final class SchemaUpdateCommand extends Command
                 ));
 
                 return $this->confirmRequired($input, $io, 'Create these application rows?', false);
-            });
+            } : null);
 
-            $projectResult = $this->projectService->sync(function (array $projectIds) use ($input, $io): bool {
+            $projectResult = $this->projectService->sync($shouldAskForConfirmation ? function (array $projectIds) use ($input, $io): bool {
                 $io->section('Missing projects');
                 $io->listing(array_map(
                     static fn (string $projectId): string => sprintf('%s from installed package assets', $projectId),
@@ -88,7 +93,7 @@ final class SchemaUpdateCommand extends Command
                 ));
 
                 return $this->confirmRequired($input, $io, 'Create these project rows?', false);
-            });
+            } : null);
         } catch (\Throwable $exception) {
             $io->error($exception->getMessage());
 
@@ -187,6 +192,15 @@ final class SchemaUpdateCommand extends Command
         }
 
         return $io->confirm($question, $default);
+    }
+
+    private function shouldAskForConfirmation(InputInterface $input): bool
+    {
+        if (($_SERVER['APP_ENV'] ?? null) === 'test') {
+            return $input->isInteractive();
+        }
+
+        return $input->isInteractive() && $this->hasInteractiveTerminal();
     }
 
     private function hasInteractiveTerminal(): bool

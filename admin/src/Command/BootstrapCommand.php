@@ -5,7 +5,7 @@ namespace Symfonicat\Command;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
 use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\Tools\SchemaTool;
+use Symfonicat\Service\SchemaSynchronizer;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -24,6 +24,7 @@ final class BootstrapCommand extends Command
 
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
+        private readonly SchemaSynchronizer $schemaSynchronizer,
     ) {
         parent::__construct();
     }
@@ -74,13 +75,7 @@ final class BootstrapCommand extends Command
 
     private function synchronizeSchema(): void
     {
-        $metadata = $this->entityManager->getMetadataFactory()->getAllMetadata();
-        if ($metadata === []) {
-            return;
-        }
-
-        $schemaTool = new SchemaTool($this->entityManager);
-        $schemaTool->updateSchema($metadata, true);
+        $this->schemaSynchronizer->synchronize();
     }
 
     private function runWithBootstrapLock(callable $callback): void

@@ -18,7 +18,7 @@ docker compose up -d
 docker exec -it php bin/console symfonicat:admin:create <email>
 ```
 
-The `php` container installs Composer dependencies, synchronizes the schema, seeds local defaults, runs `npm install`, and builds assets.
+The `php` container installs Composer dependencies, synchronizes the Doctrine schema, syncs package-provided rows, seeds local defaults, runs `npm install`, and builds assets.
 
 ## Configuration
 
@@ -39,7 +39,7 @@ docker exec php bin/console symfonicat:dump
 docker exec php bin/console symfonicat:load
 ```
 
-Composer runs `symfonicat:load` after `composer install` through the Symfonicat Composer hook, so checked-in admin YAML can hydrate a fresh install automatically after dependencies are installed.
+Composer runs `symfonicat:schema:update` and then `symfonicat:load` after `composer install`, so a fresh database gets its tables, package-provided rows, and checked-in admin YAML automatically.
 
 ## Source Layout
 
@@ -183,11 +183,13 @@ The build command renders `templates/electron/{type}/main.twig.js` or `templates
 
 ## Sync
 
-`symfonicat:schema:update` synchronizes modules, domains, applications, and projects from package assets:
+`symfonicat:schema:update` first synchronizes the Doctrine schema and then synchronizes modules, domains, applications, and projects from package assets:
 
 ```bash
 docker exec -it php bin/console symfonicat:schema:update
 ```
+
+In non-interactive runs, such as Composer install scripts, missing package-provided rows are created automatically. Removing a stale module that still has referencing rows requires an interactive run so the affected rows can be reviewed before deletion.
 
 ## Picture of @dunglas at the Zoo
 

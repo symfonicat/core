@@ -40,7 +40,7 @@ docker exec php bin/console symfonicat:dump
 docker exec php bin/console symfonicat:load
 ```
 
-`symfonicat:dump` writes Symfonicat admin rows to YAML (excluding `symfonicat_admin`) and preserves `symfonicat.vendors`. `symfonicat:load` is also run after `composer install`; without a `symfonicat.admin` section it exits without changing the database. The admin header has a `yaml` dropdown linking to `/admin/y/dump` and `/admin/y/load`.
+`symfonicat:dump` writes Symfonicat admin rows to YAML (excluding `symfonicat_admin`) and preserves `symfonicat.vendors`. Composer runs `symfonicat:schema:update` and then `symfonicat:load` after install, so fresh databases get their tables, package-provided rows, and checked-in admin YAML automatically. Without a `symfonicat.admin` section, load exits without changing the database. The admin header has a `yaml` dropdown linking to `/admin/y/dump` and `/admin/y/load`.
 
 ## Admin
 
@@ -70,7 +70,7 @@ Build output and favicon paths use vendor-prefixed target ids; generated start U
 
 ## Sync
 
-`symfonicat:schema:update` synchronizes package-provided modules, domains, applications, and projects:
+`symfonicat:schema:update` synchronizes the Doctrine schema and then synchronizes package-provided modules, domains, applications, and projects. Non-interactive runs create missing package rows automatically; stale modules with referencing rows still require an interactive confirmation before deletion.
 
 ```bash
 docker exec -it php bin/console symfonicat:schema:update

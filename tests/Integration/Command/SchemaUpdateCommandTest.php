@@ -20,6 +20,16 @@ use Symfony\Component\Console\Tester\CommandTester;
  */
 final class SchemaUpdateCommandTest extends SymfonicatKernelTestCase
 {
+    public function testSynchronizesFreshSchemaBeforeReadingPackageRows(): void
+    {
+        $this->dropCurrentSchema();
+
+        $tester = $this->runCommand(interactive: false);
+
+        self::assertSame(0, $tester->getStatusCode());
+        self::assertGreaterThan(0, $this->countModules());
+    }
+
     public function testCreatesRowsForFilesystemModulesThatAreMissingInDatabase(): void
     {
         $tester = $this->runCommand();
@@ -75,15 +85,18 @@ final class SchemaUpdateCommandTest extends SymfonicatKernelTestCase
         self::assertStringContainsString('already match', $tester->getDisplay());
     }
 
-    private function runCommand(): CommandTester
+    private function runCommand(bool $interactive = true): CommandTester
     {
         $application = new Application(self::$kernel);
         $application->setAutoExit(false);
         $command = $application->find('symfonicat:schema:update');
         $tester = new CommandTester($command);
-        // Schema update now requires confirmation when creating domain/application/project rows.
-        $tester->setInputs(['yes', 'yes', 'yes']);
-        $tester->execute([], ['interactive' => true]);
+        if ($interactive) {
+            // Schema update asks for confirmation when creating application/project rows interactively.
+            $tester->setInputs(['yes', 'yes', 'yes']);
+        }
+
+        $tester->execute([], ['interactive' => $interactive]);
 
         return $tester;
     }
@@ -93,5 +106,38 @@ final class SchemaUpdateCommandTest extends SymfonicatKernelTestCase
         return (int) $this->entityManager()
             ->getConnection()
             ->fetchOne('SELECT COUNT(*) FROM symfonicat_module');
+    }
+
+    private function dropCurrentSchema(): void
+    {
+        $connection = $this->entityManager()->getConnection();
+        $platform = $connection->getDatabasePlatform();
+        $platformClass = strtolower($platform::class);
+
+        if (str_contains($platformClass, 'postgresql')) {
+            $connection->executeStatement('DROP SCHEMA IF EXISTS public CASCADE');
+            $connection->executeStatement('CREATE SCHEMA public');
+            $connection->executeStatement('SET search_path TO public, pg_catalog');
+            $this->entityManager()->clear();
+
+            return;
+        }
+
+        $isSqlite = str_contains($platformClass, 'sqlite');
+        if ($isSqlite) {
+            $connection->executeStatement('PRAGMA foreign_keys = OFF');
+        }
+
+        try {
+            foreach ($connection->createSchemaManager()->listTableNames() as $table) {
+                $connection->executeStatement(sprintf('DROP TABLE IF EXISTS %s', $platform->quoteIdentifier($table)));
+            }
+        } finally {
+            if ($isSqlite) {
+                $connection->executeStatement('PRAGMA foreign_keys = ON');
+            }
+        }
+
+        $this->entityManager()->clear();
     }
 }
