@@ -2,6 +2,8 @@
 
 `symfonicat/core` is the full Symfonicat Symfony application: public routing, admin CRUD, package module runtime, Electron packaging, webpack wiring, and Docker/FrankenPHP live in this repository.
 
+On first Docker boot, the `php` container installs PHP and Node dependencies, synchronizes the schema, loads checked-in admin YAML, and builds assets before FrankenPHP starts. Its healthcheck includes a startup grace period so the web stack waits for that bootstrap to finish. Messenger workers run only when the `workers` Compose profile is enabled.
+
 ## Runtime
 
 `DomainService`, `ProjectService`, routing rules, and `ApplicationService` resolve the active domain, project, and application shell. Public routes are `/`, `/{path}`, and the internal `/application/{id}/{path}` application entry route.

@@ -33,11 +33,21 @@ services:
         condition: service_healthy
       mercure:
         condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:2019/metrics || exit 1"]
+      interval: 30s
+      timeout: 3s
+      retries: 5
+      start_period: 10m
 
   messenger-worker:
     image: symfonicat-core-php:local
     restart: unless-stopped
     scale: ${MESSENGER_WORKERS:-2}
+    profiles:
+      - workers
+    healthcheck:
+      disable: true
     command:
       - /bin/sh
       - -lc

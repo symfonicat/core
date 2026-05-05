@@ -18,7 +18,7 @@ docker compose up -d
 docker exec -it php bin/console symfonicat:admin:create <email>
 ```
 
-The `php` container installs Composer dependencies, synchronizes the Doctrine schema, syncs package-provided rows, seeds local defaults, runs `npm install`, and builds assets.
+The `php` container installs Composer dependencies, synchronizes the Doctrine schema, syncs package-provided rows, seeds local defaults, runs `npm install`, and builds assets. First boot can take several minutes; the `php` healthcheck has a startup grace period so the web stack waits for that bootstrap work to finish before it starts. Messenger workers are opt-in via the `workers` Compose profile.
 
 ## Configuration
 
