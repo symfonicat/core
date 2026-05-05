@@ -125,7 +125,6 @@ final class EncoreEntryTagsExtension extends AbstractExtension
         }
 
         // Do not attempt to discover domain entries from installed packages.
-        // Domains are created only via bootstrap; fall back to the default entry name.
         return $entryName;
     }
 

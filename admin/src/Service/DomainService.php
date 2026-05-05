@@ -103,8 +103,7 @@ class DomainService
     private function discoverPackageDomains(): array
     {
         // Domain rows are intentionally *not* discovered from installed packages here.
-        // Domains are only created programmatically during the symfonicat:bootstrap
-        // command to avoid auto-creation during runtime.
+        // Domains are intentionally not auto-created during runtime.
         return [];
     }
 

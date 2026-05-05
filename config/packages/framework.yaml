@@ -2,6 +2,16 @@
 framework:
     secret: '%env(APP_SECRET)%'
 
+    rate_limiter:
+        admin_login:
+            policy: sliding_window
+            limit: 10
+            interval: '5 minutes'
+            cache_pool: cache.rate_limiter
+
+    serializer:
+        enable_attributes: true
+
     # Note that the session will be started ONLY if you read or write from it.
     session:
         handler_id: Symfony\Component\HttpFoundation\Session\Storage\Handler\RedisSessionHandler

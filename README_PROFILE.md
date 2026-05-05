@@ -2,7 +2,9 @@
 
 `symfonicat/core` is the full Symfonicat Symfony application: public routing, admin CRUD, package module runtime, Electron packaging, webpack wiring, and Docker/FrankenPHP live in this repository.
 
-On first Docker boot, the `php` container installs PHP and Node dependencies, synchronizes the schema, loads checked-in admin YAML, and builds assets before FrankenPHP starts. Its healthcheck includes a startup grace period so the web stack waits for that bootstrap to finish. Messenger workers run only when the `workers` Compose profile is enabled.
+On first Docker boot, the `php` container installs PHP and Node dependencies, runs `symfonicat:schema:update`, loads checked-in admin YAML, and builds assets before FrankenPHP starts. Its healthcheck includes a startup grace period so the web stack waits for that startup work to finish. Redis backs cache, sessions, locks, login throttling, and Symfony Messenger; Messenger routes messages to the Redis-backed `async` transport by default and Compose starts workers for them.
+
+The Docker image mounts the repository at `/symfonicat`, serves Caddy from `/symfonicat/public`, and includes the PHP extensions the app expects for Symfony 8, Redis, PostgreSQL, image processing, process control, sockets, XML/HTML handling, archives, APCu, OPcache, igbinary, and msgpack. Composer declares those modules as platform requirements. Symfony uses APCu for the system cache, Redis for shared cache/session/lock/limiter state, igbinary for cache and Redis Messenger serialization, and Intervention Image with Imagick for admin image upload conversion.
 
 ## Runtime
 
@@ -77,5 +79,9 @@ Build output and favicon paths use vendor-prefixed target ids; generated start U
 ```bash
 docker exec -it php bin/console symfonicat:schema:update
 ```
+
+## Messenger
+
+Redis-backed Messenger transports are configured, and default routing sends `*` to `async`. Compose starts eight `messenger-worker` replicas by default; override with `MESSENGER_WORKERS` or `docker compose up -d --scale messenger-worker=<count>`.
 
 For full install, routing, env, Electron, and command details, see [README.md](https://github.com/symfonicat/core/blob/main/README.md).

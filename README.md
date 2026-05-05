@@ -18,7 +18,7 @@ docker compose up -d
 docker exec -it php bin/console symfonicat:admin:create <email>
 ```
 
-The `php` container installs Composer dependencies, synchronizes the Doctrine schema, syncs package-provided rows, seeds local defaults, runs `npm install`, and builds assets. First boot can take several minutes; the `php` healthcheck has a startup grace period so the web stack waits for that bootstrap work to finish before it starts. Messenger workers are opt-in via the `workers` Compose profile.
+The `php` container installs Composer dependencies, runs `symfonicat:schema:update`, loads checked-in admin YAML, runs `npm install`, and builds assets. First boot can take several minutes; the `php` healthcheck has a startup grace period so the web stack waits for that startup work to finish before it starts. Redis is used for application cache, sessions, locks, admin login throttling, and Symfony Messenger; Messenger routes messages to the Redis-backed `async` transport by default and Compose starts workers for them.
 
 ## Configuration
 
@@ -40,6 +40,14 @@ docker exec php bin/console symfonicat:load
 ```
 
 Composer runs `symfonicat:schema:update` and then `symfonicat:load` after `composer install`, so a fresh database gets its tables, package-provided rows, and checked-in admin YAML automatically.
+
+## Runtime Infrastructure
+
+The Docker PHP image is the canonical runtime. It mounts the repository at `/symfonicat`, serves Caddy from `/symfonicat/public`, and uses `/symfonicat` as the container working directory. It installs Composer plus Symfony-oriented extensions for Redis, PostgreSQL, image processing, strings/locales, XML/HTML handling, archive support, process control, sockets, APCu, OPcache, and compact serializers. Composer declares these extensions as platform requirements so local and container installs fail early when the runtime is incomplete.
+
+Symfony uses Redis through the native `redis` extension. Application cache and custom cache pools are Redis-backed, the system cache uses APCu, sessions use Redis, locks use `LOCK_DSN`, and admin login throttling stores limiter state in Redis. Cache serialization is configured to use igbinary, and the Redis Messenger transport uses the PhpRedis igbinary serializer option.
+
+`intervention/image` is registered as a Symfony service backed by Imagick. Admin image uploads use it to decode uploaded image bytes and write PNG output; GD remains installed in the image as a supporting image extension. OPcache and APCu are enabled for CLI and web SAPIs, and Messenger workers use `pcntl`/POSIX signal support for clean shutdown.
 
 ## Source Layout
 
@@ -190,6 +198,18 @@ docker exec -it php bin/console symfonicat:schema:update
 ```
 
 In non-interactive runs, such as Composer install scripts, missing package-provided rows are created automatically. Removing a stale module that still has referencing rows requires an interactive run so the affected rows can be reviewed before deletion.
+
+## Messenger
+
+Symfony Messenger has Redis-backed `async` and `failed` transports configured through `MESSENGER_TRANSPORT_DSN`, `MESSENGER_FAILED_TRANSPORT_DSN`, and `MESSENGER_CONSUMER_NAME`. The default routing sends `*` to `async`, so dispatched messages are written to Redis and handled by the Compose `messenger-worker` service.
+
+Compose starts eight worker replicas by default for heavier local job throughput. Override the count with `MESSENGER_WORKERS`:
+
+```bash
+MESSENGER_WORKERS=12 docker compose up -d --scale messenger-worker=12
+```
+
+Workers wait for the PHP container healthcheck, Redis, Postgres, and Mercure, then consume the `async` transport with a one-hour time limit, a 256 MB memory limit, and a failure limit so containers recycle under sustained load.
 
 ## Picture of @dunglas at the Zoo
 

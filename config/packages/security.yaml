@@ -22,6 +22,11 @@ security:
                 password_parameter: password
                 enable_csrf: true
                 csrf_token_id: symfonicat_admin_login
+            login_throttling:
+                max_attempts: 10
+                interval: '5 minutes'
+                lock_factory: lock.factory
+                cache_pool: cache.rate_limiter
             logout:
                 path: /admin/logout/clear
                 target: symfonicat_project_root

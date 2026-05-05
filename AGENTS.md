@@ -1,6 +1,6 @@
 # AGENTS.md
 
-These instructions apply to the main app repo at `/home/t/www/symfonicat/core`.
+These instructions apply to the main app repo at `/home/t/www/symfonicat`.
 
 ## App goal
 
@@ -117,6 +117,48 @@ These instructions apply to the main app repo at `/home/t/www/symfonicat/core`.
 ## Docker
 
 - Docker/FrankenPHP files belong in this repo.
+
+## System overview
+
+1. Symfonicat is a full Symfony 8 application distributed as the `symfonicat/core` package. Treat this repository as the install target and runtime application, not as a reusable bundle with a separate starter project.
+
+2. The public application surface is owned by this repo. The canonical public routes are `/`, `/{path}`, and the internal `/application/{id}/{path}` application entry route, with runtime resolution deciding whether the request renders a domain, project, or application shell.
+
+3. Public runtime resolution is layered. `DomainService` resolves the base host, `ProjectService` resolves the first subdomain when one is present, `RoutingRuleSubscriber` applies configured routing rules, and `ApplicationService` loads the final application shell when a rule or route points at one.
+
+4. Routing rules are database-owned runtime behavior, not just admin metadata. The supported rule types are `domain`, `project`, `application`, `redirect`, and `route`; changes to these rules can alter which shell renders, whether a request redirects, or whether a named Symfony route takes over.
+
+5. Symfonicat ids are vendor-scoped in storage and clean in most runtime presentation. `Domain`, `Project`, `Application`, `Module`, and `Electron` rows can expose `project1` while storing or looking up `core/project1`; use full ids for persistence and admin route parameters, and clean ids for public URLs and templates when that is the established pattern.
+
+6. The root package is treated as the special `core` vendor. Installed packages under configured vendors, such as `symfonicat/analytics`, are discovered with their Composer vendor and are represented by ids like `symfonicat/analytics/main`.
+
+7. Package discovery is driven by `config/packages/symfonicat.yaml`. The configured vendor list feeds package service imports, package controller route imports, schema sync, webpack fallback discovery, and package-owned asset discovery.
+
+8. Admin YAML lives in the `symfonicat.admin` section of `config/packages/symfonicat.yaml`. `symfonicat:dump` writes Symfonicat-owned database rows there while excluding `symfonicat_admin`, and `symfonicat:load` restores those rows without touching administrator accounts.
+
+9. Schema synchronization is handled by `symfonicat:schema:update`. That command first synchronizes the Doctrine schema and then synchronizes package-provided modules, domains, applications, and projects; non-interactive runs create missing package rows automatically, while stale module removal with references remains interactive.
+
+10. `symfonicat:bootstrap` is stale and must not be reintroduced. Docker entrypoints, Composer scripts, documentation, tests, and operational notes should use `symfonicat:schema:update` plus `symfonicat:load` for fresh installs and boot-time synchronization.
+
+11. The admin area is isolated from any host app user system. It uses Symfonicat-owned `Admin` rows, separate tables, admin create/delete console commands, and the `/admin` route family for CRUD surfaces.
+
+12. Admin URLs should stay close to the legacy shape. Applications use `/admin/a*`, domains use `/admin/d*`, Electron rows use `/admin/e*`, env uses `/admin/env*`, projects use `/admin/p*`, routing rules use `/admin/r*`, and YAML dump/load uses `/admin/y/*`.
+
+13. Env resolution is a runtime feature and should go through `EnvService`. Twig `env()` lookups use dotted keys, and frontend runtime data is emitted into `window.env`; domain values form the base layer and project values override domain values for the same `Env.id`.
+
+14. Electron is part of the runtime surface. Electron rows have vendor-scoped ids, a target type of domain, project, or application, optional favicon handling, scoped env values, and build commands that render Symfony/Twig-backed Electron entry files while the app keeps talking to the live Symfony server over HTTP.
+
+15. Backend module controllers live in installed packages and are exposed through full module routes such as `/m/symfonicat/analytics/main`. Module controllers should extend `Symfonicat\Controller\AbstractModuleController` so requests only run when the active domain, project, or application has that module attached.
+
+16. Webpack entry discovery is driven by `symfonicat:data:webpack` and `webpack.symfonicat.js`. It scans the root package and configured vendor packages for `assets/applications/{id}`, `assets/domains/{id}`, `assets/projects/{id}`, and `assets/modules/{id}`.
+
+17. Keep public and admin frontend stacks separate. Public runtime work belongs in `assets/symfonicat.js`, `assets/stimulus.js`, `assets/controllers.json`, and `assets/controllers/`; admin runtime work belongs in `assets/symfonicat_admin.js`, `assets/stimulus_admin.js`, `assets/controllers_admin.json`, and `assets/controllers_admin/`.
+
+18. Docker is the canonical runtime. The PHP image mounts the repo at `/symfonicat`, uses `/symfonicat` as `WORKDIR`, serves Caddy from `/symfonicat/public`, and should be kept aligned with Compose and entrypoint paths.
+
+19. Redis is the shared infrastructure service for Symfony application cache, sessions, locks, admin login throttling, and Messenger. The app requires native `ext-redis`; do not add Predis unless there is a deliberate fallback requirement that is documented and configured.
+
+20. Symfony Messenger defaults to Redis-backed async routing. The `async` and `failed` transports use `symfony/redis-messenger`, default routing sends `*` to `async`, and the Compose `messenger-worker` service consumes the `async` transport with multiple replicas, process limits, and `pcntl`/POSIX signal handling for clean shutdown.
 
 ## Documentation
 

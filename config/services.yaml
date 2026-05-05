@@ -46,6 +46,14 @@ services:
         arguments:
             $publicDir: '%kernel.project_dir%/public'
 
+    Intervention\Image\Drivers\Imagick\Driver: ~
+
+    Intervention\Image\ImageManager:
+        arguments:
+            $driver: '@Intervention\Image\Drivers\Imagick\Driver'
+
+    Intervention\Image\Interfaces\ImageManagerInterface: '@Intervention\Image\ImageManager'
+
     Symfonicat\Security\AdminUserProvider:
         arguments:
             $cache: '@cache.app'
@@ -55,11 +63,17 @@ services:
             $entryFilesTwigExtension: '@webpack_encore.twig_entry_files_extension'
 
     symfonicat.redis_connection:
-        class: Predis\ClientInterface
+        class: Redis
         factory: ['Symfony\Component\Cache\Adapter\RedisAdapter', 'createConnection']
         arguments:
             - '%env(resolve:REDIS_URL)%'
-            - { class: 'Predis\Client' }
+            - { class: 'Redis', lazy: true }
+
+    cache.default_marshaller:
+        class: Symfony\Component\Cache\Marshaller\DefaultMarshaller
+        arguments:
+            - true
+            - '%kernel.debug%'
 
     Symfony\Component\HttpFoundation\Session\Storage\Handler\RedisSessionHandler:
         arguments:

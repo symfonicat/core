@@ -2,12 +2,15 @@
 
 namespace Symfonicat\Service;
 
+use Intervention\Image\Encoders\PngEncoder;
+use Intervention\Image\Interfaces\ImageManagerInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 final class FileUploadService
 {
     public function __construct(
         private readonly string $publicDir,
+        private readonly ImageManagerInterface $imageManager,
     ) {
     }
 
@@ -72,42 +75,14 @@ final class FileUploadService
             return $raw;
         }
 
-        if (class_exists(\Imagick::class)) {
-            try {
-                $imagick = new \Imagick();
-                $imagick->readImageBlob($raw);
-                $imagick->setImageFormat('png');
-                $png = $imagick->getImagesBlob();
-                $imagick->clear();
-                $imagick->destroy();
-
-                if (is_string($png) && $png !== '') {
-                    return $png;
-                }
-            } catch (\Throwable) {
-                // Fall through to GD conversion if available.
-            }
+        try {
+            return $this->imageManager
+                ->decodeBinary($raw)
+                ->encode(new PngEncoder())
+                ->toString();
+        } catch (\Throwable $exception) {
+            throw new \RuntimeException('Uploaded file is not a valid image.', previous: $exception);
         }
-
-        if (!function_exists('imagecreatefromstring') || !function_exists('imagepng')) {
-            throw new \RuntimeException('Upload a PNG icon, or install GD/Imagick to convert other formats.');
-        }
-
-        $image = @imagecreatefromstring($raw);
-        if ($image === false) {
-            throw new \RuntimeException('Uploaded file is not a valid image.');
-        }
-
-        ob_start();
-        imagepng($image);
-        $png = ob_get_clean();
-        imagedestroy($image);
-
-        if (!is_string($png)) {
-            throw new \RuntimeException('Unable to convert uploaded image to PNG.');
-        }
-
-        return $png;
     }
 
     private function isPngImage(string $raw): bool

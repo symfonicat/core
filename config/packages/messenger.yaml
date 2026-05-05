@@ -1,6 +1,9 @@
 framework:
     messenger:
         failure_transport: failed
+        stop_worker_on_signals:
+            - SIGTERM
+            - SIGINT
 
         transports:
             async:
@@ -10,6 +13,9 @@ framework:
                     consumer: '%env(MESSENGER_CONSUMER_NAME)%'
                     redeliver_timeout: 3600
                     claim_interval: 60000
+                    lazy: true
+                    serializer: 2
+                    stream_max_entries: 100000
                 retry_strategy:
                     max_retries: 3
                     delay: 1000
@@ -21,11 +27,12 @@ framework:
                 options:
                     group: symfonicat_failed
                     consumer: '%env(MESSENGER_CONSUMER_NAME)%'
-
-            sync: 'sync://'
+                    lazy: true
+                    serializer: 2
+                    stream_max_entries: 100000
 
         routing:
-            Symfony\Component\Mercure\Update: async
+            '*': async
 
 when@test:
     framework:
