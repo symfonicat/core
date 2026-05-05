@@ -102,7 +102,7 @@ final class RoutingRuleAdminRowTest extends SymfonicatKernelTestCase
         $twig = self::getTestContainer()->get(Environment::class);
 
         try {
-            return $twig->render('admin/routing_rule/_row.html.twig', [
+            return $twig->render('@symfonicat/routing_rule/_row.html.twig', [
                 'rule' => $rule,
             ]);
         } finally {

@@ -20,7 +20,6 @@ final class WebpackModulesDataCommand extends Command
 {
     public function __construct(
         private readonly ApplicationRepository $applicationRepository,
-        private readonly DomainRepository $domainRepository,
         private readonly ModuleRepository $moduleRepository,
         private readonly ProjectRepository $projectRepository,
         private readonly PackageDiscoveryService $packageDiscoveryService,
@@ -38,10 +37,6 @@ final class WebpackModulesDataCommand extends Command
             'modules' => $this->entriesFromRepositoryOrPackages(
                 fn (): array => $this->moduleRepository->findAll(),
                 'modules',
-            ),
-            'domains' => $this->entriesFromRepositoryOrPackages(
-                fn (): array => $this->domainRepository->findAll(),
-                'domains',
             ),
             'projects' => $this->entriesFromRepositoryOrPackages(
                 fn (): array => $this->projectRepository->findAll(),

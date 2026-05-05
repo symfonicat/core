@@ -1,0 +1,36 @@
+#!/bin/sh
+set -eu
+
+ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+TARGET_DIR=${BOOTSTRAP_TARGET_DIR:-"$ROOT_DIR/assets/bootstrap"}
+VERSION=${BOOTSTRAP_VERSION:-5}
+FORCE=${BOOTSTRAP_FORCE:-0}
+
+if [ -d "$TARGET_DIR" ] && [ -n "$(find "$TARGET_DIR" -mindepth 1 -maxdepth 1 -print -quit)" ] && [ "$FORCE" != "1" ]; then
+    echo "[symfonicat] bootstrap sources already exist at $TARGET_DIR; set BOOTSTRAP_FORCE=1 to refresh." >&2
+    exit 0
+fi
+
+TMP_DIR=$(mktemp -d)
+OUT_DIR="${TARGET_DIR}.tmp.$$"
+
+cleanup() {
+    rm -rf "$TMP_DIR" "$OUT_DIR"
+}
+trap cleanup EXIT HUP INT TERM
+
+mkdir -p "$(dirname -- "$TARGET_DIR")"
+
+(
+    cd "$TMP_DIR"
+    TARBALL=$(npm pack "bootstrap@$VERSION" --silent)
+    tar -xzf "$TARBALL"
+)
+
+mkdir -p "$OUT_DIR"
+cp -R "$TMP_DIR/package/." "$OUT_DIR/"
+
+rm -rf "$TARGET_DIR"
+mv "$OUT_DIR" "$TARGET_DIR"
+
+echo "[symfonicat] bootstrap $VERSION sources installed to $TARGET_DIR" >&2

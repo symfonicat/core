@@ -17,6 +17,7 @@ final class SymfonicatExtension extends Extension implements PrependExtensionInt
         $container->prependExtensionConfig('twig', [
             'paths' => [
                 $root.'/templates',
+                $root.'/admin/templates' => 'symfonicat',
             ],
         ]);
 

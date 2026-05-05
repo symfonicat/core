@@ -40,13 +40,14 @@ docker exec php bin/console symfonicat:load
 
 ## Admin
 
-Admin is isolated from host users and uses Symfonicat-owned admin rows with HTTP basic plus TOTP MFA. The main surfaces are applications, domains, Electron rows, env keys, projects, routing rules, and YAML dump/load. Vendor fields are read-only in admin forms.
-
 Create an admin with:
 
 ```bash
 docker exec -it php bin/console symfonicat:admin:create <username>
 ```
+
+and then visit `/admin`.
+
 
 ## Modules
 
@@ -64,8 +65,6 @@ docker exec php bin/console symfonicat:electron:build <name>
 Build output and favicon paths use vendor-prefixed target ids; generated start URLs use clean host/path ids.
 
 ## Sync
-
-`symfonicat:bootstrap` waits for the database, synchronizes the schema and package rows, then runs `symfonicat:load` to import admin YAML and seed local defaults.
 
 `symfonicat:schema:update` synchronizes package-provided modules, domains, applications, and projects:
 

@@ -1,0 +1,35 @@
+{{ form_start(form) }}
+
+<div class="row g-3">
+    <div class="col-md-3">
+        {# vendor shown in title #}
+    </div>
+</div>
+
+{% if form.id is defined %}
+    <div class="row g-3">
+        <div class="col-md-12">
+            {{ form_row(form.id) }}
+        </div>
+    </div>
+{% endif %}
+
+<div class="row g-3">
+    <div class="col-md-3">
+        {{ form_row(form.modules) }}
+    </div>
+
+    <div class="col-md-9">
+        {{ include('@symfonicat/env/_env_collection.html.twig', { form: form.env }) }}
+    </div>
+</div>
+
+{% if form._token is defined %}
+    {{ form_widget(form._token) }}
+{% endif %}
+
+<div class="d-flex justify-content-end">
+    <button class="btn btn-sm btn-success">{{ button_label|default('save') }}</button>
+</div>
+
+{{ form_end(form, { render_rest: false }) }}

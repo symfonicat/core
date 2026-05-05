@@ -1,0 +1,27 @@
+{% extends '@symfonicat/base.html.twig' %}
+{% block title %}Applications{% endblock %}
+{% block body %}
+
+    <table class="table" id="applications">
+        <thead>
+            <tr>
+                <th>application</th>
+                <th>modules</th>
+                {% for env_parent in env_parents %}
+                    <th>{{ env_parent.id }}</th>
+                {% endfor %}
+                <th>&nbsp;</th>
+            </tr>
+        </thead>
+        <tbody id="applications-body">
+        {% for application in applications %}
+            {{ include('@symfonicat/application/_row.html.twig') }}
+        {% else %}
+            <tr id="applications-empty">
+                <td colspan="{{ 3 + env_parents|length }}">no records found</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+{% endblock %}

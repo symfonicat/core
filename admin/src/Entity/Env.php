@@ -1,0 +1,48 @@
+<?php
+
+namespace Symfonicat\Entity;
+
+use Symfonicat\Repository\EnvRepository;
+use Doctrine\ORM\Mapping as ORM;
+
+#[ORM\Entity(repositoryClass: EnvRepository::class)]
+#[ORM\Table(name: 'symfonicat_env')]
+class Env
+{
+    #[ORM\Id]
+    #[ORM\Column(length: 255)]
+    private ?string $id = null;
+
+    #[ORM\ManyToOne(targetEntity: EnvParent::class, inversedBy: 'env')]
+    #[ORM\JoinColumn(name: 'env_parent_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
+    private ?EnvParent $envParent = null;
+
+    public function getId(): ?string
+    {
+        return $this->id;
+    }
+
+    public function setId(string $id): static
+    {
+        $this->id = trim($id);
+
+        return $this;
+    }
+
+    public function getEnvParent(): ?EnvParent
+    {
+        return $this->envParent;
+    }
+
+    public function setEnvParent(?EnvParent $envParent): static
+    {
+        $this->envParent = $envParent;
+
+        return $this;
+    }
+
+    public function __toString(): string
+    {
+        return $this->id ?? '';
+    }
+}

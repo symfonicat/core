@@ -111,7 +111,9 @@ Webpack entry discovery is driven by `symfonicat:data:webpack`. It scans the roo
 - `assets/projects/{id}`
 - `assets/modules/{id}`
 
-Public assets use `assets/symfonicat.js`, `assets/stimulus.js`, `assets/controllers.json`, and `assets/controllers/`. Admin-only JavaScript belongs on `assets/symfonicat_admin.js`, `assets/stimulus_admin.js`, `assets/controllers_admin.json`, and `assets/controllers_admin/`.
+Public assets use `assets/**`, and admin code lives under `admin/**/` .
+
+Bootstrap theme tokens are set in `assets/scss/_variables.scss` and `assets/scss/_variables-dark.scss`; generated selector overrides live in `assets/scss/_overrides.scss`.
 
 ## Modules
 
@@ -175,22 +177,12 @@ docker exec php bin/console symfonicat:electron:build <name>
 
 The build command renders `templates/electron/{type}/main.twig.js` or `templates/electron/{type}/overrides/{targetId}.twig.js`, writes `electron/{type}/{targetId}/app.js`, writes a local `package.json`, and runs `electron-builder` into `electron/{type}/{targetId}/build`.
 
-## Sync And Bootstrap
-
-`symfonicat:bootstrap` waits for the database, synchronizes the schema, and then runs `symfonicat:load` to import example admin YAML.
+## Sync
 
 `symfonicat:schema:update` synchronizes modules, domains, applications, and projects from package assets:
 
 ```bash
 docker exec -it php bin/console symfonicat:schema:update
-```
-
-Other useful commands:
-
-```bash
-docker exec php bin/console symfonicat:data:webpack
-docker exec php bin/console symfonicat:data:dns
-docker exec php bin/console symfonicat:public-suffix:refresh
 ```
 
 ## Picture of @dunglas at the Zoo

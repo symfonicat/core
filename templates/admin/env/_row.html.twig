@@ -1,9 +1,0 @@
-<tr id="env_{{ env.id }}" class="btn-row">
-    <td class="fw-semibold">{{ env.envParent ? env.envParent.id : '-' }}</td>
-    <td>{{ env.id }}</td>
-    <td class="text-end btn-cell">
-        <div class="btn-group btn-group-sm">
-            {{ include('admin/env/_delete_form.html.twig') }}
-        </div>
-    </td>
-</tr>

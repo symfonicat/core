@@ -1,0 +1,112 @@
+{% set applicationHref = null %}
+{% if rule.type == 'application' and rule.application %}
+    {% if rule.applicationType == 'route' and rule.route %}
+        {% set applicationHref = path(rule.route) %}
+    {% else %}
+        {% set applicationHref = path_application(rule.application) %}
+    {% endif %}
+{% endif %}
+
+<tr id="routing_rule_{{ rule.id }}" class="btn-row">
+    <td class="fw-semibold text-nowrap">{{ rule.type }}</td>
+    <td>
+        {% if rule.argumentsPath %}
+            <code>{{ rule.argumentsPath }}</code>
+        {% else %}
+            <i class="fa fa-fw fa-times"></i>
+        {% endif %}
+    </td>
+    <td class="text-nowrap">
+        {% if rule.domain %}
+            <code>{{ rule.domain.id }}</code>
+        {% else %}
+            <i class="fa fa-fw fa-times"></i>
+        {% endif %}
+    </td>
+    <td class="text-nowrap">
+        {% if rule.project %}
+            <div><code>{{ rule.project.id }}</code></div>
+        {% elseif rule.type == 'redirect' %}
+            {% if rule.redirectType == 'project' and rule.project %}
+                <div><code>{{ rule.project.id }}</code></div>
+
+            {% else %}
+                <i class="fa fa-fw fa-times"></i>
+            {% endif %}
+        {% else %}
+            <i class="fa fa-fw fa-times"></i>
+        {% endif %}
+    </td>
+    <td class="text-nowrap">
+        {% if rule.application %}
+            {% if applicationHref %}
+                <a href="{{ applicationHref }}"><code>{{ rule.application.id(true) }}</code></a>
+            {% else %}
+                <code>{{ rule.application.id(true) }}</code>
+            {% endif %}
+        {% else %}
+            <i class="fa fa-fw fa-times"></i>
+        {% endif %}
+    </td>
+    <td class="text-nowrap">
+        {% if rule.type == 'application' %}
+            {{ (rule.applicationType ?: '<i class="fa fa-fw fa-times"></i>')|raw }}
+        {% else %}
+            <i class="fa fa-fw fa-times"></i>
+        {% endif %}
+    </td>
+    <td>
+        {% if rule.route %}
+            {% if rule.type == 'application' and applicationHref %}
+                <a href="{{ applicationHref }}"><code>{{ rule.route }}</code></a>
+            {% else %}
+                <code>{{ rule.route }}</code>
+            {% endif %}
+        {% else %}
+            <i class="fa fa-fw fa-times"></i>
+        {% endif %}
+    </td>
+    <td class="text-nowrap">
+        {% if rule.type == 'route' and rule.routeType %}
+            {{ rule.routeType }}
+        {% else %}
+            <i class="fa fa-fw fa-times"></i>
+        {% endif %}
+    </td>
+    <td class="text-nowrap">
+        {% if rule.type == 'redirect' and rule.redirectType %}
+            {{ rule.redirectType }}
+        {% else %}
+            <i class="fa fa-fw fa-times"></i>
+        {% endif %}
+    </td>
+    <td class="text-nowrap">
+        {% if rule.type == 'redirect' and rule.redirectTarget %}
+            {{ rule.redirectTarget }}
+        {% else %}
+            <i class="fa fa-fw fa-times"></i>
+        {% endif %}
+    </td>
+    <td class="text-nowrap">
+        {% if rule.redirectDomain %}
+            <code>{{ rule.redirectDomain.id }}</code>
+        {% else %}
+            <i class="fa fa-fw fa-times"></i>
+        {% endif %}
+    </td>
+    <td class="text-nowrap">
+        {% if rule.redirectProject %}
+            <div><code>{{ rule.redirectProject.id }}</code></div>
+        {% else %}
+            <i class="fa fa-fw fa-times"></i>
+        {% endif %}
+    </td>
+    <td class="text-end btn-cell">
+        <div class="btn-group btn-group-sm">
+            <a href="{{ path('symfonicat_routing_rule_edit', {'id': rule.id}) }}" class="btn btn-sm btn-warning">
+                <i class="fa fa-pencil">&nbsp;</i>
+            </a>
+            {{ include('@symfonicat/routing_rule/_delete_form.html.twig') }}
+        </div>
+    </td>
+</tr>
