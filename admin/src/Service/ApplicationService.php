@@ -170,6 +170,17 @@ class ApplicationService
             return $this->pathFromRouteRule($rule, $path, $arguments);
         }
 
+        if ($rule->isApplicationDomainType() || $rule->isApplicationProjectType() || $rule->isApplicationDomainProjectType()) {
+            if ($arguments !== []) {
+                throw new InvalidParameterException(sprintf(
+                    'Application "%s" domain and project rules do not support wildcard path arguments.',
+                    (string) $rule->getApplication()?->getId(),
+                ));
+            }
+
+            return $this->segmentsToPath($this->pathSegments($path));
+        }
+
         $replacementArguments = array_values(array_map(
             static fn (mixed $argument): string => trim((string) $argument, " \t\n\r\0\x0B/"),
             $arguments,

@@ -34,6 +34,9 @@ class RoutingRule
 
     public const APPLICATION_TYPE_ARGUMENTS = 'arguments';
     public const APPLICATION_TYPE_ROUTE = 'route';
+    public const APPLICATION_TYPE_DOMAIN = 'domain';
+    public const APPLICATION_TYPE_PROJECT = 'project';
+    public const APPLICATION_TYPE_DOMAIN_PROJECT = 'domain_project';
 
     public const RESERVED_ARGUMENTS = [
         'admin',
@@ -136,6 +139,9 @@ class RoutingRule
         return [
             'arguments' => self::APPLICATION_TYPE_ARGUMENTS,
             'route' => self::APPLICATION_TYPE_ROUTE,
+            'domain' => self::APPLICATION_TYPE_DOMAIN,
+            'project' => self::APPLICATION_TYPE_PROJECT,
+            'domain and project' => self::APPLICATION_TYPE_DOMAIN_PROJECT,
         ];
     }
 
@@ -353,6 +359,21 @@ class RoutingRule
         return $this->getApplicationType() === self::APPLICATION_TYPE_ROUTE;
     }
 
+    public function isApplicationDomainType(): bool
+    {
+        return $this->getApplicationType() === self::APPLICATION_TYPE_DOMAIN;
+    }
+
+    public function isApplicationProjectType(): bool
+    {
+        return $this->getApplicationType() === self::APPLICATION_TYPE_PROJECT;
+    }
+
+    public function isApplicationDomainProjectType(): bool
+    {
+        return $this->getApplicationType() === self::APPLICATION_TYPE_DOMAIN_PROJECT;
+    }
+
     public function isDomainRedirectType(): bool
     {
         return $this->redirectType === self::REDIRECT_TYPE_DOMAIN;
@@ -421,8 +442,6 @@ class RoutingRule
         }
 
         if ($this->isApplicationType()) {
-            $this->domain = null;
-            $this->project = null;
             $this->redirectType = null;
             $this->redirectTarget = null;
             $this->routeType = null;
@@ -430,8 +449,23 @@ class RoutingRule
             $this->redirectProject = null;
 
             if ($this->isApplicationRouteType()) {
+                $this->domain = null;
+                $this->project = null;
                 $this->arguments = [];
+            } elseif ($this->isApplicationDomainType()) {
+                $this->project = null;
+                $this->arguments = [];
+                $this->route = null;
+            } elseif ($this->isApplicationProjectType()) {
+                $this->domain = null;
+                $this->arguments = [];
+                $this->route = null;
+            } elseif ($this->isApplicationDomainProjectType()) {
+                $this->arguments = [];
+                $this->route = null;
             } else {
+                $this->domain = null;
+                $this->project = null;
                 $this->route = null;
                 $this->applicationType = self::APPLICATION_TYPE_ARGUMENTS;
             }
@@ -537,6 +571,30 @@ class RoutingRule
             if ($this->isApplicationRouteType() && trim((string) $this->route) === '') {
                 $context->buildViolation('A route-based application rule requires a route.')
                     ->atPath('route')
+                    ->addViolation();
+            }
+
+            if ($this->isApplicationDomainType() && $this->domain === null) {
+                $context->buildViolation('A domain application rule requires a domain.')
+                    ->atPath('domain')
+                    ->addViolation();
+            }
+
+            if ($this->isApplicationProjectType() && $this->project === null) {
+                $context->buildViolation('A project application rule requires a project.')
+                    ->atPath('project')
+                    ->addViolation();
+            }
+
+            if ($this->isApplicationDomainProjectType() && $this->domain === null) {
+                $context->buildViolation('A domain and project application rule requires a domain.')
+                    ->atPath('domain')
+                    ->addViolation();
+            }
+
+            if ($this->isApplicationDomainProjectType() && $this->project === null) {
+                $context->buildViolation('A domain and project application rule requires a project.')
+                    ->atPath('project')
                     ->addViolation();
             }
 

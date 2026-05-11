@@ -71,7 +71,7 @@ Runtime resolution is layered:
 1. `DomainService` resolves the base host.
 2. `ProjectService` resolves the first subdomain when present.
 3. `RoutingRuleSubscriber` applies redirect, route, domain, project, and application rules.
-4. `ApplicationService` loads application shells from argument rules or route-bound rules.
+4. `ApplicationService` loads application shells from argument rules, route-bound rules, or domain/project application bindings.
 
 Public routes:
 
@@ -104,15 +104,27 @@ Env resolution is application, then domain, then project, then Electron for Elec
 {{ path_application('core/test', 'somepath/testpath', ['PARAM']) }}
 ```
 
+For domain-bound and project-bound application rules, `path_application()` returns the bound path on the current host. Use the matching domain or project host when linking across hosts.
+
 ## Routing Rules
 
 Supported rule types:
 
 - `domain`: render the domain shell for a matching regex path.
 - `project`: suppress the project catch-all for a matching regex path.
-- `application`: render an application shell from regex arguments or a named Symfony route.
+- `application`: render an application shell from regex arguments, bind an application to a domain, project, or domain/project pair, or attach application context to a named Symfony route.
 - `redirect`: redirect a domain or project to another domain, project, or `project.domain` pair.
 - `route`: render a named Symfony route for the root of a domain or project.
+
+Application rules support these application types:
+
+- `arguments`: match regex path segments and render the application shell.
+- `route`: attach application context to a named Symfony route without replacing that route's response.
+- `domain`: render the application shell for the bare matching domain.
+- `project`: render the application shell for the matching project subdomain.
+- `domain_project`: render the application shell for the matching project on the matching domain.
+
+Root-level `route` rules are evaluated before domain/project application bindings, so a domain or project can still hand its root request to a Symfony-only route.
 
 ## Assets
 

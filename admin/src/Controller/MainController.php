@@ -20,19 +20,27 @@ final class MainController extends AbstractController
     private ?Project $project;
 
     public function __construct(
+
         private readonly DomainService $domainService,
         private readonly ProjectService $projectService,
         private readonly SubdomainService $subdomainService,
         private readonly Environment $twig,
+
     ) {
+
         $this->domain = $this->domainService->load();
         $this->project = $this->projectService->load();
     }
 
     #[Route('/', name: 'symfonicat_project_root', methods: ['GET'], defaults: ['path' => ''], condition: 'not request.attributes.get("project")')]
     #[Route('/{path}', name: 'symfonicat_project', methods: ['GET'], requirements: ['path' => '(?!m(?:/|$)).*'], defaults: ['path' => ''], priority: -1000, condition: 'request.attributes.get("project") and request.attributes.get("symfonicat_use_project_catch_all", true)')]
-    public function main(Request $request, string $path = ''): Response
-    {
+    public function main(
+
+        Request $request,
+        string $path = '',
+
+    ): Response {
+
         if ($request->attributes->getBoolean('symfonicat_force_domain_main')) {
             return $this->renderDomain();
         }
@@ -76,13 +84,21 @@ final class MainController extends AbstractController
 
         return $this->render($template);
     }
-    private function resolveTemplate(string $overrideTemplate, string $fallbackTemplate): string
-    {
-        try {
-            $this->twig->load($overrideTemplate);
 
+    private function resolveTemplate (
+
+        string $overrideTemplate,
+        string $fallbackTemplate
+
+    ): string {
+
+        try {
+
+            $this->twig->load($overrideTemplate);
             return $overrideTemplate;
+
         } catch (LoaderError) {
+
             return $fallbackTemplate;
         }
     }

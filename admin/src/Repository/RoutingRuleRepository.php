@@ -169,6 +169,56 @@ class RoutingRuleRepository extends ServiceEntityRepository
             ->getOneOrNullResult();
     }
 
+    public function findOneTypeApplicationByDomain(Domain $domain): ?RoutingRule
+    {
+        return $this->createQueryBuilder('rule')
+            ->andWhere('rule.type = :type')
+            ->andWhere('rule.applicationType = :applicationType')
+            ->andWhere('rule.application IS NOT NULL')
+            ->andWhere('IDENTITY(rule.domain) = :domainId')
+            ->setParameter('type', RoutingRule::TYPE_APPLICATION)
+            ->setParameter('applicationType', RoutingRule::APPLICATION_TYPE_DOMAIN)
+            ->setParameter('domainId', $domain->getId(true))
+            ->orderBy('rule.id', 'ASC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    public function findOneTypeApplicationByProject(Project $project): ?RoutingRule
+    {
+        return $this->createQueryBuilder('rule')
+            ->andWhere('rule.type = :type')
+            ->andWhere('rule.applicationType = :applicationType')
+            ->andWhere('rule.application IS NOT NULL')
+            ->andWhere('IDENTITY(rule.project) = :projectId')
+            ->setParameter('type', RoutingRule::TYPE_APPLICATION)
+            ->setParameter('applicationType', RoutingRule::APPLICATION_TYPE_PROJECT)
+            ->setParameter('projectId', $project->getId(true))
+            ->orderBy('rule.id', 'ASC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    public function findOneTypeApplicationByDomainAndProject(Domain $domain, Project $project): ?RoutingRule
+    {
+        return $this->createQueryBuilder('rule')
+            ->andWhere('rule.type = :type')
+            ->andWhere('rule.applicationType = :applicationType')
+            ->andWhere('rule.application IS NOT NULL')
+            ->andWhere('IDENTITY(rule.domain) = :domainId')
+            ->andWhere('IDENTITY(rule.project) = :projectId')
+            ->setParameter('type', RoutingRule::TYPE_APPLICATION)
+            ->setParameter('applicationType', RoutingRule::APPLICATION_TYPE_DOMAIN_PROJECT)
+            ->setParameter('domainId', $domain->getId(true))
+            ->setParameter('projectId', $project->getId(true))
+            ->orderBy('rule.id', 'ASC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
     /**
      * @return RoutingRule[]
      */

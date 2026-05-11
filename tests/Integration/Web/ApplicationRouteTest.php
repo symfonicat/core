@@ -129,6 +129,103 @@ final class ApplicationRouteTest extends SymfonicatWebTestCase
         self::assertSame('test test', (string) $this->client()->getResponse()->getContent());
     }
 
+    public function testDomainApplicationRuleRendersApplicationShellOnBareDomain(): void
+    {
+        $domain = $this->createDomain('example.com');
+        $application = (new Application())->setId('core/test');
+        $rule = (new RoutingRule())
+            ->setType(RoutingRule::TYPE_APPLICATION)
+            ->setApplication($application)
+            ->setApplicationType(RoutingRule::APPLICATION_TYPE_DOMAIN)
+            ->setDomain($domain);
+
+        $this->entityManager()->persist($application);
+        $this->entityManager()->persist($rule);
+        $this->entityManager()->flush();
+
+        $this->setHost('example.com');
+        $this->client()->request('GET', '/docs');
+
+        self::assertResponseIsSuccessful();
+        $content = (string) $this->client()->getResponse()->getContent();
+
+        self::assertMatchesRegularExpression('/"id"\s*:\s*"test"/', $content);
+        self::assertStringContainsString('test', $content);
+    }
+
+    public function testProjectApplicationRuleRendersApplicationShellOnProjectSubdomain(): void
+    {
+        $domain = $this->createDomain('example.com');
+        $project = $this->createProject('project1', $domain);
+        $application = (new Application())->setId('core/test');
+        $rule = (new RoutingRule())
+            ->setType(RoutingRule::TYPE_APPLICATION)
+            ->setApplication($application)
+            ->setApplicationType(RoutingRule::APPLICATION_TYPE_PROJECT)
+            ->setProject($project);
+
+        $this->entityManager()->persist($application);
+        $this->entityManager()->persist($rule);
+        $this->entityManager()->flush();
+
+        $this->setHost('project1.example.com');
+        $this->client()->request('GET', '/docs');
+
+        self::assertResponseIsSuccessful();
+        self::assertMatchesRegularExpression('/"id"\s*:\s*"test"/', (string) $this->client()->getResponse()->getContent());
+    }
+
+    public function testDomainProjectApplicationRuleRendersApplicationShellForExactPair(): void
+    {
+        $domain = $this->createDomain('example.com');
+        $project = $this->createProject('project1', $domain);
+        $application = (new Application())->setId('core/test');
+        $rule = (new RoutingRule())
+            ->setType(RoutingRule::TYPE_APPLICATION)
+            ->setApplication($application)
+            ->setApplicationType(RoutingRule::APPLICATION_TYPE_DOMAIN_PROJECT)
+            ->setDomain($domain)
+            ->setProject($project);
+
+        $this->entityManager()->persist($application);
+        $this->entityManager()->persist($rule);
+        $this->entityManager()->flush();
+
+        $this->setHost('project1.example.com');
+        $this->client()->request('GET', '/docs');
+
+        self::assertResponseIsSuccessful();
+        self::assertMatchesRegularExpression('/"id"\s*:\s*"test"/', (string) $this->client()->getResponse()->getContent());
+    }
+
+    public function testProjectRouteRuleOverridesProjectApplicationBinding(): void
+    {
+        $domain = $this->createDomain('example.com');
+        $project = $this->createProject('project1', $domain);
+        $application = (new Application())->setId('core/test');
+        $applicationRule = (new RoutingRule())
+            ->setType(RoutingRule::TYPE_APPLICATION)
+            ->setApplication($application)
+            ->setApplicationType(RoutingRule::APPLICATION_TYPE_PROJECT)
+            ->setProject($project);
+        $routeRule = (new RoutingRule())
+            ->setType(RoutingRule::TYPE_ROUTE)
+            ->setRouteType(RoutingRule::ROUTE_TYPE_PROJECT)
+            ->setProject($project)
+            ->setRoute('symfonicat_project_test');
+
+        $this->entityManager()->persist($application);
+        $this->entityManager()->persist($applicationRule);
+        $this->entityManager()->persist($routeRule);
+        $this->entityManager()->flush();
+
+        $this->setHost('project1.example.com');
+        $this->client()->request('GET', '/');
+
+        self::assertResponseIsSuccessful();
+        self::assertSame('test', (string) $this->client()->getResponse()->getContent());
+    }
+
     private function seedApplicationRule(): Application
     {
         $application = (new Application())->setId('core/test');

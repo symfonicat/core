@@ -48,6 +48,9 @@ final class RoutingRuleTest extends TestCase
         self::assertSame([
             'arguments' => 'arguments',
             'route' => 'route',
+            'domain' => 'domain',
+            'project' => 'project',
+            'domain and project' => 'domain_project',
         ], RoutingRule::getApplicationTypeChoices());
         self::assertSame([
             'domain' => 'domain',
@@ -137,6 +140,69 @@ final class RoutingRuleTest extends TestCase
 
         self::assertSame([], $rule->getArguments());
         self::assertSame('symfonicat_project_test', $rule->getRoute());
+    }
+
+    public function testNormalizeScopeKeepsDomainForDomainApplicationRules(): void
+    {
+        $domain = (new Domain())->setId('core/example.com');
+        $project = (new Project())->setId('core/project1');
+
+        $rule = (new RoutingRule())
+            ->setType(RoutingRule::TYPE_APPLICATION)
+            ->setApplicationType(RoutingRule::APPLICATION_TYPE_DOMAIN)
+            ->setDomain($domain)
+            ->setProject($project)
+            ->setArguments(['symfonicat'])
+            ->setRoute('symfonicat_project_test');
+
+        $rule->normalizeScope();
+
+        self::assertSame($domain, $rule->getDomain());
+        self::assertNull($rule->getProject());
+        self::assertSame([], $rule->getArguments());
+        self::assertNull($rule->getRoute());
+    }
+
+    public function testNormalizeScopeKeepsProjectForProjectApplicationRules(): void
+    {
+        $domain = (new Domain())->setId('core/example.com');
+        $project = (new Project())->setId('core/project1');
+
+        $rule = (new RoutingRule())
+            ->setType(RoutingRule::TYPE_APPLICATION)
+            ->setApplicationType(RoutingRule::APPLICATION_TYPE_PROJECT)
+            ->setDomain($domain)
+            ->setProject($project)
+            ->setArguments(['symfonicat'])
+            ->setRoute('symfonicat_project_test');
+
+        $rule->normalizeScope();
+
+        self::assertNull($rule->getDomain());
+        self::assertSame($project, $rule->getProject());
+        self::assertSame([], $rule->getArguments());
+        self::assertNull($rule->getRoute());
+    }
+
+    public function testNormalizeScopeKeepsDomainAndProjectForDomainProjectApplicationRules(): void
+    {
+        $domain = (new Domain())->setId('core/example.com');
+        $project = (new Project())->setId('core/project1');
+
+        $rule = (new RoutingRule())
+            ->setType(RoutingRule::TYPE_APPLICATION)
+            ->setApplicationType(RoutingRule::APPLICATION_TYPE_DOMAIN_PROJECT)
+            ->setDomain($domain)
+            ->setProject($project)
+            ->setArguments(['symfonicat'])
+            ->setRoute('symfonicat_project_test');
+
+        $rule->normalizeScope();
+
+        self::assertSame($domain, $rule->getDomain());
+        self::assertSame($project, $rule->getProject());
+        self::assertSame([], $rule->getArguments());
+        self::assertNull($rule->getRoute());
     }
 
     public function testNormalizeScopeKeepsBothRedirectTargetsForCombinedRedirectTarget(): void
@@ -256,6 +322,43 @@ final class RoutingRuleTest extends TestCase
 
         self::assertHasViolationMatching($violations, 'An application routing rule requires an application.');
         self::assertHasViolationMatching($violations, 'A route-based application rule requires a route.');
+    }
+
+    public function testValidateScopeRequiresDomainForDomainApplicationRule(): void
+    {
+        $rule = (new RoutingRule())
+            ->setType(RoutingRule::TYPE_APPLICATION)
+            ->setApplicationType(RoutingRule::APPLICATION_TYPE_DOMAIN);
+
+        $violations = $this->validator->validate($rule);
+
+        self::assertHasViolationMatching($violations, 'An application routing rule requires an application.');
+        self::assertHasViolationMatching($violations, 'A domain application rule requires a domain.');
+    }
+
+    public function testValidateScopeRequiresProjectForProjectApplicationRule(): void
+    {
+        $rule = (new RoutingRule())
+            ->setType(RoutingRule::TYPE_APPLICATION)
+            ->setApplicationType(RoutingRule::APPLICATION_TYPE_PROJECT);
+
+        $violations = $this->validator->validate($rule);
+
+        self::assertHasViolationMatching($violations, 'An application routing rule requires an application.');
+        self::assertHasViolationMatching($violations, 'A project application rule requires a project.');
+    }
+
+    public function testValidateScopeRequiresDomainAndProjectForDomainProjectApplicationRule(): void
+    {
+        $rule = (new RoutingRule())
+            ->setType(RoutingRule::TYPE_APPLICATION)
+            ->setApplicationType(RoutingRule::APPLICATION_TYPE_DOMAIN_PROJECT);
+
+        $violations = $this->validator->validate($rule);
+
+        self::assertHasViolationMatching($violations, 'An application routing rule requires an application.');
+        self::assertHasViolationMatching($violations, 'A domain and project application rule requires a domain.');
+        self::assertHasViolationMatching($violations, 'A domain and project application rule requires a project.');
     }
 
     public function testValidateScopeRequiresBothRedirectDestinationsForCombinedRedirectTarget(): void

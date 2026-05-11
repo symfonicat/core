@@ -95,6 +95,21 @@ final class RoutingRuleService
         return $this->routingRuleRepository->findOneTypeApplicationByRoute($route);
     }
 
+    public function getApplicationRuleForDomain(Domain $domain): ?RoutingRule
+    {
+        return $this->routingRuleRepository->findOneTypeApplicationByDomain($domain);
+    }
+
+    public function getApplicationRuleForProject(Project $project): ?RoutingRule
+    {
+        return $this->routingRuleRepository->findOneTypeApplicationByProject($project);
+    }
+
+    public function getApplicationRuleForDomainAndProject(Domain $domain, Project $project): ?RoutingRule
+    {
+        return $this->routingRuleRepository->findOneTypeApplicationByDomainAndProject($domain, $project);
+    }
+
     public function getApplicationRuleForApplication(Application|string $application): ?RoutingRule
     {
         $applicationId = $application instanceof Application ? (string) $application->getId(true) : $application;

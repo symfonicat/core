@@ -15,40 +15,55 @@ use Twig\Error\LoaderError;
 
 final class ApplicationController extends AbstractController
 {
+    public function __construct(
+        private readonly Environment $twig,
+        private readonly ApplicationRepository $applicationRepository,
+        private readonly ApplicationService $applicationService,
+    ) {
+    }
+
     #[Route('/application/{id}/{path}', name: 'symfonicat_application', requirements: ['path' => '.*'], defaults: ['path' => ''], methods: ['GET'])]
     public function application(
         Request $request,
         string $id,
         string $path,
-        ApplicationRepository $applicationRepository,
-        ApplicationService $applicationService,
-        Environment $twig,
     ): Response {
-        $application = $applicationRepository->findOneByFullOrCleanId($id);
+        $application = $this->applicationRepository->findOneByFullOrCleanId($id);
         if (!$application instanceof Application) {
             throw new NotFoundHttpException(sprintf('Application "%s" was not found.', $id));
         }
 
-        if ($applicationService->getRuleForApplication($application) === null) {
+        if ($this->applicationService->getRuleForApplication($application) === null) {
             throw new NotFoundHttpException(sprintf('Application "%s" does not have an application routing rule.', $id));
         }
 
-        $applicationPath = $applicationService->path($id, $path);
+        $applicationPath = $this->applicationService->path($id, $path);
 
-        $request->attributes->set('application', $application);
-        $request->attributes->set('symfonicat_application_path', $applicationPath);
-        $request->attributes->set('symfonicat_application_redirect_target', $applicationPath);
-        $request->attributes->set('symfonicat_routing_rule_active', true);
-
-        return $this->render($this->resolveTemplate($application, $twig));
+        return $this->renderApplication($request, $application, $applicationPath, $applicationPath);
     }
 
-    private function resolveTemplate(Application $application, Environment $twig): string
+    public function renderApplication(
+        Request $request,
+        Application $application,
+        string $applicationPath = '',
+        ?string $redirectTarget = null,
+    ): Response {
+        $request->attributes->set('application', $application);
+        $request->attributes->set('symfonicat_application_path', $applicationPath);
+        if ($redirectTarget !== null && $redirectTarget !== '') {
+            $request->attributes->set('symfonicat_application_redirect_target', $redirectTarget);
+        }
+        $request->attributes->set('symfonicat_routing_rule_active', true);
+
+        return $this->render($this->resolveTemplate($application));
+    }
+
+    private function resolveTemplate(Application $application): string
     {
         $override = sprintf('application/overrides/%s.html.twig', $application->getId());
 
         try {
-            $twig->load($override);
+            $this->twig->load($override);
 
             return $override;
         } catch (LoaderError) {

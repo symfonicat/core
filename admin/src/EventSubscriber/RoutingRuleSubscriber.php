@@ -2,6 +2,7 @@
 
 namespace Symfonicat\EventSubscriber;
 
+use Symfonicat\Controller\ApplicationController;
 use Symfonicat\Controller\MainController;
 use Symfonicat\Entity\Application;
 use Symfonicat\Entity\Domain;
@@ -12,6 +13,7 @@ use Symfonicat\Service\DomainService;
 use Symfonicat\Service\PathService;
 use Symfonicat\Service\ProjectService;
 use Symfonicat\Service\RoutingRuleService;
+use Symfonicat\Service\SubdomainService;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -24,8 +26,6 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Exception\MissingMandatoryParametersException;
 use Symfony\Component\Routing\Exception\RouteNotFoundException;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
-use Twig\Environment;
-use Twig\Error\LoaderError;
 
 final class RoutingRuleSubscriber implements EventSubscriberInterface
 {
@@ -34,10 +34,11 @@ final class RoutingRuleSubscriber implements EventSubscriberInterface
         private readonly ApplicationService $applicationService,
         private readonly DomainService $domainService,
         private readonly ProjectService $projectService,
+        private readonly SubdomainService $subdomainService,
         private readonly PathService $pathService,
-        private readonly Environment $twig,
         private readonly UrlGeneratorInterface $urlGenerator,
         private readonly HttpKernelInterface $httpKernel,
+        private readonly ApplicationController $applicationController,
     ) {
     }
 
@@ -62,6 +63,7 @@ final class RoutingRuleSubscriber implements EventSubscriberInterface
         }
 
         $isModulePath = $path === '/m' || str_starts_with($path, '/m/');
+        $isApplicationPath = $path === '/application' || str_starts_with($path, '/application/');
 
         $domain = $this->domainService->load();
         $project = $this->projectService->load();
@@ -113,11 +115,27 @@ final class RoutingRuleSubscriber implements EventSubscriberInterface
             return;
         }
 
+        if (!$isApplicationPath) {
+            $applicationRule = $this->getBoundApplicationRule($domain, $project);
+            $application = $applicationRule?->getApplication();
+
+            if ($application instanceof Application) {
+                $request->attributes->set('symfonicat_application_rule', $applicationRule);
+                $event->setResponse($this->applicationController->renderApplication(
+                    $request,
+                    $application,
+                    $request->getPathInfo(),
+                ));
+
+                return;
+            }
+        }
+
         $application = $this->applicationService->load();
         if ($application !== null) {
             $request->attributes->set('application', $application);
             $request->attributes->set('symfonicat_routing_rule_active', true);
-            $event->setResponse($this->renderApplication($application));
+            $event->setResponse($this->applicationController->renderApplication($request, $application, $request->getPathInfo()));
 
             return;
         }
@@ -275,29 +293,29 @@ final class RoutingRuleSubscriber implements EventSubscriberInterface
 
         $overrideRequest->attributes->set('symfonicat_routing_rule_active', true);
         $overrideRequest->attributes->set('symfonicat_route_override_active', true);
+        $overrideRequest->attributes->set('symfonicat_use_project_catch_all', false);
 
         return $this->httpKernel->handle($overrideRequest, HttpKernelInterface::SUB_REQUEST);
     }
 
-    private function renderApplication(Application $application): Response
+    private function getBoundApplicationRule(?Domain $domain, ?Project $project): ?RoutingRule
     {
-        $template = $this->resolveApplicationTemplate(
-            sprintf('application/overrides/%s.html.twig', $application->getId()),
-            'application/main.html.twig',
-        );
+        if ($project instanceof Project) {
+            if ($domain instanceof Domain) {
+                $rule = $this->routingRuleService->getApplicationRuleForDomainAndProject($domain, $project);
+                if ($rule instanceof RoutingRule) {
+                    return $rule;
+                }
+            }
 
-        return new Response($this->twig->render($template));
-    }
-
-    private function resolveApplicationTemplate(string $overrideTemplate, string $fallbackTemplate): string
-    {
-        try {
-            $this->twig->load($overrideTemplate);
-
-            return $overrideTemplate;
-        } catch (LoaderError) {
-            return $fallbackTemplate;
+            return $this->routingRuleService->getApplicationRuleForProject($project);
         }
+
+        if ($domain instanceof Domain && $this->subdomainService->getSubdomains() === []) {
+            return $this->routingRuleService->getApplicationRuleForDomain($domain);
+        }
+
+        return null;
     }
 
     private function withPort(Request $request, string $url): string

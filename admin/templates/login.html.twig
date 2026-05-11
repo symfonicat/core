@@ -19,7 +19,7 @@
                             </div>
                         {% endif %}
 
-                        <form method="post" action="{{ path('symfonicat_admin_login_check') }}" class="d-grid gap-3">
+                        <form method="post" action="{{ path('symfonicat_admin_login_check') }}" class="d-grid gap-3" data-turbo="false">
                             <input type="hidden" name="_csrf_token" value="{{ csrf_token('symfonicat_admin_login') }}">
 
                             <input
@@ -59,7 +59,7 @@
                             Enter the current code from your TOTP app to continue.
                         </p>
 
-                        <form method="post" action="{{ path('symfonicat_admin_login') }}" class="d-grid gap-3">
+                        <form method="post" action="{{ path('symfonicat_admin_login') }}" class="d-grid gap-3" data-turbo="false">
                             <input type="hidden" name="_token" value="{{ csrf_token('symfonicat_admin_mfa') }}">
 
                             <input

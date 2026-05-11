@@ -47,6 +47,9 @@ export default class extends Controller {
         const isRoute = type === 'route'
         const isApplicationArguments = isApplication && applicationType === 'arguments'
         const isApplicationRoute = isApplication && applicationType === 'route'
+        const isApplicationDomain = isApplication && applicationType === 'domain'
+        const isApplicationProject = isApplication && applicationType === 'project'
+        const isApplicationDomainProject = isApplication && applicationType === 'domain_project'
 
         this.toggleRow(this.applicationTypeRowTarget, isApplication)
         this.toggleRow(this.argumentsRowTarget, isDomain || isProject || isApplicationArguments)
@@ -59,11 +62,19 @@ export default class extends Controller {
 
         this.toggleRow(
             this.domainRowTarget,
-            isDomain || (isRedirect && redirectType === 'domain') || (isRoute && routeType === 'domain')
+            isDomain ||
+                isApplicationDomain ||
+                isApplicationDomainProject ||
+                (isRedirect && redirectType === 'domain') ||
+                (isRoute && routeType === 'domain')
         )
         this.toggleRow(
             this.projectRowTarget,
-            isProject || (isRedirect && redirectType === 'project') || (isRoute && routeType === 'project')
+            isProject ||
+                isApplicationProject ||
+                isApplicationDomainProject ||
+                (isRedirect && redirectType === 'project') ||
+                (isRoute && routeType === 'project')
         )
         this.toggleRow(this.applicationRowTarget, isApplication)
         this.toggleRow(

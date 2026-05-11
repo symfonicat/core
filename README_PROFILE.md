@@ -10,6 +10,8 @@ The Docker image mounts the repository at `/symfonicat`, serves Caddy from `/sym
 
 `DomainService`, `ProjectService`, routing rules, and `ApplicationService` resolve the active domain, project, and application shell. Public routes are `/`, `/{path}`, and the internal `/application/{id}/{path}` application entry route.
 
+Routing rules can render domain and project shells, redirect hosts, hand a root request to a named Symfony route, or render application shells. Application rules can match regex arguments, bind an application to a bare domain, bind one to a project subdomain, bind one to a specific domain/project pair, or attach application context to a Symfony route without replacing that route's response.
+
 Ids for `Domain`, `Project`, `Application`, `Module`, and `Electron` are stored with a vendor prefix. Default template access returns the clean id:
 
 ```twig

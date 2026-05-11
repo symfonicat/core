@@ -50,7 +50,7 @@ class RoutingRuleType extends AbstractType
                 'label' => 'application type',
                 'required' => false,
                 'placeholder' => 'select application type',
-                'help' => 'Choose whether the application matches arguments or a Symfony route.',
+                'help' => 'Choose whether the application matches arguments, a Symfony route, a domain, a project, or a domain/project pair.',
             ])
             ->add('redirectType', ChoiceType::class, [
                 'choices' => RoutingRule::getRedirectTypeChoices(),
