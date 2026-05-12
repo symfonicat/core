@@ -41,18 +41,6 @@ docker exec php bin/console symfonicat:load
 
 Composer runs `symfonicat:schema:update` and then `symfonicat:load` after `composer install`, so a fresh database gets its tables, package-provided rows, and checked-in admin YAML automatically.
 
-## Runtime Infrastructure
-
-The Docker PHP image is the canonical runtime. It mounts the repository at `/symfonicat`, serves Caddy from `/symfonicat/public`, and uses `/symfonicat` as the container working directory. It installs Composer plus Symfony-oriented extensions for Redis, PostgreSQL, image processing, strings/locales, XML/HTML handling, archive support, process control, sockets, APCu, OPcache, and compact serializers. Composer declares these extensions as platform requirements so local and container installs fail early when the runtime is incomplete.
-
-Symfony uses Redis through the native `redis` extension. Application cache and custom cache pools are Redis-backed, the system cache uses APCu, sessions use Redis, locks use `LOCK_DSN`, and admin login throttling stores limiter state in Redis. Cache serialization is configured to use igbinary, and the Redis Messenger transport uses the PhpRedis igbinary serializer option.
-
-`intervention/image` is registered as a Symfony service backed by Imagick. Admin image uploads use it to decode uploaded image bytes and write PNG output; GD remains installed in the image as a supporting image extension. OPcache and APCu are enabled for CLI and web SAPIs, and Messenger workers use `pcntl`/POSIX signal support for clean shutdown.
-
-## Source Layout
-
-The root Symfony kernel remains in `src/Kernel.php`. Symfonicat-owned runtime, admin, entity, form, command, Twig, routing, and bundle classes live under `admin/src` with the `Symfonicat\` namespace. Composer autoloads `Symfonicat\` from `admin/src`, Symfony service discovery scans `admin/src`, and Doctrine maps Symfonicat entities from `admin/src/Entity`.
-
 ## Ids
 
 `Domain`, `Project`, `Application`, `Module`, and `Electron` store ids with a vendor prefix and expose the clean id by default:
@@ -79,11 +67,45 @@ Public routes:
 - `/{path}` renders the project shell when a project subdomain is active.
 - `/application/{id}/{path}` is the internal application entry route.
 
+## Assets
+
+### Private
+
+Webpack entry discovery is driven by `symfonicat:data:webpack`. It scans the root package plus installed Composer packages from configured vendors and resolves:
+
+- `assets/applications/{id}`
+- `assets/domains/{id}`
+- `assets/projects/{id}`
+- `assets/modules/{id}`
+
+Bootstrap theme tokens are set in `assets/scss/_variables.scss` and `assets/scss/_variables-dark.scss`; generated selector overrides live in `assets/scss/_overrides.scss`.
+Admin pages use the `symfonicat_admin` JavaScript entry, which loads Bootstrap JavaScript for controls such as the YAML dropdown while keeping admin controllers out of the public runtime entry.
+
+### Public
+
+The `symfonicat_asset(path)` Twig helper resolves shell-specific public assets. Domain shells use `/domains/{domain-id}/` when that folder exists. Project shells use `/projects/{project-id}/` when that folder exists, then fall back to the active domain folder. If no matching project or domain folder exists, assets resolve under `/default/`; admin pages use this default asset folder. The repository ships skeleton `public/default/`, `public/domains/example.com/`, and `public/projects/project1/` folders.
+
+Notice how the favicons work on each url:
+
+- `example.com`: purple favicon, `public/domains/example.com/favicon.svg`
+- `project1.example.com`: green favicon, `public/projects/project1/favicon.svg`
+- `example.com/admin`: blue favicon, `public/default/favicon.svg`
+
+But notice that in `admin/templates/base.html.twig` and `templates/base.html.twig` the only asset function being used is this:
+
+```twig
+<link rel="icon" href="{{ symfonicat_asset('favicon.svg') }}" />
+```
+
+## Env
+
 Env resolution is application, then domain, then project, then Electron for Electron requests only. The same grouped structure is emitted into `window.env`. Twig uses the `env()` helper for dotted lookups:
 
 ```twig
 {{ env('colors.primary') }}
 ```
+
+## Paths
 
 `path_application()` generates URLs for application routing rules:
 
@@ -125,19 +147,6 @@ Application rules support these application types:
 - `domain_project`: render the application shell for the matching project on the matching domain.
 
 Root-level `route` rules are evaluated before domain/project application bindings, so a domain or project can still hand its root request to a Symfony-only route.
-
-## Assets
-
-Webpack entry discovery is driven by `symfonicat:data:webpack`. It scans the root package plus installed Composer packages from configured vendors and resolves:
-
-- `assets/applications/{id}`
-- `assets/domains/{id}`
-- `assets/projects/{id}`
-- `assets/modules/{id}`
-
-Public assets use `assets/**`, and admin code lives under `admin/**/` .
-
-Bootstrap theme tokens are set in `assets/scss/_variables.scss` and `assets/scss/_variables-dark.scss`; generated selector overrides live in `assets/scss/_overrides.scss`.
 
 ## Modules
 
@@ -191,6 +200,7 @@ There are `electron` and `electron_favicon` Twig variables available in any temp
 ```
 
 Electron rows have vendor-scoped ids, a `type` (`domain`, `project`, or `application`), a matching target relation, an optional favicon, and scoped env values.
+The checked-in example Electron row uses `public/electron/favicon/domain/example.com.svg`, matching the default SVG favicon.
 
 Build outputs with:
 
@@ -210,18 +220,6 @@ docker exec -it php bin/console symfonicat:schema:update
 ```
 
 In non-interactive runs, such as Composer install scripts, missing package-provided rows are created automatically. Removing a stale module that still has referencing rows requires an interactive run so the affected rows can be reviewed before deletion.
-
-## Messenger
-
-Symfony Messenger has Redis-backed `async` and `failed` transports configured through `MESSENGER_TRANSPORT_DSN`, `MESSENGER_FAILED_TRANSPORT_DSN`, and `MESSENGER_CONSUMER_NAME`. The default routing sends `*` to `async`, so dispatched messages are written to Redis and handled by the Compose `messenger-worker` service.
-
-Compose starts eight worker replicas by default for heavier local job throughput. Override the count with `MESSENGER_WORKERS`:
-
-```bash
-MESSENGER_WORKERS=12 docker compose up -d --scale messenger-worker=12
-```
-
-Workers wait for the PHP container healthcheck, Redis, Postgres, and Mercure, then consume the `async` transport with a one-hour time limit, a 256 MB memory limit, and a failure limit so containers recycle under sustained load.
 
 ## Picture of @dunglas at the Zoo
 

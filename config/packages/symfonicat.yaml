@@ -105,3 +105,17 @@ symfonicat:
                 application_id: core/test
                 redirect_domain_id: null
                 redirect_project_id: null
+            -
+                id: 3
+                arguments: []
+                type: application
+                redirect_type: null
+                redirect_target: null
+                route_type: null
+                application_type: domain_project
+                route: null
+                domain_id: core/example.com
+                project_id: core/project1
+                application_id: core/test
+                redirect_domain_id: null
+                redirect_project_id: null

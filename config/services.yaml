@@ -62,6 +62,10 @@ services:
         arguments:
             $entryFilesTwigExtension: '@webpack_encore.twig_entry_files_extension'
 
+    Symfonicat\Twig\RuntimeAssetExtension:
+        arguments:
+            $projectDir: '%kernel.project_dir%'
+
     symfonicat.redis_connection:
         class: Redis
         factory: ['Symfony\Component\Cache\Adapter\RedisAdapter', 'createConnection']

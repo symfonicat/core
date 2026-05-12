@@ -3,6 +3,7 @@ import { definitionsFromContext } from '@hotwired/stimulus-webpack-helpers'
 import TurboController from '@symfony/ux-turbo'
 import MercureTurboStreamController from '@symfony/ux-turbo/dist/turbo_stream_controller.js'
 
+import '../../assets/bootstrap/js/index.esm.js'
 import adminControllers from './controllers_admin.json'
 
 const context = require.context('./controllers_admin', true, /\.[jt]sx?$/)

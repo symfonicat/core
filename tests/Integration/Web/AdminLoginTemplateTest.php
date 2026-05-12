@@ -19,6 +19,8 @@ final class AdminLoginTemplateTest extends SymfonicatKernelTestCase
             'error' => null,
         ]);
 
+        self::assertStringNotContainsString('<base ', $html);
+        self::assertStringContainsString('<link rel="icon" href="/default/favicon.svg"', $html);
         self::assertMatchesRegularExpression(
             '/<form[^>]+action="\/admin\/login\/check"[^>]+data-turbo="false"/',
             $html,
@@ -39,6 +41,14 @@ final class AdminLoginTemplateTest extends SymfonicatKernelTestCase
             '/<form[^>]+action="\/admin\/login"[^>]+data-turbo="false"/',
             $html,
         );
+    }
+
+    public function testAdminEntrypointLoadsBootstrapJavascript(): void
+    {
+        $projectDir = self::getContainer()->getParameter('kernel.project_dir');
+        $entrypoint = file_get_contents($projectDir.'/admin/assets/symfonicat_admin.js');
+
+        self::assertStringContainsString('../../assets/bootstrap/js/index.esm.js', (string) $entrypoint);
     }
 
     /**

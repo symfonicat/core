@@ -77,6 +77,20 @@ YAML);
         self::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM symfonicat_domain_project'));
     }
 
+    public function testCheckedInElectronFaviconSeedUsesDefaultSvg(): void
+    {
+        $projectDir = self::getContainer()->getParameter('kernel.project_dir');
+        $config = Yaml::parseFile($projectDir.'/config/packages/symfonicat.yaml');
+        $electronRows = $config['symfonicat']['admin']['symfonicat_electron'];
+
+        self::assertSame('electron/favicon/domain/example.com.svg', $electronRows[0]['favicon']);
+        self::assertFileExists($projectDir.'/public/electron/favicon/domain/example.com.svg');
+        self::assertSame(
+            file_get_contents($projectDir.'/public/default/favicon.svg'),
+            file_get_contents($projectDir.'/public/electron/favicon/domain/example.com.svg'),
+        );
+    }
+
     private function removeDirectory(string $directory): void
     {
         if (!is_dir($directory)) {

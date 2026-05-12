@@ -12,6 +12,8 @@ The Docker image mounts the repository at `/symfonicat`, serves Caddy from `/sym
 
 Routing rules can render domain and project shells, redirect hosts, hand a root request to a named Symfony route, or render application shells. Application rules can match regex arguments, bind an application to a bare domain, bind one to a project subdomain, bind one to a specific domain/project pair, or attach application context to a Symfony route without replacing that route's response.
 
+The `symfonicat_asset(path)` Twig helper resolves shell-specific public files under `/domains/{domain-id}/` for domain shells when that folder exists, `/projects/{project-id}/` for project shells when that folder exists, and `/default/` when no matching project or domain folder exists. Admin pages use the default asset folder. Project shells fall back to the active domain folder before using `/default/`. Skeleton folders are included for `public/default/`, `public/domains/example.com/`, and `public/projects/project1/`.
+
 Ids for `Domain`, `Project`, `Application`, `Module`, and `Electron` are stored with a vendor prefix. Default template access returns the clean id:
 
 ```twig
@@ -46,7 +48,7 @@ docker exec php bin/console symfonicat:dump
 docker exec php bin/console symfonicat:load
 ```
 
-`symfonicat:dump` writes Symfonicat admin rows to YAML (excluding `symfonicat_admin`) and preserves `symfonicat.vendors`. Composer runs `symfonicat:schema:update` and then `symfonicat:load` after install, so fresh databases get their tables, package-provided rows, and checked-in admin YAML automatically. Without a `symfonicat.admin` section, load exits without changing the database. The admin header has a `yaml` dropdown linking to `/admin/y/dump` and `/admin/y/load`.
+`symfonicat:dump` writes Symfonicat admin rows to YAML (excluding `symfonicat_admin`) and preserves `symfonicat.vendors`. Composer runs `symfonicat:schema:update` and then `symfonicat:load` after install, so fresh databases get their tables, package-provided rows, and checked-in admin YAML automatically. Without a `symfonicat.admin` section, load exits without changing the database. The admin header has a Bootstrap-backed `yaml` dropdown linking to `/admin/y/dump` and `/admin/y/load`.
 
 ## Admin
 
@@ -61,7 +63,17 @@ and then visit `/admin`.
 
 ## Modules
 
-Module controllers are package-owned and run only when the active domain, project, or application has the module attached. Runtime module requests use full-qualified URLs such as `/m/symfonicat/analytics/main`, matching frontend module code like `const mod = 'symfonicat/analytics/main'`.
+Module controllers are package-owned and run only when the active domain, project, or application has the module attached. Runtime module requests use full-qualified URLs such as `/m/symfonicat/analytics/main`, matching frontend module code like this:
+
+```javascript
+const mod = 'symfonicat/analytics/main'
+
+mod.log('module active!')
+
+// posts { test: true } to /m/symfonicat/analytics/main
+const result = await mod.json({ test: true })
+mod.log('/m/symfonicat/analytics/main result:', result)
+```
 
 ## Electron
 
@@ -72,7 +84,7 @@ docker exec php bin/console symfonicat:electron:build
 docker exec php bin/console symfonicat:electron:build <name>
 ```
 
-Build output and favicon paths use vendor-prefixed target ids; generated start URLs use clean host/path ids.
+Build output and favicon paths use vendor-prefixed target ids; generated start URLs use clean host/path ids. The checked-in example Electron row uses `public/electron/favicon/domain/example.com.svg`, matching the default SVG favicon.
 
 ## Sync
 
