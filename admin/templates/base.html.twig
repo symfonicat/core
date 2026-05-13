@@ -8,16 +8,19 @@
         <title>{% block title %}Symfonicat Admin{% endblock %}</title>
 
 {% block stylesheets -%}
-{{- encore_entry_link_tags('symfonicat') | indent_links(8) -}}
+{{- encore_entry_link_tags('app') | indent_links(8) -}}
 {%- endblock %}
 
 {% block javascripts -%}
-{{- encore_entry_script_tags('symfonicat_admin') | indent_scripts(8) -}}
+{{- encore_entry_script_tags('admin') | indent_scripts(8) -}}
 {%- endblock %}
 
     </head>
     <body data-controller="symfony--ux-turbo--turbo-core" data-turbo-suppress-warning>
         {% block flashes %}
+            {% for message in app.flashes('error') %}
+            <aside class="alert alert-danger">{{ message }}</aside>
+            {% endfor %}
             {% for message in app.flashes('success') %}
             <aside class="alert alert-success">{{ message }}</aside>
             {% endfor %}
@@ -45,6 +48,7 @@
                     <a href="{{ path('symfonicat_electron_index') }}" class="btn btn-sm btn-outline-light {{ active('symfonicat_electron_*', 'btn-light active') }}">electron</a>
                     <a href="{{ path('symfonicat_env_index') }}" class="btn btn-sm btn-outline-light {{ active('symfonicat_env_*', 'btn-light active') }}">env</a>
                     <a href="{{ path('symfonicat_routing_rule_index') }}" class="btn btn-sm btn-outline-light {{ active('symfonicat_routing_rule*', 'btn-light active') }}">routing rules</a>
+                    <a href="{{ path('symfonicat_file_upload') }}" class="btn btn-sm btn-outline-light {{ active('symfonicat_file_upload', 'btn-light active') }}">files</a>
                     <div class="btn-group">
                         <button
                             type="button"
@@ -59,10 +63,8 @@
                     </div>
                     <a
                         class="btn btn-sm btn-secondary"
-                        data-no-prefetch
-                        data-no-prefetch-url="{{ path('symfonicat_admin_logout') }}"
-                        role="button"
-                        tabindex="0"
+                        href="{{ path('symfonicat_admin_logout') }}"
+                        data-turbo="false"
                     >logout</a>
                 </nav>
             </header>

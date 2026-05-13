@@ -1,4 +1,4 @@
-# assets/module.js
+# assets/app/module.js
 
 Minimal browser-only module request API.
 
@@ -18,7 +18,7 @@ const parsedHtml = await 'frame'.html({ data2: true });
 const parsedHtmlWithPath = await 'frame'.html('path/secondpath', { data2: true });
 ```
 
-These helpers are bootstrapped by `assets/symfonicat.js`. Module entrypoints do not need to import `./module` directly.
+These helpers are bootstrapped by `assets/app.js`. Module entrypoints do not need to import `assets/app/module.js` directly.
 
 ## Behavior
 - Every request starts with `/m/{moduleId}`.

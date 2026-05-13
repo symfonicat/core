@@ -15,22 +15,31 @@ For local development, point the seeded hosts at your Docker host:
 git clone https://github.com/symfonicat/core symfonicat
 cd symfonicat
 docker compose up -d
-docker exec -it php bin/console symfonicat:admin:create <email>
+docker exec -it php bin/console symfonicat:admin:create <email> # prints QR code
+touch symfonicat.lock # enables /admin
 ```
 
-The `php` container installs Composer dependencies, runs `symfonicat:schema:update`, loads checked-in admin YAML, runs `npm install`, and builds assets. First boot can take several minutes; the `php` healthcheck has a startup grace period so the web stack waits for that startup work to finish before it starts. Redis is used for application cache, sessions, locks, admin login throttling, and Symfony Messenger; Messenger routes messages to the Redis-backed `async` transport by default and Compose starts workers for them.
+First boot can take several minutes.
+
+The `php` container:
+
+- installs Composer dependencies
+- runs `symfonicat:schema:update`
+- loads checked-in admin YAML
+- runs `npm install`
+- builds assets
+
+Redis is used for application cache, sessions, locks, admin login throttling, and Symfony Messenger; Messenger routes messages to the Redis-backed `async` transport by default and Compose starts workers for them.
 
 ## Configuration
 
-Package discovery is configured in `config/packages/symfonicat.yaml`:
+Package discovery is configured in `config/packages/symfonicat.yaml`. The vendors list determines what composer package vendors are searched for Symfonicat modules:
 
 ```yaml
 symfonicat:
     vendors:
         - symfonicat
 ```
-
-The configured vendor list drives package service imports, package controller routes, schema sync, webpack fallback discovery, and package-owned asset discovery. The root package is emitted as the special `core` vendor; installed packages under configured vendors use ids such as `symfonicat/analytics/main`.
 
 `symfonicat:dump` writes all `symfonicat_*` database tables (excluding `symfonicat_admin`) to the same file under `symfonicat.admin` while preserving `symfonicat.vendors`. `symfonicat:load` restores that `symfonicat.admin` section into the database (it likewise ignores `symfonicat_admin`). If the YAML file has no `admin` section, load exits successfully without touching the database.
 
@@ -65,7 +74,7 @@ Public routes:
 
 - `/` renders the domain shell.
 - `/{path}` renders the project shell when a project subdomain is active.
-- `/application/{id}/{path}` is the internal application entry route.
+- `/application/{vendor}/{id}/{path}` is the internal application entry route and uses the full vendor-prefixed application id in the URL.
 
 ## Assets
 
@@ -79,7 +88,8 @@ Webpack entry discovery is driven by `symfonicat:data:webpack`. It scans the roo
 - `assets/modules/{id}`
 
 Bootstrap theme tokens are set in `assets/scss/_variables.scss` and `assets/scss/_variables-dark.scss`; generated selector overrides live in `assets/scss/_overrides.scss`.
-Admin pages use the `symfonicat_admin` JavaScript entry, which loads Bootstrap JavaScript for controls such as the YAML dropdown while keeping admin controllers out of the public runtime entry.
+The public runtime entry is `assets/app.js`; its internal helpers live under `assets/app/` (`module`, `application_redirect`, `stimulus`, and `mercure`).
+Admin pages use the `admin` JavaScript entry from `admin/assets/admin.js`, which loads Bootstrap JavaScript for controls such as the YAML dropdown while keeping admin controllers out of the public runtime entry.
 
 ### Public
 
@@ -162,11 +172,11 @@ const result = await mod.json({ test: true })
 mod.log('/m/symfonicat/analytics/main result:', result)
 ```
 
-Controllers should extend `Symfonicat\Controller\AbstractModuleController`, which only runs a module when it is attached to the active project, domain, or application context.
+Module controllers should extend `Symfonicat\Controller\AbstractModuleController`, which only runs a module when it is attached to the active project, domain, or application context.
 
 ## Admin
 
-Admin is isolated from host users and uses Symfonicat-owned `Admin` rows with HTTP basic plus TOTP MFA.
+Every path beginning with `/admin` is hard-disabled unless `<repo>/symfonicat.lock` exists. When the lock file is missing, Caddy catches the request before public static files can be served, marks it, and routes it into Symfony so Symfony renders the 404. Symfony has the same early request gate for non-Caddy runtimes. Create the ignored lock file with `touch symfonicat.lock` to open the admin area, and remove it to close the admin area again.
 
 Admin surfaces:
 
@@ -174,12 +184,15 @@ Admin surfaces:
 - `/admin/d*` domains
 - `/admin/e*` Electron rows
 - `/admin/env*` env parents and env keys
+- `/admin/f` uploads named files into domain or project public asset folders
 - `/admin/p*` projects
 - `/admin/r*` routing rules
 - `/admin/y/dump` dumps `symfonicat_*` tables to YAML
 - `/admin/y/load` loads `symfonicat.admin` YAML into the database
 
-The admin header includes a `yaml` dropdown with dump and load actions. Both actions redirect back to admin and flash a success message.
+The file upload page writes each uploaded row to the selected asset scope using the shared name field: domain rows go to `public/domains/{domain-id}/{name}` and project rows go to `public/projects/{project-id}/{name}`.
+Project lookups by clean id are strict. If more than one project shares the same clean id, runtime resolution throws an error and `/admin/p/list` flashes a duplicate-id warning so the collision is visible in the admin UI.
+Application lookups follow the same rule. If a clean application id resolves to more than one row, runtime resolution throws, `/admin/a/list` flashes a duplicate-id warning, and `symfonicat:schema:update` fails fast before it syncs applications or projects.
 
 ## Electron
 

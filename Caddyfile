@@ -5,5 +5,22 @@
 :80 {
 	root * /symfonicat/public
 	encode zstd gzip
-	php_server
+
+	@adminLockedOut {
+		path /admin*
+		not file {
+			root /symfonicat
+			try_files /symfonicat.lock
+		}
+	}
+
+	handle @adminLockedOut {
+		request_header X-Symfonicat-Admin-Locked "1"
+		rewrite * /index.php
+		php_server
+	}
+
+	handle {
+		php_server
+	}
 }

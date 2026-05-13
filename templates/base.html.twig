@@ -28,11 +28,11 @@
         <!-- -->
 
 {% block stylesheets -%}
-{{- encore_entry_link_tags('symfonicat') | indent_links(8) -}}
+{{- encore_entry_link_tags('app') | indent_links(8) -}}
 {%- endblock %}
 
 {% block javascripts -%}
-{{- encore_entry_script_tags('symfonicat') | indent_scripts(8) -}}
+{{- encore_entry_script_tags('app') | indent_scripts(8) -}}
 {%- endblock %}
 
     </head>
@@ -58,16 +58,15 @@
             <a href="{{ path('symfonicat_project_root') }}" class="text-white text-decoration-none fw-bold">Symfonicat</a>
             <div class="ms-auto">
                 
-                <button
-                    type="button"
+                <a
+                    href="{{ path('symfonicat_admin_dashboard') }}"
                     class="btn btn-sm btn-outline-light{{ active('symfonicat_admin*', ' btn-light active') }}"
-                    data-no-prefetch
-                    data-no-prefetch-url="{{ path('symfonicat_admin_dashboard') }}"
+                    data-turbo="false"
                 ><!-- -->
                 
                     admin
                 
-                </button>
+                </a>
             </div>
         </header>
 

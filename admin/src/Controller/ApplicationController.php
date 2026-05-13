@@ -22,22 +22,24 @@ final class ApplicationController extends AbstractController
     ) {
     }
 
-    #[Route('/application/{id}/{path}', name: 'symfonicat_application', requirements: ['path' => '.*'], defaults: ['path' => ''], methods: ['GET'])]
+    #[Route('/application/{vendor}/{id}/{path}', name: 'symfonicat_application', requirements: ['path' => '.*'], defaults: ['path' => ''], methods: ['GET'])]
     public function application(
         Request $request,
+        string $vendor,
         string $id,
         string $path,
     ): Response {
-        $application = $this->applicationRepository->findOneByFullOrCleanId($id);
+        $applicationId = trim($vendor).'/'.trim($id);
+        $application = $this->applicationRepository->findOneByFullOrCleanId($applicationId);
         if (!$application instanceof Application) {
-            throw new NotFoundHttpException(sprintf('Application "%s" was not found.', $id));
+            throw new NotFoundHttpException(sprintf('Application "%s" was not found.', $applicationId));
         }
 
         if ($this->applicationService->getRuleForApplication($application) === null) {
-            throw new NotFoundHttpException(sprintf('Application "%s" does not have an application routing rule.', $id));
+            throw new NotFoundHttpException(sprintf('Application "%s" does not have an application routing rule.', $applicationId));
         }
 
-        $applicationPath = $this->applicationService->path($id, $path);
+        $applicationPath = $this->applicationService->path($applicationId, $path);
 
         return $this->renderApplication($request, $application, $applicationPath, $applicationPath);
     }

@@ -18,6 +18,19 @@ final class ProjectController extends AbstractController
     #[Route('/admin/p/list', name: 'symfonicat_project_index', methods: ['GET'])]
     public function index(ProjectRepository $projectRepository, EnvParentRepository $envParentRepository): Response
     {
+        $duplicateGroups = $projectRepository->findDuplicateCleanIdGroups();
+        if ($duplicateGroups !== []) {
+            $messages = array_map(
+                static fn (array $group): string => sprintf('%s: %s', $group['cleanId'], implode(', ', $group['ids'])),
+                $duplicateGroups,
+            );
+
+            $this->addFlash(
+                'error',
+                sprintf('duplicate project ids detected: %s', implode('; ', $messages)),
+            );
+        }
+
         return $this->render('@symfonicat/project/index.html.twig', [
             'projects' => $projectRepository->findAll(),
             'env_parents' => $envParentRepository->findAllOrdered(),

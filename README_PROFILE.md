@@ -2,17 +2,26 @@
 
 `symfonicat/core` is the full Symfonicat Symfony application: public routing, admin CRUD, package module runtime, Electron packaging, webpack wiring, and Docker/FrankenPHP live in this repository.
 
-On first Docker boot, the `php` container installs PHP and Node dependencies, runs `symfonicat:schema:update`, loads checked-in admin YAML, and builds assets before FrankenPHP starts. Its healthcheck includes a startup grace period so the web stack waits for that startup work to finish. Redis backs cache, sessions, locks, login throttling, and Symfony Messenger; Messenger routes messages to the Redis-backed `async` transport by default and Compose starts workers for them.
+First boot can take several minutes.
 
-The Docker image mounts the repository at `/symfonicat`, serves Caddy from `/symfonicat/public`, and includes the PHP extensions the app expects for Symfony 8, Redis, PostgreSQL, image processing, process control, sockets, XML/HTML handling, archives, APCu, OPcache, igbinary, and msgpack. Composer declares those modules as platform requirements. Symfony uses APCu for the system cache, Redis for shared cache/session/lock/limiter state, igbinary for cache and Redis Messenger serialization, and Intervention Image with Imagick for admin image upload conversion.
+The `php` container:
+
+- installs Composer dependencies
+- runs `symfonicat:schema:update`
+- loads checked-in admin YAML
+- runs `npm install`
+- builds assets
+
+Redis is used for application cache, sessions, locks, admin login throttling, and Symfony Messenger; Messenger routes messages to the Redis-backed `async` transport by default and Compose starts workers for them.
 
 ## Runtime
 
-`DomainService`, `ProjectService`, routing rules, and `ApplicationService` resolve the active domain, project, and application shell. Public routes are `/`, `/{path}`, and the internal `/application/{id}/{path}` application entry route.
+`DomainService`, `ProjectService`, routing rules, and `ApplicationService` resolve the active domain, project, and application shell. Public routes are `/`, `/{path}`, and the internal `/application/{vendor}/{id}/{path}` application entry route.
 
 Routing rules can render domain and project shells, redirect hosts, hand a root request to a named Symfony route, or render application shells. Application rules can match regex arguments, bind an application to a bare domain, bind one to a project subdomain, bind one to a specific domain/project pair, or attach application context to a Symfony route without replacing that route's response.
 
 The `symfonicat_asset(path)` Twig helper resolves shell-specific public files under `/domains/{domain-id}/` for domain shells when that folder exists, `/projects/{project-id}/` for project shells when that folder exists, and `/default/` when no matching project or domain folder exists. Admin pages use the default asset folder. Project shells fall back to the active domain folder before using `/default/`. Skeleton folders are included for `public/default/`, `public/domains/example.com/`, and `public/projects/project1/`.
+The public JavaScript entry is `assets/app.js`; its runtime helpers live under `assets/app/`.
 
 Ids for `Domain`, `Project`, `Application`, `Module`, and `Electron` are stored with a vendor prefix. Default template access returns the clean id:
 
@@ -22,10 +31,6 @@ Ids for `Domain`, `Project`, `Application`, `Module`, and `Electron` are stored 
 ```
 
 Manual rows use the special `core` vendor. Package rows use their Composer vendor.
-
-## Source Layout
-
-The app kernel stays in `src/Kernel.php`. Symfonicat-owned PHP classes live in `admin/src` under the `Symfonicat\` namespace; services and Doctrine entity mappings are loaded from that tree.
 
 ## Package Discovery
 
@@ -56,10 +61,12 @@ Create an admin with:
 
 ```bash
 docker exec -it php bin/console symfonicat:admin:create <username>
+touch symfonicat.lock # enables /admin
 ```
 
-and then visit `/admin`.
+and then visit `/admin`. Every path beginning with `/admin` returns a Symfony-rendered 404 until the root `symfonicat.lock` file exists; Caddy catches those requests before public static files can be served, marks them, and routes them into Symfony. Symfony keeps the same guard for non-Caddy runtimes. Remove the ignored lock file to close the admin area again.
 
+The admin header includes the YAML tools and `/admin/f`, which uploads named files into `public/domains/{domain-id}/` or `public/projects/{project-id}/` for domain and project asset scopes. Project and application lookups by clean id are strict; if multiple rows share the same clean id, runtime resolution throws, the matching admin list flashes a duplicate-id warning, and `symfonicat:schema:update` fails fast before syncing those rows.
 
 ## Modules
 
@@ -94,8 +101,11 @@ Build output and favicon paths use vendor-prefixed target ids; generated start U
 docker exec -it php bin/console symfonicat:schema:update
 ```
 
-## Messenger
+## Picture of @dunglas at the Zoo
 
-Redis-backed Messenger transports are configured, and default routing sends `*` to `async`. Compose starts eight `messenger-worker` replicas by default; override with `MESSENGER_WORKERS` or `docker compose up -d --scale messenger-worker=<count>`.
+This repository includes an AI-generated picture of Kévin Dunglas at the zoo:
 
-For full install, routing, env, Electron, and command details, see [README.md](https://github.com/symfonicat/core/blob/main/README.md).
+[dunglas_at_zoo.png](https://github.com/symfonicat/core/blob/main/dunglas_at_zoo.png)
+
+
+For full install, routing, env, Electron, and command details, see [symfonicat/core](https://github.com/symfonicat/core).

@@ -1,0 +1,50 @@
+{% extends '@symfonicat/base.html.twig' %}
+
+{% block title %}Files{% endblock %}
+
+{% block body %}
+    {% set file_prototype %}
+        {{ include('@symfonicat/file_upload/_file_row.html.twig', { file_form: form.files.vars.prototype }) }}
+    {% endset %}
+
+    {{ form_start(form, {
+        attr: {
+            'data-controller': 'file-upload',
+        }
+    }) }}
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-4">
+            {{ form_row(form.name) }}
+        </div>
+        <div class="col-md-4 d-flex align-items-end">
+            <button class="btn btn-success mb-3">upload</button>
+        </div>
+    </div>
+
+    <div
+        class="d-grid gap-2"
+        data-file-upload-target="collection"
+        data-file-upload-index="{{ form.files|length }}"
+    >
+        <div data-file-upload-target="items">
+            {% for file_form in form.files %}
+                {{ include('@symfonicat/file_upload/_file_row.html.twig', { file_form: file_form }) }}
+            {% endfor %}
+        </div>
+
+        <template data-file-upload-target="prototype">{{ file_prototype|raw }}</template>
+
+        <button
+            type="button"
+            class="btn btn-sm btn-outline-secondary align-self-start"
+            data-action="click->file-upload#add"
+        >add file</button>
+    </div>
+
+    {% if form._token is defined %}
+        {{ form_widget(form._token) }}
+    {% endif %}
+
+    {{ form_end(form, { render_rest: false }) }}
+{% endblock %}

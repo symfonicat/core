@@ -13,8 +13,7 @@ import './bootstrap/js/index.esm.js'
 import './scss/bootstrap.scss'
 // --------------------------
 
-import './module'
-import './application_redirect'
-import './stimulus'
-import './mercure'
-import './no_prefetch'
+import './app/module'
+import './app/application_redirect'
+import './app/stimulus'
+import './app/mercure'

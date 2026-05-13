@@ -18,6 +18,19 @@ final class ApplicationController extends AbstractController
     #[Route('/admin/a/list', name: 'symfonicat_application_index', methods: ['GET'])]
     public function index(ApplicationRepository $applicationRepository, EnvParentRepository $envParentRepository): Response
     {
+        $duplicateGroups = $applicationRepository->findDuplicateCleanIdGroups();
+        if ($duplicateGroups !== []) {
+            $messages = array_map(
+                static fn (array $group): string => sprintf('%s: %s', $group['cleanId'], implode(', ', $group['ids'])),
+                $duplicateGroups,
+            );
+
+            $this->addFlash(
+                'error',
+                sprintf('duplicate application ids detected: %s', implode('; ', $messages)),
+            );
+        }
+
         return $this->render('@symfonicat/application/index.html.twig', [
             'applications' => $applicationRepository->findAllOrderedById(),
             'env_parents' => $envParentRepository->findAllOrdered(),

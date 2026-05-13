@@ -94,7 +94,7 @@ final class ApplicationRouter implements RouterInterface, RequestMatcherInterfac
      */
     private function removeApplicationParameters(array $parameters): array
     {
-        unset($parameters['id'], $parameters['path'], $parameters['arguments']);
+        unset($parameters['vendor'], $parameters['id'], $parameters['path'], $parameters['arguments']);
 
         return $parameters;
     }

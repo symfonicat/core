@@ -85,6 +85,28 @@ final class SchemaUpdateCommandTest extends SymfonicatKernelTestCase
         self::assertStringContainsString('already match', $tester->getDisplay());
     }
 
+    public function testFailsWhenDuplicateApplicationIdsExist(): void
+    {
+        $this->createApplication('core/test');
+        $this->createApplication('superman/test');
+
+        $tester = $this->runCommand(interactive: false);
+
+        self::assertSame(1, $tester->getStatusCode());
+        self::assertStringContainsString('Duplicate application ids detected', $tester->getDisplay());
+    }
+
+    public function testFailsWhenDuplicateProjectIdsExist(): void
+    {
+        $this->createProject('core/project1');
+        $this->createProject('superman/project1');
+
+        $tester = $this->runCommand(interactive: false);
+
+        self::assertSame(1, $tester->getStatusCode());
+        self::assertStringContainsString('Duplicate project ids detected', $tester->getDisplay());
+    }
+
     private function runCommand(bool $interactive = true): CommandTester
     {
         $application = new Application(self::$kernel);

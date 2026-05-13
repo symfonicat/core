@@ -33,18 +33,26 @@ class ProjectRepository extends ServiceEntityRepository
 
     public function findOneByIdForDomain(string $id, string $domainId): ?Project
     {
-        $qb = $this->createQueryBuilder('p')
-            ->innerJoin('p.domains', 'd')
+        $id = trim($id);
+        if ($id === '') {
+            return null;
+        }
+
+        $qb = $this->createQueryBuilder('project')
+            ->innerJoin('project.domains', 'd')
             ->andWhere('d.id = :domainId')
             ->setParameter('domainId', $domainId)
-            ->setMaxResults(1);
+            ->orderBy('CASE WHEN project.id = :id THEN 0 ELSE 1 END', 'ASC')
+            ->addOrderBy('project.id', 'ASC');
 
-        // Match either exact id or package-prefixed id that ends with "/{id}"
-        $qb->andWhere($qb->expr()->orX('p.id = :id', 'p.id LIKE :idSuffix'))
+        // Match either exact id or package-prefixed id that ends with "/{id}".
+        $qb->andWhere($qb->expr()->orX('project.id = :id', 'project.id LIKE :idSuffix'))
             ->setParameter('id', $id)
             ->setParameter('idSuffix', '%/'.$id);
 
-        return $qb->getQuery()->getOneOrNullResult();
+        $projects = $qb->getQuery()->getResult();
+
+        return $this->singleOrAmbiguousProject($projects, $id);
     }
 
     public function findOneByFullOrCleanId(string $id): ?Project
@@ -54,15 +62,51 @@ class ProjectRepository extends ServiceEntityRepository
             return null;
         }
 
-        return $this->createQueryBuilder('project')
+        $projects = $this->createQueryBuilder('project')
             ->andWhere('project.id = :id OR project.id LIKE :idSuffix')
             ->setParameter('id', $id)
             ->setParameter('idSuffix', '%/'.$id)
             ->orderBy('CASE WHEN project.id = :id THEN 0 ELSE 1 END', 'ASC')
             ->addOrderBy('project.id', 'ASC')
-            ->setMaxResults(1)
             ->getQuery()
-            ->getOneOrNullResult();
+            ->getResult();
+
+        return $this->singleOrAmbiguousProject($projects, $id);
+    }
+
+    /**
+     * @return list<array{cleanId: string, ids: list<string>}>
+     */
+    public function findDuplicateCleanIdGroups(): array
+    {
+        $groups = [];
+
+        foreach ($this->findAllOrderedById() as $project) {
+            $cleanId = trim((string) $project->getId());
+            $fullId = trim((string) $project->getId(true));
+
+            if ($cleanId === '' || $fullId === '') {
+                continue;
+            }
+
+            $groups[$cleanId][] = $fullId;
+        }
+
+        $duplicates = [];
+
+        foreach ($groups as $cleanId => $ids) {
+            $ids = array_values(array_unique($ids));
+            if (count($ids) < 2) {
+                continue;
+            }
+
+            $duplicates[] = [
+                'cleanId' => $cleanId,
+                'ids' => $ids,
+            ];
+        }
+
+        return $duplicates;
     }
 
     /**
@@ -74,5 +118,32 @@ class ProjectRepository extends ServiceEntityRepository
             ->orderBy('project.id', 'ASC')
             ->getQuery()
             ->getResult();
+    }
+
+    /**
+     * @param list<Project> $projects
+     */
+    private function singleOrAmbiguousProject(array $projects, string $lookupId): ?Project
+    {
+        $projects = array_values(array_filter($projects, static fn ($project): bool => $project instanceof Project));
+
+        if ($projects === []) {
+            return null;
+        }
+
+        if (count($projects) > 1 && !str_contains($lookupId, '/')) {
+            $matches = array_map(
+                static fn (Project $project): string => (string) $project->getId(true),
+                $projects,
+            );
+
+            throw new \RuntimeException(sprintf(
+                'Project id "%s" is ambiguous. Matching ids: %s',
+                $lookupId,
+                implode(', ', $matches),
+            ));
+        }
+
+        return $projects[0];
     }
 }

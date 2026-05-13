@@ -85,19 +85,18 @@ These instructions apply to the main app repo at `/home/t/www/symfonicat`.
 - `webpack.symfonicat.js` defines the package entrypoints and is the source of truth for how frontend bundles are wired.
 - `symfonicat:data:webpack` is the canonical webpack data source for domain/project/module entries, discovering package-owned entries from the root `symfonicat/core` package plus installed `symfonicat/*` packages.
 - Public runtime/frontend work should use the public asset stack:
-  - `assets/symfonicat.js`
-  - `assets/stimulus.js`
+  - `assets/app.js`
+  - `assets/app/`
   - `assets/controllers.json`
   - `assets/controllers/`
 - Admin runtime/frontend work must use the admin asset stack instead of the public one:
-  - `assets/symfonicat_admin.js`
-  - `assets/stimulus_admin.js`
-  - `assets/controllers_admin.json`
-  - `assets/controllers_admin/`
+  - `admin/assets/admin.js`
+  - `admin/assets/controllers.json`
+  - `admin/assets/controllers/`
 - If you generate JavaScript or Stimulus functionality for `/admin`, put it on the admin asset stack and do not add it to the public `symfonicat`/`controllers` pipeline.
 - Keep admin templates package-owned under this repo.
 - Keep the app-level layout in `templates/base.html.twig` in this repo.
-- `templates/admin/base.html.twig` uses the admin entrypoint, so admin-specific assets should target `symfonicat_admin`.
+- `templates/admin/base.html.twig` uses the admin entrypoint, so admin-specific assets should target `admin`.
 - Mandatory template areas:
   - `env`
   - `domain`
@@ -152,7 +151,7 @@ These instructions apply to the main app repo at `/home/t/www/symfonicat`.
 
 16. Webpack entry discovery is driven by `symfonicat:data:webpack` and `webpack.symfonicat.js`. It scans the root package and configured vendor packages for `assets/applications/{id}`, `assets/domains/{id}`, `assets/projects/{id}`, and `assets/modules/{id}`.
 
-17. Keep public and admin frontend stacks separate. Public runtime work belongs in `assets/symfonicat.js`, `assets/stimulus.js`, `assets/controllers.json`, and `assets/controllers/`; admin runtime work belongs in `assets/symfonicat_admin.js`, `assets/stimulus_admin.js`, `assets/controllers_admin.json`, and `assets/controllers_admin/`.
+17. Keep public and admin frontend stacks separate. Public runtime work belongs in `assets/app.js`, `assets/app/`, `assets/controllers.json`, and `assets/controllers/`; admin runtime work belongs in `admin/assets/admin.js`, `admin/assets/controllers.json`, and `admin/assets/controllers/`.
 
 18. Docker is the canonical runtime. The PHP image mounts the repo at `/symfonicat`, uses `/symfonicat` as `WORKDIR`, serves Caddy from `/symfonicat/public`, and should be kept aligned with Compose and entrypoint paths.
 

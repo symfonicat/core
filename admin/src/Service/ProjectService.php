@@ -77,6 +77,8 @@ class ProjectService
      */
     public function sync(?callable $confirmProjectCreation = null): array
     {
+        $this->assertNoDuplicateProjects();
+
         $packageProjects = $this->discoverPackageProjects();
         $databaseProjects = $this->indexDatabaseProjects();
 
@@ -130,5 +132,23 @@ class ProjectService
         }
 
         return $projects;
+    }
+
+    private function assertNoDuplicateProjects(): void
+    {
+        $duplicates = $this->projectRepository->findDuplicateCleanIdGroups();
+        if ($duplicates === []) {
+            return;
+        }
+
+        $details = array_map(
+            static fn (array $group): string => sprintf('%s: %s', $group['cleanId'], implode(', ', $group['ids'])),
+            $duplicates,
+        );
+
+        throw new \RuntimeException(sprintf(
+            'Duplicate project ids detected: %s',
+            implode('; ', $details),
+        ));
     }
 }

@@ -20,7 +20,16 @@ final class ApplicationRouteTest extends SymfonicatWebTestCase
         self::assertSame('/symfonicat/*/test', $router->generate('symfonicat_application', [
             'id' => 'test',
         ]));
+        self::assertSame('/symfonicat/*/test', $router->generate('symfonicat_application', [
+            'vendor' => 'core',
+            'id' => 'test',
+        ]));
         self::assertSame('/symfonicat/*/test/somepath/path2', $router->generate('symfonicat_application', [
+            'id' => 'test',
+            'path' => 'somepath/path2',
+        ]));
+        self::assertSame('/symfonicat/*/test/somepath/path2', $router->generate('symfonicat_application', [
+            'vendor' => 'core',
             'id' => 'test',
             'path' => 'somepath/path2',
         ]));
@@ -34,6 +43,7 @@ final class ApplicationRouteTest extends SymfonicatWebTestCase
         $twig = self::getTestContainer()->get(Environment::class);
 
         self::assertSame('/symfonicat/*/test', trim($twig->createTemplate('{{ path_application("test") }}')->render()));
+        self::assertSame('/symfonicat/*/test', trim($twig->createTemplate('{{ path_application("core/test") }}')->render()));
         self::assertSame('/symfonicat/*/test', trim($twig->createTemplate('{{ path_application(application) }}')->render([
             'application' => $application,
         ])));
@@ -50,6 +60,7 @@ final class ApplicationRouteTest extends SymfonicatWebTestCase
             'application' => $application,
         ])));
         self::assertSame('/symfonicat/*/test', trim($twig->createTemplate('{{ path("symfonicat_application", {id: "test"}) }}')->render()));
+        self::assertSame('/symfonicat/*/test', trim($twig->createTemplate('{{ path("symfonicat_application", {vendor: "core", id: "test"}) }}')->render()));
     }
 
     public function testRouteBasedApplicationRuleUsesConfiguredSymfonyRoute(): void
@@ -82,7 +93,7 @@ final class ApplicationRouteTest extends SymfonicatWebTestCase
         $this->seedApplicationRule();
 
         $this->setHost('example.com');
-        $this->client()->request('GET', '/application/test/somepath/path2');
+        $this->client()->request('GET', '/application/core/test/somepath/path2');
 
         self::assertResponseIsSuccessful();
         $content = (string) $this->client()->getResponse()->getContent();

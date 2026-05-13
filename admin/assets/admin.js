@@ -4,9 +4,9 @@ import TurboController from '@symfony/ux-turbo'
 import MercureTurboStreamController from '@symfony/ux-turbo/dist/turbo_stream_controller.js'
 
 import '../../assets/bootstrap/js/index.esm.js'
-import adminControllers from './controllers_admin.json'
+import adminControllers from './controllers.json'
 
-const context = require.context('./controllers_admin', true, /\.[jt]sx?$/)
+const context = require.context('./controllers', true, /\.[jt]sx?$/)
 
 export const app = Application.start()
 
@@ -37,7 +37,7 @@ Object.entries(adminControllers.controllers ?? {}).forEach(([packageName, contro
         if (!controller) {
             if (process.env.NODE_ENV === 'development') {
                 console.warn(
-                    `[stimulus_admin] Unsupported admin UX controller "${packageName}/${controllerName}" is configured in controllers_admin.json.`
+                    `[admin] Unsupported admin UX controller "${packageName}/${controllerName}" is configured in controllers.json.`
                 )
             }
 

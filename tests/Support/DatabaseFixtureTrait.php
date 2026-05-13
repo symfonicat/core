@@ -3,6 +3,7 @@
 namespace App\Tests\Support;
 
 use Doctrine\ORM\EntityManagerInterface;
+use Symfonicat\Entity\Application;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\DomainEnv;
 use Symfonicat\Entity\Electron;
@@ -113,6 +114,17 @@ trait DatabaseFixtureTrait
         $this->entityManager()->flush();
 
         return $project;
+    }
+
+    protected function createApplication(string $id): Application
+    {
+        $application = (new Application())
+            ->setId($this->vendorScopedId($id));
+
+        $this->entityManager()->persist($application);
+        $this->entityManager()->flush();
+
+        return $application;
     }
 
     protected function createModule(string $id, ?string $package = null): Module

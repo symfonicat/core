@@ -130,6 +130,11 @@ class ApplicationService
     public function pathFromRouteParameters(array $parameters): string
     {
         $id = (string) ($parameters['id'] ?? '');
+        $vendor = trim((string) ($parameters['vendor'] ?? ''));
+        if ($vendor !== '' && $id !== '' && !str_contains($id, '/')) {
+            $id = $vendor.'/'.$id;
+        }
+
         $path = $parameters['path'] ?? null;
         $arguments = $parameters['arguments'] ?? [];
 
@@ -221,6 +226,8 @@ class ApplicationService
      */
     public function sync(?callable $confirmApplicationCreation = null): array
     {
+        $this->assertNoDuplicateApplications();
+
         $packageApplications = $this->discoverPackageApplications();
         $databaseApplications = $this->indexDatabaseApplications();
 
@@ -333,6 +340,24 @@ class ApplicationService
         }
 
         return $application instanceof Application ? $application : null;
+    }
+
+    private function assertNoDuplicateApplications(): void
+    {
+        $duplicates = $this->applicationRepository->findDuplicateCleanIdGroups();
+        if ($duplicates === []) {
+            return;
+        }
+
+        $details = array_map(
+            static fn (array $group): string => sprintf('%s: %s', $group['cleanId'], implode(', ', $group['ids'])),
+            $duplicates,
+        );
+
+        throw new \RuntimeException(sprintf(
+            'Duplicate application ids detected: %s',
+            implode('; ', $details),
+        ));
     }
 
     private function isApplicationModuleRequestContext(Request $request): bool

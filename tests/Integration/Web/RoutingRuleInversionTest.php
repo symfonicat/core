@@ -99,14 +99,19 @@ final class RoutingRuleInversionTest extends SymfonicatWebTestCase
 
     public function testAdminPathIsImmuneToRoutingRules(): void
     {
+        $restoreAdminLock = $this->enableAdminLock();
         $domain = $this->createDomain('example.com');
         // An operator can create a rule whose argument collides with /admin/*.
         // Entity validation only blocks an argument that is exactly "admin" (not
         // a prefix match), so build one that sneaks close: "administration".
         $this->createDomainRoutingRule($domain, 'administration');
 
-        $this->setHost('example.com');
-        $this->client()->request('GET', '/admin');
+        try {
+            $this->setHost('example.com');
+            $this->client()->request('GET', '/admin');
+        } finally {
+            $restoreAdminLock();
+        }
 
         // RoutingRuleSubscriber short-circuits for anything under /admin
         // regardless of rule content, so the admin firewall — not the domain
@@ -122,5 +127,25 @@ final class RoutingRuleInversionTest extends SymfonicatWebTestCase
             (string) $response->headers->get('Location'),
             'redirect must target the admin login, proving the routing rule did not claim /admin',
         );
+    }
+
+    /**
+     * @return callable(): void
+     */
+    private function enableAdminLock(): callable
+    {
+        $lockPath = self::getContainer()->getParameter('kernel.project_dir').'/symfonicat.lock';
+        if (is_file($lockPath)) {
+            return static function (): void {
+            };
+        }
+
+        file_put_contents($lockPath, "test\n");
+
+        return static function () use ($lockPath): void {
+            if (is_file($lockPath)) {
+                unlink($lockPath);
+            }
+        };
     }
 }

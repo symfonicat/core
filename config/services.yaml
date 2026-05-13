@@ -23,6 +23,10 @@ services:
         arguments:
             $projectDir: '%kernel.project_dir%'
 
+    Symfonicat\EventSubscriber\AdminLockSubscriber:
+        arguments:
+            $projectDir: '%kernel.project_dir%'
+
     Symfonicat\Service\PackageDiscoveryService:
         arguments:
             $projectDir: '%kernel.project_dir%'
@@ -43,6 +47,10 @@ services:
             $projectDir: '%kernel.project_dir%'
 
     Symfonicat\Service\FileUploadService:
+        arguments:
+            $publicDir: '%kernel.project_dir%/public'
+
+    Symfonicat\Service\PublicFileUploadService:
         arguments:
             $publicDir: '%kernel.project_dir%/public'
 
