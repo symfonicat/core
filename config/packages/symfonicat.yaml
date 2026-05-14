@@ -92,7 +92,7 @@ symfonicat:
                 id: 1
                 arguments:
                     - symfonicat
-                    - '*'
+                    - '{user}'
                     - 'test*'
                 type: application
                 redirect_type: null

@@ -93,7 +93,7 @@ Admin pages use the `admin` JavaScript entry from `admin/assets/admin.js`, which
 
 ### Public
 
-The `symfonicat_asset(path)` Twig helper resolves shell-specific public assets. Domain shells use `/domains/{domain-id}/` when that folder exists. Project shells use `/projects/{project-id}/` when that folder exists, then fall back to the active domain folder. If no matching project or domain folder exists, assets resolve under `/default/`; admin pages use this default asset folder. The repository ships skeleton `public/default/`, `public/domains/example.com/`, and `public/projects/project1/` folders.
+The `symfonicat_asset(path)` Twig helper resolves shell-specific public assets. Without a second argument, it checks the current project folder first, then the current domain folder, then `public/default/`. A folder only wins if the requested file exists there. If the file is missing from `public/default/`, the helper throws. Passing an `Application`, `Project`, or `Domain` object as the second argument pins the base directly to that object, for example `/core/test/` for an application. The repository ships skeleton `public/default/`, `public/domains/example.com/`, `public/projects/project1/`, and `public/applications/core/test` folders.
 
 Notice how the favicons work on each url:
 
@@ -101,10 +101,16 @@ Notice how the favicons work on each url:
 - `project1.example.com`: green favicon, `public/projects/project1/favicon.svg`
 - `example.com/admin`: blue favicon, `public/default/favicon.svg`
 
-But notice that in `admin/templates/base.html.twig` and `templates/base.html.twig` the only asset function being used is this:
+But notice that in `admin/templates/base.html.twig` and `templates/base.html.twig` the only `symfonicat_asset()` call is this:
 
 ```twig
 <link rel="icon" href="{{ symfonicat_asset('favicon.svg') }}" />
+```
+
+but it can be used like this:
+
+```twig
+<link rel="icon" href="{{ symfonicat_asset('favicon.svg', application) }}" />
 ```
 
 ## Env
@@ -123,18 +129,25 @@ Env resolution is application, then domain, then project, then Electron for Elec
 {# for the test application #}
 {# which has a catch-all routing rule pointing it to /symfonicat/*/test* #}
 
-{# /symfonicat/*/test #}
+{# /symfonicat/{user}/test #}
 {{ path_application(application) }}
 
-{# /symfonicat/PARAM/test #}
-{{ path_application(application, ['PARAM']) }}
+{# /symfonicat/tay/test #}
+{{ path_application(application, { user: 'tay' }) }}
 
-{# /symfonicat/*/test/somepath/testpath #}
+{# /symfonicat/{user}/test/somepath/testpath #}
 {{ path_application(application, 'somepath/testpath') }}
 
-{# /symfonicat/PARAM/test/somepath/testpath #}
-{{ path_application('core/test', 'somepath/testpath', ['PARAM']) }}
+{# /symfonicat/tay/test/somepath #}
+{{ path_application('core/test', 'somepath', { user: 'tay' }) }}
 ```
+
+The helper is simple:
+
+- one argument can be the extra path, like `somepath/testpath`
+- one argument can be the parameter object or array
+- if you pass an object, its values are used in the order you write them
+- the older positional array form still works for wildcard replacement
 
 For domain-bound and project-bound application rules, `path_application()` returns the bound path on the current host. Use the matching domain or project host when linking across hosts.
 
@@ -176,23 +189,7 @@ Module controllers should extend `Symfonicat\Controller\AbstractModuleController
 
 ## Admin
 
-Every path beginning with `/admin` is hard-disabled unless `<repo>/symfonicat.lock` exists. When the lock file is missing, Caddy catches the request before public static files can be served, marks it, and routes it into Symfony so Symfony renders the 404. Symfony has the same early request gate for non-Caddy runtimes. Create the ignored lock file with `touch symfonicat.lock` to open the admin area, and remove it to close the admin area again.
-
-Admin surfaces:
-
-- `/admin/a*` applications
-- `/admin/d*` domains
-- `/admin/e*` Electron rows
-- `/admin/env*` env parents and env keys
-- `/admin/f` uploads named files into domain or project public asset folders
-- `/admin/p*` projects
-- `/admin/r*` routing rules
-- `/admin/y/dump` dumps `symfonicat_*` tables to YAML
-- `/admin/y/load` loads `symfonicat.admin` YAML into the database
-
-The file upload page writes each uploaded row to the selected asset scope using the shared name field: domain rows go to `public/domains/{domain-id}/{name}` and project rows go to `public/projects/{project-id}/{name}`.
-Project lookups by clean id are strict. If more than one project shares the same clean id, runtime resolution throws an error and `/admin/p/list` flashes a duplicate-id warning so the collision is visible in the admin UI.
-Application lookups follow the same rule. If a clean application id resolves to more than one row, runtime resolution throws, `/admin/a/list` flashes a duplicate-id warning, and `symfonicat:schema:update` fails fast before it syncs applications or projects.
+The magic is in the `/admin` section. Every path beginning with `/admin` is hard-disabled unless `<repo>/symfonicat.lock` exists. When the lock file is missing, Caddy catches the request before public static files can be served, marks it, and routes it into Symfony so Symfony renders the 404. Symfony has the same early request gate for non-Caddy runtimes. Create the ignored lock file with `touch symfonicat.lock` to open the admin area, and remove it to close the admin area again.
 
 ## Electron
 

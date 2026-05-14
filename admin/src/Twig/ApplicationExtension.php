@@ -40,9 +40,62 @@ final class ApplicationExtension extends AbstractExtension implements GlobalsInt
         ];
     }
 
-    public function pathApplication(Application|string $application, string|array|null $path = null, array $arguments = []): string
+    public function pathApplication(Application|string $application, string|array|object|null $pathOrParameters = null, string|array|object|null $pathOrParameters2 = null): string
     {
+        [$path, $arguments] = $this->normalizePathApplicationInputs($pathOrParameters, $pathOrParameters2);
+
         return $this->applicationService->path($application, $path, $arguments);
+    }
+
+    /**
+     * @param string|array<int|string, mixed>|object|null $pathOrParameters
+     * @param string|array<int|string, mixed>|object|null $pathOrParameters2
+     *
+     * @return array{0: string, 1: array<int, mixed>}
+     */
+    private function normalizePathApplicationInputs(string|array|object|null $pathOrParameters, string|array|object|null $pathOrParameters2): array
+    {
+        $path = '';
+        $parameters = null;
+
+        foreach ([$pathOrParameters, $pathOrParameters2] as $argument) {
+            if ($argument === null) {
+                continue;
+            }
+
+            if (is_string($argument)) {
+                if ($path === '') {
+                    $path = $argument;
+
+                    continue;
+                }
+
+                throw new \InvalidArgumentException('path_application() accepts at most one string path argument.');
+            }
+
+            $normalized = array_values($this->normalizePathParameters($argument));
+            $parameters = $parameters === null ? $normalized : array_values(array_merge($parameters, $normalized));
+        }
+
+        return [$path, $parameters ?? []];
+    }
+
+    /**
+     * @param array<int|string, mixed>|object $parameters
+     *
+     * @return array<int|string, mixed>
+     */
+    private function normalizePathParameters(array|object $parameters): array
+    {
+        if (is_array($parameters)) {
+            return $parameters;
+        }
+
+        if ($parameters instanceof \Traversable) {
+            return iterator_to_array($parameters);
+        }
+
+        return get_object_vars($parameters);
     }
 
     private function applicationHelper(): string

@@ -35,7 +35,7 @@ final class ApplicationRouteTest extends SymfonicatWebTestCase
         ]));
     }
 
-    public function testTwigApplicationPathFunctionGeneratesApplicationRulePath(): void
+    public function testTwigApplicationPathFunctionMatchesReadmeExamples(): void
     {
         $application = $this->seedApplicationRule();
 
@@ -47,16 +47,18 @@ final class ApplicationRouteTest extends SymfonicatWebTestCase
         self::assertSame('/symfonicat/*/test', trim($twig->createTemplate('{{ path_application(application) }}')->render([
             'application' => $application,
         ])));
-        self::assertSame('/symfonicat/*/test/somepath/path2', trim($twig->createTemplate('{{ path_application("test", "somepath/path2") }}')->render()));
-        self::assertSame('/symfonicat/*/test/somepath/path2', trim($twig->createTemplate('{{ path_application(application, "somepath/path2") }}')->render([
+        self::assertSame('/symfonicat/tay/test', trim($twig->createTemplate('{{ path_application(application, { user: "tay" }) }}')->render([
             'application' => $application,
         ])));
-        self::assertSame('/symfonicat/tay/test', trim($twig->createTemplate('{{ path_application("test", ["tay"]) }}')->render()));
+        self::assertSame('/symfonicat/*/test/somepath/testpath', trim($twig->createTemplate('{{ path_application(application, "somepath/testpath") }}')->render([
+            'application' => $application,
+        ])));
+        self::assertSame('/symfonicat/tay/test/somepath', trim($twig->createTemplate('{{ path_application("core/test", "somepath", { user: "tay" }) }}')->render()));
+        self::assertSame('/symfonicat/tay/test/somepath', trim($twig->createTemplate('{{ path_application("core/test", { user: "tay" }, "somepath") }}')->render()));
         self::assertSame('/symfonicat/tay/test', trim($twig->createTemplate('{{ path_application(application, ["tay"]) }}')->render([
             'application' => $application,
         ])));
-        self::assertSame('/symfonicat/tay/test/somepath/path2', trim($twig->createTemplate('{{ path_application("test", "somepath/path2", ["tay"]) }}')->render()));
-        self::assertSame('/symfonicat/tay/test/somepath/path2', trim($twig->createTemplate('{{ path_application(application, "somepath/path2", ["tay"]) }}')->render([
+        self::assertSame('/symfonicat/tay/test/somepath/testpath', trim($twig->createTemplate('{{ path_application(application, "somepath/testpath", ["tay"]) }}')->render([
             'application' => $application,
         ])));
         self::assertSame('/symfonicat/*/test', trim($twig->createTemplate('{{ path("symfonicat_application", {id: "test"}) }}')->render()));

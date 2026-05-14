@@ -20,8 +20,14 @@ Redis is used for application cache, sessions, locks, admin login throttling, an
 
 Routing rules can render domain and project shells, redirect hosts, hand a root request to a named Symfony route, or render application shells. Application rules can match regex arguments, bind an application to a bare domain, bind one to a project subdomain, bind one to a specific domain/project pair, or attach application context to a Symfony route without replacing that route's response.
 
-The `symfonicat_asset(path)` Twig helper resolves shell-specific public files under `/domains/{domain-id}/` for domain shells when that folder exists, `/projects/{project-id}/` for project shells when that folder exists, and `/default/` when no matching project or domain folder exists. Admin pages use the default asset folder. Project shells fall back to the active domain folder before using `/default/`. Skeleton folders are included for `public/default/`, `public/domains/example.com/`, and `public/projects/project1/`.
+The `symfonicat_asset(path)` Twig helper resolves shell-specific public files. Without a second argument, it checks the current project folder first, then the current domain folder, then `public/default/`. A folder only wins if the requested file exists there. If the file is missing from `public/default/`, the helper throws. Passing an `Application`, `Project`, or `Domain` object as the second argument pins the asset base directly to that object, for example `/core/test/` for an application. Skeleton folders are included for `public/default/`, `public/domains/example.com/`, and `public/projects/project1/`.
 The public JavaScript entry is `assets/app.js`; its runtime helpers live under `assets/app/`.
+`path_application()` is simple:
+
+- one argument can be the extra path
+- one argument can be the parameter object or array
+- if you pass an object, its values are used in the order you write them
+- the older positional array form still works for wildcard replacement
 
 Ids for `Domain`, `Project`, `Application`, `Module`, and `Electron` are stored with a vendor prefix. Default template access returns the clean id:
 
