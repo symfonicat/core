@@ -110,7 +110,7 @@ final class EncoreEntryTagsExtension extends AbstractExtension
 
     private function domainEntryName(?Domain $domain): ?string
     {
-        $id = trim((string) $domain?->getId(true));
+        $id = trim((string) $domain?->getId());
         if ($id === '') {
             return null;
         }
@@ -130,7 +130,7 @@ final class EncoreEntryTagsExtension extends AbstractExtension
 
     private function applicationEntryName(?Application $application): ?string
     {
-        $id = trim((string) $application?->getId(true));
+        $id = trim((string) $application?->getId());
         if ($id === '') {
             return null;
         }
@@ -162,7 +162,7 @@ final class EncoreEntryTagsExtension extends AbstractExtension
 
     private function projectEntryName(?Project $project): ?string
     {
-        $id = trim((string) $project?->getId(true));
+        $id = trim((string) $project?->getId());
         if ($id === '') {
             return null;
         }
@@ -194,7 +194,7 @@ final class EncoreEntryTagsExtension extends AbstractExtension
 
     private function moduleEntryName(?Module $module): ?string
     {
-        $id = trim((string) $module?->getId(true));
+        $id = trim((string) $module?->getId());
         if ($id === '') {
             return null;
         }

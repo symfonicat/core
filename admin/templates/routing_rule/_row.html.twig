@@ -18,7 +18,7 @@
     </td>
     <td class="text-nowrap">
         {% if rule.domain %}
-            <code>{{ rule.domain.id }}</code>
+            <code>{{ rule.domain.id(false) }}</code>
         {% else %}
             <i class="fa fa-fw fa-times"></i>
         {% endif %}
@@ -40,9 +40,9 @@
     <td class="text-nowrap">
         {% if rule.application %}
             {% if applicationHref %}
-                <a href="{{ applicationHref }}"><code>{{ rule.application.id(true) }}</code></a>
+                <a href="{{ applicationHref }}"><code>{{ rule.application.id }}</code></a>
             {% else %}
-                <code>{{ rule.application.id(true) }}</code>
+                <code>{{ rule.application.id }}</code>
             {% endif %}
         {% else %}
             <i class="fa fa-fw fa-times"></i>
@@ -89,7 +89,7 @@
     </td>
     <td class="text-nowrap">
         {% if rule.redirectDomain %}
-            <code>{{ rule.redirectDomain.id }}</code>
+            <code>{{ rule.redirectDomain.id(false) }}</code>
         {% else %}
             <i class="fa fa-fw fa-times"></i>
         {% endif %}

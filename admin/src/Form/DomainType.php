@@ -25,7 +25,7 @@ class DomainType extends AbstractType
             ])
             ->add('projects', EntityType::class, [
                 'class' => Project::class,
-                'choice_label' => static fn (Project $project): string => (string) $project->getId(true),
+                'choice_label' => static fn (Project $project): string => (string) $project->getId(),
                 'label' => 'projects',
                 'multiple' => true,
                 'required' => false,
@@ -33,7 +33,7 @@ class DomainType extends AbstractType
             ->add('modules', EntityType::class, [
                 'class' => Module::class,
                 'choice_label' => static fn (Module $module): string => (function (Module $m): string {
-                    $id = (string) $m->getId(true);
+                    $id = (string) $m->getId();
                     $parts = explode('/', $id);
                     return (string) end($parts);
                 })($module),
@@ -41,13 +41,13 @@ class DomainType extends AbstractType
                     $vendor = trim($mod->getVendor());
                     $package = trim((string) ($mod->getPackage() ?? ''));
                     if ($package === '') {
-                        $id = (string) $mod->getId(true);
+                        $id = (string) $mod->getId();
                         $parts = explode('/', $id);
                         $package = $parts[1] ?? '';
                     }
                     return $package === '' ? $vendor : sprintf('%s/%s', $vendor, $package);
                 })($m),
-                'choice_value' => static fn (?Module $m): string => $m ? (string) $m->getId(true) : '',
+                'choice_value' => static fn (?Module $m): string => $m ? (string) $m->getId() : '',
                 'label' => 'modules',
                 'multiple' => true,
                 'by_reference' => false,

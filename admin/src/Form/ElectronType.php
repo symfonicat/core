@@ -21,7 +21,7 @@ final class ElectronType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $electron = $builder->getData();
-        $electronId = $electron instanceof Electron ? trim((string) $electron->getId()) : '';
+        $electronId = $electron instanceof Electron ? trim((string) $electron->getId(false)) : '';
 
         $this->addDisabledVendorField($builder);
 
@@ -46,7 +46,7 @@ final class ElectronType extends AbstractType
             ])
             ->add('project', EntityType::class, [
                 'class' => Project::class,
-                'choice_label' => static fn (Project $project): string => (string) $project->getId(true),
+                'choice_label' => static fn (Project $project): string => (string) $project->getId(),
                 'label' => 'project',
                 'required' => false,
                 'placeholder' => 'select project',

@@ -82,8 +82,8 @@ class ProjectRepository extends ServiceEntityRepository
         $groups = [];
 
         foreach ($this->findAllOrderedById() as $project) {
-            $cleanId = trim((string) $project->getId());
-            $fullId = trim((string) $project->getId(true));
+            $cleanId = trim((string) $project->getId(false));
+            $fullId = trim((string) $project->getId());
 
             if ($cleanId === '' || $fullId === '') {
                 continue;
@@ -133,7 +133,7 @@ class ProjectRepository extends ServiceEntityRepository
 
         if (count($projects) > 1 && !str_contains($lookupId, '/')) {
             $matches = array_map(
-                static fn (Project $project): string => (string) $project->getId(true),
+                static fn (Project $project): string => (string) $project->getId(),
                 $projects,
             );
 

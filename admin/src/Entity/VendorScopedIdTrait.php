@@ -9,7 +9,7 @@ trait VendorScopedIdTrait
     #[ORM\Column(length: 100)]
     private string $vendor = 'core';
 
-    public function getId(bool $includeVendor = false): ?string
+    public function getId(bool $includeVendor = true): ?string
     {
         if ($this->id === null) {
             return null;

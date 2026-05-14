@@ -112,7 +112,7 @@ class Project
                 return true;
             }
 
-            if ($existingDomain->getId(true) !== null && $domain->getId(true) !== null && $existingDomain->getId(true) === $domain->getId(true)) {
+            if ($existingDomain->getId() !== null && $domain->getId() !== null && $existingDomain->getId() === $domain->getId()) {
                 return true;
             }
         }
@@ -127,7 +127,7 @@ class Project
                 return true;
             }
 
-            if ($existingModule->getId(true) !== null && $module->getId(true) !== null && $existingModule->getId(true) === $module->getId(true)) {
+            if ($existingModule->getId() !== null && $module->getId() !== null && $existingModule->getId() === $module->getId()) {
                 return true;
             }
         }

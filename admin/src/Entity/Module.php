@@ -135,7 +135,7 @@ class Module
                 return true;
             }
 
-            if ($existingProject->getId(true) !== null && $project->getId(true) !== null && $existingProject->getId(true) === $project->getId(true)) {
+            if ($existingProject->getId() !== null && $project->getId() !== null && $existingProject->getId() === $project->getId()) {
                 return true;
             }
         }
@@ -150,7 +150,7 @@ class Module
                 return true;
             }
 
-            if ($existingDomain->getId(true) !== null && $domain->getId(true) !== null && $existingDomain->getId(true) === $domain->getId(true)) {
+            if ($existingDomain->getId() !== null && $domain->getId() !== null && $existingDomain->getId() === $domain->getId()) {
                 return true;
             }
         }
@@ -195,7 +195,7 @@ class Module
                 return true;
             }
 
-            if ($existingApplication->getId(true) !== null && $application->getId(true) !== null && $existingApplication->getId(true) === $application->getId(true)) {
+            if ($existingApplication->getId() !== null && $application->getId() !== null && $existingApplication->getId() === $application->getId()) {
                 return true;
             }
         }

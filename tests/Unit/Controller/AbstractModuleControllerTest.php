@@ -189,10 +189,10 @@ final class AbstractModuleControllerTest extends TestCase
 
     private function makeHost(?Domain $domain, ?Project $project): string
     {
-        $domainId = $domain?->getId() ?? 'example.com';
+        $domainId = $domain?->getId(false) ?? 'example.com';
 
-        if ($project instanceof Project && $project->getId() !== null) {
-            return $project->getId().'.'.$domainId;
+        if ($project instanceof Project && $project->getId(false) !== null) {
+            return $project->getId(false).'.'.$domainId;
         }
 
         return $domainId;

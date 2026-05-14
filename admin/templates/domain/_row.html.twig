@@ -1,8 +1,8 @@
-<tr id="domain_{{ domain.id }}" class="btn-row">
-    <td class="fw-semibold"><a href="{{ app.request.scheme }}://{{ domain.id }}">{{ domain.id }}</a></td>
+<tr id="domain_{{ domain.id(false) }}" class="btn-row">
+    <td class="fw-semibold"><a href="{{ app.request.scheme }}://{{ domain.id(false) }}">{{ domain.id }}</a></td>
     <td>
         {% for project in domain.projects %}
-            <a href="{{ path('symfonicat_project_edit', {'id': project.id(true)}) }}">{{ project.id(true) }}</a>{% if not loop.last %}, {% endif %}
+            <a href="{{ path('symfonicat_project_edit', {'id': project.id}) }}">{{ project.id }}</a>{% if not loop.last %}, {% endif %}
         {% else %}
             <i class="fa fa-fw fa-times"></i>
         {% endfor %}
@@ -10,7 +10,7 @@
     <td>
         {% set groups = {} %}
         {% for module in domain.modules %}
-            {% set parts = (module.id(true) | split('/')) %}
+            {% set parts = (module.id | split('/')) %}
             {% set tail = parts | last %}
             {% set groupKey = module.package ? (module.vendor ~ '/' ~ module.package) : module.vendor %}
             {% if groups[groupKey] is defined %}
@@ -43,7 +43,7 @@
     <td class="text-end btn-cell">
 
         <div class="btn-group btn-group-sm">
-            <a href="{{ path('symfonicat_domain_edit', {'id': domain.id(true)}) }}" class="btn btn-sm btn-warning">
+            <a href="{{ path('symfonicat_domain_edit', {'id': domain.id}) }}" class="btn btn-sm btn-warning">
                 <i class="fa fa-pencil">&nbsp;</i>
             </a>
             {{ include('@symfonicat/domain/_delete_form.html.twig') }}

@@ -104,7 +104,7 @@ final class ModuleService
         $modules = [];
 
         foreach ($this->moduleRepository->findAllOrderedById() as $module) {
-            $moduleId = $module->getId(true);
+            $moduleId = $module->getId();
             if ($moduleId === null) {
                 continue;
             }
@@ -253,7 +253,7 @@ final class ModuleService
      */
     private function findModuleReferences(Module $module): array
     {
-        $moduleId = $module->getId(true);
+        $moduleId = $module->getId();
         if ($moduleId === null) {
             throw new \RuntimeException('Cannot synchronize a module without an id.');
         }
@@ -436,7 +436,7 @@ final class ModuleService
      */
     private function deleteModuleReferences(Module $module, array $references): void
     {
-        $moduleId = $module->getId(true);
+        $moduleId = $module->getId();
         if ($moduleId === null) {
             throw new \RuntimeException('Cannot delete references for a module without an id.');
         }

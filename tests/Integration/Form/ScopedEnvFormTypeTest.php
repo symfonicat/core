@@ -88,7 +88,7 @@ final class ScopedEnvFormTypeTest extends SymfonicatKernelTestCase
         $electron = $this->createElectron('Example Electron', Electron::TYPE_PROJECT, $domain, $project);
         $this->setElectronEnv($electron, $env, 'purple');
 
-        $electron = $this->entityManager()->getRepository(Electron::class)->find($electron->getId(true));
+        $electron = $this->entityManager()->getRepository(Electron::class)->find($electron->getId());
         self::assertInstanceOf(Electron::class, $electron);
 
         $view = $this->formFactory()

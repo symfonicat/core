@@ -52,14 +52,14 @@ Composer runs `symfonicat:schema:update` and then `symfonicat:load` after `compo
 
 ## Ids
 
-`Domain`, `Project`, `Application`, `Module`, and `Electron` store ids with a vendor prefix and expose the clean id by default:
+`Domain`, `Project`, `Application`, `Module`, and `Electron` store ids with a vendor prefix and expose the full id by default:
 
 ```twig
-{{ project.id }}       {# project1 #}
-{{ project.id(true) }} {# core/project1 #}
+{{ project.id(false) }} {# project1 #}
+{{ project.id }}        {# core/project1 #}
 ```
 
-The separate `vendor` field is read-only in admin forms. Manually created rows use `core`; package-discovered rows use their Composer vendor. Use clean ids in public URLs and templates. Use full ids for admin route parameters and persistence lookups.
+The separate `vendor` field is read-only in admin forms. Manually created rows use `core`; package-discovered rows use their Composer vendor. Use `id(false)` when you need the clean id. Use full ids for admin route parameters and persistence lookups.
 
 ## Public Runtime
 

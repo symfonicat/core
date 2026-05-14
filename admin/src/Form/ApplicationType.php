@@ -17,7 +17,7 @@ final class ApplicationType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $application = $builder->getData();
-        $applicationId = $application instanceof Application ? trim((string) $application->getId()) : '';
+        $applicationId = $application instanceof Application ? trim((string) $application->getId(false)) : '';
 
         $this->addDisabledVendorField($builder);
 
@@ -32,7 +32,7 @@ final class ApplicationType extends AbstractType
             ->add('modules', EntityType::class, [
                 'class' => Module::class,
                 'choice_label' => static fn (Module $module): string => (function (Module $m): string {
-                    $id = (string) $m->getId(true);
+                    $id = (string) $m->getId();
                     $parts = explode('/', $id);
                     return (string) end($parts);
                 })($module),
@@ -40,13 +40,13 @@ final class ApplicationType extends AbstractType
                     $vendor = trim($mod->getVendor());
                     $package = trim((string) ($mod->getPackage() ?? ''));
                     if ($package === '') {
-                        $id = (string) $mod->getId(true);
+                        $id = (string) $mod->getId();
                         $parts = explode('/', $id);
                         $package = $parts[1] ?? '';
                     }
                     return $package === '' ? $vendor : sprintf('%s/%s', $vendor, $package);
                 })($m),
-                'choice_value' => static fn (?Module $m): string => $m ? (string) $m->getId(true) : '',
+                'choice_value' => static fn (?Module $m): string => $m ? (string) $m->getId() : '',
                 'label' => 'modules',
                 'multiple' => true,
                 'by_reference' => false,

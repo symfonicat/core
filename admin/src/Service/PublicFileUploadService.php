@@ -49,20 +49,20 @@ final class PublicFileUploadService
 
     private function domainDirectory(?Domain $domain): string
     {
-        if (!$domain instanceof Domain || trim((string) $domain->getId()) === '') {
+        if (!$domain instanceof Domain || trim((string) $domain->getId(false)) === '') {
             throw new \InvalidArgumentException('Select a domain for each domain file upload.');
         }
 
-        return 'domains/'.$this->normalizeTargetId((string) $domain->getId());
+        return 'domains/'.$this->normalizeTargetId((string) $domain->getId(false));
     }
 
     private function projectDirectory(?Project $project): string
     {
-        if (!$project instanceof Project || trim((string) $project->getId()) === '') {
+        if (!$project instanceof Project || trim((string) $project->getId(false)) === '') {
             throw new \InvalidArgumentException('Select a project for each project file upload.');
         }
 
-        return 'projects/'.$this->normalizeTargetId((string) $project->getId());
+        return 'projects/'.$this->normalizeTargetId((string) $project->getId(false));
     }
 
     private function normalizeTargetId(string $id): string

@@ -92,7 +92,7 @@ final class ElectronController extends AbstractController
     #[Route('/admin/e/{id}/delete', name: 'symfonicat_electron_delete', methods: ['POST'], requirements: ['id' => '.+'])]
     public function delete(Request $request, Electron $electron, EntityManagerInterface $entityManager): Response
     {
-        if ($this->isCsrfTokenValid('delete'.$electron->getId(true), $request->getPayload()->getString('_token'))) {
+        if ($this->isCsrfTokenValid('delete'.$electron->getId(), $request->getPayload()->getString('_token'))) {
             $entityManager->remove($electron);
             $entityManager->flush();
         }

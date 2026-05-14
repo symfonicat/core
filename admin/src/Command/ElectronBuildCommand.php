@@ -145,7 +145,7 @@ final class ElectronBuildCommand extends Command
         $baseUrl = $this->normalizedBaseUrl();
 
         return match ($electron->getType()) {
-            Electron::TYPE_DOMAIN => $this->appendElectronQuery($this->urlForHost($this->shortId($electron->getDomain()?->getId() ?? ''), '/')),
+            Electron::TYPE_DOMAIN => $this->appendElectronQuery($this->urlForHost($this->shortId($electron->getDomain()?->getId(false) ?? ''), '/')),
             Electron::TYPE_PROJECT => $this->appendElectronQuery($this->urlForHost($this->projectHost($electron), '/')),
             Electron::TYPE_APPLICATION => $this->appendElectronQuery($baseUrl.$this->applicationService->path($electron->getApplication() ?? throw new \RuntimeException('Application is required for Electron application builds.'))),
             default => $this->appendElectronQuery($baseUrl.'/'),
@@ -188,12 +188,12 @@ final class ElectronBuildCommand extends Command
             throw new \RuntimeException('Project is required for Electron project builds.');
         }
 
-        $projectId = $this->shortId(trim((string) $project->getId()));
+        $projectId = $this->shortId(trim((string) $project->getId(false)));
         if ($projectId === '') {
             throw new \RuntimeException('Project id is required for Electron project builds.');
         }
 
-        $domainId = $this->shortId(trim((string) $electron->getDomain()?->getId()));
+        $domainId = $this->shortId(trim((string) $electron->getDomain()?->getId(false)));
         if ($domainId === '') {
             throw new \RuntimeException('Domain is required for Electron project builds.');
         }

@@ -193,7 +193,7 @@ final class RoutingRuleSubscriber implements EventSubscriberInterface
         $host = null;
 
         if ($rule->isDomainRedirectTarget()) {
-            $host = $rule->getRedirectDomain()?->getId();
+            $host = $rule->getRedirectDomain()?->getId(false);
         } elseif ($rule->isProjectRedirectTarget()) {
             $host = $this->resolveProjectRedirectHost($request, $rule->getRedirectProject(), $currentDomain);
         } elseif ($rule->isDomainAndProjectRedirectTarget()) {
@@ -221,7 +221,7 @@ final class RoutingRuleSubscriber implements EventSubscriberInterface
             return null;
         }
 
-        $projectId = trim((string) $project->getId());
+        $projectId = trim((string) $project->getId(false));
         if ($projectId === '') {
             return null;
         }
@@ -229,10 +229,10 @@ final class RoutingRuleSubscriber implements EventSubscriberInterface
         $domainId = null;
 
         if ($currentDomain !== null && $project->hasDomain($currentDomain)) {
-            $domainId = $currentDomain->getId();
+            $domainId = $currentDomain->getId(false);
         } else {
             foreach ($project->getDomains() as $domain) {
-                $candidateId = trim((string) $domain->getId());
+                $candidateId = trim((string) $domain->getId(false));
                 if ($candidateId !== '') {
                     $domainId = $candidateId;
 
@@ -255,8 +255,8 @@ final class RoutingRuleSubscriber implements EventSubscriberInterface
 
     private function resolveDomainAndProjectRedirectHost(?Project $project, ?Domain $domain): ?string
     {
-        $projectId = trim((string) $project?->getId());
-        $domainId = trim((string) $domain?->getId());
+        $projectId = trim((string) $project?->getId(false));
+        $domainId = trim((string) $domain?->getId(false));
 
         if ($projectId === '' || $domainId === '') {
             return null;

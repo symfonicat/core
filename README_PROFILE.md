@@ -29,11 +29,11 @@ The public JavaScript entry is `assets/app.js`; its runtime helpers live under `
 - if you pass an object, its values are used in the order you write them
 - the older positional array form still works for wildcard replacement
 
-Ids for `Domain`, `Project`, `Application`, `Module`, and `Electron` are stored with a vendor prefix. Default template access returns the clean id:
+Ids for `Domain`, `Project`, `Application`, `Module`, and `Electron` are stored with a vendor prefix. Default template access returns the full id:
 
 ```twig
-{{ project.id }}       {# project1 #}
-{{ project.id(true) }} {# core/project1 #}
+{{ project.id(false) }} {# project1 #}
+{{ project.id }}        {# core/project1 #}
 ```
 
 Manual rows use the special `core` vendor. Package rows use their Composer vendor.

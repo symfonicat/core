@@ -54,8 +54,8 @@ final class ApplicationRepository extends ServiceEntityRepository
         $groups = [];
 
         foreach ($this->findAllOrderedById() as $application) {
-            $cleanId = trim((string) $application->getId());
-            $fullId = trim((string) $application->getId(true));
+            $cleanId = trim((string) $application->getId(false));
+            $fullId = trim((string) $application->getId());
 
             if ($cleanId === '' || $fullId === '') {
                 continue;
@@ -94,7 +94,7 @@ final class ApplicationRepository extends ServiceEntityRepository
 
         if (count($applications) > 1 && !str_contains($lookupId, '/')) {
             $matches = array_map(
-                static fn (Application $application): string => (string) $application->getId(true),
+                static fn (Application $application): string => (string) $application->getId(),
                 $applications,
             );
 

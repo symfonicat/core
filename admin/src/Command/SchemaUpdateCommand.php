@@ -41,7 +41,7 @@ final class SchemaUpdateCommand extends Command
             $moduleResult = $this->moduleService->sync($shouldAskForConfirmation ? function (Module $module, array $references) use ($input, $io): bool {
                 $io->warning(sprintf(
                     'Module "%s" is no longer provided by an installed configured-vendor package and still has referencing entity rows.',
-                    $module->getId(true),
+                    $module->getId(),
                 ));
 
                 $io->table(
@@ -60,7 +60,7 @@ final class SchemaUpdateCommand extends Command
                 return $this->confirmRequired(
                     $input,
                     $io,
-                    sprintf('Delete those rows and remove module "%s"?', $module->getId(true)),
+                    sprintf('Delete those rows and remove module "%s"?', $module->getId()),
                     false,
                 );
             } : null);

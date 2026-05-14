@@ -14,7 +14,7 @@ use App\Tests\Support\SymfonicatWebTestCase;
  * We write to the real templates/ tree because Twig's cache + filesystem
  * loader is what actually resolves the override; stubbing it would skip the
  * exact code path we want to verify. Files are cleaned up in tearDown() and
- * their namespaces ("example.com", "project1") are unlikely to collide with
+ * their namespaces ("core/example.com", "core/project1") are unlikely to collide with
  * real overrides in the core repository.
  */
 final class TemplateOverrideTest extends SymfonicatWebTestCase
@@ -30,10 +30,14 @@ final class TemplateOverrideTest extends SymfonicatWebTestCase
             }
 
             $directory = dirname($path);
-            // Best-effort tidy of the overrides/ directory if we created it and
-            // nothing else lives there. rmdir only succeeds on empty dirs.
-            if (is_dir($directory) && basename($directory) === 'overrides') {
-                @rmdir($directory);
+            while (is_dir($directory) && basename($directory) !== 'templates') {
+                if (@rmdir($directory)) {
+                    $directory = dirname($directory);
+
+                    continue;
+                }
+
+                break;
             }
         }
 
@@ -51,7 +55,7 @@ final class TemplateOverrideTest extends SymfonicatWebTestCase
         $this->createDomain('example.com');
 
         $this->writeTemplate(
-            'domain/overrides/example.com.html.twig',
+            'domain/overrides/core/example.com.html.twig',
             <<<'TWIG'
             {% extends 'base.html.twig' %}
             {% block body %}
@@ -68,7 +72,7 @@ final class TemplateOverrideTest extends SymfonicatWebTestCase
         self::assertSelectorTextContains(
             '[data-testid="domain-override"]',
             'custom example.com landing',
-            'domain/overrides/<domain-id>.html.twig must win over domain/main.html.twig',
+            'domain/overrides/<vendor>/<domain-id>.html.twig must win over domain/main.html.twig',
         );
     }
 
@@ -97,7 +101,7 @@ final class TemplateOverrideTest extends SymfonicatWebTestCase
         $this->createProject('project1', $domain);
 
         $this->writeTemplate(
-            'project/overrides/project1.html.twig',
+            'project/overrides/core/project1.html.twig',
             <<<'TWIG'
             {% extends 'base.html.twig' %}
             {% block body %}
@@ -114,7 +118,7 @@ final class TemplateOverrideTest extends SymfonicatWebTestCase
         self::assertSelectorTextContains(
             '[data-testid="project-override"]',
             'project1 bespoke shell',
-            'project/overrides/<project-id>.html.twig must win over project/main.html.twig',
+            'project/overrides/<vendor>/<project-id>.html.twig must win over project/main.html.twig',
         );
     }
 

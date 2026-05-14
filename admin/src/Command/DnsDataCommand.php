@@ -26,7 +26,7 @@ final class DnsDataCommand extends Command
     {
         $projects = [];
         foreach ($this->projectRepository->findAll() as $project) {
-            $id = $project->getId();
+            $id = $project->getId(false);
             if ($id !== null && $id !== '') {
                 $projects[] = $id;
             }
@@ -34,7 +34,7 @@ final class DnsDataCommand extends Command
 
         $domains = [];
         foreach ($this->domainRepository->findAll() as $domain) {
-            $id = $domain->getId();
+            $id = $domain->getId(false);
             if ($id !== null && $id !== '') {
                 $domains[] = $id;
             }

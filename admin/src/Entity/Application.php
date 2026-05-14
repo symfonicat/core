@@ -72,7 +72,7 @@ class Application
                 return true;
             }
 
-            if ($existingModule->getId(true) !== null && $module->getId(true) !== null && $existingModule->getId(true) === $module->getId(true)) {
+            if ($existingModule->getId() !== null && $module->getId() !== null && $existingModule->getId() === $module->getId()) {
                 return true;
             }
         }

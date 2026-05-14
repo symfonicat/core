@@ -100,7 +100,7 @@ final class ApplicationRouteTest extends SymfonicatWebTestCase
         self::assertResponseIsSuccessful();
         $content = (string) $this->client()->getResponse()->getContent();
 
-        self::assertMatchesRegularExpression('/"id"\s*:\s*"test"/', $content);
+        self::assertMatchesRegularExpression('/"id"\s*:\s*"core\/test"/', $content);
         self::assertStringNotContainsString('"path":', $content);
         self::assertStringContainsString('"redirectTo": "/symfonicat/*/test/somepath/path2"', $content);
         self::assertMatchesRegularExpression('/"csrfToken"\s*:\s*"[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+"/', $content);
@@ -139,7 +139,7 @@ final class ApplicationRouteTest extends SymfonicatWebTestCase
         $this->client()->request('GET', '/test');
 
         self::assertResponseIsSuccessful();
-        self::assertSame('test test', (string) $this->client()->getResponse()->getContent());
+        self::assertSame('test core/test', (string) $this->client()->getResponse()->getContent());
     }
 
     public function testDomainApplicationRuleRendersApplicationShellOnBareDomain(): void
@@ -162,7 +162,7 @@ final class ApplicationRouteTest extends SymfonicatWebTestCase
         self::assertResponseIsSuccessful();
         $content = (string) $this->client()->getResponse()->getContent();
 
-        self::assertMatchesRegularExpression('/"id"\s*:\s*"test"/', $content);
+        self::assertMatchesRegularExpression('/"id"\s*:\s*"core\/test"/', $content);
         self::assertStringContainsString('test', $content);
     }
 
@@ -185,7 +185,7 @@ final class ApplicationRouteTest extends SymfonicatWebTestCase
         $this->client()->request('GET', '/docs');
 
         self::assertResponseIsSuccessful();
-        self::assertMatchesRegularExpression('/"id"\s*:\s*"test"/', (string) $this->client()->getResponse()->getContent());
+        self::assertMatchesRegularExpression('/"id"\s*:\s*"core\/test"/', (string) $this->client()->getResponse()->getContent());
     }
 
     public function testDomainProjectApplicationRuleRendersApplicationShellForExactPair(): void
@@ -208,7 +208,7 @@ final class ApplicationRouteTest extends SymfonicatWebTestCase
         $this->client()->request('GET', '/docs');
 
         self::assertResponseIsSuccessful();
-        self::assertMatchesRegularExpression('/"id"\s*:\s*"test"/', (string) $this->client()->getResponse()->getContent());
+        self::assertMatchesRegularExpression('/"id"\s*:\s*"core\/test"/', (string) $this->client()->getResponse()->getContent());
     }
 
     public function testProjectRouteRuleOverridesProjectApplicationBinding(): void

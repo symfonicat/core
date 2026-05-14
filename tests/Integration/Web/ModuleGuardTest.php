@@ -83,7 +83,7 @@ final class ModuleGuardTest extends SymfonicatWebTestCase
 
         $this->client()->request('POST', '/m/symfonicat/analytics/main', [], [], [
             'HTTP_X_SYMFONICAT_APPLICATION_REQUEST' => '1',
-            'HTTP_X_SYMFONICAT_APPLICATION' => 'test',
+            'HTTP_X_SYMFONICAT_APPLICATION' => 'core/test',
             'HTTP_X_SYMFONICAT_APPLICATION_TOKEN' => $token,
             'HTTP_ORIGIN' => 'http://example.com',
         ]);
@@ -150,7 +150,7 @@ final class ModuleGuardTest extends SymfonicatWebTestCase
         $this->setHost('example.com');
         $this->client()->request('POST', '/m/symfonicat/analytics/main', [], [], [
             'HTTP_X_SYMFONICAT_APPLICATION_REQUEST' => '1',
-            'HTTP_X_SYMFONICAT_APPLICATION' => 'test',
+            'HTTP_X_SYMFONICAT_APPLICATION' => 'core/test',
             'HTTP_X_SYMFONICAT_APPLICATION_TOKEN' => 'invalid',
         ]);
 

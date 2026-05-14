@@ -31,7 +31,7 @@ final class RuntimeAssetExtension extends AbstractExtension
     private function base(Application|Domain|Project|null $context = null, string $path = ''): string
     {
         if ($context instanceof Application) {
-            $applicationId = trim((string) $context->getId(true));
+            $applicationId = trim((string) $context->getId());
             if ($applicationId !== '') {
                 return sprintf('/%s/', $this->encodePath($applicationId));
             }
@@ -40,7 +40,7 @@ final class RuntimeAssetExtension extends AbstractExtension
         }
 
         if ($context instanceof Project) {
-            $projectId = trim((string) $context->getId());
+            $projectId = trim((string) $context->getId(false));
             if ($projectId !== '') {
                 return sprintf('/projects/%s/', $this->encodePath($projectId));
             }
@@ -49,7 +49,7 @@ final class RuntimeAssetExtension extends AbstractExtension
         }
 
         if ($context instanceof Domain) {
-            $domainId = trim((string) $context->getId());
+            $domainId = trim((string) $context->getId(false));
             if ($domainId !== '') {
                 return sprintf('/domains/%s/', $this->encodePath($domainId));
             }
@@ -67,13 +67,13 @@ final class RuntimeAssetExtension extends AbstractExtension
         }
 
         $project = $this->projectService->load();
-        if ($project instanceof Project && $this->assetFileExists('projects', (string) $project->getId(), $path)) {
-            return sprintf('/projects/%s/', $this->encodePath((string) $project->getId()));
+        if ($project instanceof Project && $this->assetFileExists('projects', (string) $project->getId(false), $path)) {
+            return sprintf('/projects/%s/', $this->encodePath((string) $project->getId(false)));
         }
 
         $domain = $this->domainService->load();
-        if ($domain instanceof Domain && $this->assetFileExists('domains', (string) $domain->getId(), $path)) {
-            return sprintf('/domains/%s/', $this->encodePath((string) $domain->getId()));
+        if ($domain instanceof Domain && $this->assetFileExists('domains', (string) $domain->getId(false), $path)) {
+            return sprintf('/domains/%s/', $this->encodePath((string) $domain->getId(false)));
         }
 
         return $this->defaultAssetBase($path);

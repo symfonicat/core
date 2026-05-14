@@ -29,14 +29,14 @@ final class FileUploadItemType extends AbstractType
             ])
             ->add('domain', EntityType::class, [
                 'class' => Domain::class,
-                'choice_label' => static fn (Domain $domain): string => (string) $domain->getId(),
+                'choice_label' => static fn (Domain $domain): string => (string) $domain->getId(false),
                 'label' => 'domain',
                 'required' => false,
                 'placeholder' => 'select domain',
             ])
             ->add('project', EntityType::class, [
                 'class' => Project::class,
-                'choice_label' => static fn (Project $project): string => (string) $project->getId(),
+                'choice_label' => static fn (Project $project): string => (string) $project->getId(false),
                 'label' => 'project',
                 'required' => false,
                 'placeholder' => 'select project',
