@@ -7,6 +7,7 @@ use Symfonicat\Entity\Application;
 use Symfonicat\Entity\RoutingRule;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Twig\Environment;
+use Twig\Error\RuntimeError;
 
 final class ApplicationRouteTest extends SymfonicatWebTestCase
 {
@@ -33,6 +34,16 @@ final class ApplicationRouteTest extends SymfonicatWebTestCase
             'id' => 'test',
             'path' => 'somepath/path2',
         ]));
+        self::assertSame('/symfonicat/pizza/test', $router->generate('symfonicat_application', [
+            'id' => 'test',
+            'arguments' => ['pizza'],
+        ]));
+        self::assertSame('/symfonicat/pizza/test/somepath/path2', $router->generate('symfonicat_application', [
+            'vendor' => 'core',
+            'id' => 'test',
+            'path' => 'somepath/path2',
+            'arguments' => ['pizza'],
+        ]));
     }
 
     public function testTwigApplicationPathFunctionMatchesReadmeExamples(): void
@@ -47,14 +58,14 @@ final class ApplicationRouteTest extends SymfonicatWebTestCase
         self::assertSame('/symfonicat/*/test', trim($twig->createTemplate('{{ path_application(application) }}')->render([
             'application' => $application,
         ])));
-        self::assertSame('/symfonicat/tay/test', trim($twig->createTemplate('{{ path_application(application, { user: "tay" }) }}')->render([
+        self::assertSame('/symfonicat/tay/test', trim($twig->createTemplate('{{ path_application(application, ["tay"]) }}')->render([
             'application' => $application,
         ])));
         self::assertSame('/symfonicat/*/test/somepath/testpath', trim($twig->createTemplate('{{ path_application(application, "somepath/testpath") }}')->render([
             'application' => $application,
         ])));
-        self::assertSame('/symfonicat/tay/test/somepath', trim($twig->createTemplate('{{ path_application("core/test", "somepath", { user: "tay" }) }}')->render()));
-        self::assertSame('/symfonicat/tay/test/somepath', trim($twig->createTemplate('{{ path_application("core/test", { user: "tay" }, "somepath") }}')->render()));
+        self::assertSame('/symfonicat/tay/test/somepath', trim($twig->createTemplate('{{ path_application("core/test", "somepath", ["tay"]) }}')->render()));
+        self::assertSame('/symfonicat/tay/test/somepath', trim($twig->createTemplate('{{ path_application("core/test", ["tay"], "somepath") }}')->render()));
         self::assertSame('/symfonicat/tay/test', trim($twig->createTemplate('{{ path_application(application, ["tay"]) }}')->render([
             'application' => $application,
         ])));
@@ -63,6 +74,21 @@ final class ApplicationRouteTest extends SymfonicatWebTestCase
         ])));
         self::assertSame('/symfonicat/*/test', trim($twig->createTemplate('{{ path("symfonicat_application", {id: "test"}) }}')->render()));
         self::assertSame('/symfonicat/*/test', trim($twig->createTemplate('{{ path("symfonicat_application", {vendor: "core", id: "test"}) }}')->render()));
+    }
+
+    public function testTwigApplicationPathRejectsObjectWildcardParameters(): void
+    {
+        $this->seedApplicationRule();
+
+        /** @var Environment $twig */
+        $twig = self::getTestContainer()->get(Environment::class);
+
+        $this->expectException(RuntimeError::class);
+        $this->expectExceptionMessage('must be of type array|string|null, stdClass given');
+
+        $twig->createTemplate('{{ path_application("test", parameters) }}')->render([
+            'parameters' => (object) ['user' => 'tay'],
+        ]);
     }
 
     public function testRouteBasedApplicationRuleUsesConfiguredSymfonyRoute(): void
@@ -118,7 +144,22 @@ final class ApplicationRouteTest extends SymfonicatWebTestCase
         self::assertStringContainsString(
             'test',
             (string) $this->client()->getResponse()->getContent(),
-            'application routing rules should match generated app URLs with trailing paths',
+            'application routing rules should match /symfonicat/*/test* URLs with trailing paths',
+        );
+    }
+
+    public function testApplicationRuleMatchesRegexTestSegment(): void
+    {
+        $this->seedApplicationRule();
+
+        $this->setHost('example.com');
+        $this->client()->request('GET', '/symfonicat/pizza/testtt/somepath/path2');
+
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString(
+            'test',
+            (string) $this->client()->getResponse()->getContent(),
+            'application routing rules should match the regex test* segment in /symfonicat/*/test*',
         );
     }
 

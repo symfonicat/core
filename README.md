@@ -59,7 +59,7 @@ Composer runs `symfonicat:schema:update` and then `symfonicat:load` after `compo
 {{ project.id }}        {# core/project1 #}
 ```
 
-The separate `vendor` field is read-only in admin forms. Manually created rows use `core`; package-discovered rows use their Composer vendor. Use `id(false)` when you need the clean id. Use full ids for admin route parameters and persistence lookups.
+The separate `vendor` field is read-only in admin forms. Manually created rows use `core`; package-discovered rows use their Composer vendor. Admin lists show clean ids where users read host and project names, but admin route parameters and persistence lookups keep the full id.
 
 ## Public Runtime
 
@@ -129,25 +129,24 @@ Env resolution is application, then domain, then project, then Electron for Elec
 {# for the test application #}
 {# which has a catch-all routing rule pointing it to /symfonicat/*/test* #}
 
-{# /symfonicat/{user}/test #}
+{# /symfonicat/*/test #}
 {{ path_application(application) }}
 
 {# /symfonicat/tay/test #}
-{{ path_application(application, { user: 'tay' }) }}
+{{ path_application(application, ['tay']) }}
 
-{# /symfonicat/{user}/test/somepath/testpath #}
+{# /symfonicat/*/test/somepath/testpath #}
 {{ path_application(application, 'somepath/testpath') }}
 
 {# /symfonicat/tay/test/somepath #}
-{{ path_application('core/test', 'somepath', { user: 'tay' }) }}
+{{ path_application('core/test', 'somepath', ['tay']) }}
 ```
 
 The helper is simple:
 
 - one argument can be the extra path, like `somepath/testpath`
-- one argument can be the parameter object or array
-- if you pass an object, its values are used in the order you write them
-- the older positional array form still works for wildcard replacement
+- one argument can be the wildcard replacement array
+- wildcard replacements are applied in array order
 
 For domain-bound and project-bound application rules, `path_application()` returns the bound path on the current host. Use the matching domain or project host when linking across hosts.
 

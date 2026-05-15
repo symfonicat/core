@@ -3,7 +3,7 @@
     {% if rule.applicationType == 'route' and rule.route %}
         {% set applicationHref = path(rule.route) %}
     {% else %}
-        {% set applicationHref = path_application(rule.application) %}
+        {% set applicationHref = path_application(rule.application, ['test1', 'test2', 'test3', 'test4']) %}
     {% endif %}
 {% endif %}
 

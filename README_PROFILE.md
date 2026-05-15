@@ -25,9 +25,8 @@ The public JavaScript entry is `assets/app.js`; its runtime helpers live under `
 `path_application()` is simple:
 
 - one argument can be the extra path
-- one argument can be the parameter object or array
-- if you pass an object, its values are used in the order you write them
-- the older positional array form still works for wildcard replacement
+- one argument can be the wildcard replacement array
+- wildcard replacements are applied in array order
 
 Ids for `Domain`, `Project`, `Application`, `Module`, and `Electron` are stored with a vendor prefix. Default template access returns the full id:
 
@@ -36,7 +35,7 @@ Ids for `Domain`, `Project`, `Application`, `Module`, and `Electron` are stored 
 {{ project.id }}        {# core/project1 #}
 ```
 
-Manual rows use the special `core` vendor. Package rows use their Composer vendor.
+Manual rows use the special `core` vendor. Package rows use their Composer vendor. Admin lists use clean ids for readable host and project names while keeping full ids for edit/delete route parameters.
 
 ## Package Discovery
 

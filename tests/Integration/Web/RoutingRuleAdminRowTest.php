@@ -60,10 +60,10 @@ final class RoutingRuleAdminRowTest extends SymfonicatKernelTestCase
         $this->entityManager()->persist($rule);
         $this->entityManager()->flush();
 
-        self::assertStringContainsString(
-            'href="/symfonicat/*/test"',
-            $this->renderRow($rule),
-        );
+        $html = $this->renderRow($rule);
+
+        self::assertStringContainsString('<code>/symfonicat/*/test*</code>', $html);
+        self::assertStringContainsString('href="/symfonicat/test1/test"', $html);
     }
 
     public function testRowLinksRouteBasedApplicationRuleWhenApplicationExists(): void
