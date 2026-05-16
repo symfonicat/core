@@ -5,7 +5,6 @@ namespace Symfonicat\Service;
 final class PackageDiscoveryService
 {
     private const SUPPORTED_ENTRY_TYPES = [
-        'applications',
         'modules',
         'projects',
     ];

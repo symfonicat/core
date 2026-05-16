@@ -11,7 +11,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 #[AsCommand(
     name: 'symfonicat:data:webpack',
-    description: 'Output application, domain, project, and module package entry data for webpack.',
+    description: 'Output domain, project, and module package entry data for webpack.',
 )]
 final class WebpackModulesDataCommand extends Command
 {
@@ -25,10 +25,6 @@ final class WebpackModulesDataCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $output->writeln(json_encode([
-            'applications' => $this->entriesFromRepositoryOrPackages(
-                fn (): array => $this->runtimeConfig->applications(),
-                'applications',
-            ),
             'modules' => $this->entriesFromRepositoryOrPackages(
                 fn (): array => $this->runtimeConfig->modules(),
                 'modules',

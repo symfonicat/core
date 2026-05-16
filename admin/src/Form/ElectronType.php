@@ -2,7 +2,6 @@
 
 namespace Symfonicat\Form;
 
-use Symfonicat\Entity\Application;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\Electron;
 use Symfonicat\Entity\Project;
@@ -45,13 +44,6 @@ final class ElectronType extends AbstractType
                 'label' => 'project',
                 'required' => false,
                 'placeholder' => 'select project',
-            ])
-            ->add('application', EntityType::class, [
-                'class' => Application::class,
-                'choice_label' => 'id',
-                'label' => 'application',
-                'required' => false,
-                'placeholder' => 'select application',
             ])
             ->add('env', CollectionType::class, [
                 'label' => 'env',

@@ -4,8 +4,6 @@ namespace Symfonicat\Service;
 
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Yaml\Yaml;
-use Symfonicat\Entity\Application;
-use Symfonicat\Entity\ApplicationEnv;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\DomainEnv;
 use Symfonicat\Entity\Electron;
@@ -52,14 +50,6 @@ final class RuntimeConfig
     }
 
     /**
-     * @return list<Application>
-     */
-    public function applications(): array
-    {
-        return array_values($this->catalog()['applications']);
-    }
-
-    /**
      * @return list<Module>
      */
     public function modules(): array
@@ -79,13 +69,6 @@ final class RuntimeConfig
         $project = $this->singleByFullOrCleanId($this->catalog()['projects'], $id, 'Project');
 
         return $project instanceof Project ? $project : null;
-    }
-
-    public function applicationByFullOrCleanId(string $id): ?Application
-    {
-        $application = $this->singleByFullOrCleanId($this->catalog()['applications'], $id, 'Application');
-
-        return $application instanceof Application ? $application : null;
     }
 
     public function moduleByFullOrCleanId(string $id): ?Module
@@ -145,65 +128,6 @@ final class RuntimeConfig
             && $rule->getProject()?->getId() === $project->getId());
     }
 
-    public function applicationRuleByRoute(string $route): ?RoutingRule
-    {
-        $route = trim($route);
-
-        return $this->firstRule(static fn (RoutingRule $rule): bool => $rule->isApplicationType()
-            && $rule->isApplicationRouteType()
-            && $rule->getRoute() === $route);
-    }
-
-    public function applicationRuleByApplicationId(string $applicationId, ?string $applicationType = null): ?RoutingRule
-    {
-        $application = $this->applicationByFullOrCleanId($applicationId);
-        if (!$application instanceof Application) {
-            return null;
-        }
-
-        return $this->firstRule(static fn (RoutingRule $rule): bool => $rule->isApplicationType()
-            && ($applicationType === null || $rule->getApplicationType() === $applicationType)
-            && $rule->getApplication()?->getId() === $application->getId());
-    }
-
-    public function applicationRuleForDomain(Domain $domain): ?RoutingRule
-    {
-        return $this->firstRule(static fn (RoutingRule $rule): bool => $rule->isApplicationType()
-            && $rule->isApplicationDomainType()
-            && $rule->getApplication() instanceof Application
-            && $rule->getDomain()?->getId() === $domain->getId());
-    }
-
-    public function applicationRuleForProject(Project $project): ?RoutingRule
-    {
-        return $this->firstRule(static fn (RoutingRule $rule): bool => $rule->isApplicationType()
-            && $rule->isApplicationProjectType()
-            && $rule->getApplication() instanceof Application
-            && $rule->getProject()?->getId() === $project->getId());
-    }
-
-    public function applicationRuleForDomainAndProject(Domain $domain, Project $project): ?RoutingRule
-    {
-        return $this->firstRule(static fn (RoutingRule $rule): bool => $rule->isApplicationType()
-            && $rule->isApplicationDomainProjectType()
-            && $rule->getApplication() instanceof Application
-            && $rule->getDomain()?->getId() === $domain->getId()
-            && $rule->getProject()?->getId() === $project->getId());
-    }
-
-    /**
-     * @return list<RoutingRule>
-     */
-    public function applicationArgumentRules(): array
-    {
-        return array_values(array_filter(
-            $this->catalog()['rules'],
-            static fn (RoutingRule $rule): bool => $rule->isApplicationType()
-                && $rule->isApplicationArgumentsType()
-                && $rule->getApplication() instanceof Application,
-        ));
-    }
-
     public function electronById(string $id): ?Electron
     {
         return $this->catalog()['electrons'][trim($id)] ?? null;
@@ -230,12 +154,6 @@ final class RuntimeConfig
             && (!$domain instanceof Domain || $electron->getDomain()?->getId() === $domain->getId()));
     }
 
-    public function electronForApplication(Application $application): ?Electron
-    {
-        return $this->firstElectron(static fn (Electron $electron): bool => $electron->isApplicationType()
-            && $electron->getApplication()?->getId() === $application->getId());
-    }
-
     /**
      * @return array<string, mixed>
      */
@@ -260,14 +178,6 @@ final class RuntimeConfig
             $id = trim((string) ($row['id'] ?? ''));
             if ($id !== '') {
                 $projects[$id] = (new Project())->setId($id);
-            }
-        }
-
-        $applications = [];
-        foreach ($this->rows($rows, 'symfonicat_application') as $row) {
-            $id = trim((string) ($row['id'] ?? ''));
-            if ($id !== '') {
-                $applications[$id] = (new Application())->setId($id);
             }
         }
 
@@ -305,14 +215,6 @@ final class RuntimeConfig
             }
         }
 
-        foreach ($this->rows($rows, 'symfonicat_module_application') as $row) {
-            $module = $modules[(string) ($row['module_id'] ?? '')] ?? null;
-            $application = $applications[(string) ($row['application_id'] ?? '')] ?? null;
-            if ($module instanceof Module && $application instanceof Application) {
-                $module->addApplication($application);
-            }
-        }
-
         $envParents = [];
         foreach ($this->rows($rows, 'symfonicat_env_parent') as $row) {
             $id = trim((string) ($row['id'] ?? ''));
@@ -346,14 +248,6 @@ final class RuntimeConfig
             }
         }
 
-        foreach ($this->rows($rows, 'symfonicat_application_env') as $row) {
-            $application = $applications[(string) ($row['application_id'] ?? '')] ?? null;
-            $env = $envs[(string) ($row['env_id'] ?? '')] ?? null;
-            if ($application instanceof Application && $env instanceof Env) {
-                $application->addEnv((new ApplicationEnv())->setEnv($env)->setValue((string) ($row['value'] ?? '')));
-            }
-        }
-
         $electrons = [];
         foreach ($this->rows($rows, 'symfonicat_electron') as $row) {
             $id = trim((string) ($row['id'] ?? ''));
@@ -366,8 +260,7 @@ final class RuntimeConfig
                 ->setName((string) ($row['name'] ?? $id))
                 ->setType((string) ($row['type'] ?? Electron::TYPE_DOMAIN))
                 ->setDomain($domains[(string) ($row['domain_id'] ?? '')] ?? null)
-                ->setProject($projects[(string) ($row['project_id'] ?? '')] ?? null)
-                ->setApplication($applications[(string) ($row['application_id'] ?? '')] ?? null);
+                ->setProject($projects[(string) ($row['project_id'] ?? '')] ?? null);
 
             $electrons[$id] = $electron;
         }
@@ -380,32 +273,11 @@ final class RuntimeConfig
             }
         }
 
-        $rules = [];
-        foreach ($this->rows($rows, 'symfonicat_routing_rule') as $row) {
-            $rule = (new RoutingRule())
-                ->setType((string) ($row['type'] ?? RoutingRule::TYPE_DOMAIN))
-                ->setArguments(is_array($row['arguments'] ?? null) ? $row['arguments'] : [])
-                ->setRedirectType(isset($row['redirect_type']) ? (string) $row['redirect_type'] : null)
-                ->setRedirectTarget(isset($row['redirect_target']) ? (string) $row['redirect_target'] : null)
-                ->setRouteType(isset($row['route_type']) ? (string) $row['route_type'] : null)
-                ->setApplicationType(isset($row['application_type']) ? (string) $row['application_type'] : null)
-                ->setRoute(isset($row['route']) ? (string) $row['route'] : null)
-                ->setDomain($domains[(string) ($row['domain_id'] ?? '')] ?? null)
-                ->setProject($projects[(string) ($row['project_id'] ?? '')] ?? null)
-                ->setApplication($applications[(string) ($row['application_id'] ?? '')] ?? null)
-                ->setRedirectDomain($domains[(string) ($row['redirect_domain_id'] ?? '')] ?? null)
-                ->setRedirectProject($projects[(string) ($row['redirect_project_id'] ?? '')] ?? null);
-
-            $rules[] = $rule;
-        }
-
         return $this->catalog = [
             'domains' => $domains,
             'projects' => $projects,
-            'applications' => $applications,
             'modules' => $modules,
             'electrons' => $electrons,
-            'rules' => $rules,
         ];
     }
 

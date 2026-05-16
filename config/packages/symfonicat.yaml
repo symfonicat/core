@@ -2,10 +2,6 @@ symfonicat:
     vendors:
         - symfonicat
     admin:
-        symfonicat_application:
-            -
-                id: core/test
-                vendor: core
         symfonicat_env_parent:
             -
                 id: colors
@@ -13,12 +9,6 @@ symfonicat:
             -
                 id: primary
                 env_parent_id: colors
-        symfonicat_application_env:
-            -
-                id: 1
-                value: red
-                application_id: core/test
-                env_id: primary
         symfonicat_domain:
             -
                 id: example.com
@@ -50,7 +40,6 @@ symfonicat:
                 type: domain
                 domain_id: example.com
                 project_id: null
-                application_id: null
         symfonicat_electron_env:
             -
                 id: 1
@@ -62,10 +51,6 @@ symfonicat:
                 id: symfonicat/analytics/main
                 package: analytics
                 vendor: symfonicat
-        symfonicat_module_application:
-            -
-                module_id: symfonicat/analytics/main
-                application_id: core/test
         symfonicat_module_domain:
             -
                 module_id: symfonicat/analytics/main
@@ -83,21 +68,3 @@ symfonicat:
                 value: green
                 project_id: core/project1
                 env_id: primary
-        symfonicat_routing_rule:
-            -
-                id: 1
-                arguments:
-                    - symfonicat
-                    - '*'
-                    - 'test*'
-                type: application
-                redirect_type: null
-                redirect_target: null
-                route_type: null
-                application_type: arguments
-                route: null
-                domain_id: null
-                project_id: null
-                application_id: core/test
-                redirect_domain_id: null
-                redirect_project_id: null

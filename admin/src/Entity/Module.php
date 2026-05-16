@@ -38,20 +38,10 @@ class Module
     #[ORM\InverseJoinColumn(name: 'domain_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
     private Collection $domains;
 
-    /**
-     * @var Collection<int, Application>
-     */
-    #[ORM\ManyToMany(targetEntity: Application::class, inversedBy: 'modules')]
-    #[ORM\JoinTable(name: 'symfonicat_module_application')]
-    #[ORM\JoinColumn(name: 'module_id', referencedColumnName: 'id')]
-    #[ORM\InverseJoinColumn(name: 'application_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
-    private Collection $applications;
-
     public function __construct()
     {
         $this->projects = new ArrayCollection();
         $this->domains = new ArrayCollection();
-        $this->applications = new ArrayCollection();
     }
 
 
@@ -151,51 +141,6 @@ class Module
             }
 
             if ($existingDomain->getId() !== null && $domain->getId() !== null && $existingDomain->getId() === $domain->getId()) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * @return Collection<int, Application>
-     */
-    public function getApplications(): Collection
-    {
-        return $this->applications;
-    }
-
-    public function addApplication(Application $application): static
-    {
-        if (!$this->hasApplication($application)) {
-            $this->applications->add($application);
-
-            if (!$application->hasModule($this)) {
-                $application->getModules()->add($this);
-            }
-        }
-
-        return $this;
-    }
-
-    public function removeApplication(Application $application): static
-    {
-        if ($this->applications->removeElement($application) && $application->hasModule($this)) {
-            $application->getModules()->removeElement($this);
-        }
-
-        return $this;
-    }
-
-    public function hasApplication(Application $application): bool
-    {
-        foreach ($this->applications as $existingApplication) {
-            if ($existingApplication === $application) {
-                return true;
-            }
-
-            if ($existingApplication->getId() !== null && $application->getId() !== null && $existingApplication->getId() === $application->getId()) {
                 return true;
             }
         }

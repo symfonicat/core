@@ -2,7 +2,6 @@
 
 namespace Symfonicat\Command;
 
-use Symfonicat\Service\ApplicationService;
 use Symfonicat\Entity\Module;
 use Symfonicat\Service\DomainService;
 use Symfonicat\Service\ModuleService;
@@ -21,7 +20,6 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 final class SchemaUpdateCommand extends Command
 {
     public function __construct(
-        private readonly ApplicationService $applicationService,
         private readonly DomainService $domainService,
         private readonly ModuleService $moduleService,
         private readonly ProjectService $projectService,
@@ -75,16 +73,6 @@ final class SchemaUpdateCommand extends Command
                 return $this->confirmRequired($input, $io, 'Create these domain rows?', false);
             } : null);
 
-            $applicationResult = $this->applicationService->sync($shouldAskForConfirmation ? function (array $applicationIds) use ($input, $io): bool {
-                $io->section('Missing applications');
-                $io->listing(array_map(
-                    static fn (string $applicationId): string => sprintf('%s from installed package assets', $applicationId),
-                    $applicationIds,
-                ));
-
-                return $this->confirmRequired($input, $io, 'Create these application rows?', false);
-            } : null);
-
             $projectResult = $this->projectService->sync($shouldAskForConfirmation ? function (array $projectIds) use ($input, $io): bool {
                 $io->section('Missing projects');
                 $io->listing(array_map(
@@ -136,14 +124,6 @@ final class SchemaUpdateCommand extends Command
             ));
         }
 
-        if ($applicationResult['created'] !== []) {
-            $io->section('Created applications');
-            $io->listing(array_map(
-                static fn (array $application): string => $application['id'],
-                $applicationResult['created'],
-            ));
-        }
-
         if ($domainResult['created'] !== []) {
             $io->section('Created domains');
             $io->listing(array_map(
@@ -164,16 +144,15 @@ final class SchemaUpdateCommand extends Command
             $moduleResult['created'] === []
             && $moduleResult['updated'] === []
             && $moduleResult['deleted'] === []
-            && $applicationResult['created'] === []
             && $domainResult['created'] === []
             && $projectResult['created'] === []
         ) {
-            $io->success('Module, application, domain, and project rows already match installed configured-vendor packages.');
+            $io->success('Module, domain, and project rows already match installed configured-vendor packages.');
 
             return Command::SUCCESS;
         }
 
-        $io->success('Module, application, domain, and project rows synchronized from installed configured-vendor packages.');
+        $io->success('Module, domain, and project rows synchronized from installed configured-vendor packages.');
 
         return Command::SUCCESS;
     }

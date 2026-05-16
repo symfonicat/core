@@ -15,7 +15,6 @@ class Electron
 {
     public const TYPE_DOMAIN = 'domain';
     public const TYPE_PROJECT = 'project';
-    public const TYPE_APPLICATION = 'application';
 
     #[ORM\Id]
     #[ORM\Column(length: 255)]
@@ -34,10 +33,6 @@ class Electron
     #[ORM\ManyToOne(targetEntity: Project::class)]
     #[ORM\JoinColumn(name: 'project_id', referencedColumnName: 'id', nullable: true, onDelete: 'CASCADE')]
     private ?Project $project = null;
-
-    #[ORM\ManyToOne(targetEntity: Application::class)]
-    #[ORM\JoinColumn(name: 'application_id', referencedColumnName: 'id', nullable: true, onDelete: 'CASCADE')]
-    private ?Application $application = null;
 
     /**
      * @var Collection<int, ElectronEnv>
@@ -72,7 +67,6 @@ class Electron
         return [
             'domain' => self::TYPE_DOMAIN,
             'project' => self::TYPE_PROJECT,
-            'application' => self::TYPE_APPLICATION,
         ];
     }
 
@@ -124,18 +118,6 @@ class Electron
         return $this;
     }
 
-    public function getApplication(): ?Application
-    {
-        return $this->application;
-    }
-
-    public function setApplication(?Application $application): static
-    {
-        $this->application = $application;
-
-        return $this;
-    }
-
     /**
      * @return Collection<int, ElectronEnv>
      */
@@ -173,17 +155,11 @@ class Electron
         return $this->type === self::TYPE_PROJECT;
     }
 
-    public function isApplicationType(): bool
-    {
-        return $this->type === self::TYPE_APPLICATION;
-    }
-
     public function getTargetId(bool $includeVendor = false): ?string
     {
         return match ($this->type) {
             self::TYPE_DOMAIN => $this->domain?->getId($includeVendor),
             self::TYPE_PROJECT => $this->projectTargetId($includeVendor),
-            self::TYPE_APPLICATION => $this->application?->getId($includeVendor),
             default => null,
         };
     }
@@ -234,10 +210,5 @@ class Electron
                 ->addViolation();
         }
 
-        if ($type === self::TYPE_APPLICATION && !$this->application instanceof Application) {
-            $context->buildViolation('Select an application.')
-                ->atPath('application')
-                ->addViolation();
-        }
     }
 }

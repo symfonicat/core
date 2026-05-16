@@ -4,7 +4,6 @@ namespace Symfonicat\Repository;
 
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
-use Symfonicat\Entity\Application;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\Electron;
 use Symfonicat\Entity\Project;
@@ -27,8 +26,7 @@ final class ElectronRepository extends ServiceEntityRepository
         return $this->createQueryBuilder('electron')
             ->leftJoin('electron.domain', 'domain')
             ->leftJoin('electron.project', 'project')
-            ->leftJoin('electron.application', 'application')
-            ->addSelect('domain', 'project', 'application')
+            ->addSelect('domain', 'project')
             ->orderBy('electron.type', 'ASC')
             ->addOrderBy('electron.name', 'ASC')
             ->addOrderBy('electron.id', 'ASC')
@@ -58,14 +56,6 @@ final class ElectronRepository extends ServiceEntityRepository
             'type' => Electron::TYPE_PROJECT,
             'project' => $project,
             'domain' => $domain,
-        ]);
-    }
-
-    public function findOneForApplication(Application $application): ?Electron
-    {
-        return $this->findOneBy([
-            'type' => Electron::TYPE_APPLICATION,
-            'application' => $application,
         ]);
     }
 }

@@ -32,16 +32,6 @@ services:
             $projectDir: '%kernel.project_dir%'
             $vendors: '%symfonicat.vendors%'
 
-    Symfonicat\Service\ApplicationService:
-        arguments:
-            $appSecret: '%kernel.secret%'
-            $frameworkRouter: '@Symfonicat\Routing\ApplicationRouter.inner'
-
-    Symfonicat\Routing\ApplicationRouter:
-        decorates: 'router.default'
-        arguments:
-            $inner: '@Symfonicat\Routing\ApplicationRouter.inner'
-
     Symfonicat\Service\SubdomainService:
         arguments:
             $projectDir: '%kernel.project_dir%'

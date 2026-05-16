@@ -170,14 +170,6 @@ module.exports = function configureSymfonicat(Encore, options = __dirname) {
     const { projectDir, packageDir } = config;
     const moduleData = loadModuleData(projectDir);
 
-    (moduleData.applications || []).forEach((application) => {
-        if (!application?.id || !application?.entry || !fs.existsSync(application.entry)) {
-            return;
-        }
-
-        Encore.addEntry(`applications/${application.id}`, toEntryPath(projectDir, application.entry));
-    });
-
     (moduleData.projects || []).forEach((project) => {
         if (!project?.id || !project?.entry || !fs.existsSync(project.entry)) {
             return;

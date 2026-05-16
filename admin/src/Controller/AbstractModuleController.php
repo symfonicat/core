@@ -4,7 +4,6 @@ namespace Symfonicat\Controller;
 
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
-use Symfonicat\Service\ApplicationService;
 use Symfonicat\Service\DomainService;
 use Symfonicat\Service\ModuleService;
 use Symfonicat\Service\PathService;
@@ -21,7 +20,6 @@ abstract class AbstractModuleController extends AbstractController
         public readonly ModuleService $moduleService,
         public readonly ProjectService $projectService,
         public readonly PathService $pathService,
-        public readonly ?ApplicationService $applicationService = null,
 
     ) {
 
@@ -31,27 +29,9 @@ abstract class AbstractModuleController extends AbstractController
             return;
         }
 
-        if ($this->applicationService?->isApplicationModuleRequest()) {
-            $application = $this->applicationService->loadFromModuleRequest();
-
-            if ($application && $application->hasModule($module)) {
-                $this->shouldRun = TRUE;
-            }
-
-            return;
-        }
-
         $project = $this->projectService->load();
 
         if ($project && $project->hasModule($module)) {
-            $this->shouldRun = TRUE;
-
-            return;
-        }
-
-        $application = $this->applicationService?->load();
-
-        if ($application && $application->hasModule($module)) {
             $this->shouldRun = TRUE;
 
             return;

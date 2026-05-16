@@ -13,7 +13,6 @@ final class Configuration implements ConfigurationInterface
 
         $treeBuilder->getRootNode()
             ->children()
-                ->scalarNode('asset_base_url')->defaultValue('')->end()
                 ->arrayNode('vendors')
                     ->scalarPrototype()->end()
                     ->defaultValue(['symfonicat'])

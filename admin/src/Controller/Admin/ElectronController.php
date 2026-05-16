@@ -97,20 +97,13 @@ final class ElectronController extends AbstractController
     {
         if ($electron->isDomainType()) {
             $electron->setProject(null);
-            $electron->setApplication(null);
 
             return;
         }
 
         if ($electron->isProjectType()) {
-            $electron->setApplication(null);
 
             return;
-        }
-
-        if ($electron->isApplicationType()) {
-            $electron->setDomain(null);
-            $electron->setProject(null);
         }
     }
 }

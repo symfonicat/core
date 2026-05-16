@@ -1322,7 +1322,6 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     },
  * }
  * @psalm-type SymfonicatConfig = array{
- *     asset_base_url?: scalar|Param|null, // Default: ""
  *     vendors?: list<scalar|Param|null>,
  *     admin?: list<mixed>,
  * }

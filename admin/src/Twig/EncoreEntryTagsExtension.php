@@ -2,7 +2,6 @@
 
 namespace Symfonicat\Twig;
 
-use Symfonicat\Entity\Application;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\Module;
 use Symfonicat\Entity\Project;
@@ -23,8 +22,6 @@ final class EncoreEntryTagsExtension extends AbstractExtension
     public function getFunctions(): array
     {
         return [
-            new TwigFunction('encore_entry_script_tags_application', $this->renderApplicationScriptTags(...), ['is_safe' => ['html']]),
-            new TwigFunction('encore_entry_link_tags_application', $this->renderApplicationLinkTags(...), ['is_safe' => ['html']]),
             new TwigFunction('encore_entry_script_tags_domain', $this->renderDomainScriptTags(...), ['is_safe' => ['html']]),
             new TwigFunction('encore_entry_link_tags_domain', $this->renderDomainLinkTags(...), ['is_safe' => ['html']]),
             new TwigFunction('encore_entry_script_tags_project', $this->renderProjectScriptTags(...), ['is_safe' => ['html']]),
@@ -32,16 +29,6 @@ final class EncoreEntryTagsExtension extends AbstractExtension
             new TwigFunction('encore_entry_script_tags_module', $this->renderModuleScriptTags(...), ['is_safe' => ['html']]),
             new TwigFunction('encore_entry_link_tags_module', $this->renderModuleLinkTags(...), ['is_safe' => ['html']]),
         ];
-    }
-
-    public function renderApplicationScriptTags(?Application $application): string
-    {
-        return $this->renderScriptTags($this->applicationEntryName($application));
-    }
-
-    public function renderApplicationLinkTags(?Application $application): string
-    {
-        return $this->renderLinkTags($this->applicationEntryName($application));
     }
 
     public function renderDomainScriptTags(?Domain $domain): string
@@ -125,38 +112,6 @@ final class EncoreEntryTagsExtension extends AbstractExtension
         }
 
         // Do not attempt to discover domain entries from installed packages.
-        return $entryName;
-    }
-
-    private function applicationEntryName(?Application $application): ?string
-    {
-        $id = trim((string) $application?->getId());
-        if ($id === '') {
-            return null;
-        }
-
-        $entryName = 'applications/'.$id;
-        if ($this->entryFilesTwigExtension->entryExists($entryName)) {
-            return $entryName;
-        }
-
-        if (strpos($id, '/') !== false) {
-            return $entryName;
-        }
-
-        $packages = $this->packageDiscoveryService->discoverEntryDirectories('applications');
-        $matches = [];
-        foreach (array_keys($packages) as $pkgId) {
-            $parts = explode('/', $pkgId);
-            if (end($parts) === $id) {
-                $matches[] = $pkgId;
-            }
-        }
-
-        if (count($matches) === 1) {
-            return 'applications/'.$matches[0];
-        }
-
         return $entryName;
     }
 

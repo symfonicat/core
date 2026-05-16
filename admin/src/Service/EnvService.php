@@ -2,8 +2,6 @@
 
 namespace Symfonicat\Service;
 
-use Symfonicat\Entity\Application;
-use Symfonicat\Entity\ApplicationEnv;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\Project;
 use Symfonicat\Entity\DomainEnv;
@@ -14,14 +12,13 @@ use Symfonicat\Entity\ProjectEnv;
 final class EnvService
 {
     public function __construct(
-        private readonly ApplicationService $applicationService,
         private readonly DomainService $domainService,
         private readonly ElectronService $electronService,
         private readonly ProjectService $projectService,
     ) {
     }
 
-    public function get(string $id, Application|Domain|Project|null $entity = null): ?string
+    public function get(string $id, Domain|Project|null $entity = null): ?string
     {
         $id = trim($id);
         if ($id === '') {
@@ -49,36 +46,29 @@ final class EnvService
     /**
      * @return array<string, array<string, string>>
      */
-    public function all(Application|Domain|Project|null $entity = null): array
+    public function all(Domain|Project|null $entity = null): array
     {
-        if ($entity instanceof Application) {
-            return $this->collectApplicationValues($entity);
-        }
 
         if ($entity instanceof Domain) {
             return $this->mergeValues(
-                $this->collectApplicationValues($this->applicationService->load()),
                 $this->collectDomainValues($entity),
             );
         }
 
         if ($entity instanceof Project) {
             return $this->mergeValues(
-                $this->collectApplicationValues($this->applicationService->load()),
                 $this->collectDomainValues($this->resolveDomainForProject($entity)),
                 $this->collectProjectValues($entity),
                 $this->collectElectronValues($this->electronService->loadForContext(null, $this->resolveDomainForProject($entity), $entity)),
             );
         }
 
-        $application = $this->applicationService->load();
         $domain = $this->domainService->load();
         $project = $this->projectService->load();
         $electron = $this->electronService->load();
 
         if ($project instanceof Project) {
             return $this->mergeValues(
-                $this->collectApplicationValues($application),
                 $this->collectDomainValues($domain),
                 $this->collectProjectValues($project),
                 $this->collectElectronValues($electron),
@@ -86,7 +76,6 @@ final class EnvService
         }
 
         return $this->mergeValues(
-            $this->collectApplicationValues($application),
             $this->collectDomainValues($domain),
             $this->collectElectronValues($electron),
         );
@@ -115,34 +104,6 @@ final class EnvService
         }
 
         return null;
-    }
-
-    /**
-     * @return array<string, array<string, string>>
-     */
-    private function collectApplicationValues(?Application $application): array
-    {
-        if (!$application instanceof Application) {
-            return [];
-        }
-
-        $values = [];
-
-        foreach ($application->getEnv() as $item) {
-            if (!$item instanceof ApplicationEnv) {
-                continue;
-            }
-
-            $envParentId = $item->getEnv()?->getEnvParent()?->getId();
-            $envId = $item->getEnv()?->getId();
-            if ($envParentId === null || $envParentId === '' || $envId === null || $envId === '') {
-                continue;
-            }
-
-            $values[$envParentId][$envId] = $item->getValue();
-        }
-
-        return $values;
     }
 
     /**

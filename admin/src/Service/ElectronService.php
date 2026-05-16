@@ -2,7 +2,6 @@
 
 namespace Symfonicat\Service;
 
-use Symfonicat\Entity\Application;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\Electron;
 use Symfonicat\Entity\Project;
@@ -13,7 +12,6 @@ use Symfony\Component\HttpFoundation\RequestStack;
 class ElectronService
 {
     public function __construct(
-        private readonly ApplicationService $applicationService,
         private readonly DomainService $domainService,
         private readonly ElectronRepository $electronRepository,
         private readonly ProjectService $projectService,
@@ -30,33 +28,19 @@ class ElectronService
             return $this->runtimeConfig->electronById($electronId);
         }
 
-        $application = $request?->attributes->get('application');
         $project = $request?->attributes->get('project');
         $domain = $request?->attributes->get('domain');
 
         return $this->loadForContext(
-            $application instanceof Application ? $application : null,
             $domain instanceof Domain ? $domain : null,
             $project instanceof Project ? $project : null,
         );
     }
 
-    public function loadForContext(?Application $application, ?Domain $domain, ?Project $project): ?Electron
+    public function loadForContext(?Domain $domain, ?Project $project): ?Electron
     {
         if (!$this->isElectronRequest()) {
             return null;
-        }
-
-        if (!$application instanceof Application) {
-            $application = $this->applicationService->load();
-        }
-
-        if ($application instanceof Application) {
-            if ($this->usesDatabaseRuntime()) {
-                return $this->electronRepository->findOneForApplication($application);
-            }
-
-            return $this->runtimeConfig->electronForApplication($application);
         }
 
         if (!$project instanceof Project) {
