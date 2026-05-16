@@ -15,39 +15,115 @@ symfonicat:
                 id: core/subdomainparcel
                 path: assets/parcel/subdomainparcel
                 vendor: core
-        symfonicat_domain: []
-        symfonicat_endpoint: []
-        symfonicat_subdomain: []
+            -
+                id: symfonicat/analytics/analyticsparcel
+                path: vendor/symfonicat/analytics/assets/parcel/analyticsparcel
+                vendor: symfonicat
+        symfonicat_domain:
+            -
+                id: example.com
+                catch: false
+                parcel_id: core/domainparcel
+        symfonicat_endpoint:
+            -
+                id: test
+                catch: true
+                arguments:
+                    - symfonicat
+                    - test
+                parcel_id: core/endpointparcel
+        symfonicat_subdomain:
+            -
+                id: core/subdomain1
+                catch: false
+                vendor: core
+                parcel_id: core/subdomainparcel
         symfonicat_application: []
-        symfonicat_env_parent: []
-        symfonicat_env: []
+        symfonicat_env_parent:
+            -
+                id: colors
+        symfonicat_env:
+            -
+                id: primary
+                env_parent_id: colors
         symfonicat_application_env: []
-        symfonicat_domain_env: []
-        symfonicat_middleware:
+        symfonicat_domain_env:
             -
                 id: 1
-                class: Symfonicat\Middleware\DomainMiddleware
+                value: blue
+                domain_id: example.com
+                env_id: primary
+        symfonicat_middleware:
             -
                 id: 2
-                class: Symfonicat\Middleware\EndpointMiddleware
+                class: Symfonicat\Middleware\TestMiddleware
             -
                 id: 3
-                class: Symfonicat\Middleware\SubdomainMiddleware
+                class: Symfonicat\Middleware\DomainMiddleware
             -
                 id: 4
-                class: Symfonicat\Middleware\TestMiddleware
-        symfonicat_domain_middleware: []
-        symfonicat_domain_subdomain: []
-        symfonicat_endpoint_env: []
-        symfonicat_endpoint_middleware: []
+                class: Symfonicat\Middleware\SubdomainMiddleware
+            -
+                id: 5
+                class: Symfonicat\Middleware\EndpointMiddleware
+        symfonicat_domain_middleware:
+            -
+                domain_id: example.com
+                middleware_id: 3
+        symfonicat_domain_subdomain:
+            -
+                domain_id: example.com
+                subdomain_id: core/subdomain1
+        symfonicat_endpoint_env:
+            -
+                id: 1
+                value: purple
+                endpoint_id: test
+                env_id: primary
+        symfonicat_endpoint_middleware:
+            -
+                endpoint_id: test
+                middleware_id: 5
         symfonicat_module:
             -
                 id: symfonicat/analytics/main
                 package: analytics
                 vendor: symfonicat
-        symfonicat_module_domain: []
-        symfonicat_module_endpoint: []
-        symfonicat_module_subdomain: []
-        symfonicat_parcel_env: []
-        symfonicat_subdomain_env: []
-        symfonicat_subdomain_middleware: []
+        symfonicat_module_domain:
+            -
+                module_id: symfonicat/analytics/main
+                domain_id: example.com
+        symfonicat_module_endpoint:
+            -
+                module_id: symfonicat/analytics/main
+                endpoint_id: test
+        symfonicat_module_subdomain:
+            -
+                module_id: symfonicat/analytics/main
+                subdomain_id: core/subdomain1
+        symfonicat_parcel_env:
+            -
+                id: 1
+                value: red
+                parcel_id: core/domainparcel
+                env_id: primary
+            -
+                id: 2
+                value: orange
+                parcel_id: core/endpointparcel
+                env_id: primary
+            -
+                id: 3
+                value: turquoise
+                parcel_id: core/subdomainparcel
+                env_id: primary
+        symfonicat_subdomain_env:
+            -
+                id: 2
+                value: green
+                subdomain_id: core/subdomain1
+                env_id: primary
+        symfonicat_subdomain_middleware:
+            -
+                subdomain_id: core/subdomain1
+                middleware_id: 4

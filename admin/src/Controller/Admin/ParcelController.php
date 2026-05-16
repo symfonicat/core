@@ -14,7 +14,7 @@ use Symfony\Component\Routing\Attribute\Route;
 
 final class ParcelController extends AbstractController
 {
-    #[Route('/admin/b', name: 'symfonicat_parcel_index', methods: ['GET'])]
+    #[Route('/admin/p', name: 'symfonicat_parcel_index', methods: ['GET'])]
     public function index(ParcelRepository $parcelRepository, EnvParentRepository $envParentRepository): Response
     {
         return $this->render('@symfonicat/parcel/index.html.twig', [
@@ -23,7 +23,7 @@ final class ParcelController extends AbstractController
         ]);
     }
 
-    #[Route('/admin/b/{id}', name: 'symfonicat_parcel_edit', methods: ['GET', 'POST'], requirements: ['id' => '.+'])]
+    #[Route('/admin/p/{id}', name: 'symfonicat_parcel_edit', methods: ['GET', 'POST'], requirements: ['id' => '.+'])]
     public function edit(Request $request, string $id, ParcelRepository $parcelRepository, EntityManagerInterface $entityManager): Response
     {
         $parcel = $parcelRepository->find($id);
