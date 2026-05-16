@@ -3,7 +3,7 @@
 namespace Symfonicat\Form;
 
 use Symfonicat\Entity\Domain;
-use Symfonicat\Entity\Project;
+use Symfonicat\Entity\Subdomain;
 use Symfonicat\Form\Model\FileUploadItemData;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
@@ -15,7 +15,7 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 final class FileUploadItemType extends AbstractType
 {
     public const FILE_TYPE_DOMAIN = 'domain';
-    public const FILE_TYPE_PROJECT = 'project';
+    public const FILE_TYPE_PROJECT = 'subdomain';
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
@@ -24,7 +24,7 @@ final class FileUploadItemType extends AbstractType
                 'label' => 'type',
                 'choices' => [
                     'domain' => self::FILE_TYPE_DOMAIN,
-                    'project' => self::FILE_TYPE_PROJECT,
+                    'subdomain' => self::FILE_TYPE_PROJECT,
                 ],
             ])
             ->add('domain', EntityType::class, [
@@ -34,12 +34,12 @@ final class FileUploadItemType extends AbstractType
                 'required' => false,
                 'placeholder' => 'select domain',
             ])
-            ->add('project', EntityType::class, [
-                'class' => Project::class,
-                'choice_label' => static fn (Project $project): string => (string) $project->getId(false),
-                'label' => 'project',
+            ->add('subdomain', EntityType::class, [
+                'class' => Subdomain::class,
+                'choice_label' => static fn (Subdomain $subdomain): string => (string) $subdomain->getId(false),
+                'label' => 'subdomain',
                 'required' => false,
-                'placeholder' => 'select project',
+                'placeholder' => 'select subdomain',
             ])
             ->add('file', FileType::class, [
                 'label' => 'file',

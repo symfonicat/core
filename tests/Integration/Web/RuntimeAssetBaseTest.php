@@ -54,24 +54,24 @@ final class RuntimeAssetBaseTest extends SymfonicatWebTestCase
     public function testProjectShellUsesProjectAssetBase(): void
     {
         $domain = $this->createDomain('example.com');
-        $this->createProject('project1', $domain);
+        $this->createProject('subdomain1', $domain);
 
-        $this->setHost('project1.example.com');
+        $this->setHost('subdomain1.example.com');
         $this->client()->request('GET', '/');
 
         self::assertResponseIsSuccessful();
         $content = (string) $this->client()->getResponse()->getContent();
 
         self::assertStringNotContainsString('<base ', $content);
-        self::assertStringContainsString('<link rel="icon" href="/projects/project1/favicon.svg"', $content);
+        self::assertStringContainsString('<link rel="icon" href="/subdomains/subdomain1/favicon.svg"', $content);
     }
 
     public function testProjectShellFallsBackToDomainAssetBaseWhenProjectFolderIsMissing(): void
     {
         $domain = $this->createDomain('example.com');
-        $this->createProject('project_without_assets', $domain);
+        $this->createProject('subdomain_without_assets', $domain);
 
-        $this->setHost('project_without_assets.example.com');
+        $this->setHost('subdomain_without_assets.example.com');
         $this->client()->request('GET', '/');
 
         self::assertResponseIsSuccessful();
@@ -84,9 +84,9 @@ final class RuntimeAssetBaseTest extends SymfonicatWebTestCase
     public function testProjectShellFallsBackToDefaultAssetBaseWhenProjectAndDomainFoldersAreMissing(): void
     {
         $domain = $this->createDomain('missing-assets.example');
-        $this->createProject('project_without_any_assets', $domain);
+        $this->createProject('subdomain_without_any_assets', $domain);
 
-        $this->setHost('project_without_any_assets.missing-assets.example');
+        $this->setHost('subdomain_without_any_assets.missing-assets.example');
         $this->client()->request('GET', '/');
 
         self::assertResponseIsSuccessful();
@@ -127,15 +127,15 @@ final class RuntimeAssetBaseTest extends SymfonicatWebTestCase
 
     public function testExplicitProjectContextUsesProjectAssetBase(): void
     {
-        $project = $this->createProject('project1');
+        $subdomain = $this->createProject('subdomain1');
 
         /** @var Environment $twig */
         $twig = self::getTestContainer()->get(Environment::class);
 
         self::assertSame(
-            '/projects/project1/favicon.svg',
-            trim($twig->createTemplate('{{ symfonicat_asset("favicon.svg", project) }}')->render([
-                'project' => $project,
+            '/subdomains/subdomain1/favicon.svg',
+            trim($twig->createTemplate('{{ symfonicat_asset("favicon.svg", subdomain) }}')->render([
+                'subdomain' => $subdomain,
             ])),
         );
     }
@@ -173,36 +173,36 @@ final class RuntimeAssetBaseTest extends SymfonicatWebTestCase
     public function testProjectShellUsesProjectAssetBaseWhenProjectFolderExists(): void
     {
         $domain = $this->createDomain('example.com');
-        $this->createProject('project_with_assets', $domain);
-        $this->createTemporaryPublicDirectory('projects/project_with_assets');
-        $this->createTemporaryPublicFile('projects/project_with_assets/favicon.svg', 'project-favicon');
+        $this->createProject('subdomain_with_assets', $domain);
+        $this->createTemporaryPublicDirectory('subdomains/subdomain_with_assets');
+        $this->createTemporaryPublicFile('subdomains/subdomain_with_assets/favicon.svg', 'subdomain-favicon');
 
-        $this->setHost('project_with_assets.example.com');
+        $this->setHost('subdomain_with_assets.example.com');
         $this->client()->request('GET', '/');
 
         self::assertResponseIsSuccessful();
         $content = (string) $this->client()->getResponse()->getContent();
 
         self::assertStringNotContainsString('<base ', $content);
-        self::assertStringContainsString('<link rel="icon" href="/projects/project_with_assets/favicon.svg"', $content);
+        self::assertStringContainsString('<link rel="icon" href="/subdomains/subdomain_with_assets/favicon.svg"', $content);
     }
 
     public function testProjectShellFallsBackToDomainAssetWhenProjectFileIsMissing(): void
     {
         $domain = $this->createDomain('fallback.example');
-        $this->createProject('project_missing_file', $domain);
+        $this->createProject('subdomain_missing_file', $domain);
         $this->createTemporaryPublicDirectory('domains/fallback.example');
         $this->createTemporaryPublicFile('domains/fallback.example/favicon.svg', 'domain-favicon');
-        $this->createTemporaryPublicDirectory('projects/project_missing_file');
+        $this->createTemporaryPublicDirectory('subdomains/subdomain_missing_file');
 
-        $this->setHost('project_missing_file.fallback.example');
+        $this->setHost('subdomain_missing_file.fallback.example');
         $this->client()->request('GET', '/');
 
         self::assertResponseIsSuccessful();
         $content = (string) $this->client()->getResponse()->getContent();
 
         self::assertStringContainsString('<link rel="icon" href="/domains/fallback.example/favicon.svg"', $content);
-        self::assertStringNotContainsString('/projects/project_missing_file/favicon.svg', $content);
+        self::assertStringNotContainsString('/subdomains/subdomain_missing_file/favicon.svg', $content);
     }
 
     public function testMissingDefaultAssetThrows(): void
@@ -216,7 +216,7 @@ final class RuntimeAssetBaseTest extends SymfonicatWebTestCase
             $twig = self::getTestContainer()->get(Environment::class);
 
             $this->expectException(\Twig\Error\RuntimeError::class);
-            $this->expectExceptionMessage('Asset "missing.svg" was not found in the project, domain, or default public folders.');
+            $this->expectExceptionMessage('Asset "missing.svg" was not found in the subdomain, domain, or default public folders.');
             $twig->createTemplate('{{ symfonicat_asset("missing.svg") }}')->render();
         } finally {
             $requestStack->pop();

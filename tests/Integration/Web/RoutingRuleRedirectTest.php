@@ -11,7 +11,7 @@ final class RoutingRuleRedirectTest extends SymfonicatWebTestCase
     {
         $sourceDomain = $this->createDomain('example.com');
         $targetDomain = $this->createDomain('other.example');
-        $targetProject = $this->createProject('project2', $targetDomain);
+        $targetProject = $this->createProject('subdomain2', $targetDomain);
 
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_REDIRECT)
@@ -28,9 +28,9 @@ final class RoutingRuleRedirectTest extends SymfonicatWebTestCase
         $this->client()->request('GET', '/docs');
 
         self::assertResponseRedirects(
-            'http://project2.other.example/docs',
+            'http://subdomain2.other.example/docs',
             302,
-            'combined redirect target must resolve to project.id + "." + domain.id',
+            'combined redirect target must resolve to subdomain.id + "." + domain.id',
         );
     }
 }

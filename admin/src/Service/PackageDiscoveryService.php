@@ -6,14 +6,14 @@ final class PackageDiscoveryService
 {
     private const SUPPORTED_ENTRY_TYPES = [
         'modules',
-        'projects',
+        'subdomains',
     ];
 
     /**
      * @param list<string> $vendors
      */
     public function __construct(
-        private readonly string $projectDir,
+        private readonly string $subdomainDir,
         private readonly array $vendors = ['symfonicat'],
     ) {
     }
@@ -30,13 +30,13 @@ final class PackageDiscoveryService
     {
         $packages = [];
 
-        $rootComposerPath = $this->projectDir.'/composer.json';
+        $rootComposerPath = $this->subdomainDir.'/composer.json';
         if (is_file($rootComposerPath)) {
             $rootComposer = $this->decodeJsonFile($rootComposerPath);
             $packageName = trim((string) ($rootComposer['name'] ?? 'symfonicat/core'));
             if ($packageName !== '' && $this->isConfiguredVendorPackage($packageName)) {
                 $packages[$packageName] = [
-                    'installPath' => $this->projectDir,
+                    'installPath' => $this->subdomainDir,
                     'name' => $packageName,
                     'package' => $this->shortPackageName($packageName),
                     'vendor' => 'core',
@@ -44,7 +44,7 @@ final class PackageDiscoveryService
             }
         }
 
-        $installedPath = $this->projectDir.'/vendor/composer/installed.json';
+        $installedPath = $this->subdomainDir.'/vendor/composer/installed.json';
         if (!is_file($installedPath)) {
             return array_values($packages);
         }
@@ -63,7 +63,7 @@ final class PackageDiscoveryService
                 continue;
             }
 
-            $installPath = realpath($this->projectDir.'/vendor/composer/'.$relativeInstallPath);
+            $installPath = realpath($this->subdomainDir.'/vendor/composer/'.$relativeInstallPath);
             if ($installPath === false || !is_dir($installPath)) {
                 continue;
             }

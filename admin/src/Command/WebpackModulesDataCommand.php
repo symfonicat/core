@@ -11,7 +11,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 #[AsCommand(
     name: 'symfonicat:data:webpack',
-    description: 'Output domain, project, and module package entry data for webpack.',
+    description: 'Output domain, subdomain, and module package entry data for webpack.',
 )]
 final class WebpackModulesDataCommand extends Command
 {
@@ -29,9 +29,9 @@ final class WebpackModulesDataCommand extends Command
                 fn (): array => $this->runtimeConfig->modules(),
                 'modules',
             ),
-            'projects' => $this->entriesFromRepositoryOrPackages(
-                fn (): array => $this->runtimeConfig->projects(),
-                'projects',
+            'subdomains' => $this->entriesFromRepositoryOrPackages(
+                fn (): array => $this->runtimeConfig->subdomains(),
+                'subdomains',
             ),
         ], JSON_THROW_ON_ERROR));
 

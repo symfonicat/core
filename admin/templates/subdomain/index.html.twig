@@ -1,8 +1,8 @@
 {% extends '@symfonicat/base.html.twig' %}
-{% block title %}Projects{% endblock %}
+{% block title %}Subdomains{% endblock %}
 {% block body %}
 
-    <table class="table" id="project">
+    <table class="table" id="subdomain">
         <thead>
             <tr>
                 <th>name</th>
@@ -13,11 +13,11 @@
                 <th>&nbsp;</th>
             </tr>
         </thead>
-        <tbody id="project-body">
-        {% for project in projects %}
-            {{ include('@symfonicat/project/_row.html.twig') }}
+        <tbody id="subdomain-body">
+        {% for subdomain in subdomains %}
+            {{ include('@symfonicat/subdomain/_row.html.twig') }}
         {% else %}
-            <tr id="project-empty">
+            <tr id="subdomain-empty">
                 <td colspan="{{ 3 + env_parents|length }}">no records found</td>
             </tr>
         {% endfor %}

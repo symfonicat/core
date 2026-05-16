@@ -6,11 +6,11 @@ use App\Tests\Support\SymfonicatWebTestCase;
 
 /**
  * Verifies that database-backed RoutingRule rows invert the default
- * subdomain → project / bare → domain mapping:
+ * affix → subdomain / bare → domain mapping:
  *
  *   - A TYPE_DOMAIN rule whose argument matches the first path segment forces
- *     the domain shell even when the request arrived on a project subdomain.
- *   - A TYPE_PROJECT rule disables the project catch-all so the request is
+ *     the domain shell even when the request arrived on a subdomain affix.
+ *   - A TYPE_PROJECT rule disables the subdomain catch-all so the request is
  *     free to fall through to other Symfony routes (or 404 if nothing else
  *     matches).
  *
@@ -20,25 +20,25 @@ use App\Tests\Support\SymfonicatWebTestCase;
  */
 final class RoutingRuleInversionTest extends SymfonicatWebTestCase
 {
-    public function testDomainRuleForcesDomainShellEvenUnderProjectSubdomain(): void
+    public function testDomainRuleForcesDomainShellEvenUnderProjectAffix(): void
     {
         $domain = $this->createDomain('example.com');
-        $project = $this->createProject('project1', $domain);
+        $subdomain = $this->createProject('subdomain1', $domain);
         $env = $this->createEnv('primary');
         $this->setDomainEnv($domain, $env, 'blue');
-        $this->setProjectEnv($project, $env, 'green');
+        $this->setProjectEnv($subdomain, $env, 'green');
 
-        // Baseline: without the rule, /docs on project1.example.com renders
-        // the project shell.
-        $this->setHost('project1.example.com');
+        // Baseline: without the rule, /docs on subdomain1.example.com renders
+        // the subdomain shell.
+        $this->setHost('subdomain1.example.com');
         $this->client()->request('GET', '/docs');
 
         self::assertResponseIsSuccessful();
-        self::assertSelectorTextContains('body', 'core/project1', 'project shell is the pre-rule default');
+        self::assertSelectorTextContains('body', 'core/subdomain1', 'subdomain shell is the pre-rule default');
 
         // Now install a domain rule for "docs" and repeat the request. The
         // RoutingRuleSubscriber should rewrite the controller target to the
-        // domain shell before the normal project catch-all can claim it.
+        // domain shell before the normal subdomain catch-all can claim it.
         $this->createDomainRoutingRule($domain, 'docs');
 
         $this->client()->request('GET', '/docs');
@@ -50,9 +50,9 @@ final class RoutingRuleInversionTest extends SymfonicatWebTestCase
             'domain rule must flip the /docs path to render the domain template',
         );
         // NOTE: Env overlay is intentionally not asserted here. EnvService still
-        // sees both the project and the domain (the rule only overrides which
+        // sees both the subdomain and the domain (the rule only overrides which
         // TEMPLATE renders, not which entity is loaded), so `colors.primary` stays
-        // at the project value. That's consistent with EnvServiceTest and is
+        // at the subdomain value. That's consistent with EnvServiceTest and is
         // captured explicitly there; calling it out here would double-pin the
         // same contract in two places.
     }
@@ -60,19 +60,19 @@ final class RoutingRuleInversionTest extends SymfonicatWebTestCase
     public function testDomainRuleIsScopedToItsDomain(): void
     {
         $exampleCom = $this->createDomain('example.com');
-        $this->createProject('project1', $exampleCom);
+        $this->createProject('subdomain1', $exampleCom);
 
         $otherDomain = $this->createDomain('other.example');
         $this->createDomainRoutingRule($otherDomain, 'docs');
 
-        $this->setHost('project1.example.com');
+        $this->setHost('subdomain1.example.com');
         $this->client()->request('GET', '/docs');
 
-        // Rule belongs to other.example, not example.com: project shell wins.
+        // Rule belongs to other.example, not example.com: subdomain shell wins.
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains(
             'body',
-            'core/project1',
+            'core/subdomain1',
             'rules on foreign domains must not leak across domains',
         );
     }
@@ -80,20 +80,20 @@ final class RoutingRuleInversionTest extends SymfonicatWebTestCase
     public function testProjectRuleDisablesCatchAllSoRequestCan404(): void
     {
         $domain = $this->createDomain('example.com');
-        $project = $this->createProject('project1', $domain);
+        $subdomain = $this->createProject('subdomain1', $domain);
 
-        // Baseline confirms the project catch-all does match /foo-bar.
-        $this->setHost('project1.example.com');
+        // Baseline confirms the subdomain catch-all does match /foo-bar.
+        $this->setHost('subdomain1.example.com');
         $this->client()->request('GET', '/foo-bar');
-        self::assertResponseIsSuccessful('without a project rule the catch-all renders the shell');
+        self::assertResponseIsSuccessful('without a subdomain rule the catch-all renders the shell');
 
-        $this->createProjectRoutingRule($project, 'foo-bar');
+        $this->createProjectRoutingRule($subdomain, 'foo-bar');
 
         $this->client()->request('GET', '/foo-bar');
 
         self::assertResponseStatusCodeSame(
             404,
-            'project rule must suppress the catch-all; with no other route claiming /foo-bar the request 404s',
+            'subdomain rule must suppress the catch-all; with no other route claiming /foo-bar the request 404s',
         );
     }
 

@@ -14,11 +14,11 @@ Redis is used for application cache, sessions, locks, admin login throttling, an
 
 ## Runtime
 
-`DomainService`, `ProjectService`, routing rules, and `ApplicationService` resolve the active domain, project, and application shell. Public routes are `/`, `/{path}`, and the internal `/application/{vendor}/{id}/{path}` application entry route.
+`DomainService`, `ProjectService`, routing rules, and `ApplicationService` resolve the active domain, subdomain, and application shell. Public routes are `/`, `/{path}`, and the internal `/application/{vendor}/{id}/{path}` application entry route.
 
-Routing rules can render domain and project shells, redirect hosts, hand a root request to a named Symfony route, or render application shells. Application rules can match regex arguments, bind an application to a bare domain, bind one to a project subdomain, bind one to a specific domain/project pair, or attach application context to a Symfony route without replacing that route's response.
+Routing rules can render domain and subdomain shells, redirect hosts, hand a root request to a named Symfony route, or render application shells. Application rules can match regex arguments, bind an application to a bare domain, bind one to a subdomain affix, bind one to a specific domain/subdomain pair, or attach application context to a Symfony route without replacing that route's response.
 
-The `symfonicat_asset(path)` Twig helper resolves shell-specific public files. Without a second argument, it checks the current project folder first, then the current domain folder, then `public/default/`. Passing an `Application`, `Project`, `Domain`, or `Electron` object pins the asset base directly to that object; Electron assets resolve under `public/electron/{electron.id}/`.
+The `symfonicat_asset(path)` Twig helper resolves shell-specific public files. Without a second argument, it checks the current subdomain folder first, then the current domain folder, then `public/default/`. Passing an `Application`, `Project`, `Domain`, or `Electron` object pins the asset base directly to that object; Electron assets resolve under `public/electron/{electron.id}/`.
 The public JavaScript entry is `assets/app.js`; its runtime helpers live under `assets/app/`.
 `path_application()` is simple:
 
@@ -31,11 +31,11 @@ The public JavaScript entry is `assets/app.js`; its runtime helpers live under `
 ```twig
 {{ domain.id }}        {# example.com #}
 {{ electron.id }}      {# example-test #}
-{{ project.id(false) }} {# project1 #}
-{{ project.id }}        {# core/project1 #}
+{{ subdomain.id(false) }} {# subdomain1 #}
+{{ subdomain.id }}        {# core/subdomain1 #}
 ```
 
-Manual project/application rows use the special `core` vendor. Package rows use their Composer vendor.
+Manual subdomain/application rows use the special `core` vendor. Package rows use their Composer vendor.
 
 ## Package Discovery
 
@@ -73,11 +73,11 @@ touch symfonicat.lock # enables /admin
 
 and then visit `/admin`. Every path beginning with `/admin` returns a Symfony-rendered 404 until the root `symfonicat.lock` file exists; Caddy catches those requests before public static files can be served, marks them, and routes them into Symfony. Symfony keeps the same guard for non-Caddy runtimes. Remove the ignored lock file to close the admin area again.
 
-The admin header includes the YAML tools and `/admin/f`, which uploads named files into `public/domains/{domain-id}/` or `public/projects/{project-id}/` for domain and project asset scopes. Project and application lookups by clean id are strict; if multiple rows share the same clean id, runtime resolution throws, the matching admin list flashes a duplicate-id warning, and `symfonicat:schema:update` fails fast before syncing those rows.
+The admin header includes the YAML tools and `/admin/f`, which uploads named files into `public/domains/{domain-id}/` or `public/subdomains/{subdomain-id}/` for domain and subdomain asset scopes. Project and application lookups by clean id are strict; if multiple rows share the same clean id, runtime resolution throws, the matching admin list flashes a duplicate-id warning, and `symfonicat:schema:update` fails fast before syncing those rows.
 
 ## Modules
 
-Module controllers are package-owned and run only when the active domain, project, or application has the module attached. Runtime module requests use full-qualified URLs such as `/m/symfonicat/analytics/main`, matching frontend module code like this:
+Module controllers are package-owned and run only when the active domain, subdomain, or application has the module attached. Runtime module requests use full-qualified URLs such as `/m/symfonicat/analytics/main`, matching frontend module code like this:
 
 ```javascript
 const mod = 'symfonicat/analytics/main'
@@ -102,7 +102,7 @@ Electron rows use plain ids. Generated start URLs include `?electron={electron.i
 
 ## Sync
 
-`symfonicat:schema:update` synchronizes the Doctrine schema and then synchronizes package-provided modules, domains, applications, and projects. Non-interactive runs create missing package rows automatically; stale modules with referencing rows still require an interactive confirmation before deletion.
+`symfonicat:schema:update` synchronizes the Doctrine schema and then synchronizes package-provided modules, domains, applications, and subdomains. Non-interactive runs create missing package rows automatically; stale modules with referencing rows still require an interactive confirmation before deletion.
 
 ```bash
 docker exec -it php bin/console symfonicat:schema:update

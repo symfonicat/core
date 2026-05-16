@@ -3,25 +3,25 @@
 namespace Symfonicat\Form;
 
 use Symfonicat\Entity\Module;
-use Symfonicat\Entity\Project;
+use Symfonicat\Entity\Subdomain;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
-class ProjectType extends AbstractType
+class SubdomainType extends AbstractType
 {
     use VendorScopedIdFormTrait;
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-        $project = $builder->getData();
-        $projectId = $project instanceof Project ? trim((string) $project->getId(false)) : '';
+        $subdomain = $builder->getData();
+        $subdomainId = $subdomain instanceof Subdomain ? trim((string) $subdomain->getId(false)) : '';
 
         $this->addDisabledVendorField($builder);
 
-        if ($projectId === '') {
+        if ($subdomainId === '') {
             $builder->add('id', null, [
                 'label' => 'id',
                 'disabled' => !$options['id_editable'],
@@ -54,7 +54,7 @@ class ProjectType extends AbstractType
             ])
             ->add('env', CollectionType::class, [
                 'label' => 'env',
-                'entry_type' => ProjectEnvType::class,
+                'entry_type' => SubdomainEnvType::class,
                 'allow_add' => true,
                 'allow_delete' => true,
                 'by_reference' => false,
@@ -69,7 +69,7 @@ class ProjectType extends AbstractType
     public function configureOptions(OptionsResolver $resolver): void
     {
         $resolver->setDefaults([
-            'data_class' => Project::class,
+            'data_class' => Subdomain::class,
             'id_editable' => true,
             'default_vendor' => 'core',
         ]);

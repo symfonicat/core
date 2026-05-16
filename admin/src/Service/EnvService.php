@@ -3,22 +3,22 @@
 namespace Symfonicat\Service;
 
 use Symfonicat\Entity\Domain;
-use Symfonicat\Entity\Project;
+use Symfonicat\Entity\Subdomain;
 use Symfonicat\Entity\DomainEnv;
 use Symfonicat\Entity\Electron;
 use Symfonicat\Entity\ElectronEnv;
-use Symfonicat\Entity\ProjectEnv;
+use Symfonicat\Entity\SubdomainEnv;
 
 final class EnvService
 {
     public function __construct(
         private readonly DomainService $domainService,
         private readonly ElectronService $electronService,
-        private readonly ProjectService $projectService,
+        private readonly SubdomainService $subdomainService,
     ) {
     }
 
-    public function get(string $id, Domain|Project|null $entity = null): ?string
+    public function get(string $id, Domain|Subdomain|null $entity = null): ?string
     {
         $id = trim($id);
         if ($id === '') {
@@ -46,7 +46,7 @@ final class EnvService
     /**
      * @return array<string, array<string, string>>
      */
-    public function all(Domain|Project|null $entity = null): array
+    public function all(Domain|Subdomain|null $entity = null): array
     {
 
         if ($entity instanceof Domain) {
@@ -55,22 +55,22 @@ final class EnvService
             );
         }
 
-        if ($entity instanceof Project) {
+        if ($entity instanceof Subdomain) {
             return $this->mergeValues(
-                $this->collectDomainValues($this->resolveDomainForProject($entity)),
-                $this->collectProjectValues($entity),
-                $this->collectElectronValues($this->electronService->loadForContext(null, $this->resolveDomainForProject($entity), $entity)),
+                $this->collectDomainValues($this->resolveDomainForSubdomain($entity)),
+                $this->collectSubdomainValues($entity),
+                $this->collectElectronValues($this->electronService->loadForContext(null, $this->resolveDomainForSubdomain($entity), $entity)),
             );
         }
 
         $domain = $this->domainService->load();
-        $project = $this->projectService->load();
+        $subdomain = $this->subdomainService->load();
         $electron = $this->electronService->load();
 
-        if ($project instanceof Project) {
+        if ($subdomain instanceof Subdomain) {
             return $this->mergeValues(
                 $this->collectDomainValues($domain),
-                $this->collectProjectValues($project),
+                $this->collectSubdomainValues($subdomain),
                 $this->collectElectronValues($electron),
             );
         }
@@ -95,11 +95,11 @@ final class EnvService
         return array_replace_recursive(...$valueSets);
     }
 
-    private function resolveDomainForProject(Project $project): ?Domain
+    private function resolveDomainForSubdomain(Subdomain $subdomain): ?Domain
     {
         $domain = $this->domainService->load();
 
-        if ($domain instanceof Domain && $project->hasDomain($domain)) {
+        if ($domain instanceof Domain && $subdomain->hasDomain($domain)) {
             return $domain;
         }
 
@@ -137,16 +137,16 @@ final class EnvService
     /**
      * @return array<string, array<string, string>>
      */
-    private function collectProjectValues(?Project $project): array
+    private function collectSubdomainValues(?Subdomain $subdomain): array
     {
-        if (!$project instanceof Project) {
+        if (!$subdomain instanceof Subdomain) {
             return [];
         }
 
         $values = [];
 
-        foreach ($project->getEnv() as $item) {
-            if (!$item instanceof ProjectEnv) {
+        foreach ($subdomain->getEnv() as $item) {
+            if (!$item instanceof SubdomainEnv) {
                 continue;
             }
 

@@ -6,7 +6,7 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\Electron;
-use Symfonicat\Entity\Project;
+use Symfonicat\Entity\Subdomain;
 
 /**
  * @extends ServiceEntityRepository<Electron>
@@ -25,8 +25,8 @@ final class ElectronRepository extends ServiceEntityRepository
     {
         return $this->createQueryBuilder('electron')
             ->leftJoin('electron.domain', 'domain')
-            ->leftJoin('electron.project', 'project')
-            ->addSelect('domain', 'project')
+            ->leftJoin('electron.subdomain', 'subdomain')
+            ->addSelect('domain', 'subdomain')
             ->orderBy('electron.type', 'ASC')
             ->addOrderBy('electron.name', 'ASC')
             ->addOrderBy('electron.id', 'ASC')
@@ -42,19 +42,19 @@ final class ElectronRepository extends ServiceEntityRepository
         ]);
     }
 
-    public function findOneForProject(Project $project): ?Electron
+    public function findOneForSubdomain(Subdomain $subdomain): ?Electron
     {
         return $this->findOneBy([
             'type' => Electron::TYPE_PROJECT,
-            'project' => $project,
+            'subdomain' => $subdomain,
         ]);
     }
 
-    public function findOneForProjectAndDomain(Project $project, Domain $domain): ?Electron
+    public function findOneForSubdomainAndDomain(Subdomain $subdomain, Domain $domain): ?Electron
     {
         return $this->findOneBy([
             'type' => Electron::TYPE_PROJECT,
-            'project' => $project,
+            'subdomain' => $subdomain,
             'domain' => $domain,
         ]);
     }

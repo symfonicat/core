@@ -4,7 +4,7 @@ Edit `/etc/hosts`:
 
 ```text
 127.0.0.1 example.com
-127.0.0.1 project1.example.com
+127.0.0.1 subdomain1.example.com
 ```
 
 ```bash
@@ -50,8 +50,8 @@ Runtime reads `symfonicat.admin` from this YAML file. The `symfonicat_*` tables 
 ```twig
 {{ domain.id }}        {# example.com #}
 {{ electron.id }}      {# example-test #}
-{{ project.id }}        {# core/project1 #}
-{{ project.id(false) }} {# project1 #}
+{{ subdomain.id }}        {# core/subdomain1 #}
+{{ subdomain.id(false) }} {# subdomain1 #}
 ```
 
 ## Public Runtime
@@ -59,14 +59,14 @@ Runtime reads `symfonicat.admin` from this YAML file. The `symfonicat_*` tables 
 Runtime resolution is layered:
 
 1. `DomainService` resolves the base host.
-2. `ProjectService` resolves the first subdomain when present.
-3. `RoutingRuleSubscriber` applies redirect, route, domain, project, and application rules.
-4. `ApplicationService` loads application shells from argument rules, route-bound rules, or domain/project application bindings.
+2. `ProjectService` resolves the first affix when present.
+3. `RoutingRuleSubscriber` applies redirect, route, domain, subdomain, and application rules.
+4. `ApplicationService` loads application shells from argument rules, route-bound rules, or domain/subdomain application bindings.
 
 Public routes:
 
 - `/` renders the domain shell.
-- `/{path}` renders the project shell when a project subdomain is active.
+- `/{path}` renders the subdomain shell when a subdomain affix is active.
 - `/application/{vendor}/{id}/{path}` is the internal application entry route and uses the full vendor-prefixed application id in the URL.
 
 ## Assets
@@ -77,19 +77,19 @@ Webpack entry discovery is driven by `symfonicat:data:webpack`. It scans the roo
 
 - `assets/applications/{id}`
 - `assets/domains/{id}`
-- `assets/projects/{id}`
+- `assets/subdomains/{id}`
 - `assets/modules/{id}`
 
 Bootstrap is available at `assets/bootstrap` with some overrides at `assets/scss`
 
 ### Public
 
-The `symfonicat_asset(path)` Twig helper resolves shell-specific public assets. Without a second argument, it automatically searches the public folder for the file, prioritizing project, then domain, then the default folder.
+The `symfonicat_asset(path)` Twig helper resolves shell-specific public assets. Without a second argument, it automatically searches the public folder for the file, prioritizing subdomain, then domain, then the default folder.
 
 Notice how the favicons work on each url:
 
 - `example.com`: purple favicon, `public/domains/example.com/favicon.svg`
-- `project1.example.com`: green favicon, `public/projects/project1/favicon.svg`
+- `subdomain1.example.com`: green favicon, `public/subdomains/subdomain1/favicon.svg`
 - `example.com/admin`: blue favicon, `public/default/favicon.svg`
 
 But notice that in `admin/templates/base.html.twig` and `templates/base.html.twig` the only `symfonicat_asset()` call is this:
@@ -109,7 +109,7 @@ Passing an Electron row resolves assets under `public/electron/{electron.id}/`.
 
 ## Env
 
-Env resolution is application, then domain, then project, then Electron for Electron requests only. The same grouped structure is emitted into `window.env`. Twig uses the `env()` helper for dotted lookups:
+Env resolution is application, then domain, then subdomain, then Electron for Electron requests only. The same grouped structure is emitted into `window.env`. Twig uses the `env()` helper for dotted lookups:
 
 ```twig
 {{ env('colors.primary') }}
@@ -142,27 +142,27 @@ The helper is simple:
 - one argument can be the wildcard replacement array
 - wildcard replacements are applied in array order
 
-For domain-bound and project-bound application rules, `path_application()` returns the bound path on the current host. Use the matching domain or project host when linking across hosts.
+For domain-bound and subdomain-bound application rules, `path_application()` returns the bound path on the current host. Use the matching domain or subdomain host when linking across hosts.
 
 ## Routing Rules
 
 Supported rule types:
 
 - `domain`: render the domain shell for a matching regex path.
-- `project`: suppress the project catch-all for a matching regex path.
-- `application`: render an application shell from regex arguments, bind an application to a domain, project, or domain/project pair, or attach application context to a named Symfony route.
-- `redirect`: redirect a domain or project to another domain, project, or `project.domain` pair.
-- `route`: render a named Symfony route for the root of a domain or project.
+- `subdomain`: suppress the subdomain catch-all for a matching regex path.
+- `application`: render an application shell from regex arguments, bind an application to a domain, subdomain, or domain/subdomain pair, or attach application context to a named Symfony route.
+- `redirect`: redirect a domain or subdomain to another domain, subdomain, or `subdomain.domain` pair.
+- `route`: render a named Symfony route for the root of a domain or subdomain.
 
 Application rules support these application types:
 
 - `arguments`: match regex path segments and render the application shell.
 - `route`: attach application context to a named Symfony route without replacing that route's response.
 - `domain`: render the application shell for the bare matching domain.
-- `project`: render the application shell for the matching project subdomain.
-- `domain_project`: render the application shell for the matching project on the matching domain.
+- `subdomain`: render the application shell for the matching subdomain affix.
+- `domain_subdomain`: render the application shell for the matching subdomain on the matching domain.
 
-Root-level `route` rules are evaluated before domain/project application bindings, so a domain or project can still hand its root request to a Symfony-only route.
+Root-level `route` rules are evaluated before domain/subdomain application bindings, so a domain or subdomain can still hand its root request to a Symfony-only route.
 
 ## Modules
 
@@ -177,7 +177,7 @@ const result = await mod.json({ test: true })
       mod.log('/m/symfonicat/analytics/main result:', result)
 ```
 
-Module controllers should extend `Symfonicat\Controller\AbstractModuleController`, which only runs a module when it is attached to the active project, domain, or application context.
+Module controllers should extend `Symfonicat\Controller\AbstractModuleController`, which only runs a module when it is attached to the active subdomain, domain, or application context.
 
 ## Admin
 
@@ -195,7 +195,7 @@ There is an `electron` Twig variable available in any template if the request is
 {% endif %}
 ```
 
-Electron rows have plain ids, a `type` (`domain`, `project`, or `application`), a matching target relation, and scoped env values. The generated Electron start URL includes `?electron={electron.id}` so Symfony can resolve the active Electron row on every request.
+Electron rows have plain ids, a `type` (`domain`, `subdomain`, or `application`), a matching target relation, and scoped env values. The generated Electron start URL includes `?electron={electron.id}` so Symfony can resolve the active Electron row on every request.
 
 Build outputs with:
 
@@ -208,7 +208,7 @@ The build command renders `templates/electron/{type}/main.twig.js` or `templates
 
 ## Sync
 
-`symfonicat:schema:update` first synchronizes the Doctrine schema and then synchronizes modules, applications, and projects from package assets. Run it explicitly when you want dev/admin tables:
+`symfonicat:schema:update` first synchronizes the Doctrine schema and then synchronizes modules, applications, and subdomains from package assets. Run it explicitly when you want dev/admin tables:
 
 ```bash
 docker exec -it php bin/console symfonicat:schema:update

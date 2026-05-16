@@ -21,13 +21,13 @@ class Module
     private ?string $package = null;
 
     /**
-     * @var Collection<int, Project>
+     * @var Collection<int, Subdomain>
      */
-    #[ORM\ManyToMany(targetEntity: Project::class, inversedBy: 'modules')]
-    #[ORM\JoinTable(name: 'symfonicat_module_project')]
+    #[ORM\ManyToMany(targetEntity: Subdomain::class, inversedBy: 'modules')]
+    #[ORM\JoinTable(name: 'symfonicat_module_subdomain')]
     #[ORM\JoinColumn(name: 'module_id', referencedColumnName: 'id')]
-    #[ORM\InverseJoinColumn(name: 'project_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
-    private Collection $projects;
+    #[ORM\InverseJoinColumn(name: 'subdomain_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
+    private Collection $subdomains;
 
     /**
      * @var Collection<int, Domain>
@@ -40,7 +40,7 @@ class Module
 
     public function __construct()
     {
-        $this->projects = new ArrayCollection();
+        $this->subdomains = new ArrayCollection();
         $this->domains = new ArrayCollection();
     }
 
@@ -59,30 +59,30 @@ class Module
     }
 
     /**
-     * @return Collection<int, Project>
+     * @return Collection<int, Subdomain>
      */
-    public function getProjects(): Collection
+    public function getSubdomains(): Collection
     {
-        return $this->projects;
+        return $this->subdomains;
     }
 
-    public function addProject(Project $project): static
+    public function addSubdomain(Subdomain $subdomain): static
     {
-        if (!$this->hasProject($project)) {
-            $this->projects->add($project);
+        if (!$this->hasSubdomain($subdomain)) {
+            $this->subdomains->add($subdomain);
 
-            if (!$project->hasModule($this)) {
-                $project->getModules()->add($this);
+            if (!$subdomain->hasModule($this)) {
+                $subdomain->getModules()->add($this);
             }
         }
 
         return $this;
     }
 
-    public function removeProject(Project $project): static
+    public function removeSubdomain(Subdomain $subdomain): static
     {
-        if ($this->projects->removeElement($project) && $project->hasModule($this)) {
-            $project->getModules()->removeElement($this);
+        if ($this->subdomains->removeElement($subdomain) && $subdomain->hasModule($this)) {
+            $subdomain->getModules()->removeElement($this);
         }
 
         return $this;
@@ -118,14 +118,14 @@ class Module
         return $this;
     }
 
-    public function hasProject(Project $project): bool
+    public function hasSubdomain(Subdomain $subdomain): bool
     {
-        foreach ($this->projects as $existingProject) {
-            if ($existingProject === $project) {
+        foreach ($this->subdomains as $existingSubdomain) {
+            if ($existingSubdomain === $subdomain) {
                 return true;
             }
 
-            if ($existingProject->getId() !== null && $project->getId() !== null && $existingProject->getId() === $project->getId()) {
+            if ($existingSubdomain->getId() !== null && $subdomain->getId() !== null && $existingSubdomain->getId() === $subdomain->getId()) {
                 return true;
             }
         }

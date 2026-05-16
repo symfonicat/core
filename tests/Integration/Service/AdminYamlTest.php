@@ -8,15 +8,15 @@ use Symfony\Component\Yaml\Yaml;
 
 final class AdminYamlTest extends SymfonicatKernelTestCase
 {
-    private string $projectDir;
+    private string $subdomainDir;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->projectDir = sys_get_temp_dir().'/symfonicat_admin_yaml_'.bin2hex(random_bytes(6));
-        mkdir($this->projectDir.'/config/packages', 0755, true);
-        file_put_contents($this->projectDir.'/config/packages/symfonicat.yaml', <<<'YAML'
+        $this->subdomainDir = sys_get_temp_dir().'/symfonicat_admin_yaml_'.bin2hex(random_bytes(6));
+        mkdir($this->subdomainDir.'/config/packages', 0755, true);
+        file_put_contents($this->subdomainDir.'/config/packages/symfonicat.yaml', <<<'YAML'
 symfonicat:
     vendors:
         - symfonicat
@@ -26,7 +26,7 @@ YAML);
 
     protected function tearDown(): void
     {
-        $this->removeDirectory($this->projectDir);
+        $this->removeDirectory($this->subdomainDir);
 
         parent::tearDown();
     }
@@ -44,42 +44,42 @@ YAML);
         $connection->insert('symfonicat_domain', [
             'id' => 'example.com',
         ]);
-        $connection->insert('symfonicat_project', [
-            'id' => 'core/project1',
+        $connection->insert('symfonicat_subdomain', [
+            'id' => 'core/subdomain1',
             'vendor' => 'core',
         ]);
-        $connection->insert('symfonicat_domain_project', [
+        $connection->insert('symfonicat_domain_subdomain', [
             'domain_id' => 'example.com',
-            'project_id' => 'core/project1',
+            'subdomain_id' => 'core/subdomain1',
         ]);
 
-        $adminYaml = new AdminYaml($connection, $this->projectDir);
+        $adminYaml = new AdminYaml($connection, $this->subdomainDir);
         $dumpCounts = $adminYaml->dump();
 
         self::assertArrayNotHasKey('symfonicat_admin', $dumpCounts);
-        self::assertSame(1, $dumpCounts['symfonicat_domain_project']);
+        self::assertSame(1, $dumpCounts['symfonicat_domain_subdomain']);
 
-        $config = Yaml::parseFile($this->projectDir.'/config/packages/symfonicat.yaml');
+        $config = Yaml::parseFile($this->subdomainDir.'/config/packages/symfonicat.yaml');
         self::assertSame(['symfonicat', 'custom'], $config['symfonicat']['vendors']);
         self::assertArrayNotHasKey('symfonicat_admin', $config['symfonicat']['admin']);
 
-        $connection->executeStatement('DELETE FROM symfonicat_domain_project');
+        $connection->executeStatement('DELETE FROM symfonicat_domain_subdomain');
         $connection->executeStatement('DELETE FROM symfonicat_admin');
-        $connection->executeStatement('DELETE FROM symfonicat_project');
+        $connection->executeStatement('DELETE FROM symfonicat_subdomain');
         $connection->executeStatement('DELETE FROM symfonicat_domain');
 
         $loadCounts = $adminYaml->load();
 
         self::assertArrayNotHasKey('symfonicat_admin', $loadCounts);
-        self::assertSame(1, $loadCounts['symfonicat_domain_project']);
+        self::assertSame(1, $loadCounts['symfonicat_domain_subdomain']);
         self::assertFalse($connection->fetchOne('SELECT email FROM symfonicat_admin WHERE id = 7'));
-        self::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM symfonicat_domain_project'));
+        self::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM symfonicat_domain_subdomain'));
     }
 
     public function testCheckedInElectronSeedHasPlainIdAndNoVendorOrFavicon(): void
     {
-        $projectDir = self::getContainer()->getParameter('kernel.project_dir');
-        $config = Yaml::parseFile($projectDir.'/config/packages/symfonicat.yaml');
+        $subdomainDir = self::getContainer()->getParameter('kernel.project_dir');
+        $config = Yaml::parseFile($subdomainDir.'/config/packages/symfonicat.yaml');
         $electronRows = $config['symfonicat']['admin']['symfonicat_electron'];
 
         self::assertSame('example-test', $electronRows[0]['id']);

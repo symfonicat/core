@@ -21,20 +21,20 @@ services:
 
     Symfonicat\Service\DomainService:
         arguments:
-            $projectDir: '%kernel.project_dir%'
+            $subdomainDir: '%kernel.project_dir%'
 
     Symfonicat\EventSubscriber\AdminLockSubscriber:
         arguments:
-            $projectDir: '%kernel.project_dir%'
+            $subdomainDir: '%kernel.project_dir%'
 
     Symfonicat\Service\PackageDiscoveryService:
         arguments:
-            $projectDir: '%kernel.project_dir%'
+            $subdomainDir: '%kernel.project_dir%'
             $vendors: '%symfonicat.vendors%'
 
-    Symfonicat\Service\SubdomainService:
+    Symfonicat\Service\AffixService:
         arguments:
-            $projectDir: '%kernel.project_dir%'
+            $subdomainDir: '%kernel.project_dir%'
 
     Symfonicat\Service\FileUploadService:
         arguments:
@@ -62,7 +62,7 @@ services:
 
     Symfonicat\Twig\RuntimeAssetExtension:
         arguments:
-            $projectDir: '%kernel.project_dir%'
+            $subdomainDir: '%kernel.project_dir%'
 
     symfonicat.redis_connection:
         class: Redis

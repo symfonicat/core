@@ -1,0 +1,9 @@
+{% extends '@symfonicat/base.html.twig' %}
+{% block title %}Edit Subdomain{% endblock %}
+{% block body %}
+
+    <h3>{{ subdomain.id }}</h3>
+    <hr />
+
+    {{ include('@symfonicat/subdomain/_form.html.twig', { form: form, button_label: 'save' }) }}
+{% endblock %}

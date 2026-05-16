@@ -4,7 +4,7 @@ namespace Symfonicat\Service;
 
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\Electron;
-use Symfonicat\Entity\Project;
+use Symfonicat\Entity\Subdomain;
 use Symfonicat\Repository\ElectronRepository;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -14,7 +14,7 @@ class ElectronService
     public function __construct(
         private readonly DomainService $domainService,
         private readonly ElectronRepository $electronRepository,
-        private readonly ProjectService $projectService,
+        private readonly SubdomainService $subdomainService,
         private readonly RequestStack $requestStack,
         private readonly RuntimeConfig $runtimeConfig,
     ) {
@@ -28,45 +28,45 @@ class ElectronService
             return $this->runtimeConfig->electronById($electronId);
         }
 
-        $project = $request?->attributes->get('project');
+        $subdomain = $request?->attributes->get('subdomain');
         $domain = $request?->attributes->get('domain');
 
         return $this->loadForContext(
             $domain instanceof Domain ? $domain : null,
-            $project instanceof Project ? $project : null,
+            $subdomain instanceof Subdomain ? $subdomain : null,
         );
     }
 
-    public function loadForContext(?Domain $domain, ?Project $project): ?Electron
+    public function loadForContext(?Domain $domain, ?Subdomain $subdomain): ?Electron
     {
         if (!$this->isElectronRequest()) {
             return null;
         }
 
-        if (!$project instanceof Project) {
-            $project = $this->projectService->load();
+        if (!$subdomain instanceof Subdomain) {
+            $subdomain = $this->subdomainService->load();
         }
 
         if (!$domain instanceof Domain) {
             $domain = $this->domainService->load();
         }
 
-        if ($project instanceof Project) {
+        if ($subdomain instanceof Subdomain) {
             if ($this->usesDatabaseRuntime()) {
                 if ($domain instanceof Domain) {
-                    return $this->electronRepository->findOneForProjectAndDomain($project, $domain)
-                        ?? $this->electronRepository->findOneForProject($project);
+                    return $this->electronRepository->findOneForSubdomainAndDomain($subdomain, $domain)
+                        ?? $this->electronRepository->findOneForSubdomain($subdomain);
                 }
 
-                return $this->electronRepository->findOneForProject($project);
+                return $this->electronRepository->findOneForSubdomain($subdomain);
             }
 
             if ($domain instanceof Domain) {
-                return $this->runtimeConfig->electronForProject($project, $domain)
-                    ?? $this->runtimeConfig->electronForProject($project);
+                return $this->runtimeConfig->electronForSubdomain($subdomain, $domain)
+                    ?? $this->runtimeConfig->electronForSubdomain($subdomain);
             }
 
-            return $this->runtimeConfig->electronForProject($project);
+            return $this->runtimeConfig->electronForSubdomain($subdomain);
         }
 
         if ($domain instanceof Domain) {

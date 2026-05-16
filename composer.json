@@ -1,7 +1,7 @@
 {
     "name": "symfonicat/core",
     "description": "Symfonicat Symfony application with admin, routing, module runtime, Electron tooling, and FrankenPHP starter infrastructure.",
-    "type": "project",
+    "type": "subdomain",
     "license": "proprietary",
     "minimum-stability": "stable",
     "prefer-stable": true,

@@ -13,7 +13,7 @@ Encore
 ;
 
 configureSymfonicat(Encore, {
-    projectDir: __dirname,
+    subdomainDir: __dirname,
     packageDir: path.join(__dirname),
 });
 

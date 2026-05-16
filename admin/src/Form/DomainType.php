@@ -4,7 +4,7 @@ namespace Symfonicat\Form;
 
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\Module;
-use Symfonicat\Entity\Project;
+use Symfonicat\Entity\Subdomain;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
@@ -19,10 +19,10 @@ class DomainType extends AbstractType
             ->add('id', null, [
                 'label' => 'domain',
             ])
-            ->add('projects', EntityType::class, [
-                'class' => Project::class,
-                'choice_label' => static fn (Project $project): string => (string) $project->getId(),
-                'label' => 'projects',
+            ->add('subdomains', EntityType::class, [
+                'class' => Subdomain::class,
+                'choice_label' => static fn (Subdomain $subdomain): string => (string) $subdomain->getId(),
+                'label' => 'subdomains',
                 'multiple' => true,
                 'required' => false,
             ])

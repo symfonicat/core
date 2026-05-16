@@ -2,22 +2,22 @@
 
 namespace Symfonicat\Repository;
 
-use Symfonicat\Entity\Project;
+use Symfonicat\Entity\Subdomain;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * @extends ServiceEntityRepository<Project>
+ * @extends ServiceEntityRepository<Subdomain>
  */
-class ProjectRepository extends ServiceEntityRepository
+class SubdomainRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
     {
-        parent::__construct($registry, Project::class);
+        parent::__construct($registry, Subdomain::class);
     }
 
     //    /**
-    //     * @return Project[] Returns an array of Project objects
+    //     * @return Subdomain[] Returns an array of Subdomain objects
     //     */
     //    public function findByExampleField($value): array
     //    {
@@ -31,47 +31,47 @@ class ProjectRepository extends ServiceEntityRepository
     //        ;
     //    }
 
-    public function findOneByIdForDomain(string $id, string $domainId): ?Project
+    public function findOneByIdForDomain(string $id, string $domainId): ?Subdomain
     {
         $id = trim($id);
         if ($id === '') {
             return null;
         }
 
-        $qb = $this->createQueryBuilder('project')
-            ->innerJoin('project.domains', 'd')
+        $qb = $this->createQueryBuilder('subdomain')
+            ->innerJoin('subdomain.domains', 'd')
             ->andWhere('d.id = :domainId')
             ->setParameter('domainId', $domainId)
-            ->orderBy('CASE WHEN project.id = :id THEN 0 ELSE 1 END', 'ASC')
-            ->addOrderBy('project.id', 'ASC');
+            ->orderBy('CASE WHEN subdomain.id = :id THEN 0 ELSE 1 END', 'ASC')
+            ->addOrderBy('subdomain.id', 'ASC');
 
         // Match either exact id or package-prefixed id that ends with "/{id}".
-        $qb->andWhere($qb->expr()->orX('project.id = :id', 'project.id LIKE :idSuffix'))
+        $qb->andWhere($qb->expr()->orX('subdomain.id = :id', 'subdomain.id LIKE :idSuffix'))
             ->setParameter('id', $id)
             ->setParameter('idSuffix', '%/'.$id);
 
-        $projects = $qb->getQuery()->getResult();
+        $subdomains = $qb->getQuery()->getResult();
 
-        return $this->singleOrAmbiguousProject($projects, $id);
+        return $this->singleOrAmbiguousSubdomain($subdomains, $id);
     }
 
-    public function findOneByFullOrCleanId(string $id): ?Project
+    public function findOneByFullOrCleanId(string $id): ?Subdomain
     {
         $id = trim($id);
         if ($id === '') {
             return null;
         }
 
-        $projects = $this->createQueryBuilder('project')
-            ->andWhere('project.id = :id OR project.id LIKE :idSuffix')
+        $subdomains = $this->createQueryBuilder('subdomain')
+            ->andWhere('subdomain.id = :id OR subdomain.id LIKE :idSuffix')
             ->setParameter('id', $id)
             ->setParameter('idSuffix', '%/'.$id)
-            ->orderBy('CASE WHEN project.id = :id THEN 0 ELSE 1 END', 'ASC')
-            ->addOrderBy('project.id', 'ASC')
+            ->orderBy('CASE WHEN subdomain.id = :id THEN 0 ELSE 1 END', 'ASC')
+            ->addOrderBy('subdomain.id', 'ASC')
             ->getQuery()
             ->getResult();
 
-        return $this->singleOrAmbiguousProject($projects, $id);
+        return $this->singleOrAmbiguousSubdomain($subdomains, $id);
     }
 
     /**
@@ -81,9 +81,9 @@ class ProjectRepository extends ServiceEntityRepository
     {
         $groups = [];
 
-        foreach ($this->findAllOrderedById() as $project) {
-            $cleanId = trim((string) $project->getId(false));
-            $fullId = trim((string) $project->getId());
+        foreach ($this->findAllOrderedById() as $subdomain) {
+            $cleanId = trim((string) $subdomain->getId(false));
+            $fullId = trim((string) $subdomain->getId());
 
             if ($cleanId === '' || $fullId === '') {
                 continue;
@@ -110,40 +110,40 @@ class ProjectRepository extends ServiceEntityRepository
     }
 
     /**
-     * @return Project[]
+     * @return Subdomain[]
      */
     public function findAllOrderedById(): array
     {
-        return $this->createQueryBuilder('project')
-            ->orderBy('project.id', 'ASC')
+        return $this->createQueryBuilder('subdomain')
+            ->orderBy('subdomain.id', 'ASC')
             ->getQuery()
             ->getResult();
     }
 
     /**
-     * @param list<Project> $projects
+     * @param list<Subdomain> $subdomains
      */
-    private function singleOrAmbiguousProject(array $projects, string $lookupId): ?Project
+    private function singleOrAmbiguousSubdomain(array $subdomains, string $lookupId): ?Subdomain
     {
-        $projects = array_values(array_filter($projects, static fn ($project): bool => $project instanceof Project));
+        $subdomains = array_values(array_filter($subdomains, static fn ($subdomain): bool => $subdomain instanceof Subdomain));
 
-        if ($projects === []) {
+        if ($subdomains === []) {
             return null;
         }
 
-        if (count($projects) > 1 && !str_contains($lookupId, '/')) {
+        if (count($subdomains) > 1 && !str_contains($lookupId, '/')) {
             $matches = array_map(
-                static fn (Project $project): string => (string) $project->getId(),
-                $projects,
+                static fn (Subdomain $subdomain): string => (string) $subdomain->getId(),
+                $subdomains,
             );
 
             throw new \RuntimeException(sprintf(
-                'Project id "%s" is ambiguous. Matching ids: %s',
+                'Subdomain id "%s" is ambiguous. Matching ids: %s',
                 $lookupId,
                 implode(', ', $matches),
             ));
         }
 
-        return $projects[0];
+        return $subdomains[0];
     }
 }

@@ -5,18 +5,18 @@ namespace Symfonicat\Entity;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity]
-#[ORM\Table(name: 'symfonicat_project_env')]
-#[ORM\UniqueConstraint(name: 'uniq_symfonicat_project_env_project_env', columns: ['project_id', 'env_id'])]
-class ProjectEnv
+#[ORM\Table(name: 'symfonicat_subdomain_env')]
+#[ORM\UniqueConstraint(name: 'uniq_symfonicat_subdomain_env_subdomain_env', columns: ['subdomain_id', 'env_id'])]
+class SubdomainEnv
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\ManyToOne(targetEntity: Project::class, inversedBy: 'env')]
-    #[ORM\JoinColumn(name: 'project_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
-    private ?Project $project = null;
+    #[ORM\ManyToOne(targetEntity: Subdomain::class, inversedBy: 'env')]
+    #[ORM\JoinColumn(name: 'subdomain_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
+    private ?Subdomain $subdomain = null;
 
     #[ORM\ManyToOne(targetEntity: Env::class)]
     #[ORM\JoinColumn(name: 'env_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
@@ -30,14 +30,14 @@ class ProjectEnv
         return $this->id;
     }
 
-    public function getProject(): ?Project
+    public function getSubdomain(): ?Subdomain
     {
-        return $this->project;
+        return $this->subdomain;
     }
 
-    public function setProject(?Project $project): static
+    public function setSubdomain(?Subdomain $subdomain): static
     {
-        $this->project = $project;
+        $this->subdomain = $subdomain;
 
         return $this;
     }

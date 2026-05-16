@@ -21,7 +21,7 @@ final class AdminYaml
     public function __construct(
         private readonly Connection $connection,
         #[Autowire('%kernel.project_dir%')]
-        private readonly string $projectDir,
+        private readonly string $subdomainDir,
     ) {
     }
 
@@ -146,7 +146,7 @@ final class AdminYaml
 
     private function configPath(): string
     {
-        return rtrim($this->projectDir, '/').self::CONFIG_PATH;
+        return rtrim($this->subdomainDir, '/').self::CONFIG_PATH;
     }
 
     /**

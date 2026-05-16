@@ -5,7 +5,7 @@ namespace Symfonicat\Command;
 use Symfonicat\Entity\Module;
 use Symfonicat\Service\DomainService;
 use Symfonicat\Service\ModuleService;
-use Symfonicat\Service\ProjectService;
+use Symfonicat\Service\SubdomainService;
 use Symfonicat\Service\SchemaSynchronizer;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -22,7 +22,7 @@ final class SchemaUpdateCommand extends Command
     public function __construct(
         private readonly DomainService $domainService,
         private readonly ModuleService $moduleService,
-        private readonly ProjectService $projectService,
+        private readonly SubdomainService $subdomainService,
         private readonly SchemaSynchronizer $schemaSynchronizer,
     ) {
         parent::__construct();
@@ -73,14 +73,14 @@ final class SchemaUpdateCommand extends Command
                 return $this->confirmRequired($input, $io, 'Create these domain rows?', false);
             } : null);
 
-            $projectResult = $this->projectService->sync($shouldAskForConfirmation ? function (array $projectIds) use ($input, $io): bool {
-                $io->section('Missing projects');
+            $subdomainResult = $this->subdomainService->sync($shouldAskForConfirmation ? function (array $subdomainIds) use ($input, $io): bool {
+                $io->section('Missing subdomains');
                 $io->listing(array_map(
-                    static fn (string $projectId): string => sprintf('%s from installed package assets', $projectId),
-                    $projectIds,
+                    static fn (string $subdomainId): string => sprintf('%s from installed package assets', $subdomainId),
+                    $subdomainIds,
                 ));
 
-                return $this->confirmRequired($input, $io, 'Create these project rows?', false);
+                return $this->confirmRequired($input, $io, 'Create these subdomain rows?', false);
             } : null);
         } catch (\Throwable $exception) {
             $io->error($exception->getMessage());
@@ -132,11 +132,11 @@ final class SchemaUpdateCommand extends Command
             ));
         }
 
-        if ($projectResult['created'] !== []) {
-            $io->section('Created projects');
+        if ($subdomainResult['created'] !== []) {
+            $io->section('Created subdomains');
             $io->listing(array_map(
-                static fn (array $project): string => $project['id'],
-                $projectResult['created'],
+                static fn (array $subdomain): string => $subdomain['id'],
+                $subdomainResult['created'],
             ));
         }
 
@@ -145,14 +145,14 @@ final class SchemaUpdateCommand extends Command
             && $moduleResult['updated'] === []
             && $moduleResult['deleted'] === []
             && $domainResult['created'] === []
-            && $projectResult['created'] === []
+            && $subdomainResult['created'] === []
         ) {
-            $io->success('Module, domain, and project rows already match installed configured-vendor packages.');
+            $io->success('Module, domain, and subdomain rows already match installed configured-vendor packages.');
 
             return Command::SUCCESS;
         }
 
-        $io->success('Module, domain, and project rows synchronized from installed configured-vendor packages.');
+        $io->success('Module, domain, and subdomain rows synchronized from installed configured-vendor packages.');
 
         return Command::SUCCESS;
     }

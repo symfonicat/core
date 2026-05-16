@@ -3,4 +3,4 @@ symfonicat_public_controllers:
     type: attribute
     exclude:
         - ../../admin/src/Controller/Admin/
-    condition: 'not request.attributes.get("project") or not request.attributes.get("symfonicat_use_project_catch_all", true)'
+    condition: 'not request.attributes.get("subdomain") or not request.attributes.get("symfonicat_use_subdomain_catch_all", true)'

@@ -11,8 +11,8 @@ use Symfonicat\Entity\ElectronEnv;
 use Symfonicat\Entity\Env;
 use Symfonicat\Entity\EnvParent;
 use Symfonicat\Entity\Module;
-use Symfonicat\Entity\Project;
-use Symfonicat\Entity\ProjectEnv;
+use Symfonicat\Entity\Subdomain;
+use Symfonicat\Entity\SubdomainEnv;
 use Symfonicat\Entity\RoutingRule;
 
 final class RuntimeConfig
@@ -24,7 +24,7 @@ final class RuntimeConfig
 
     public function __construct(
         #[Autowire('%kernel.project_dir%')]
-        private readonly string $projectDir,
+        private readonly string $subdomainDir,
     ) {
     }
 
@@ -42,11 +42,11 @@ final class RuntimeConfig
     }
 
     /**
-     * @return list<Project>
+     * @return list<Subdomain>
      */
-    public function projects(): array
+    public function subdomains(): array
     {
-        return array_values($this->catalog()['projects']);
+        return array_values($this->catalog()['subdomains']);
     }
 
     /**
@@ -57,18 +57,18 @@ final class RuntimeConfig
         return array_values($this->catalog()['modules']);
     }
 
-    public function projectByIdForDomain(string $id, Domain $domain): ?Project
+    public function subdomainByIdForDomain(string $id, Domain $domain): ?Subdomain
     {
-        $project = $this->projectByFullOrCleanId($id);
+        $subdomain = $this->subdomainByFullOrCleanId($id);
 
-        return $project instanceof Project && $project->hasDomain($domain) ? $project : null;
+        return $subdomain instanceof Subdomain && $subdomain->hasDomain($domain) ? $subdomain : null;
     }
 
-    public function projectByFullOrCleanId(string $id): ?Project
+    public function subdomainByFullOrCleanId(string $id): ?Subdomain
     {
-        $project = $this->singleByFullOrCleanId($this->catalog()['projects'], $id, 'Project');
+        $subdomain = $this->singleByFullOrCleanId($this->catalog()['subdomains'], $id, 'Subdomain');
 
-        return $project instanceof Project ? $project : null;
+        return $subdomain instanceof Subdomain ? $subdomain : null;
     }
 
     public function moduleByFullOrCleanId(string $id): ?Module
@@ -92,11 +92,11 @@ final class RuntimeConfig
     /**
      * @return list<RoutingRule>
      */
-    public function projectRules(Project $project): array
+    public function subdomainRules(Subdomain $subdomain): array
     {
         return array_values(array_filter(
             $this->catalog()['rules'],
-            static fn (RoutingRule $rule): bool => $rule->isProjectType() && $rule->getProject()?->getId() === $project->getId(),
+            static fn (RoutingRule $rule): bool => $rule->isSubdomainType() && $rule->getSubdomain()?->getId() === $subdomain->getId(),
         ));
     }
 
@@ -107,11 +107,11 @@ final class RuntimeConfig
             && $rule->getDomain()?->getId() === $domain->getId());
     }
 
-    public function redirectRuleForProject(Project $project): ?RoutingRule
+    public function redirectRuleForSubdomain(Subdomain $subdomain): ?RoutingRule
     {
         return $this->firstRule(static fn (RoutingRule $rule): bool => $rule->isRedirectRule()
-            && $rule->isProjectRedirectType()
-            && $rule->getProject()?->getId() === $project->getId());
+            && $rule->isSubdomainRedirectType()
+            && $rule->getSubdomain()?->getId() === $subdomain->getId());
     }
 
     public function routeRuleForDomain(Domain $domain): ?RoutingRule
@@ -121,11 +121,11 @@ final class RuntimeConfig
             && $rule->getDomain()?->getId() === $domain->getId());
     }
 
-    public function routeRuleForProject(Project $project): ?RoutingRule
+    public function routeRuleForSubdomain(Subdomain $subdomain): ?RoutingRule
     {
         return $this->firstRule(static fn (RoutingRule $rule): bool => $rule->isRouteRule()
-            && $rule->isProjectRouteType()
-            && $rule->getProject()?->getId() === $project->getId());
+            && $rule->isSubdomainRouteType()
+            && $rule->getSubdomain()?->getId() === $subdomain->getId());
     }
 
     public function electronById(string $id): ?Electron
@@ -147,10 +147,10 @@ final class RuntimeConfig
             && $electron->getDomain()?->getId() === $domain->getId());
     }
 
-    public function electronForProject(Project $project, ?Domain $domain = null): ?Electron
+    public function electronForSubdomain(Subdomain $subdomain, ?Domain $domain = null): ?Electron
     {
-        return $this->firstElectron(static fn (Electron $electron): bool => $electron->isProjectType()
-            && $electron->getProject()?->getId() === $project->getId()
+        return $this->firstElectron(static fn (Electron $electron): bool => $electron->isSubdomainType()
+            && $electron->getSubdomain()?->getId() === $subdomain->getId()
             && (!$domain instanceof Domain || $electron->getDomain()?->getId() === $domain->getId()));
     }
 
@@ -173,11 +173,11 @@ final class RuntimeConfig
             }
         }
 
-        $projects = [];
-        foreach ($this->rows($rows, 'symfonicat_project') as $row) {
+        $subdomains = [];
+        foreach ($this->rows($rows, 'symfonicat_subdomain') as $row) {
             $id = trim((string) ($row['id'] ?? ''));
             if ($id !== '') {
-                $projects[$id] = (new Project())->setId($id);
+                $subdomains[$id] = (new Subdomain())->setId($id);
             }
         }
 
@@ -191,11 +191,11 @@ final class RuntimeConfig
             }
         }
 
-        foreach ($this->rows($rows, 'symfonicat_domain_project') as $row) {
+        foreach ($this->rows($rows, 'symfonicat_domain_subdomain') as $row) {
             $domain = $domains[(string) ($row['domain_id'] ?? '')] ?? null;
-            $project = $projects[(string) ($row['project_id'] ?? '')] ?? null;
-            if ($domain instanceof Domain && $project instanceof Project) {
-                $domain->addProject($project);
+            $subdomain = $subdomains[(string) ($row['subdomain_id'] ?? '')] ?? null;
+            if ($domain instanceof Domain && $subdomain instanceof Subdomain) {
+                $domain->addSubdomain($subdomain);
             }
         }
 
@@ -207,11 +207,11 @@ final class RuntimeConfig
             }
         }
 
-        foreach ($this->rows($rows, 'symfonicat_module_project') as $row) {
+        foreach ($this->rows($rows, 'symfonicat_module_subdomain') as $row) {
             $module = $modules[(string) ($row['module_id'] ?? '')] ?? null;
-            $project = $projects[(string) ($row['project_id'] ?? '')] ?? null;
-            if ($module instanceof Module && $project instanceof Project) {
-                $module->addProject($project);
+            $subdomain = $subdomains[(string) ($row['subdomain_id'] ?? '')] ?? null;
+            if ($module instanceof Module && $subdomain instanceof Subdomain) {
+                $module->addSubdomain($subdomain);
             }
         }
 
@@ -240,11 +240,11 @@ final class RuntimeConfig
             }
         }
 
-        foreach ($this->rows($rows, 'symfonicat_project_env') as $row) {
-            $project = $projects[(string) ($row['project_id'] ?? '')] ?? null;
+        foreach ($this->rows($rows, 'symfonicat_subdomain_env') as $row) {
+            $subdomain = $subdomains[(string) ($row['subdomain_id'] ?? '')] ?? null;
             $env = $envs[(string) ($row['env_id'] ?? '')] ?? null;
-            if ($project instanceof Project && $env instanceof Env) {
-                $project->addEnv((new ProjectEnv())->setEnv($env)->setValue((string) ($row['value'] ?? '')));
+            if ($subdomain instanceof Subdomain && $env instanceof Env) {
+                $subdomain->addEnv((new SubdomainEnv())->setEnv($env)->setValue((string) ($row['value'] ?? '')));
             }
         }
 
@@ -260,7 +260,7 @@ final class RuntimeConfig
                 ->setName((string) ($row['name'] ?? $id))
                 ->setType((string) ($row['type'] ?? Electron::TYPE_DOMAIN))
                 ->setDomain($domains[(string) ($row['domain_id'] ?? '')] ?? null)
-                ->setProject($projects[(string) ($row['project_id'] ?? '')] ?? null);
+                ->setSubdomain($subdomains[(string) ($row['subdomain_id'] ?? '')] ?? null);
 
             $electrons[$id] = $electron;
         }
@@ -275,7 +275,7 @@ final class RuntimeConfig
 
         return $this->catalog = [
             'domains' => $domains,
-            'projects' => $projects,
+            'subdomains' => $subdomains,
             'modules' => $modules,
             'electrons' => $electrons,
         ];
@@ -286,7 +286,7 @@ final class RuntimeConfig
      */
     private function readAdminRows(): array
     {
-        $path = rtrim($this->projectDir, '/').'/config/packages/symfonicat.yaml';
+        $path = rtrim($this->subdomainDir, '/').'/config/packages/symfonicat.yaml';
         if (!is_file($path)) {
             return [];
         }

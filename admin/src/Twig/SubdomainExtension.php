@@ -3,15 +3,15 @@
 namespace Symfonicat\Twig;
 
 use Symfonicat\Repository\ModuleRepository;
-use Symfonicat\Service\ProjectService;
+use Symfonicat\Service\SubdomainService;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Twig\Extension\AbstractExtension;
 use Twig\Extension\GlobalsInterface;
 
-final class ProjectExtension extends AbstractExtension implements GlobalsInterface
+final class SubdomainExtension extends AbstractExtension implements GlobalsInterface
 {
     public function __construct(
-        private readonly ProjectService $projectService,
+        private readonly SubdomainService $subdomainService,
         private readonly RequestStack $requestStack,
         private readonly ModuleRepository $moduleRepository,
     ) {
@@ -21,12 +21,12 @@ final class ProjectExtension extends AbstractExtension implements GlobalsInterfa
     {
         if (null === $this->requestStack->getCurrentRequest()) {
             return [
-                'project' => null,
+                'subdomain' => null,
             ];
         }
 
-        $project = $this->projectService->load();
+        $subdomain = $this->subdomainService->load();
 
-        return ['project' => $project];
+        return ['subdomain' => $subdomain];
     }
 }

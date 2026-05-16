@@ -8,10 +8,10 @@ use App\Tests\Support\SymfonicatWebTestCase;
  * Exercises the ProjectSubscriber's host-dispatching logic end-to-end.
  *
  * This is the behavior that makes Symfonicat "one app, many shells": hitting
- * example.com renders the domain shell, hitting project1.example.com renders
- * the project shell, and all the redirects in between do the right thing.
+ * example.com renders the domain shell, hitting subdomain1.example.com renders
+ * the subdomain shell, and all the redirects in between do the right thing.
  */
-final class SubdomainResolutionTest extends SymfonicatWebTestCase
+final class AffixResolutionTest extends SymfonicatWebTestCase
 {
     public function testBareDomainRendersDomainShellWithoutRedirect(): void
     {
@@ -27,34 +27,34 @@ final class SubdomainResolutionTest extends SymfonicatWebTestCase
         self::assertSelectorTextContains('body', 'color: blue');
     }
 
-    public function testProjectSubdomainRendersProjectShellWhenProjectIsAttachedToDomain(): void
+    public function testProjectAffixRendersProjectShellWhenProjectIsAttachedToDomain(): void
     {
         $domain = $this->createDomain('example.com');
-        $project = $this->createProject('project1', $domain);
+        $subdomain = $this->createProject('subdomain1', $domain);
 
-        $this->setHost('project1.example.com');
+        $this->setHost('subdomain1.example.com');
         $this->client()->request('GET', '/');
 
         self::assertResponseIsSuccessful();
-        self::assertSelectorTextContains('body', 'core/project1');
+        self::assertSelectorTextContains('body', 'core/subdomain1');
     }
 
     public function testProjectEnvOverlaysDomainEnvInProjectShell(): void
     {
         $domain = $this->createDomain('example.com');
-        $project = $this->createProject('project1', $domain);
+        $subdomain = $this->createProject('subdomain1', $domain);
         $color = $this->createEnv('primary');
         $this->setDomainEnv($domain, $color, 'blue');
-        $this->setProjectEnv($project, $color, 'green');
+        $this->setProjectEnv($subdomain, $color, 'green');
 
-        $this->setHost('project1.example.com');
+        $this->setHost('subdomain1.example.com');
         $this->client()->request('GET', '/');
 
         self::assertResponseIsSuccessful();
-        self::assertSelectorTextContains('body', 'color: green', 'project env must win over domain env on the project shell');
+        self::assertSelectorTextContains('body', 'color: green', 'subdomain env must win over domain env on the subdomain shell');
     }
 
-    public function testSubdomainForUnknownProjectRedirectsToBareDomain(): void
+    public function testAffixForUnknownProjectRedirectsToBareDomain(): void
     {
         $this->createDomain('example.com');
 
@@ -65,7 +65,7 @@ final class SubdomainResolutionTest extends SymfonicatWebTestCase
         self::assertSame(
             301,
             $response->getStatusCode(),
-            'unknown project subdomains must 301 so search engines canonicalize on the bare domain',
+            'unknown subdomain affixs must 301 so search engines canonicalize on the bare domain',
         );
         self::assertSame(
             'http://example.com',
@@ -94,48 +94,48 @@ final class SubdomainResolutionTest extends SymfonicatWebTestCase
         );
     }
 
-    public function testWwwPrefixIsStrippedButInnerSubdomainSurvives(): void
+    public function testWwwPrefixIsStrippedButInnerAffixSurvives(): void
     {
         $domain = $this->createDomain('example.com');
-        $this->createProject('project1', $domain);
+        $this->createProject('subdomain1', $domain);
 
-        // www.project1.example.com should lose the `www` but keep `project1.`
-        $this->setHost('www.project1.example.com');
+        // www.subdomain1.example.com should lose the `www` but keep `subdomain1.`
+        $this->setHost('www.subdomain1.example.com');
         $this->client()->request('GET', '/');
 
         $response = $this->client()->getResponse();
         self::assertSame(301, $response->getStatusCode());
         self::assertSame(
-            'http://project1.example.com',
+            'http://subdomain1.example.com',
             (string) $response->headers->get('Location'),
-            'stripping www must not collapse a legitimate project subdomain with it',
+            'stripping www must not collapse a legitimate subdomain affix with it',
         );
     }
 
-    public function testDeepSubdomainFoldsDownToTheInnermostProject(): void
+    public function testDeepAffixFoldsDownToTheInnermostProject(): void
     {
         $domain = $this->createDomain('example.com');
-        $this->createProject('project1', $domain);
+        $this->createProject('subdomain1', $domain);
 
-        // Two subdomain segments: foo.project1.example.com should fold to
-        // project1.example.com (the innermost subdomain wins).
-        $this->setHost('foo.project1.example.com');
+        // Two affix segments: foo.subdomain1.example.com should fold to
+        // subdomain1.example.com (the innermost affix wins).
+        $this->setHost('foo.subdomain1.example.com');
         $this->client()->request('GET', '/');
 
         $response = $this->client()->getResponse();
         self::assertSame(
             301,
             $response->getStatusCode(),
-            'nested subdomains must 301 so the innermost host is the canonical one',
+            'nested affixs must 301 so the innermost host is the canonical one',
         );
         self::assertSame(
-            'http://project1.example.com',
+            'http://subdomain1.example.com',
             (string) $response->headers->get('Location'),
-            'redirect target must resolve to the project subdomain URL',
+            'redirect target must resolve to the subdomain affix URL',
         );
     }
 
-    public function testAdminPathIsImmuneToSubdomainRedirects(): void
+    public function testAdminPathIsImmuneToAffixRedirects(): void
     {
         $this->createDomain('example.com');
 
@@ -148,7 +148,7 @@ final class SubdomainResolutionTest extends SymfonicatWebTestCase
         self::assertNotSame(
             301,
             $status,
-            sprintf('/admin paths must not be redirected by the subdomain subscriber (got %d)', $status),
+            sprintf('/admin paths must not be redirected by the affix subscriber (got %d)', $status),
         );
     }
 }

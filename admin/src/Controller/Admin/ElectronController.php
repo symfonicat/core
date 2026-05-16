@@ -96,12 +96,12 @@ final class ElectronController extends AbstractController
     private function normalizeTypeSelection(Electron $electron): void
     {
         if ($electron->isDomainType()) {
-            $electron->setProject(null);
+            $electron->setSubdomain(null);
 
             return;
         }
 
-        if ($electron->isProjectType()) {
+        if ($electron->isSubdomainType()) {
 
             return;
         }

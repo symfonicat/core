@@ -22,14 +22,14 @@ final class ScopedEnvFormTypeTest extends SymfonicatKernelTestCase
     public function testProjectFormRestoresSelectedEnvParent(): void
     {
         $env = $this->createEnv('primary', 'colors');
-        $project = $this->createProject('project1');
-        $this->setProjectEnv($project, $env, 'green');
+        $subdomain = $this->createProject('subdomain1');
+        $this->setProjectEnv($subdomain, $env, 'green');
 
-        $project = $this->entityManager()->getRepository(Project::class)->find('core/project1');
-        self::assertInstanceOf(Project::class, $project);
+        $subdomain = $this->entityManager()->getRepository(Project::class)->find('core/subdomain1');
+        self::assertInstanceOf(Project::class, $subdomain);
 
         $view = $this->formFactory()
-            ->create(ProjectType::class, $project, ['id_editable' => false])
+            ->create(ProjectType::class, $subdomain, ['id_editable' => false])
             ->createView();
 
         self::assertSame('colors', $view['env'][0]['envParent']->vars['value']);
@@ -84,8 +84,8 @@ final class ScopedEnvFormTypeTest extends SymfonicatKernelTestCase
     {
         $env = $this->createEnv('primary', 'colors');
         $domain = $this->createDomain('example.com');
-        $project = $this->createProject('project1', $domain);
-        $electron = $this->createElectron('Example Electron', Electron::TYPE_PROJECT, $domain, $project);
+        $subdomain = $this->createProject('subdomain1', $domain);
+        $electron = $this->createElectron('Example Electron', Electron::TYPE_PROJECT, $domain, $subdomain);
         $this->setElectronEnv($electron, $env, 'purple');
 
         $electron = $this->entityManager()->getRepository(Electron::class)->find($electron->getId());

@@ -52,16 +52,16 @@ trait DatabaseFixtureTrait
             'symfonicat_routing_rule',
             'symfonicat_electron_env',
             'symfonicat_application_env',
-            'symfonicat_project_env',
+            'symfonicat_subdomain_env',
             'symfonicat_domain_env',
             'symfonicat_module_application',
-            'symfonicat_module_project',
+            'symfonicat_module_subdomain',
             'symfonicat_module_domain',
-            'symfonicat_domain_project',
+            'symfonicat_domain_subdomain',
             'symfonicat_electron',
             'symfonicat_application',
             'symfonicat_module',
-            'symfonicat_project',
+            'symfonicat_subdomain',
             'symfonicat_domain',
             'symfonicat_env',
             'symfonicat_env_parent',
@@ -103,17 +103,17 @@ trait DatabaseFixtureTrait
 
     protected function createProject(string $id, ?Domain $domain = null): Project
     {
-        $project = (new Project())
+        $subdomain = (new Project())
             ->setId($this->vendorScopedId($id));
 
         if ($domain instanceof Domain) {
-            $domain->addProject($project);
+            $domain->addProject($subdomain);
         }
 
-        $this->entityManager()->persist($project);
+        $this->entityManager()->persist($subdomain);
         $this->entityManager()->flush();
 
-        return $project;
+        return $subdomain;
     }
 
     protected function createApplication(string $id): Application
@@ -139,14 +139,14 @@ trait DatabaseFixtureTrait
         return $module;
     }
 
-    protected function createElectron(string $name, string $type, ?Domain $domain = null, ?Project $project = null): Electron
+    protected function createElectron(string $name, string $type, ?Domain $domain = null, ?Project $subdomain = null): Electron
     {
         $electron = (new Electron())
             ->setId(strtolower(str_replace(' ', '-', $name)))
             ->setName($name)
             ->setType($type)
             ->setDomain($domain)
-            ->setProject($project);
+            ->setProject($subdomain);
 
         $this->entityManager()->persist($electron);
         $this->entityManager()->flush();
@@ -191,17 +191,17 @@ trait DatabaseFixtureTrait
         return $domainEnv;
     }
 
-    protected function setProjectEnv(Project $project, Env $env, string $value): ProjectEnv
+    protected function setProjectEnv(Project $subdomain, Env $env, string $value): ProjectEnv
     {
-        $projectEnv = (new ProjectEnv())
+        $subdomainEnv = (new ProjectEnv())
             ->setEnv($env)
             ->setValue($value);
 
-        $project->addEnv($projectEnv);
-        $this->entityManager()->persist($projectEnv);
+        $subdomain->addEnv($subdomainEnv);
+        $this->entityManager()->persist($subdomainEnv);
         $this->entityManager()->flush();
 
-        return $projectEnv;
+        return $subdomainEnv;
     }
 
     protected function setElectronEnv(Electron $electron, Env $env, string $value): ElectronEnv
@@ -230,11 +230,11 @@ trait DatabaseFixtureTrait
         return $rule;
     }
 
-    protected function createProjectRoutingRule(Project $project, string $argument): RoutingRule
+    protected function createProjectRoutingRule(Project $subdomain, string $argument): RoutingRule
     {
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_PROJECT)
-            ->setProject($project)
+            ->setProject($subdomain)
             ->setArguments([$argument]);
 
         $this->entityManager()->persist($rule);

@@ -35,12 +35,12 @@ final class ApplicationDuplicateIdTest extends SymfonicatWebTestCase
             ->setType(RoutingRule::TYPE_APPLICATION)
             ->setApplication($application)
             ->setApplicationType(RoutingRule::APPLICATION_TYPE_ROUTE)
-            ->setRoute('symfonicat_project_test');
+            ->setRoute('symfonicat_subdomain_test');
         $duplicateRule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_APPLICATION)
             ->setApplication($duplicate)
             ->setApplicationType(RoutingRule::APPLICATION_TYPE_ROUTE)
-            ->setRoute('symfonicat_project_test');
+            ->setRoute('symfonicat_subdomain_test');
 
         $this->entityManager()->persist($rule);
         $this->entityManager()->persist($duplicateRule);

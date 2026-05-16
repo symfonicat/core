@@ -1,8 +1,8 @@
-<tr id="project_{{ project.id(false) }}" class="btn-row">
-    <td class="fw-semibold">{{ project.id }}</td>
+<tr id="subdomain_{{ subdomain.id(false) }}" class="btn-row">
+    <td class="fw-semibold">{{ subdomain.id }}</td>
     <td>
         {% set groups = {} %}
-        {% for module in project.modules %}
+        {% for module in subdomain.modules %}
             {% set parts = (module.id | split('/')) %}
             {% set tail = parts | last %}
             {% set groupKey = module.package ? (module.vendor ~ '/' ~ module.package) : module.vendor %}
@@ -25,7 +25,7 @@
     </td>
     {% for env_parent in env_parents %}
         <td>
-            {% set entries = env_parent_entries(project.env, env_parent) %}
+            {% set entries = env_parent_entries(subdomain.env, env_parent) %}
             {% for entry in entries %}
                 <div><code>{{ entry }}</code></div>
             {% else %}
@@ -36,7 +36,7 @@
     <td class="text-end btn-cell">
         
         <div class="btn-group btn-group-sm">
-            <a href="{{ path('symfonicat_project_edit', {'id': project.id}) }}" class="btn btn-sm btn-warning">
+            <a href="{{ path('symfonicat_subdomain_edit', {'id': subdomain.id}) }}" class="btn btn-sm btn-warning">
                 <i class="fa fa-pencil">&nbsp;</i>
             </a>
         </div>

@@ -56,18 +56,18 @@ final class EnvServiceTest extends TestCase
             $theme->getId() => 'default',
         ]);
 
-        $project = $this->makeProject('project1', [
+        $subdomain = $this->makeProject('subdomain1', [
             $color->getId() => 'green',
         ]);
 
-        $domain->addProject($project);
+        $domain->addProject($subdomain);
 
-        $service = $this->makeService($domain, $project);
+        $service = $this->makeService($domain, $subdomain);
 
         self::assertSame(
             ['colors' => ['primary' => 'green', 'theme' => 'default']],
             $service->all(),
-            'project values should overlay matching domain keys; non-overlapping domain keys remain',
+            'subdomain values should overlay matching domain keys; non-overlapping domain keys remain',
         );
         self::assertSame('green', $service->get('colors.primary'));
         self::assertSame('default', $service->get('colors.theme'));
@@ -88,12 +88,12 @@ final class EnvServiceTest extends TestCase
             $color->getId() => 'blue',
             $theme->getId() => 'domain',
         ]);
-        $project = $this->makeProject('project1', [
+        $subdomain = $this->makeProject('subdomain1', [
             $color->getId() => 'green',
         ]);
-        $domain->addProject($project);
+        $domain->addProject($subdomain);
 
-        $service = $this->makeService($domain, $project, $application);
+        $service = $this->makeService($domain, $subdomain, $application);
 
         self::assertSame(
             ['colors' => ['primary' => 'green', 'theme' => 'domain', 'mode' => 'default']],
@@ -113,15 +113,15 @@ final class EnvServiceTest extends TestCase
             $color->getId() => 'blue',
             $theme->getId() => 'domain',
         ]);
-        $project = $this->makeProject('project1', [
+        $subdomain = $this->makeProject('subdomain1', [
             $color->getId() => 'green',
         ]);
         $electron = $this->makeElectron('Example Electron', [
             $color->getId() => 'purple',
         ]);
-        $domain->addProject($project);
+        $domain->addProject($subdomain);
 
-        $service = $this->makeService($domain, $project, $application, $electron);
+        $service = $this->makeService($domain, $subdomain, $application, $electron);
 
         self::assertSame(
             ['colors' => ['primary' => 'purple', 'theme' => 'domain']],
@@ -149,18 +149,18 @@ final class EnvServiceTest extends TestCase
         $matchedDomain = $this->makeDomain('example.com', [$color->getId() => 'blue']);
         $unmatchedDomain = $this->makeDomain('other.com', [$color->getId() => 'red']);
 
-        $project = $this->makeProject('project1', [$color->getId() => 'green']);
-        $matchedDomain->addProject($project);
+        $subdomain = $this->makeProject('subdomain1', [$color->getId() => 'green']);
+        $matchedDomain->addProject($subdomain);
 
         // Current request resolves to the UNRELATED domain, but we pass in
         // the Project entity explicitly. EnvService should only use the
-        // ambient domain if the project actually belongs to it.
+        // ambient domain if the subdomain actually belongs to it.
         $service = $this->makeService($unmatchedDomain, null);
 
         self::assertSame(
             ['colors' => ['primary' => 'green']],
-            $service->all($project),
-            'unrelated ambient domain must not leak values when an explicit project is passed',
+            $service->all($subdomain),
+            'unrelated ambient domain must not leak values when an explicit subdomain is passed',
         );
     }
 
@@ -168,10 +168,10 @@ final class EnvServiceTest extends TestCase
     {
         $color = $this->makeEnv('primary');
         $domain = $this->makeDomain('example.com', [$color->getId() => 'blue']);
-        $project = $this->makeProject('project1', [$color->getId() => 'green']);
-        $domain->addProject($project);
+        $subdomain = $this->makeProject('subdomain1', [$color->getId() => 'green']);
+        $domain->addProject($subdomain);
 
-        $service = $this->makeService($domain, $project);
+        $service = $this->makeService($domain, $subdomain);
 
         self::assertSame(
             ['colors' => ['primary' => 'blue']],
@@ -207,7 +207,7 @@ final class EnvServiceTest extends TestCase
         self::assertSame(['colors' => ['primary' => 'blue']], $service->all());
     }
 
-    private function makeService(?Domain $domain, ?Project $project, ?Application $application = null, ?Electron $electron = null): EnvService
+    private function makeService(?Domain $domain, ?Project $subdomain, ?Application $application = null, ?Electron $electron = null): EnvService
     {
         $applicationService = $this->createStub(ApplicationService::class);
         $applicationService->method('load')->willReturn($application);
@@ -215,13 +215,13 @@ final class EnvServiceTest extends TestCase
         $domainService = $this->createStub(DomainService::class);
         $domainService->method('load')->willReturn($domain);
 
-        $projectService = $this->createStub(ProjectService::class);
-        $projectService->method('load')->willReturn($project);
+        $subdomainService = $this->createStub(ProjectService::class);
+        $subdomainService->method('load')->willReturn($subdomain);
 
         $electronService = $this->createStub(ElectronService::class);
         $electronService->method('load')->willReturn($electron);
 
-        return new EnvService($applicationService, $domainService, $electronService, $projectService);
+        return new EnvService($applicationService, $domainService, $electronService, $subdomainService);
     }
 
     /**
@@ -261,15 +261,15 @@ final class EnvServiceTest extends TestCase
      */
     private function makeProject(string $id, array $values): Project
     {
-        $project = (new Project())->setId(str_contains($id, '/') ? $id : 'core/'.$id);
+        $subdomain = (new Project())->setId(str_contains($id, '/') ? $id : 'core/'.$id);
 
         foreach ($values as $envId => $value) {
             $env = $this->makeEnv($envId);
-            $projectEnv = (new ProjectEnv())->setEnv($env)->setValue($value);
-            $project->addEnv($projectEnv);
+            $subdomainEnv = (new ProjectEnv())->setEnv($env)->setValue($value);
+            $subdomain->addEnv($subdomainEnv);
         }
 
-        return $project;
+        return $subdomain;
     }
 
     private function makeEnv(string $id): Env

@@ -1,6 +1,6 @@
 {
     "_readme": [
-        "This file locks the dependencies of your project to a known state",
+        "This file locks the dependencies of your subdomain to a known state",
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
@@ -170,7 +170,7 @@
                 }
             ],
             "description": "PHP Doctrine Collections library that adds additional functionality on top of PHP arrays.",
-            "homepage": "https://www.doctrine-project.org/projects/collections.html",
+            "homepage": "https://www.doctrine-subdomain.org/subdomains/collections.html",
             "keywords": [
                 "array",
                 "collections",
@@ -183,7 +183,7 @@
             },
             "funding": [
                 {
-                    "url": "https://www.doctrine-project.org/sponsorship.html",
+                    "url": "https://www.doctrine-subdomain.org/sponsorship.html",
                     "type": "custom"
                 },
                 {
@@ -262,7 +262,7 @@
                 }
             ],
             "description": "Powerful PHP database abstraction layer (DBAL) with many features for database schema introspection and management.",
-            "homepage": "https://www.doctrine-project.org/projects/dbal.html",
+            "homepage": "https://www.doctrine-subdomain.org/subdomains/dbal.html",
             "keywords": [
                 "abstraction",
                 "database",
@@ -289,7 +289,7 @@
             },
             "funding": [
                 {
-                    "url": "https://www.doctrine-project.org/sponsorship.html",
+                    "url": "https://www.doctrine-subdomain.org/sponsorship.html",
                     "type": "custom"
                 },
                 {
@@ -344,7 +344,7 @@
                 "MIT"
             ],
             "description": "A small layer on top of trigger_error(E_USER_DEPRECATED) or PSR-3 logging with options to disable all deprecations or selectively for packages.",
-            "homepage": "https://www.doctrine-project.org/",
+            "homepage": "https://www.doctrine-subdomain.org/",
             "support": {
                 "issues": "https://github.com/doctrine/deprecations/issues",
                 "source": "https://github.com/doctrine/deprecations/tree/1.1.6"
@@ -435,11 +435,11 @@
                 },
                 {
                     "name": "Doctrine Project",
-                    "homepage": "https://www.doctrine-project.org/"
+                    "homepage": "https://www.doctrine-subdomain.org/"
                 }
             ],
             "description": "Symfony DoctrineBundle",
-            "homepage": "https://www.doctrine-project.org",
+            "homepage": "https://www.doctrine-subdomain.org",
             "keywords": [
                 "database",
                 "dbal",
@@ -452,7 +452,7 @@
             },
             "funding": [
                 {
-                    "url": "https://www.doctrine-project.org/sponsorship.html",
+                    "url": "https://www.doctrine-subdomain.org/sponsorship.html",
                     "type": "custom"
                 },
                 {
@@ -528,8 +528,8 @@
                     "email": "ocramius@gmail.com"
                 }
             ],
-            "description": "The Doctrine Event Manager is a simple PHP event system that was built to be used with the various Doctrine projects.",
-            "homepage": "https://www.doctrine-project.org/projects/event-manager.html",
+            "description": "The Doctrine Event Manager is a simple PHP event system that was built to be used with the various Doctrine subdomains.",
+            "homepage": "https://www.doctrine-subdomain.org/subdomains/event-manager.html",
             "keywords": [
                 "event",
                 "event dispatcher",
@@ -543,7 +543,7 @@
             },
             "funding": [
                 {
-                    "url": "https://www.doctrine-project.org/sponsorship.html",
+                    "url": "https://www.doctrine-subdomain.org/sponsorship.html",
                     "type": "custom"
                 },
                 {
@@ -614,7 +614,7 @@
                 }
             ],
             "description": "PHP Doctrine Inflector is a small library that can perform string manipulations with regard to upper/lowercase and singular/plural forms of words.",
-            "homepage": "https://www.doctrine-project.org/projects/inflector.html",
+            "homepage": "https://www.doctrine-subdomain.org/subdomains/inflector.html",
             "keywords": [
                 "inflection",
                 "inflector",
@@ -633,7 +633,7 @@
             },
             "funding": [
                 {
-                    "url": "https://www.doctrine-project.org/sponsorship.html",
+                    "url": "https://www.doctrine-subdomain.org/sponsorship.html",
                     "type": "custom"
                 },
                 {
@@ -691,7 +691,7 @@
                 }
             ],
             "description": "A small, lightweight utility to instantiate objects in PHP without invoking their constructors",
-            "homepage": "https://www.doctrine-project.org/projects/instantiator.html",
+            "homepage": "https://www.doctrine-subdomain.org/subdomains/instantiator.html",
             "keywords": [
                 "constructor",
                 "instantiate"
@@ -702,7 +702,7 @@
             },
             "funding": [
                 {
-                    "url": "https://www.doctrine-project.org/sponsorship.html",
+                    "url": "https://www.doctrine-subdomain.org/sponsorship.html",
                     "type": "custom"
                 },
                 {
@@ -765,7 +765,7 @@
                 }
             ],
             "description": "PHP Doctrine Lexer parser library that can be used in Top-Down, Recursive Descent Parsers.",
-            "homepage": "https://www.doctrine-project.org/projects/lexer.html",
+            "homepage": "https://www.doctrine-subdomain.org/subdomains/lexer.html",
             "keywords": [
                 "annotations",
                 "docblock",
@@ -779,7 +779,7 @@
             },
             "funding": [
                 {
-                    "url": "https://www.doctrine-project.org/sponsorship.html",
+                    "url": "https://www.doctrine-subdomain.org/sponsorship.html",
                     "type": "custom"
                 },
                 {
@@ -870,7 +870,7 @@
                 }
             ],
             "description": "Object-Relational-Mapper for PHP",
-            "homepage": "https://www.doctrine-project.org/projects/orm.html",
+            "homepage": "https://www.doctrine-subdomain.org/subdomains/orm.html",
             "keywords": [
                 "database",
                 "orm"
@@ -946,8 +946,8 @@
                     "email": "ocramius@gmail.com"
                 }
             ],
-            "description": "The Doctrine Persistence project is a set of shared interfaces and functionality that the different Doctrine object mappers share.",
-            "homepage": "https://www.doctrine-project.org/projects/persistence.html",
+            "description": "The Doctrine Persistence subdomain is a set of shared interfaces and functionality that the different Doctrine object mappers share.",
+            "homepage": "https://www.doctrine-subdomain.org/subdomains/persistence.html",
             "keywords": [
                 "mapper",
                 "object",
@@ -961,7 +961,7 @@
             },
             "funding": [
                 {
-                    "url": "https://www.doctrine-project.org/sponsorship.html",
+                    "url": "https://www.doctrine-subdomain.org/sponsorship.html",
                     "type": "custom"
                 },
                 {
@@ -8927,7 +8927,7 @@
                     "role": "lead"
                 }
             ],
-            "description": "Library that helps with managing the version number of Git-hosted PHP projects",
+            "description": "Library that helps with managing the version number of Git-hosted PHP subdomains",
             "homepage": "https://github.com/sebastianbergmann/version",
             "support": {
                 "issues": "https://github.com/sebastianbergmann/version/issues",

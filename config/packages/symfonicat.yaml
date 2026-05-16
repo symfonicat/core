@@ -25,21 +25,21 @@ symfonicat:
                 value: blue
                 domain_id: example.com
                 env_id: primary
-        symfonicat_project:
+        symfonicat_subdomain:
             -
-                id: core/project1
+                id: core/subdomain1
                 vendor: core
-        symfonicat_domain_project:
+        symfonicat_domain_subdomain:
             -
                 domain_id: example.com
-                project_id: core/project1
+                subdomain_id: core/subdomain1
         symfonicat_electron:
             -
                 id: example-test
                 name: 'Example Test'
                 type: domain
                 domain_id: example.com
-                project_id: null
+                subdomain_id: null
         symfonicat_electron_env:
             -
                 id: 1
@@ -58,13 +58,13 @@ symfonicat:
             -
                 module_id: symfonicat/analytics/main
                 domain_id: localhost
-        symfonicat_module_project:
+        symfonicat_module_subdomain:
             -
                 module_id: symfonicat/analytics/main
-                project_id: core/project1
-        symfonicat_project_env:
+                subdomain_id: core/subdomain1
+        symfonicat_subdomain_env:
             -
                 id: 1
                 value: green
-                project_id: core/project1
+                subdomain_id: core/subdomain1
                 env_id: primary

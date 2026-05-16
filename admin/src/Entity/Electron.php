@@ -14,7 +14,7 @@ use Symfonicat\Repository\ElectronRepository;
 class Electron
 {
     public const TYPE_DOMAIN = 'domain';
-    public const TYPE_PROJECT = 'project';
+    public const TYPE_PROJECT = 'subdomain';
 
     #[ORM\Id]
     #[ORM\Column(length: 255)]
@@ -30,9 +30,9 @@ class Electron
     #[ORM\JoinColumn(name: 'domain_id', referencedColumnName: 'id', nullable: true, onDelete: 'CASCADE')]
     private ?Domain $domain = null;
 
-    #[ORM\ManyToOne(targetEntity: Project::class)]
-    #[ORM\JoinColumn(name: 'project_id', referencedColumnName: 'id', nullable: true, onDelete: 'CASCADE')]
-    private ?Project $project = null;
+    #[ORM\ManyToOne(targetEntity: Subdomain::class)]
+    #[ORM\JoinColumn(name: 'subdomain_id', referencedColumnName: 'id', nullable: true, onDelete: 'CASCADE')]
+    private ?Subdomain $subdomain = null;
 
     /**
      * @var Collection<int, ElectronEnv>
@@ -66,7 +66,7 @@ class Electron
     {
         return [
             'domain' => self::TYPE_DOMAIN,
-            'project' => self::TYPE_PROJECT,
+            'subdomain' => self::TYPE_PROJECT,
         ];
     }
 
@@ -106,14 +106,14 @@ class Electron
         return $this;
     }
 
-    public function getProject(): ?Project
+    public function getSubdomain(): ?Subdomain
     {
-        return $this->project;
+        return $this->subdomain;
     }
 
-    public function setProject(?Project $project): static
+    public function setSubdomain(?Subdomain $subdomain): static
     {
-        $this->project = $project;
+        $this->subdomain = $subdomain;
 
         return $this;
     }
@@ -150,7 +150,7 @@ class Electron
         return $this->type === self::TYPE_DOMAIN;
     }
 
-    public function isProjectType(): bool
+    public function isSubdomainType(): bool
     {
         return $this->type === self::TYPE_PROJECT;
     }
@@ -159,15 +159,15 @@ class Electron
     {
         return match ($this->type) {
             self::TYPE_DOMAIN => $this->domain?->getId($includeVendor),
-            self::TYPE_PROJECT => $this->projectTargetId($includeVendor),
+            self::TYPE_PROJECT => $this->subdomainTargetId($includeVendor),
             default => null,
         };
     }
 
-    public function projectTargetId(bool $includeVendor = false): ?string
+    public function subdomainTargetId(bool $includeVendor = false): ?string
     {
-        $projectId = trim((string) $this->project?->getId($includeVendor));
-        if ($projectId === '') {
+        $subdomainId = trim((string) $this->subdomain?->getId($includeVendor));
+        if ($subdomainId === '') {
             return null;
         }
 
@@ -176,7 +176,7 @@ class Electron
             return null;
         }
 
-        return sprintf('%s.%s', $projectId, $domainId);
+        return sprintf('%s.%s', $subdomainId, $domainId);
     }
 
     #[Assert\Callback]
@@ -198,9 +198,9 @@ class Electron
                 ->addViolation();
         }
 
-        if ($type === self::TYPE_PROJECT && !$this->project instanceof Project) {
-            $context->buildViolation('Select a project.')
-                ->atPath('project')
+        if ($type === self::TYPE_PROJECT && !$this->subdomain instanceof Subdomain) {
+            $context->buildViolation('Select a subdomain.')
+                ->atPath('subdomain')
                 ->addViolation();
         }
 

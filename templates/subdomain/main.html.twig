@@ -4,22 +4,22 @@
 {% block stylesheets -%}
 
     {{- parent() -}}
-    {% for module in project.modules -%}
+    {% for module in subdomain.modules -%}
         {{- encore_entry_link_tags_module(module) | indent_links(8) -}}
     {%- endfor %}
 
-    {{- encore_entry_link_tags_project(project) | indent_links(8) -}}
+    {{- encore_entry_link_tags_subdomain(subdomain) | indent_links(8) -}}
 
 {%- endblock %}
 
 {% block javascripts -%}
 
     {{- parent() -}}
-    {% for module in project.modules -%}
+    {% for module in subdomain.modules -%}
         {{- encore_entry_script_tags_module(module) | indent_scripts(8) -}}
     {%- endfor %}
 
-    {{- encore_entry_script_tags_project(project) | indent_scripts(8) -}}
+    {{- encore_entry_script_tags_subdomain(subdomain) | indent_scripts(8) -}}
 
 {%- endblock %}
 
@@ -28,7 +28,7 @@
     <main id="root">
     </main>
     
-    {{ project.id }}
+    {{ subdomain.id }}
 
     <br />
 

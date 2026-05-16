@@ -7,7 +7,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfonicat\Service\DomainService;
 use Symfonicat\Service\ModuleService;
 use Symfonicat\Service\PathService;
-use Symfonicat\Service\ProjectService;
+use Symfonicat\Service\SubdomainService;
 
 abstract class AbstractModuleController extends AbstractController
 {
@@ -18,7 +18,7 @@ abstract class AbstractModuleController extends AbstractController
 
         public readonly DomainService $domainService,
         public readonly ModuleService $moduleService,
-        public readonly ProjectService $projectService,
+        public readonly SubdomainService $subdomainService,
         public readonly PathService $pathService,
 
     ) {
@@ -29,15 +29,15 @@ abstract class AbstractModuleController extends AbstractController
             return;
         }
 
-        $project = $this->projectService->load();
+        $subdomain = $this->subdomainService->load();
 
-        if ($project && $project->hasModule($module)) {
+        if ($subdomain && $subdomain->hasModule($module)) {
             $this->shouldRun = TRUE;
 
             return;
         }
 
-        if (!$project && ($domain = $this->domainService->load()) && $domain->hasModule($module)) {
+        if (!$subdomain && ($domain = $this->domainService->load()) && $domain->hasModule($module)) {
             $this->shouldRun = TRUE;
         }
 

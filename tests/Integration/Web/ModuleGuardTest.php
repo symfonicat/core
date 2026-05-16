@@ -12,11 +12,11 @@ use Symfonicat\Entity\RoutingRule;
  * Covers two intertwined contracts:
  *
  *   1. AbstractModuleController only lets a module handler run when the
- *      current domain or project has actually installed the module. Calls
+ *      current domain or subdomain has actually installed the module. Calls
  *      without that association return 404 instead of serving module content
  *      — the unit test pins the constructor logic; this test proves the wire
  *      is hooked up end-to-end through routing + DI.
- *   2. The project catch-all route declares `requirements: ['path' => '(?!m(?:/|$)).*']`
+ *   2. The subdomain catch-all route declares `requirements: ['path' => '(?!m(?:/|$)).*']`
  *      so that the generic {path} wildcard never shadows the more specific
  *      /m/* controllers. That regex is the only thing keeping any request for
  *      /m/symfonicat/analytics/main from being absorbed by MainController::main().
@@ -26,29 +26,29 @@ final class ModuleGuardTest extends SymfonicatWebTestCase
     public function testModuleRouteReturns404WhenModuleNotInstalledOnProject(): void
     {
         $domain = $this->createDomain('example.com');
-        $this->createProject('project1', $domain);
+        $this->createProject('subdomain1', $domain);
         // Module exists in the DB (so ModuleService::load() returns it) but is
-        // NOT associated with project1. Guard must refuse to execute.
+        // NOT associated with subdomain1. Guard must refuse to execute.
         $this->createModule('symfonicat/analytics/main');
 
-        $this->setHost('project1.example.com');
+        $this->setHost('subdomain1.example.com');
         $this->client()->request('POST', '/m/symfonicat/analytics/main');
 
         self::assertResponseStatusCodeSame(
             404,
-            'project that has not installed the module must not be able to invoke it',
+            'subdomain that has not installed the module must not be able to invoke it',
         );
     }
 
     public function testModuleRouteSucceedsWhenModuleInstalledOnProject(): void
     {
         $domain = $this->createDomain('example.com');
-        $project = $this->createProject('project1', $domain);
+        $subdomain = $this->createProject('subdomain1', $domain);
         $module = $this->createModule('symfonicat/analytics/main');
-        $project->addModule($module);
+        $subdomain->addModule($module);
         $this->entityManager()->flush();
 
-        $this->setHost('project1.example.com');
+        $this->setHost('subdomain1.example.com');
         $this->client()->request('POST', '/m/symfonicat/analytics/main');
 
         self::assertResponseIsSuccessful();
@@ -160,44 +160,44 @@ final class ModuleGuardTest extends SymfonicatWebTestCase
     public function testModuleRouteRespectsHttpMethodWhitelist(): void
     {
         $domain = $this->createDomain('example.com');
-        $project = $this->createProject('project1', $domain);
+        $subdomain = $this->createProject('subdomain1', $domain);
         $module = $this->createModule('symfonicat/analytics/main');
-        $project->addModule($module);
+        $subdomain->addModule($module);
         $this->entityManager()->flush();
 
-        $this->setHost('project1.example.com');
+        $this->setHost('subdomain1.example.com');
         $this->client()->request('GET', '/m/symfonicat/analytics/main');
 
         // Analytics controller is declared POST-only. GET must 405 instead of
-        // being swallowed by the project catch-all (which would return 200).
+        // being swallowed by the subdomain catch-all (which would return 200).
         $status = $this->client()->getResponse()->getStatusCode();
         self::assertContains(
             $status,
             [404, 405],
-            sprintf('GET /m/symfonicat/analytics/main must not render the project shell; got %d', $status),
+            sprintf('GET /m/symfonicat/analytics/main must not render the subdomain shell; got %d', $status),
         );
         self::assertStringNotContainsString(
-            'core/project1',
+            'core/subdomain1',
             (string) $this->client()->getResponse()->getContent(),
-            'the project catch-all (which emits "core/project1") must not absorb /m/* requests',
+            'the subdomain catch-all (which emits "core/subdomain1") must not absorb /m/* requests',
         );
     }
 
     public function testProjectCatchAllIgnoresPathsThatStartWithM(): void
     {
-        // Bare "m" and "m/something" must not be consumed by the project
+        // Bare "m" and "m/something" must not be consumed by the subdomain
         // catch-all requirement `(?!m(?:/|$)).*`.
         $domain = $this->createDomain('example.com');
-        $this->createProject('project1', $domain);
+        $this->createProject('subdomain1', $domain);
 
-        $this->setHost('project1.example.com');
+        $this->setHost('subdomain1.example.com');
 
         // /m (no trailing slash, no module): nothing to serve; not the shell.
         $this->client()->request('GET', '/m');
         self::assertNotSame(
             200,
             $this->client()->getResponse()->getStatusCode(),
-            'bare /m must not resolve to the project shell',
+            'bare /m must not resolve to the subdomain shell',
         );
 
         // /m/does-not-exist: module controller space, but nothing registered.
@@ -205,7 +205,7 @@ final class ModuleGuardTest extends SymfonicatWebTestCase
         self::assertSame(
             404,
             $this->client()->getResponse()->getStatusCode(),
-            '/m/<unknown> must 404, not leak to the project catch-all',
+            '/m/<unknown> must 404, not leak to the subdomain catch-all',
         );
 
         // /milestones: "m" followed by letters is not a module prefix and the
@@ -213,7 +213,7 @@ final class ModuleGuardTest extends SymfonicatWebTestCase
         // reject when "m" is followed by "/" or end-of-string).
         $this->client()->request('GET', '/milestones');
         self::assertResponseIsSuccessful(
-            '/milestones is a normal path segment and must render the project shell',
+            '/milestones is a normal path segment and must render the subdomain shell',
         );
     }
 

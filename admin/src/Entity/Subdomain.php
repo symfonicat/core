@@ -2,14 +2,14 @@
 
 namespace Symfonicat\Entity;
 
-use Symfonicat\Repository\ProjectRepository;
+use Symfonicat\Repository\SubdomainRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
-#[ORM\Entity(repositoryClass: ProjectRepository::class)]
-#[ORM\Table(name: 'symfonicat_project')]
-class Project
+#[ORM\Entity(repositoryClass: SubdomainRepository::class)]
+#[ORM\Table(name: 'symfonicat_subdomain')]
+class Subdomain
 {
     use VendorScopedIdTrait;
 
@@ -22,19 +22,19 @@ class Project
     /**
      * @var Collection<int, Domain>
      */
-    #[ORM\ManyToMany(targetEntity: Domain::class, mappedBy: 'projects')]
+    #[ORM\ManyToMany(targetEntity: Domain::class, mappedBy: 'subdomains')]
     private Collection $domains;
 
     /**
      * @var Collection<int, Module>
      */
-    #[ORM\ManyToMany(targetEntity: Module::class, mappedBy: 'projects')]
+    #[ORM\ManyToMany(targetEntity: Module::class, mappedBy: 'subdomains')]
     private Collection $modules;
 
     /**
-     * @var Collection<int, ProjectEnv>
+     * @var Collection<int, SubdomainEnv>
      */
-    #[ORM\OneToMany(targetEntity: ProjectEnv::class, mappedBy: 'project', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[ORM\OneToMany(targetEntity: SubdomainEnv::class, mappedBy: 'subdomain', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $env;
 
     public function __construct()
@@ -58,8 +58,8 @@ class Project
         if (!$this->hasDomain($domain)) {
             $this->domains->add($domain);
 
-            if (!$domain->hasProject($this)) {
-                $domain->getProjects()->add($this);
+            if (!$domain->hasSubdomain($this)) {
+                $domain->getSubdomains()->add($this);
             }
         }
 
@@ -68,8 +68,8 @@ class Project
 
     public function removeDomain(Domain $domain): static
     {
-        if ($this->domains->removeElement($domain) && $domain->hasProject($this)) {
-            $domain->getProjects()->removeElement($this);
+        if ($this->domains->removeElement($domain) && $domain->hasSubdomain($this)) {
+            $domain->getSubdomains()->removeElement($this);
         }
 
         return $this;
@@ -88,8 +88,8 @@ class Project
         if (!$this->hasModule($module)) {
             $this->modules->add($module);
 
-            if (!$module->hasProject($this)) {
-                $module->getProjects()->add($this);
+            if (!$module->hasSubdomain($this)) {
+                $module->getSubdomains()->add($this);
             }
         }
 
@@ -98,8 +98,8 @@ class Project
 
     public function removeModule(Module $module): static
     {
-        if ($this->modules->removeElement($module) && $module->hasProject($this)) {
-            $module->getProjects()->removeElement($this);
+        if ($this->modules->removeElement($module) && $module->hasSubdomain($this)) {
+            $module->getSubdomains()->removeElement($this);
         }
 
         return $this;
@@ -136,27 +136,27 @@ class Project
     }
 
     /**
-     * @return Collection<int, ProjectEnv>
+     * @return Collection<int, SubdomainEnv>
      */
     public function getEnv(): Collection
     {
         return $this->env;
     }
 
-    public function addEnv(ProjectEnv $env): static
+    public function addEnv(SubdomainEnv $env): static
     {
         if (!$this->env->contains($env)) {
             $this->env->add($env);
-            $env->setProject($this);
+            $env->setSubdomain($this);
         }
 
         return $this;
     }
 
-    public function removeEnv(ProjectEnv $env): static
+    public function removeEnv(SubdomainEnv $env): static
     {
-        if ($this->env->removeElement($env) && $env->getProject() === $this) {
-            $env->setProject(null);
+        if ($this->env->removeElement($env) && $env->getSubdomain() === $this) {
+            $env->setSubdomain(null);
         }
 
         return $this;

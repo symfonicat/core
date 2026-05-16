@@ -98,13 +98,13 @@ final class SchemaUpdateCommandTest extends SymfonicatKernelTestCase
 
     public function testFailsWhenDuplicateProjectIdsExist(): void
     {
-        $this->createProject('core/project1');
-        $this->createProject('superman/project1');
+        $this->createProject('core/subdomain1');
+        $this->createProject('superman/subdomain1');
 
         $tester = $this->runCommand(interactive: false);
 
         self::assertSame(1, $tester->getStatusCode());
-        self::assertStringContainsString('Duplicate project ids detected', $tester->getDisplay());
+        self::assertStringContainsString('Duplicate subdomain ids detected', $tester->getDisplay());
     }
 
     private function runCommand(bool $interactive = true): CommandTester
@@ -114,7 +114,7 @@ final class SchemaUpdateCommandTest extends SymfonicatKernelTestCase
         $command = $application->find('symfonicat:schema:update');
         $tester = new CommandTester($command);
         if ($interactive) {
-            // Schema update asks for confirmation when creating application/project rows interactively.
+            // Schema update asks for confirmation when creating application/subdomain rows interactively.
             $tester->setInputs(['yes', 'yes', 'yes']);
         }
 

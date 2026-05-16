@@ -19,7 +19,7 @@ final class PublicSuffixRefreshCommand extends Command
     public function __construct(
         private readonly HttpClientInterface $httpClient,
         #[Autowire('%kernel.project_dir%')]
-        private readonly string $projectDir,
+        private readonly string $subdomainDir,
     ) {
         parent::__construct();
     }
@@ -37,7 +37,7 @@ final class PublicSuffixRefreshCommand extends Command
             return Command::FAILURE;
         }
 
-        $target = rtrim($this->projectDir, '/').'/public_suffix_list.dat';
+        $target = rtrim($this->subdomainDir, '/').'/public_suffix_list.dat';
         file_put_contents($target, $content);
 
         $io->success(sprintf('Updated %s', $target));

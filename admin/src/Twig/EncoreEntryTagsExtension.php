@@ -4,7 +4,7 @@ namespace Symfonicat\Twig;
 
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\Module;
-use Symfonicat\Entity\Project;
+use Symfonicat\Entity\Subdomain;
 use Symfony\WebpackEncoreBundle\Exception\EntrypointNotFoundException;
 use Symfony\WebpackEncoreBundle\Twig\EntryFilesTwigExtension;
 use Twig\Extension\AbstractExtension;
@@ -24,8 +24,8 @@ final class EncoreEntryTagsExtension extends AbstractExtension
         return [
             new TwigFunction('encore_entry_script_tags_domain', $this->renderDomainScriptTags(...), ['is_safe' => ['html']]),
             new TwigFunction('encore_entry_link_tags_domain', $this->renderDomainLinkTags(...), ['is_safe' => ['html']]),
-            new TwigFunction('encore_entry_script_tags_project', $this->renderProjectScriptTags(...), ['is_safe' => ['html']]),
-            new TwigFunction('encore_entry_link_tags_project', $this->renderProjectLinkTags(...), ['is_safe' => ['html']]),
+            new TwigFunction('encore_entry_script_tags_subdomain', $this->renderSubdomainScriptTags(...), ['is_safe' => ['html']]),
+            new TwigFunction('encore_entry_link_tags_subdomain', $this->renderSubdomainLinkTags(...), ['is_safe' => ['html']]),
             new TwigFunction('encore_entry_script_tags_module', $this->renderModuleScriptTags(...), ['is_safe' => ['html']]),
             new TwigFunction('encore_entry_link_tags_module', $this->renderModuleLinkTags(...), ['is_safe' => ['html']]),
         ];
@@ -41,14 +41,14 @@ final class EncoreEntryTagsExtension extends AbstractExtension
         return $this->renderLinkTags($this->domainEntryName($domain));
     }
 
-    public function renderProjectScriptTags(?Project $project): string
+    public function renderSubdomainScriptTags(?Subdomain $subdomain): string
     {
-        return $this->renderScriptTags($this->projectEntryName($project));
+        return $this->renderScriptTags($this->subdomainEntryName($subdomain));
     }
 
-    public function renderProjectLinkTags(?Project $project): string
+    public function renderSubdomainLinkTags(?Subdomain $subdomain): string
     {
-        return $this->renderLinkTags($this->projectEntryName($project));
+        return $this->renderLinkTags($this->subdomainEntryName($subdomain));
     }
 
     public function renderModuleScriptTags(?Module $module): string
@@ -115,14 +115,14 @@ final class EncoreEntryTagsExtension extends AbstractExtension
         return $entryName;
     }
 
-    private function projectEntryName(?Project $project): ?string
+    private function subdomainEntryName(?Subdomain $subdomain): ?string
     {
-        $id = trim((string) $project?->getId());
+        $id = trim((string) $subdomain?->getId());
         if ($id === '') {
             return null;
         }
 
-        $entryName = 'projects/'.$id;
+        $entryName = 'subdomains/'.$id;
         if ($this->entryFilesTwigExtension->entryExists($entryName)) {
             return $entryName;
         }
@@ -131,7 +131,7 @@ final class EncoreEntryTagsExtension extends AbstractExtension
             return $entryName;
         }
 
-        $packages = $this->packageDiscoveryService->discoverEntryDirectories('projects');
+        $packages = $this->packageDiscoveryService->discoverEntryDirectories('subdomains');
         $matches = [];
         foreach (array_keys($packages) as $pkgId) {
             $parts = explode('/', $pkgId);
@@ -141,7 +141,7 @@ final class EncoreEntryTagsExtension extends AbstractExtension
         }
 
         if (count($matches) === 1) {
-            return 'projects/'.$matches[0];
+            return 'subdomains/'.$matches[0];
         }
 
         return $entryName;

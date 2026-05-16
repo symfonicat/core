@@ -41,21 +41,21 @@ final class RoutingRuleServiceTest extends TestCase
     #[DataProvider('reservedArgumentProvider')]
     public function testProjectLookupIgnoresReservedArguments(string $argument, string $path): void
     {
-        $project = (new Project())->setId('core/project1');
+        $subdomain = (new Project())->setId('core/subdomain1');
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_PROJECT)
-            ->setProject($project)
+            ->setProject($subdomain)
             ->setArguments([$argument]);
 
         $repo = $this->createMock(RoutingRuleRepository::class);
         $repo->expects(self::once())
             ->method('findTypeProjectByProject')
-            ->with(self::identicalTo($project))
+            ->with(self::identicalTo($subdomain))
             ->willReturn([$rule]);
 
         $service = $this->service($repo);
 
-        self::assertNull($service->getTypeProjectByProjectAndPath($project, $path));
+        self::assertNull($service->getTypeProjectByProjectAndPath($subdomain, $path));
     }
 
     public function testDomainLookupReturnsFirstMatchingPathRule(): void
@@ -79,30 +79,30 @@ final class RoutingRuleServiceTest extends TestCase
 
     public function testProjectLookupReturnsFirstMatchingPathRule(): void
     {
-        $project = (new Project())->setId('core/project1');
+        $subdomain = (new Project())->setId('core/subdomain1');
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_PROJECT)
-            ->setProject($project)
+            ->setProject($subdomain)
             ->setArguments(['blog']);
 
         $repo = $this->createMock(RoutingRuleRepository::class);
         $repo->expects(self::once())
             ->method('findTypeProjectByProject')
-            ->with(self::identicalTo($project))
+            ->with(self::identicalTo($subdomain))
             ->willReturn([$rule]);
 
         $service = $this->service($repo);
 
-        self::assertSame($rule, $service->getTypeProjectByProjectAndPath($project, '/blog'));
+        self::assertSame($rule, $service->getTypeProjectByProjectAndPath($subdomain, '/blog'));
     }
 
     public function testCollectionLookupsAreStraightPassThrough(): void
     {
         $domain = (new Domain())->setId('example.com');
-        $project = (new Project())->setId('core/project1');
+        $subdomain = (new Project())->setId('core/subdomain1');
 
         $domainRules = [new RoutingRule(), new RoutingRule()];
-        $projectRules = [new RoutingRule()];
+        $subdomainRules = [new RoutingRule()];
 
         $repo = $this->createMock(RoutingRuleRepository::class);
         $repo->expects(self::once())
@@ -111,13 +111,13 @@ final class RoutingRuleServiceTest extends TestCase
             ->willReturn($domainRules);
         $repo->expects(self::once())
             ->method('findTypeProjectByProject')
-            ->with(self::identicalTo($project))
-            ->willReturn($projectRules);
+            ->with(self::identicalTo($subdomain))
+            ->willReturn($subdomainRules);
 
         $service = $this->service($repo);
 
         self::assertSame($domainRules, $service->getTypeDomainByDomain($domain));
-        self::assertSame($projectRules, $service->getTypeProjectByProject($project));
+        self::assertSame($subdomainRules, $service->getTypeProjectByProject($subdomain));
     }
 
     public function testApplicationRouteLookupPassesThroughToRepository(): void
@@ -125,17 +125,17 @@ final class RoutingRuleServiceTest extends TestCase
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_APPLICATION)
             ->setApplicationType(RoutingRule::APPLICATION_TYPE_ROUTE)
-            ->setRoute('symfonicat_project_test');
+            ->setRoute('symfonicat_subdomain_test');
 
         $repo = $this->createMock(RoutingRuleRepository::class);
         $repo->expects(self::once())
             ->method('findOneTypeApplicationByRoute')
-            ->with('symfonicat_project_test')
+            ->with('symfonicat_subdomain_test')
             ->willReturn($rule);
 
         $service = $this->service($repo);
 
-        self::assertSame($rule, $service->getApplicationRuleForRoute('symfonicat_project_test'));
+        self::assertSame($rule, $service->getApplicationRuleForRoute('symfonicat_subdomain_test'));
     }
 
     /**

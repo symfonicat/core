@@ -45,8 +45,8 @@ final class AdminLoginTemplateTest extends SymfonicatKernelTestCase
 
     public function testAdminEntrypointLoadsBootstrapJavascript(): void
     {
-        $projectDir = self::getContainer()->getParameter('kernel.project_dir');
-        $entrypoint = file_get_contents($projectDir.'/admin/assets/admin.js');
+        $subdomainDir = self::getContainer()->getParameter('kernel.project_dir');
+        $entrypoint = file_get_contents($subdomainDir.'/admin/assets/admin.js');
 
         self::assertStringContainsString('../../assets/bootstrap/js/index.esm.js', (string) $entrypoint);
     }

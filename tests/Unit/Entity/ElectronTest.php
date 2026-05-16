@@ -19,30 +19,30 @@ final class ElectronTest extends TestCase
 
     public function testProjectTargetIdRequiresBothProjectAndDomain(): void
     {
-        $project = (new Project())
-            ->setId('core/project1');
+        $subdomain = (new Project())
+            ->setId('core/subdomain1');
 
         $electron = (new Electron())
             ->setType(Electron::TYPE_PROJECT)
-            ->setProject($project);
+            ->setProject($subdomain);
 
-        self::assertNull($electron->projectTargetId());
+        self::assertNull($electron->subdomainTargetId());
         self::assertNull($electron->getTargetId());
     }
 
     public function testProjectTargetIdUsesProjectAndDomainIds(): void
     {
-        $project = (new Project())
-            ->setId('core/project1');
+        $subdomain = (new Project())
+            ->setId('core/subdomain1');
         $domain = (new Domain())
             ->setId('example.com');
 
         $electron = (new Electron())
             ->setType(Electron::TYPE_PROJECT)
-            ->setProject($project)
+            ->setProject($subdomain)
             ->setDomain($domain);
 
-        self::assertSame('project1.example.com', $electron->projectTargetId());
-        self::assertSame('project1.example.com', $electron->getTargetId());
+        self::assertSame('subdomain1.example.com', $electron->subdomainTargetId());
+        self::assertSame('subdomain1.example.com', $electron->getTargetId());
     }
 }

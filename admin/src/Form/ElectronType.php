@@ -4,7 +4,7 @@ namespace Symfonicat\Form;
 
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\Electron;
-use Symfonicat\Entity\Project;
+use Symfonicat\Entity\Subdomain;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
@@ -38,12 +38,12 @@ final class ElectronType extends AbstractType
                 'required' => false,
                 'placeholder' => 'select domain',
             ])
-            ->add('project', EntityType::class, [
-                'class' => Project::class,
-                'choice_label' => static fn (Project $project): string => (string) $project->getId(),
-                'label' => 'project',
+            ->add('subdomain', EntityType::class, [
+                'class' => Subdomain::class,
+                'choice_label' => static fn (Subdomain $subdomain): string => (string) $subdomain->getId(),
+                'label' => 'subdomain',
                 'required' => false,
-                'placeholder' => 'select project',
+                'placeholder' => 'select subdomain',
             ])
             ->add('env', CollectionType::class, [
                 'label' => 'env',

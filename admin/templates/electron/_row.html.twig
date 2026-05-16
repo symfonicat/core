@@ -2,7 +2,7 @@
     <td class="fw-semibold">{{ electron.name }}</td>
     <td>{{ electron.type }}</td>
     <td><b>{% if electron.domain %}{{ electron.domain.id(false) }}{% else %}<i class="fa fa-fw fa-times"></i>{% endif %}</b></td>
-    <td><b>{% if electron.project %}{{ electron.project.id }}{% else %}<i class="fa fa-fw fa-times"></i>{% endif %}</b></td>
+    <td><b>{% if electron.subdomain %}{{ electron.subdomain.id }}{% else %}<i class="fa fa-fw fa-times"></i>{% endif %}</b></td>
     {% for env_parent in env_parents %}
         <td>
             {% set entries = env_parent_entries(electron.env, env_parent) %}

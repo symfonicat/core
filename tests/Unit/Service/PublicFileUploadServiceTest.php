@@ -43,19 +43,19 @@ final class PublicFileUploadServiceTest extends TestCase
 
     public function testUploadsProjectFileIntoCleanProjectPublicFolder(): void
     {
-        $project = (new Project())->setId('core/project1');
-        $file = $this->uploadedFile('project content');
+        $subdomain = (new Project())->setId('core/subdomain1');
+        $file = $this->uploadedFile('subdomain content');
 
         $path = (new PublicFileUploadService($this->publicDir))->upload(
             'file.txt',
             FileUploadItemType::FILE_TYPE_PROJECT,
             null,
-            $project,
+            $subdomain,
             $file,
         );
 
-        self::assertSame('projects/project1/file.txt', $path);
-        self::assertSame('project content', file_get_contents($this->publicDir.'/'.$path));
+        self::assertSame('subdomains/subdomain1/file.txt', $path);
+        self::assertSame('subdomain content', file_get_contents($this->publicDir.'/'.$path));
     }
 
     public function testRejectsFileNamesWithPathSeparators(): void

@@ -6,15 +6,15 @@ use App\Tests\Support\SymfonicatWebTestCase;
 
 /**
  * MainController::resolveTemplate() lets operators ship a per-domain or
- * per-project Twig template that transparently replaces the default
- * domain/main.html.twig or project/main.html.twig. These tests drop an
+ * per-subdomain Twig template that transparently replaces the default
+ * domain/main.html.twig or subdomain/main.html.twig. These tests drop an
  * override template into the live filesystem for the duration of the test and
  * assert the resolver picks it up.
  *
  * We write to the real templates/ tree because Twig's cache + filesystem
  * loader is what actually resolves the override; stubbing it would skip the
  * exact code path we want to verify. Files are cleaned up in tearDown() and
- * their namespaces ("example.com", "core/project1") are unlikely to collide with
+ * their namespaces ("example.com", "core/subdomain1") are unlikely to collide with
  * real overrides in the core repository.
  */
 final class TemplateOverrideTest extends SymfonicatWebTestCase
@@ -98,27 +98,27 @@ final class TemplateOverrideTest extends SymfonicatWebTestCase
     public function testProjectOverrideTemplateReplacesDefaultShell(): void
     {
         $domain = $this->createDomain('example.com');
-        $this->createProject('project1', $domain);
+        $this->createProject('subdomain1', $domain);
 
         $this->writeTemplate(
-            'project/overrides/core/project1.html.twig',
+            'subdomain/overrides/core/subdomain1.html.twig',
             <<<'TWIG'
             {% extends 'base.html.twig' %}
             {% block body %}
-                <h1 data-testid="project-override">project1 bespoke shell</h1>
+                <h1 data-testid="subdomain-override">subdomain1 bespoke shell</h1>
             {% endblock %}
             TWIG,
         );
 
         $this->clearTwigCache();
-        $this->setHost('project1.example.com');
+        $this->setHost('subdomain1.example.com');
         $this->client()->request('GET', '/');
 
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains(
-            '[data-testid="project-override"]',
-            'project1 bespoke shell',
-            'project/overrides/<vendor>/<project-id>.html.twig must win over project/main.html.twig',
+            '[data-testid="subdomain-override"]',
+            'subdomain1 bespoke shell',
+            'subdomain/overrides/<vendor>/<subdomain-id>.html.twig must win over subdomain/main.html.twig',
         );
     }
 

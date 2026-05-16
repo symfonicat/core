@@ -51,10 +51,10 @@ These instructions apply to the main app repo at `/home/t/www/symfonicat`.
 
 - Bundle-owned entities/tables:
   - `Domain` -> `symfonicat_domain`
-  - `Project` -> `symfonicat_project`
+  - `Project` -> `symfonicat_subdomain`
   - `Env` -> `symfonicat_env`
   - `DomainEnv` -> `symfonicat_domain_env`
-  - `ProjectEnv` -> `symfonicat_project_env`
+  - `ProjectEnv` -> `symfonicat_subdomain_env`
   - `Module` -> `symfonicat_module`
   - `RoutingRule` -> `symfonicat_routing_rule`
   - `Admin` -> `symfonicat_admin`
@@ -83,7 +83,7 @@ These instructions apply to the main app repo at `/home/t/www/symfonicat`.
 - Asset source lives at `assets`
 - Build target remains `public/build`
 - `webpack.symfonicat.js` defines the package entrypoints and is the source of truth for how frontend bundles are wired.
-- `symfonicat:data:webpack` is the canonical webpack data source for domain/project/module entries, discovering package-owned entries from the root `symfonicat/core` package plus installed `symfonicat/*` packages.
+- `symfonicat:data:webpack` is the canonical webpack data source for domain/subdomain/module entries, discovering package-owned entries from the root `symfonicat/core` package plus installed `symfonicat/*` packages.
 - Public runtime/frontend work should use the public asset stack:
   - `assets/app.js`
   - `assets/app/`
@@ -101,7 +101,7 @@ These instructions apply to the main app repo at `/home/t/www/symfonicat`.
   - `env`
   - `domain`
   - `module`
-  - `project`
+  - `subdomain`
   - `routing_rule`
 
 ## Electron
@@ -119,15 +119,15 @@ These instructions apply to the main app repo at `/home/t/www/symfonicat`.
 
 ## System overview
 
-1. Symfonicat is a full Symfony 8 application distributed as the `symfonicat/core` package. Treat this repository as the install target and runtime application, not as a reusable bundle with a separate starter project.
+1. Symfonicat is a full Symfony 8 application distributed as the `symfonicat/core` package. Treat this repository as the install target and runtime application, not as a reusable bundle with a separate starter subdomain.
 
-2. The public application surface is owned by this repo. The canonical public routes are `/`, `/{path}`, and the internal `/application/{id}/{path}` application entry route, with runtime resolution deciding whether the request renders a domain, project, or application shell.
+2. The public application surface is owned by this repo. The canonical public routes are `/`, `/{path}`, and the internal `/application/{id}/{path}` application entry route, with runtime resolution deciding whether the request renders a domain, subdomain, or application shell.
 
-3. Public runtime resolution is layered. `DomainService` resolves the base host, `ProjectService` resolves the first subdomain when one is present, `RoutingRuleSubscriber` applies configured routing rules, and `ApplicationService` loads the final application shell when a rule or route points at one.
+3. Public runtime resolution is layered. `DomainService` resolves the base host, `ProjectService` resolves the first affix when one is present, `RoutingRuleSubscriber` applies configured routing rules, and `ApplicationService` loads the final application shell when a rule or route points at one.
 
-4. Routing rules are database-owned runtime behavior, not just admin metadata. The supported rule types are `domain`, `project`, `application`, `redirect`, and `route`; changes to these rules can alter which shell renders, whether a request redirects, or whether a named Symfony route takes over.
+4. Routing rules are database-owned runtime behavior, not just admin metadata. The supported rule types are `domain`, `subdomain`, `application`, `redirect`, and `route`; changes to these rules can alter which shell renders, whether a request redirects, or whether a named Symfony route takes over.
 
-5. Symfonicat ids are vendor-scoped in storage and clean in most runtime presentation. `Domain`, `Project`, `Application`, `Module`, and `Electron` rows can expose `project1` while storing or looking up `core/project1`; use full ids for persistence and admin route parameters, and clean ids for public URLs and templates when that is the established pattern.
+5. Symfonicat ids are vendor-scoped in storage and clean in most runtime presentation. `Domain`, `Project`, `Application`, `Module`, and `Electron` rows can expose `subdomain1` while storing or looking up `core/subdomain1`; use full ids for persistence and admin route parameters, and clean ids for public URLs and templates when that is the established pattern.
 
 6. The root package is treated as the special `core` vendor. Installed packages under configured vendors, such as `symfonicat/analytics`, are discovered with their Composer vendor and are represented by ids like `symfonicat/analytics/main`.
 
@@ -135,21 +135,21 @@ These instructions apply to the main app repo at `/home/t/www/symfonicat`.
 
 8. Admin YAML lives in the `symfonicat.admin` section of `config/packages/symfonicat.yaml`. `symfonicat:dump` writes Symfonicat-owned database rows there while excluding `symfonicat_admin`, and `symfonicat:load` restores those rows without touching administrator accounts.
 
-9. Schema synchronization is handled by `symfonicat:schema:update`. That command first synchronizes the Doctrine schema and then synchronizes package-provided modules, domains, applications, and projects; non-interactive runs create missing package rows automatically, while stale module removal with references remains interactive.
+9. Schema synchronization is handled by `symfonicat:schema:update`. That command first synchronizes the Doctrine schema and then synchronizes package-provided modules, domains, applications, and subdomains; non-interactive runs create missing package rows automatically, while stale module removal with references remains interactive.
 
 10. `symfonicat:bootstrap` is stale and must not be reintroduced. Docker entrypoints, Composer scripts, documentation, tests, and operational notes should use `symfonicat:schema:update` plus `symfonicat:load` for fresh installs and boot-time synchronization.
 
 11. The admin area is isolated from any host app user system. It uses Symfonicat-owned `Admin` rows, separate tables, admin create/delete console commands, and the `/admin` route family for CRUD surfaces.
 
-12. Admin URLs should stay close to the legacy shape. Applications use `/admin/a*`, domains use `/admin/d*`, Electron rows use `/admin/e*`, env uses `/admin/env*`, projects use `/admin/p*`, routing rules use `/admin/r*`, and YAML dump/load uses `/admin/y/*`.
+12. Admin URLs should stay close to the legacy shape. Applications use `/admin/a*`, domains use `/admin/d*`, Electron rows use `/admin/e*`, env uses `/admin/env*`, subdomains use `/admin/p*`, routing rules use `/admin/r*`, and YAML dump/load uses `/admin/y/*`.
 
-13. Env resolution is a runtime feature and should go through `EnvService`. Twig `env()` lookups use dotted keys, and frontend runtime data is emitted into `window.env`; domain values form the base layer and project values override domain values for the same `Env.id`.
+13. Env resolution is a runtime feature and should go through `EnvService`. Twig `env()` lookups use dotted keys, and frontend runtime data is emitted into `window.env`; domain values form the base layer and subdomain values override domain values for the same `Env.id`.
 
-14. Electron is part of the runtime surface. Electron rows have vendor-scoped ids, a target type of domain, project, or application, optional favicon handling, scoped env values, and build commands that render Symfony/Twig-backed Electron entry files while the app keeps talking to the live Symfony server over HTTP.
+14. Electron is part of the runtime surface. Electron rows have vendor-scoped ids, a target type of domain, subdomain, or application, optional favicon handling, scoped env values, and build commands that render Symfony/Twig-backed Electron entry files while the app keeps talking to the live Symfony server over HTTP.
 
-15. Backend module controllers live in installed packages and are exposed through full module routes such as `/m/symfonicat/analytics/main`. Module controllers should extend `Symfonicat\Controller\AbstractModuleController` so requests only run when the active domain, project, or application has that module attached.
+15. Backend module controllers live in installed packages and are exposed through full module routes such as `/m/symfonicat/analytics/main`. Module controllers should extend `Symfonicat\Controller\AbstractModuleController` so requests only run when the active domain, subdomain, or application has that module attached.
 
-16. Webpack entry discovery is driven by `symfonicat:data:webpack` and `webpack.symfonicat.js`. It scans the root package and configured vendor packages for `assets/applications/{id}`, `assets/domains/{id}`, `assets/projects/{id}`, and `assets/modules/{id}`.
+16. Webpack entry discovery is driven by `symfonicat:data:webpack` and `webpack.symfonicat.js`. It scans the root package and configured vendor packages for `assets/applications/{id}`, `assets/domains/{id}`, `assets/subdomains/{id}`, and `assets/modules/{id}`.
 
 17. Keep public and admin frontend stacks separate. Public runtime work belongs in `assets/app.js`, `assets/app/`, `assets/controllers.json`, and `assets/controllers/`; admin runtime work belongs in `admin/assets/admin.js`, `admin/assets/controllers.json`, and `admin/assets/controllers/`.
 
@@ -164,6 +164,6 @@ These instructions apply to the main app repo at `/home/t/www/symfonicat`.
 - Every change to this repository must include corresponding rewrites of both `README.md` and `README_PROFILE.md`.
 - Exception: template-only changes do not require README rewrites unless they change documented behavior, routing, commands, or another user-facing contract that the README already describes.
 - Rewrite the README files as clean current-state snapshots rather than appending to or layering on top of prior wording.
-- Prefer concise, practical README writing over exhaustive internal inventory. Favor setup, runtime behavior, and the commands/features a user actually needs; avoid duplicating minor implementation details, meta references, long table/entity inventories, and other low-signal material unless it is necessary to use or operate the project correctly.
+- Prefer concise, practical README writing over exhaustive internal inventory. Favor setup, runtime behavior, and the commands/features a user actually needs; avoid duplicating minor implementation details, meta references, long table/entity inventories, and other low-signal material unless it is necessary to use or operate the subdomain correctly.
 - Do not preserve stale wording, historical notes, or old code references unless they are still true in the current tree.
 - Keep `README.md` as the full core-repository README and `README_PROFILE.md` as the slimmed-down public-profile README.

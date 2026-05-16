@@ -98,7 +98,7 @@ final class ApplicationRouteTest extends SymfonicatWebTestCase
             ->setType(RoutingRule::TYPE_APPLICATION)
             ->setApplication($application)
             ->setApplicationType(RoutingRule::APPLICATION_TYPE_ROUTE)
-            ->setRoute('symfonicat_project_test');
+            ->setRoute('symfonicat_subdomain_test');
 
         $this->entityManager()->persist($application);
         $this->entityManager()->persist($rule);
@@ -170,7 +170,7 @@ final class ApplicationRouteTest extends SymfonicatWebTestCase
             ->setType(RoutingRule::TYPE_APPLICATION)
             ->setApplication($application)
             ->setApplicationType(RoutingRule::APPLICATION_TYPE_ROUTE)
-            ->setRoute('symfonicat_project_test');
+            ->setRoute('symfonicat_subdomain_test');
 
         $this->entityManager()->persist($application);
         $this->entityManager()->persist($rule);
@@ -207,22 +207,22 @@ final class ApplicationRouteTest extends SymfonicatWebTestCase
         self::assertStringContainsString('test', $content);
     }
 
-    public function testProjectApplicationRuleRendersApplicationShellOnProjectSubdomain(): void
+    public function testProjectApplicationRuleRendersApplicationShellOnProjectAffix(): void
     {
         $domain = $this->createDomain('example.com');
-        $project = $this->createProject('project1', $domain);
+        $subdomain = $this->createProject('subdomain1', $domain);
         $application = (new Application())->setId('core/test');
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_APPLICATION)
             ->setApplication($application)
             ->setApplicationType(RoutingRule::APPLICATION_TYPE_PROJECT)
-            ->setProject($project);
+            ->setProject($subdomain);
 
         $this->entityManager()->persist($application);
         $this->entityManager()->persist($rule);
         $this->entityManager()->flush();
 
-        $this->setHost('project1.example.com');
+        $this->setHost('subdomain1.example.com');
         $this->client()->request('GET', '/docs');
 
         self::assertResponseIsSuccessful();
@@ -232,20 +232,20 @@ final class ApplicationRouteTest extends SymfonicatWebTestCase
     public function testDomainProjectApplicationRuleRendersApplicationShellForExactPair(): void
     {
         $domain = $this->createDomain('example.com');
-        $project = $this->createProject('project1', $domain);
+        $subdomain = $this->createProject('subdomain1', $domain);
         $application = (new Application())->setId('core/test');
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_APPLICATION)
             ->setApplication($application)
             ->setApplicationType(RoutingRule::APPLICATION_TYPE_DOMAIN_PROJECT)
             ->setDomain($domain)
-            ->setProject($project);
+            ->setProject($subdomain);
 
         $this->entityManager()->persist($application);
         $this->entityManager()->persist($rule);
         $this->entityManager()->flush();
 
-        $this->setHost('project1.example.com');
+        $this->setHost('subdomain1.example.com');
         $this->client()->request('GET', '/docs');
 
         self::assertResponseIsSuccessful();
@@ -255,25 +255,25 @@ final class ApplicationRouteTest extends SymfonicatWebTestCase
     public function testProjectRouteRuleOverridesProjectApplicationBinding(): void
     {
         $domain = $this->createDomain('example.com');
-        $project = $this->createProject('project1', $domain);
+        $subdomain = $this->createProject('subdomain1', $domain);
         $application = (new Application())->setId('core/test');
         $applicationRule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_APPLICATION)
             ->setApplication($application)
             ->setApplicationType(RoutingRule::APPLICATION_TYPE_PROJECT)
-            ->setProject($project);
+            ->setProject($subdomain);
         $routeRule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_ROUTE)
             ->setRouteType(RoutingRule::ROUTE_TYPE_PROJECT)
-            ->setProject($project)
-            ->setRoute('symfonicat_project_test');
+            ->setProject($subdomain)
+            ->setRoute('symfonicat_subdomain_test');
 
         $this->entityManager()->persist($application);
         $this->entityManager()->persist($applicationRule);
         $this->entityManager()->persist($routeRule);
         $this->entityManager()->flush();
 
-        $this->setHost('project1.example.com');
+        $this->setHost('subdomain1.example.com');
         $this->client()->request('GET', '/');
 
         self::assertResponseIsSuccessful();

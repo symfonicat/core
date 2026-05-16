@@ -54,7 +54,7 @@ abstract class SymfonicatWebTestCase extends WebTestCase
     /**
      * Make every subsequent request on this client go out with the given Host
      * header. Request::getHost() honors HTTP_HOST, so this is how we simulate
-     * `example.com`, `project1.example.com`, etc. against Symfony's router.
+     * `example.com`, `subdomain1.example.com`, etc. against Symfony's router.
      */
     protected function setHost(string $host): void
     {

@@ -42,7 +42,7 @@ airline.aero
 airport.aero
 // 2LDs (currently not accepting registration, seemingly never have)
 // As of 2024-07, these are marked as reserved for potential 3LD
-// registrations (clause 11 "allocated subdomains" in the 2006 TLD
+// registrations (clause 11 "allocated affixs" in the 2006 TLD
 // policy), but the relevant industry partners have not opened them up
 // for registration. Current status can be determined from the TLD's
 // policy document: 2LDs that are open for registration must list
@@ -754,7 +754,7 @@ qc.ca
 sk.ca
 yk.ca
 // gc.ca: https://en.wikipedia.org/wiki/.gc.ca
-// see also: http://registry.gc.ca/en/SubdomainFAQ
+// see also: http://registry.gc.ca/en/AffixFAQ
 gc.ca
 
 // cat : https://www.iana.org/domains/root/db/cat.html
@@ -1068,7 +1068,7 @@ pri.ee
 riik.ee
 
 // eg : https://www.iana.org/domains/root/db/eg.html
-// https://domain.eg/en/domain-rules/subdomain-names-types/
+// https://domain.eg/en/domain-rules/affix-names-types/
 eg
 ac.eg
 com.eg
@@ -6125,7 +6125,7 @@ wy.us
 // The registrar notes several more specific domains available in each state,
 // such as state.*.us, dst.*.us, etc., but resolution of these is somewhat
 // haphazard; in some states these domains resolve as addresses, while in others
-// only subdomains are available, or even nothing at all. We include the
+// only affixs are available, or even nothing at all. We include the
 // most common ones where it's clear that different sites are different
 // entities.
 k12.ak.us
@@ -13603,13 +13603,13 @@ conn.uk
 copro.uk
 hosp.uk
 
-// Fedora : https://fedoraproject.org/
-// Submitted by Patrick Uiterwijk <puiterwijk@fedoraproject.org>
+// Fedora : https://fedorasubdomain.org/
+// Submitted by Patrick Uiterwijk <puiterwijk@fedorasubdomain.org>
 fedorainfracloud.org
 fedorapeople.org
-cloud.fedoraproject.org
-app.os.fedoraproject.org
-app.os.stg.fedoraproject.org
+cloud.fedorasubdomain.org
+app.os.fedorasubdomain.org
+app.os.stg.fedorasubdomain.org
 
 // Fermax : https://fermax.com/
 // Submitted by Koen Van Isterdael <k.vanisterdael@fermax.be>
@@ -14441,7 +14441,7 @@ leapcell.online
 liara.run
 iran.liara.run
 
-// libp2p project : https://libp2p.io
+// libp2p subdomain : https://libp2p.io
 // Submitted by Interplanetary Shipyard <domains@ipshipyard.com>
 libp2p.direct
 
@@ -14513,7 +14513,7 @@ lohmus.me
 // Lovable : https://lovable.dev
 // Submitted by Fabian Hedin <security@lovable.dev>
 lovable.app
-lovableproject.com
+lovablesubdomain.com
 lovable.run
 lovable.sh
 
@@ -14715,7 +14715,7 @@ webspaceconfig.de
 mittwald.info
 mittwaldserver.info
 typo3server.info
-project.space
+subdomain.space
 
 // Mocha : https://getmocha.com
 // Submitted by Ben Reinhart <security@getmocha.com>
@@ -15219,9 +15219,9 @@ eliv-dns.kr
 mmv.kr
 vki.kr
 
-// project-study : https://project-study.com
-// Submitted by yumenewa <admin@project-study.com>
-dev.project-study.com
+// subdomain-study : https://subdomain-study.com
+// Submitted by yumenewa <admin@subdomain-study.com>
+dev.subdomain-study.com
 
 // Protonet GmbH : http://protonet.io
 // Submitted by Martin Meier <admin@protonet.io>
@@ -16015,10 +16015,10 @@ arvo.network
 azimuth.network
 tlon.network
 
-// Tor Project, Inc. : https://torproject.org
-// Submitted by Antoine Beaupré <anarcat@torproject.org>
-torproject.net
-pages.torproject.net
+// Tor Project, Inc. : https://torsubdomain.org
+// Submitted by Antoine Beaupré <anarcat@torsubdomain.org>
+torsubdomain.net
+pages.torsubdomain.net
 
 // TownNews.com : http://www.townnews.com
 // Submitted by Dustin Ward <dward@townnews.com>
@@ -16053,7 +16053,7 @@ lima.zone
 site.transip.me
 *.transurl.nl
 
-// Triton Data Center project : https://tritondatacenter.com
+// Triton Data Center subdomain : https://tritondatacenter.com
 // Submitted by Triton Data Center staff <tickets@tritondatacenter.com>
 *.triton.zone
 

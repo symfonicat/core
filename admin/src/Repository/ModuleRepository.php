@@ -3,7 +3,7 @@
 namespace Symfonicat\Repository;
 
 use Symfonicat\Entity\Module;
-use Symfonicat\Entity\Project;
+use Symfonicat\Entity\Subdomain;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -49,12 +49,12 @@ class ModuleRepository extends ServiceEntityRepository
     /**
      * @return Module[]
      */
-    public function findForProject(Project $project): array
+    public function findForSubdomain(Subdomain $subdomain): array
     {
         return $this->createQueryBuilder('m')
-            ->innerJoin('m.projects', 'p')
-            ->andWhere('p = :project')
-            ->setParameter('project', $project)
+            ->innerJoin('m.subdomains', 'p')
+            ->andWhere('p = :subdomain')
+            ->setParameter('subdomain', $subdomain)
             ->orderBy('m.id', 'ASC')
             ->getQuery()
             ->getResult();

@@ -1,0 +1,1 @@
+console.log('[subdomain]: subdomain1 subdomain loaded!')

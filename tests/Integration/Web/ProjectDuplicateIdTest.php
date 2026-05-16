@@ -14,22 +14,22 @@ final class ProjectDuplicateIdTest extends SymfonicatWebTestCase
 {
     public function testProjectLookupByCleanIdThrowsWhenMultipleFullIdsMatch(): void
     {
-        $this->createProject('core/project1');
-        $this->createProject('superman/project1');
+        $this->createProject('core/subdomain1');
+        $this->createProject('superman/subdomain1');
 
         /** @var ProjectRepository $repository */
         $repository = self::getTestContainer()->get(ProjectRepository::class);
 
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('Project id "project1" is ambiguous.');
+        $this->expectExceptionMessage('Project id "subdomain1" is ambiguous.');
 
-        $repository->findOneByFullOrCleanId('project1');
+        $repository->findOneByFullOrCleanId('subdomain1');
     }
 
     public function testAdminProjectListFlashesDuplicateIdWarning(): void
     {
-        $this->createProject('core/project1');
-        $this->createProject('superman/project1');
+        $this->createProject('core/subdomain1');
+        $this->createProject('superman/subdomain1');
 
         $requestStack = self::getTestContainer()->get(RequestStack::class);
         $request = Request::create('/admin/p/list');
@@ -41,18 +41,18 @@ final class ProjectDuplicateIdTest extends SymfonicatWebTestCase
 
         /** @var ProjectController $controller */
         $controller = self::getTestContainer()->get(ProjectController::class);
-        /** @var ProjectRepository $projectRepository */
-        $projectRepository = self::getTestContainer()->get(ProjectRepository::class);
+        /** @var ProjectRepository $subdomainRepository */
+        $subdomainRepository = self::getTestContainer()->get(ProjectRepository::class);
         /** @var EnvParentRepository $envParentRepository */
         $envParentRepository = self::getTestContainer()->get(EnvParentRepository::class);
 
         try {
-            $response = $controller->index($projectRepository, $envParentRepository);
+            $response = $controller->index($subdomainRepository, $envParentRepository);
             $html = (string) $response->getContent();
 
             self::assertStringContainsString('alert alert-danger', $html);
             self::assertStringContainsString(
-                'duplicate project ids detected: project1: core/project1, superman/project1',
+                'duplicate subdomain ids detected: subdomain1: core/subdomain1, superman/subdomain1',
                 $html,
             );
         } finally {
