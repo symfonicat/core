@@ -3,7 +3,6 @@
     <td>{{ application.type }}</td>
     <td><b>{% if application.domain %}{{ application.domain.id(false) }}{% else %}<i class="fa fa-fw fa-times"></i>{% endif %}</b></td>
     <td><b>{% if application.subdomain %}{{ application.subdomain.id }}{% else %}<i class="fa fa-fw fa-times"></i>{% endif %}</b></td>
-    <td>{% if application.bundle %}<code>{{ application.bundle.id }}</code>{% else %}<i class="fa fa-fw fa-times"></i>{% endif %}</td>
     {% for env_parent in env_parents %}
         <td>
             {% set entries = env_parent_entries(application.env, env_parent) %}

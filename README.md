@@ -78,7 +78,7 @@ Webpack entry discovery is driven by `symfonicat:data:webpack`. It scans the roo
 - core entries from `assets/{domain,subdomain,module,bundle}/{id}`
 - installed package entries from `{composer-package-dir}/assets/{domain,subdomain,module,bundle}/{id}`
 
-Bundle rows live in `symfonicat_bundle`, use vendor-scoped ids like `core/shared` or `symfonicat/analytics/shared`, and point at a `path` that is either a directory containing `index.js` or a direct entry file. Domains, subdomains, and applications can reference a bundle; the public shell renders the referenced bundle entry before the shell-specific entry.
+Bundle rows live in `symfonicat_bundle`, use vendor-scoped ids like `core/shared` or `symfonicat/analytics/shared`, and point at a `path` that is either a directory containing `index.js` or a direct entry file. Domains and subdomains can reference a bundle; the public shell renders the referenced bundle entry before the shell-specific entry.
 
 Bootstrap is available at `assets/bootstrap` with some overrides at `assets/scss`
 
@@ -183,7 +183,7 @@ Module controllers should extend `Symfonicat\Controller\AbstractModuleController
 
 The magic is in the `/admin` section. The entire `/admin` section is hard-disabled unless `<repo>/symfonicat.lock` exists. Create the ignored lock file with `touch symfonicat.lock` to open the admin area, and remove it to close the admin area again.
 
-Bundle CRUD is under `/admin/b`; domain, subdomain, and application forms can attach one bundle row.
+Bundle CRUD is under `/admin/b`; domain and subdomain forms can attach one bundle row.
 The admin schema action is `/admin/s`; it runs the same non-interactive synchronization as `symfonicat:schema:update`, flashes the result, and returns to the referring admin page.
 
 ## Electron
@@ -211,7 +211,7 @@ The build command renders `templates/electron/{type}/main.twig.js` or `templates
 
 ## Sync
 
-`symfonicat:schema:update` first synchronizes the Doctrine schema and then synchronizes bundles, modules, applications, and subdomains from package assets. Package-backed bundle rows whose `assets/bundle/{id}` directory disappears are removed, and domain/subdomain/application references to those bundles are cleared. Run it explicitly when you want dev/admin tables:
+`symfonicat:schema:update` first synchronizes the Doctrine schema and then synchronizes bundles, modules, applications, and subdomains from package assets. Package-backed bundle rows whose `assets/bundle/{id}` directory disappears are removed, and domain/subdomain references to those bundles are cleared. Run it explicitly when you want dev/admin tables:
 
 ```bash
 docker exec -it php bin/console symfonicat:schema:update

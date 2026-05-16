@@ -27,7 +27,6 @@ symfonicat:
                 type: domain
                 domain_id: example.com
                 subdomain_id: null
-                bundle_id: null
         symfonicat_env_parent:
             -
                 id: colors

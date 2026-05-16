@@ -292,8 +292,7 @@ final class RuntimeConfig
                 ->setName((string) ($row['name'] ?? $id))
                 ->setType((string) ($row['type'] ?? Application::TYPE_DOMAIN))
                 ->setDomain($domains[(string) ($row['domain_id'] ?? '')] ?? null)
-                ->setSubdomain($subdomains[(string) ($row['subdomain_id'] ?? '')] ?? null)
-                ->setBundle($bundles[(string) ($row['bundle_id'] ?? '')] ?? null);
+                ->setSubdomain($subdomains[(string) ($row['subdomain_id'] ?? '')] ?? null);
 
             $applications[$id] = $application;
         }

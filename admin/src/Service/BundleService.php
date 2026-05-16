@@ -3,7 +3,6 @@
 namespace Symfonicat\Service;
 
 use Doctrine\ORM\EntityManagerInterface;
-use Symfonicat\Entity\Application;
 use Symfonicat\Entity\Bundle;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\Subdomain;
@@ -21,7 +20,7 @@ final class BundleService
     /**
      * @return array{
      *     created: list<array{id: string, path: string}>,
-     *     deleted: list<array{id: string, path: string, references: array{applications: int, domains: int, subdomains: int}}>,
+     *     deleted: list<array{id: string, path: string, references: array{domains: int, subdomains: int}}>,
      *     updated: list<array{id: string, from: string, to: string}>
      * }
      */
@@ -109,12 +108,11 @@ final class BundleService
     }
 
     /**
-     * @return array{applications: int, domains: int, subdomains: int}
+     * @return array{domains: int, subdomains: int}
      */
     private function clearBundleReferences(Bundle $bundle): array
     {
         return [
-            'applications' => $this->clearBundleReference(Application::class, $bundle),
             'domains' => $this->clearBundleReference(Domain::class, $bundle),
             'subdomains' => $this->clearBundleReference(Subdomain::class, $bundle),
         ];

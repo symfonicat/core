@@ -34,10 +34,6 @@ class Application
     #[ORM\JoinColumn(name: 'subdomain_id', referencedColumnName: 'id', nullable: true, onDelete: 'CASCADE')]
     private ?Subdomain $subdomain = null;
 
-    #[ORM\ManyToOne(targetEntity: Bundle::class)]
-    #[ORM\JoinColumn(name: 'bundle_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
-    private ?Bundle $bundle = null;
-
     /**
      * @var Collection<int, ApplicationEnv>
      */
@@ -118,18 +114,6 @@ class Application
     public function setSubdomain(?Subdomain $subdomain): static
     {
         $this->subdomain = $subdomain;
-
-        return $this;
-    }
-
-    public function getBundle(): ?Bundle
-    {
-        return $this->bundle;
-    }
-
-    public function setBundle(?Bundle $bundle): static
-    {
-        $this->bundle = $bundle;
 
         return $this;
     }

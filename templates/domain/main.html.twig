@@ -9,7 +9,6 @@
     {%- endfor %}
 
     {{- encore_entry_link_tags_bundle(domain.bundle) | indent_links(8) -}}
-    {{- encore_entry_link_tags_bundle(application.bundle|default(null)) | indent_links(8) -}}
     {{- encore_entry_link_tags_domain(domain) | indent_links(8) -}}
 
 {%- endblock %}
@@ -22,7 +21,6 @@
     {%- endfor %}
 
     {{- encore_entry_script_tags_bundle(domain.bundle) | indent_scripts(8) -}}
-    {{- encore_entry_script_tags_bundle(application.bundle|default(null)) | indent_scripts(8) -}}
     {{- encore_entry_script_tags_domain(domain) | indent_scripts(8) -}}
 
 {%- endblock %}

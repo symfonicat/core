@@ -11,10 +11,10 @@
 
 <div class="row g-3">
     <div class="col-md-3">
-        {{ form_row(form.id) }}
+        {{ form_row(form.name) }}
     </div>
     <div class="col-md-3">
-        {{ form_row(form.name) }}
+        {{ form_row(form.id) }}
     </div>
 
 </div>
@@ -37,9 +37,6 @@
         <div data-application-form-target="subdomainRow">
             {{ form_row(form.subdomain) }}
         </div>
-    </div>
-    <div class="col-md-3">
-        {{ form_row(form.bundle) }}
     </div>
 </div>
 

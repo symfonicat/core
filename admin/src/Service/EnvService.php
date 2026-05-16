@@ -67,7 +67,6 @@ final class EnvService
                 $this->collectDomainValues($domain),
                 $this->collectBundleValues($entity->getBundle()),
                 $this->collectSubdomainValues($entity),
-                $this->collectBundleValues($application?->getBundle()),
                 $this->collectApplicationValues($application),
             );
         }
@@ -82,7 +81,6 @@ final class EnvService
                 $this->collectDomainValues($domain),
                 $this->collectBundleValues($subdomain->getBundle()),
                 $this->collectSubdomainValues($subdomain),
-                $this->collectBundleValues($application?->getBundle()),
                 $this->collectApplicationValues($application),
             );
         }
@@ -90,7 +88,6 @@ final class EnvService
         return $this->mergeValues(
             $this->collectBundleValues($domain?->getBundle()),
             $this->collectDomainValues($domain),
-            $this->collectBundleValues($application?->getBundle()),
             $this->collectApplicationValues($application),
         );
     }
