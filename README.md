@@ -75,10 +75,10 @@ Public routes:
 
 Webpack entry discovery is driven by `symfonicat:data:webpack`. It scans the root package plus installed Composer packages from configured vendors and resolves:
 
-- `assets/applications/{id}`
-- `assets/domains/{id}`
-- `assets/subdomains/{id}`
-- `assets/modules/{id}`
+- core domain bundles from `assets/bundles/domain/{id}`
+- core subdomain bundles from `assets/bundles/subdomain/{id}`
+- core module bundles from `assets/bundles/module/{id}`
+- installed package bundles from `{composer-package-dir}/bundles/{domain,subdomain,module}/{id}`
 
 Bootstrap is available at `assets/bootstrap` with some overrides at `assets/scss`
 

@@ -106,11 +106,14 @@ const discoverPackageEntries = (projectDir, type) => {
     const entries = new Map();
 
     loadSymfonicatPackages(projectDir).forEach((pkg) => {
-        const baseDir = path.join(pkg.installPath, 'assets', type);
+        const baseDir = pkg.vendor === 'core'
+            ? path.join(pkg.installPath, 'assets', 'bundles', type)
+            : path.join(pkg.installPath, 'bundles', type);
 
         listDirEntries(baseDir).forEach((entry) => {
-            const idPrefix = pkg.vendor === 'core' ? 'core' : `${pkg.vendor}/${pkg.package}`;
-            const id = `${idPrefix}/${entry.name}`;
+            const id = type === 'domain'
+                ? entry.name
+                : `${pkg.vendor === 'core' ? 'core' : `${pkg.vendor}/${pkg.package}`}/${entry.name}`;
 
             if (entries.has(id)) {
                 const existing = entries.get(id);
@@ -143,7 +146,6 @@ const loadModuleData = (projectDir) => {
         console.warn('[webpack] symfonicat:data:webpack failed; falling back to configured package vendors.');
 
         return {
-            applications: discoverPackageEntries(projectDir, 'application'),
             domains: discoverPackageEntries(projectDir, 'domain'),
             subdomains: discoverPackageEntries(projectDir, 'subdomain'),
             modules: discoverPackageEntries(projectDir, 'module'),

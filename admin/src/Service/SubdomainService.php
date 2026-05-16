@@ -63,7 +63,7 @@ class SubdomainService
         // "subdomain1" to package-prefixed subdomain ids such as "core/subdomain1"
         // when there is exactly one match among discovered package entries.
         if (strpos($subdomainId, '/') === false) {
-            $packages = $this->packageDiscoveryService->discoverEntryDirectories('subdomains');
+            $packages = $this->packageDiscoveryService->discoverEntryDirectories('subdomain');
             $matches = [];
             foreach (array_keys($packages) as $pkgId) {
                 $parts = explode('/', $pkgId);
@@ -127,7 +127,7 @@ class SubdomainService
      */
     private function discoverPackageSubdomains(): array
     {
-        return array_keys($this->packageDiscoveryService->discoverEntryDirectories('subdomains'));
+        return array_keys($this->packageDiscoveryService->discoverEntryDirectories('subdomain'));
     }
 
     /**

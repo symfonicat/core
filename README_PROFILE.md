@@ -47,7 +47,7 @@ symfonicat:
         - symfonicat
 ```
 
-Webpack and schema sync discover package entries under configured Composer vendors. The root package is emitted as `core/...`; installed package entries use ids such as `symfonicat/analytics/main`. The same vendor list is used for package service imports and package controller route imports.
+Webpack and schema sync discover package entries under configured Composer vendors. Core bundle entries live under `assets/bundles/{domain,subdomain,module}/`; installed package bundle entries live under `{composer-package-dir}/bundles/{domain,subdomain,module}/`. The root package is emitted as `core/...`; installed package entries use ids such as `symfonicat/analytics/main`. The same vendor list is used for package service imports and package controller route imports.
 
 ## Admin YAML
 

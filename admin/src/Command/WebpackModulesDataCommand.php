@@ -25,13 +25,17 @@ final class WebpackModulesDataCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $output->writeln(json_encode([
+            'domains' => $this->entriesFromRepositoryOrPackages(
+                fn (): array => $this->runtimeConfig->domains(),
+                'domain',
+            ),
             'modules' => $this->entriesFromRepositoryOrPackages(
                 fn (): array => $this->runtimeConfig->modules(),
-                'modules',
+                'module',
             ),
             'subdomains' => $this->entriesFromRepositoryOrPackages(
                 fn (): array => $this->runtimeConfig->subdomains(),
-                'subdomains',
+                'subdomain',
             ),
         ], JSON_THROW_ON_ERROR));
 

@@ -5,8 +5,9 @@ namespace Symfonicat\Service;
 final class PackageDiscoveryService
 {
     private const SUPPORTED_ENTRY_TYPES = [
-        'modules',
-        'subdomains',
+        'domain',
+        'module',
+        'subdomain',
     ];
 
     /**
@@ -100,7 +101,9 @@ final class PackageDiscoveryService
         $entries = [];
 
         foreach ($this->findSymfonicatPackages() as $package) {
-            $baseDirectory = $package['installPath'].'/assets/'.$type;
+            $baseDirectory = $package['vendor'] === 'core'
+                ? $package['installPath'].'/assets/bundles/'.$type
+                : $package['installPath'].'/bundles/'.$type;
             $directories = glob($baseDirectory.'/*', GLOB_ONLYDIR) ?: [];
             sort($directories, SORT_STRING);
 
@@ -110,8 +113,12 @@ final class PackageDiscoveryService
                     continue;
                 }
 
-                $idPrefix = $package['vendor'] === 'core' ? 'core' : $package['vendor'].'/'.$package['package'];
-                $id = $idPrefix.'/'.$name;
+                if ($type === 'domain') {
+                    $id = $name;
+                } else {
+                    $idPrefix = $package['vendor'] === 'core' ? 'core' : $package['vendor'].'/'.$package['package'];
+                    $id = $idPrefix.'/'.$name;
+                }
 
                 if (isset($entries[$id])) {
                     throw new \RuntimeException(sprintf(
@@ -154,7 +161,7 @@ final class PackageDiscoveryService
     {
         $modules = [];
 
-        foreach ($this->discoverEntryDirectories('modules') as $id => $module) {
+        foreach ($this->discoverEntryDirectories('module') as $id => $module) {
             $packagePath = $module['directory'].'/package.json';
             if (!is_file($packagePath)) {
                 throw new \RuntimeException(sprintf('Module "%s" is missing "%s".', $id, $packagePath));
