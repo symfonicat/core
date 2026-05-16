@@ -14,7 +14,7 @@ use Symfony\Component\Routing\Attribute\Route;
 
 final class BundleController extends AbstractController
 {
-    #[Route('/admin/b/list', name: 'symfonicat_bundle_index', methods: ['GET'])]
+    #[Route('/admin/b', name: 'symfonicat_bundle_index', methods: ['GET'])]
     public function index(BundleRepository $bundleRepository, EnvParentRepository $envParentRepository): Response
     {
         return $this->render('@symfonicat/bundle/index.html.twig', [

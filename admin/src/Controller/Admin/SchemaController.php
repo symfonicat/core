@@ -24,7 +24,7 @@ final class SchemaController extends AbstractController
     ) {
     }
 
-    #[Route('/admin/s', name: 'symfonicat_admin_schema_update', methods: ['GET'])]
+    #[Route('/admin/u', name: 'symfonicat_admin_schema_update', methods: ['GET'])]
     public function update(Request $request): RedirectResponse
     {
         try {

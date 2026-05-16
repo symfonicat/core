@@ -15,7 +15,7 @@ use Symfony\Component\Routing\Attribute\Route;
 final class SubdomainController extends AbstractController
 {
 
-    #[Route('/admin/s/list', name: 'symfonicat_subdomain_index', methods: ['GET'])]
+    #[Route('/admin/s', name: 'symfonicat_subdomain_index', methods: ['GET'])]
     public function index(SubdomainRepository $subdomainRepository, EnvParentRepository $envParentRepository): Response
     {
         $duplicateGroups = $subdomainRepository->findDuplicateCleanIdGroups();

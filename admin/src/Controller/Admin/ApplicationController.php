@@ -14,7 +14,7 @@ use Symfony\Component\Routing\Attribute\Route;
 
 final class ApplicationController extends AbstractController
 {
-    #[Route('/admin/e', name: 'symfonicat_application_index', methods: ['GET'])]
+    #[Route('/admin/a', name: 'symfonicat_application_index', methods: ['GET'])]
     public function index(ApplicationRepository $applicationRepository, \Symfonicat\Repository\EnvParentRepository $envParentRepository): Response
     {
         return $this->render('@symfonicat/application/index.html.twig', [
@@ -23,7 +23,7 @@ final class ApplicationController extends AbstractController
         ]);
     }
 
-    #[Route('/admin/e/create', name: 'symfonicat_application_create', methods: ['GET', 'POST'])]
+    #[Route('/admin/a/create', name: 'symfonicat_application_create', methods: ['GET', 'POST'])]
     public function create(
         Request $request,
         EntityManagerInterface $entityManager,
@@ -53,7 +53,7 @@ final class ApplicationController extends AbstractController
         ]);
     }
 
-    #[Route('/admin/e/{id}', name: 'symfonicat_application_edit', methods: ['GET', 'POST'], requirements: ['id' => '.+'])]
+    #[Route('/admin/a/{id}', name: 'symfonicat_application_edit', methods: ['GET', 'POST'], requirements: ['id' => '.+'])]
     public function edit(
         Request $request,
         Application $application,
@@ -82,7 +82,7 @@ final class ApplicationController extends AbstractController
         ]);
     }
 
-    #[Route('/admin/e/{id}/delete', name: 'symfonicat_application_delete', methods: ['POST'], requirements: ['id' => '.+'])]
+    #[Route('/admin/a/{id}/delete', name: 'symfonicat_application_delete', methods: ['POST'], requirements: ['id' => '.+'])]
     public function delete(Request $request, Application $application, EntityManagerInterface $entityManager): Response
     {
         if ($this->isCsrfTokenValid('delete'.$application->getId(), $request->getPayload()->getString('_token'))) {
