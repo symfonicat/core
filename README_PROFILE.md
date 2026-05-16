@@ -49,6 +49,8 @@ symfonicat:
 
 Webpack and schema sync discover package entries under configured Composer vendors. Core entries live under `assets/{domain,subdomain,module,bundle}/`; installed package entries live under `{composer-package-dir}/assets/{domain,subdomain,module,bundle}/`. The root package is emitted as `core/...`; installed package entries use ids such as `symfonicat/analytics/main`. Bundle rows use the same vendor-scoped id style and can be attached to domains and subdomains.
 
+Env data is layered as bundle, domain, subdomain, then application at runtime, with the same grouped structure exposed through `window.env` and Twig `env()` lookups.
+
 ## Admin YAML
 
 Runtime reads `config/packages/symfonicat.yaml` under `symfonicat.admin`. The database tables are for unlocked admin editing and dumping YAML; production runtime should not need those tables. For local admin work:

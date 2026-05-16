@@ -109,7 +109,7 @@ Passing an Electron row resolves assets under `public/electron/{electron.id}/`.
 
 ## Env
 
-Env resolution is application, then domain, then subdomain, then Electron for Electron requests only. The same grouped structure is emitted into `window.env`. Twig uses the `env()` helper for dotted lookups:
+Env resolution is bundle, then domain, then subdomain, then application, then Electron for Electron requests only. The same grouped structure is emitted into `window.env`. Twig uses the `env()` helper for dotted lookups:
 
 ```twig
 {{ env('colors.primary') }}

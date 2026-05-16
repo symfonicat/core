@@ -50,11 +50,11 @@ final class EnvService
      */
     public function all(Domain|Subdomain|null $entity = null): array
     {
-
         if ($entity instanceof Domain) {
             return $this->mergeValues(
                 $this->collectBundleValues($entity->getBundle()),
                 $this->collectDomainValues($entity),
+                $this->collectApplicationValues($this->applicationService->load()),
             );
         }
 
@@ -88,6 +88,8 @@ final class EnvService
         return $this->mergeValues(
             $this->collectBundleValues($domain?->getBundle()),
             $this->collectDomainValues($domain),
+            $this->collectBundleValues($subdomain?->getBundle()),
+            $this->collectSubdomainValues($subdomain),
             $this->collectApplicationValues($application),
         );
     }
