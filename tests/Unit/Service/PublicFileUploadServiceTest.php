@@ -26,7 +26,7 @@ final class PublicFileUploadServiceTest extends TestCase
 
     public function testUploadsDomainFileIntoCleanDomainPublicFolder(): void
     {
-        $domain = (new Domain())->setId('core/example.com');
+        $domain = (new Domain())->setId('example.com');
         $file = $this->uploadedFile('domain content');
 
         $path = (new PublicFileUploadService($this->publicDir))->upload(
@@ -66,7 +66,7 @@ final class PublicFileUploadServiceTest extends TestCase
         (new PublicFileUploadService($this->publicDir))->upload(
             '../file.txt',
             FileUploadItemType::FILE_TYPE_DOMAIN,
-            (new Domain())->setId('core/example.com'),
+            (new Domain())->setId('example.com'),
             null,
             $this->uploadedFile('content'),
         );

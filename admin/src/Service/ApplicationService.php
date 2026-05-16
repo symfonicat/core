@@ -27,6 +27,7 @@ class ApplicationService
         private readonly RoutingRuleService $routingRuleService,
         private readonly PackageDiscoveryService $packageDiscoveryService,
         private readonly string $appSecret,
+        private readonly RuntimeConfig $runtimeConfig,
     ) {
     }
 
@@ -88,7 +89,9 @@ class ApplicationService
             return null;
         }
 
-        $rule = $this->routingRuleRepository->findOneTypeApplicationByRoute($route);
+        $rule = $this->usesDatabaseRuntime()
+            ? $this->routingRuleRepository->findOneTypeApplicationByRoute($route)
+            : $this->runtimeConfig->applicationRuleByRoute($route);
         $application = $rule?->getApplication();
 
         if ($application instanceof Application) {
@@ -97,6 +100,13 @@ class ApplicationService
         }
 
         return $application instanceof Application ? $application : null;
+    }
+
+    public function find(string $applicationId): ?Application
+    {
+        return $this->usesDatabaseRuntime()
+            ? $this->applicationRepository->findOneByFullOrCleanId($applicationId)
+            : $this->runtimeConfig->applicationByFullOrCleanId($applicationId);
     }
 
     /**
@@ -157,12 +167,22 @@ class ApplicationService
             return null;
         }
 
+        if ($this->usesDatabaseRuntime()) {
+            return match ($applicationType) {
+                RoutingRule::APPLICATION_TYPE_ARGUMENTS => $this->routingRuleRepository->findOneTypeApplicationArgumentsByApplicationId($applicationId),
+                RoutingRule::APPLICATION_TYPE_ROUTE => $this->routingRuleRepository->findOneTypeApplicationRouteByApplicationId($applicationId),
+                default => $this->routingRuleRepository->findOneTypeApplicationArgumentsByApplicationId($applicationId)
+                    ?? $this->routingRuleRepository->findOneTypeApplicationRouteByApplicationId($applicationId)
+                    ?? $this->routingRuleRepository->findOneTypeApplicationByApplicationId($applicationId),
+            };
+        }
+
         return match ($applicationType) {
-            RoutingRule::APPLICATION_TYPE_ARGUMENTS => $this->routingRuleRepository->findOneTypeApplicationArgumentsByApplicationId($applicationId),
-            RoutingRule::APPLICATION_TYPE_ROUTE => $this->routingRuleRepository->findOneTypeApplicationRouteByApplicationId($applicationId),
-            default => $this->routingRuleRepository->findOneTypeApplicationArgumentsByApplicationId($applicationId)
-                ?? $this->routingRuleRepository->findOneTypeApplicationRouteByApplicationId($applicationId)
-                ?? $this->routingRuleRepository->findOneTypeApplicationByApplicationId($applicationId),
+            RoutingRule::APPLICATION_TYPE_ARGUMENTS => $this->runtimeConfig->applicationRuleByApplicationId($applicationId, RoutingRule::APPLICATION_TYPE_ARGUMENTS),
+            RoutingRule::APPLICATION_TYPE_ROUTE => $this->runtimeConfig->applicationRuleByApplicationId($applicationId, RoutingRule::APPLICATION_TYPE_ROUTE),
+            default => $this->runtimeConfig->applicationRuleByApplicationId($applicationId, RoutingRule::APPLICATION_TYPE_ARGUMENTS)
+                ?? $this->runtimeConfig->applicationRuleByApplicationId($applicationId, RoutingRule::APPLICATION_TYPE_ROUTE)
+                ?? $this->runtimeConfig->applicationRuleByApplicationId($applicationId),
         };
     }
 
@@ -333,7 +353,7 @@ class ApplicationService
             return null;
         }
 
-        $application = $this->applicationRepository->findOneByFullOrCleanId($applicationId);
+        $application = $this->find($applicationId);
 
         if ($application instanceof Application) {
             $request->attributes->set('application', $application);
@@ -358,6 +378,11 @@ class ApplicationService
             'Duplicate application ids detected: %s',
             implode('; ', $details),
         ));
+    }
+
+    private function usesDatabaseRuntime(): bool
+    {
+        return ($_SERVER['APP_ENV'] ?? null) === 'test';
     }
 
     private function isApplicationModuleRequestContext(Request $request): bool

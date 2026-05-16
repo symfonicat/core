@@ -13,8 +13,6 @@ use Symfonicat\Repository\ElectronRepository;
 #[ORM\Table(name: 'symfonicat_electron')]
 class Electron
 {
-    use VendorScopedIdTrait;
-
     public const TYPE_DOMAIN = 'domain';
     public const TYPE_PROJECT = 'project';
     public const TYPE_APPLICATION = 'application';
@@ -41,9 +39,6 @@ class Electron
     #[ORM\JoinColumn(name: 'application_id', referencedColumnName: 'id', nullable: true, onDelete: 'CASCADE')]
     private ?Application $application = null;
 
-    #[ORM\Column(length: 255, nullable: true)]
-    private ?string $favicon = null;
-
     /**
      * @var Collection<int, ElectronEnv>
      */
@@ -53,6 +48,23 @@ class Electron
     public function __construct()
     {
         $this->env = new ArrayCollection();
+    }
+
+    public function getId(bool $includeVendor = true): ?string
+    {
+        return $this->id;
+    }
+
+    public function setId(string $id): static
+    {
+        $id = trim($id, " \t\n\r\0\x0B/");
+        if ($id === '') {
+            throw new \InvalidArgumentException('Electron id must be non-empty.');
+        }
+
+        $this->id = $id;
+
+        return $this;
     }
 
     public static function typeChoices(): array
@@ -120,18 +132,6 @@ class Electron
     public function setApplication(?Application $application): static
     {
         $this->application = $application;
-
-        return $this;
-    }
-
-    public function getFavicon(): ?string
-    {
-        return $this->favicon;
-    }
-
-    public function setFavicon(?string $favicon): static
-    {
-        $this->favicon = $favicon;
 
         return $this;
     }

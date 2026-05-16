@@ -1,10 +1,6 @@
-# Symfonicat
+## Symfonicat
 
-`symfonicat/core` is the full Symfony application for Symfonicat. Public routing, admin CRUD, Doctrine entities, package module runtime, webpack entry discovery, Electron packaging, and Docker/FrankenPHP infrastructure live in this repository.
-
-## Install
-
-For local development, point the seeded hosts at your Docker host:
+Edit `/etc/hosts`:
 
 ```text
 127.0.0.1 example.com
@@ -15,6 +11,8 @@ For local development, point the seeded hosts at your Docker host:
 git clone https://github.com/symfonicat/core symfonicat
 cd symfonicat
 docker compose up -d
+docker exec -it php bin/console symfonicat:schema:update
+docker exec php bin/console symfonicat:load
 docker exec -it php bin/console symfonicat:admin:create <email> # prints QR code
 touch symfonicat.lock # enables /admin
 ```
@@ -24,12 +22,8 @@ First boot can take several minutes.
 The `php` container:
 
 - installs Composer dependencies
-- runs `symfonicat:schema:update`
-- loads checked-in admin YAML
 - runs `npm install`
 - builds assets
-
-Redis is used for application cache, sessions, locks, admin login throttling, and Symfony Messenger; Messenger routes messages to the Redis-backed `async` transport by default and Compose starts workers for them.
 
 ## Configuration
 
@@ -41,25 +35,24 @@ symfonicat:
         - symfonicat
 ```
 
-`symfonicat:dump` writes all `symfonicat_*` database tables (excluding `symfonicat_admin`) to the same file under `symfonicat.admin` while preserving `symfonicat.vendors`. `symfonicat:load` restores that `symfonicat.admin` section into the database (it likewise ignores `symfonicat_admin`). If the YAML file has no `admin` section, load exits successfully without touching the database.
-
 ```bash
-docker exec php bin/console symfonicat:dump
-docker exec php bin/console symfonicat:load
+docker exec php bin/console symfonicat:dump # writes database to symfonicat.yaml
+docker exec php bin/console symfonicat:load # imports symfonicat.yaml into database
+docker exec php bin/console symfonicat:purge # drops all symfonicat_* tables
 ```
 
-Composer runs `symfonicat:schema:update` and then `symfonicat:load` after `composer install`, so a fresh database gets its tables, package-provided rows, and checked-in admin YAML automatically.
+Runtime reads `symfonicat.admin` from this YAML file. The `symfonicat_*` tables are for unlocked admin editing and regenerating YAML; production runtime should not need them after deployment.
 
 ## Ids
 
-`Domain`, `Project`, `Application`, `Module`, and `Electron` store ids with a vendor prefix and expose the full id by default:
+`Project`, `Application`, and `Module` store package-scoped ids. `Domain` ids are always bare domain names, and `Electron` ids are plain row ids:
 
 ```twig
-{{ project.id(false) }} {# project1 #}
+{{ domain.id }}        {# example.com #}
+{{ electron.id }}      {# example-test #}
 {{ project.id }}        {# core/project1 #}
+{{ project.id(false) }} {# project1 #}
 ```
-
-The separate `vendor` field is read-only in admin forms. Manually created rows use `core`; package-discovered rows use their Composer vendor. Admin lists show clean ids where users read host and project names, but admin route parameters and persistence lookups keep the full id.
 
 ## Public Runtime
 
@@ -87,13 +80,11 @@ Webpack entry discovery is driven by `symfonicat:data:webpack`. It scans the roo
 - `assets/projects/{id}`
 - `assets/modules/{id}`
 
-Bootstrap theme tokens are set in `assets/scss/_variables.scss` and `assets/scss/_variables-dark.scss`; generated selector overrides live in `assets/scss/_overrides.scss`.
-The public runtime entry is `assets/app.js`; its internal helpers live under `assets/app/` (`module`, `application_redirect`, `stimulus`, and `mercure`).
-Admin pages use the `admin` JavaScript entry from `admin/assets/admin.js`, which loads Bootstrap JavaScript for controls such as the YAML dropdown while keeping admin controllers out of the public runtime entry.
+Bootstrap is available at `assets/bootstrap` with some overrides at `assets/scss`
 
 ### Public
 
-The `symfonicat_asset(path)` Twig helper resolves shell-specific public assets. Without a second argument, it checks the current project folder first, then the current domain folder, then `public/default/`. A folder only wins if the requested file exists there. If the file is missing from `public/default/`, the helper throws. Passing an `Application`, `Project`, or `Domain` object as the second argument pins the base directly to that object, for example `/core/test/` for an application. The repository ships skeleton `public/default/`, `public/domains/example.com/`, `public/projects/project1/`, and `public/applications/core/test` folders.
+The `symfonicat_asset(path)` Twig helper resolves shell-specific public assets. Without a second argument, it automatically searches the public folder for the file, prioritizing project, then domain, then the default folder.
 
 Notice how the favicons work on each url:
 
@@ -111,7 +102,10 @@ but it can be used like this:
 
 ```twig
 <link rel="icon" href="{{ symfonicat_asset('favicon.svg', application) }}" />
+<link rel="icon" href="{{ symfonicat_asset('favicon.svg', electron) }}" />
 ```
+
+Passing an Electron row resolves assets under `public/electron/{electron.id}/`.
 
 ## Env
 
@@ -176,23 +170,22 @@ Backend module controllers live in installed packages and are exposed under full
 
 ```javascript
 const mod = 'symfonicat/analytics/main'
-
-mod.log('module active!')
+      mod.log('module active!')
 
 // posts { test: true } to /m/symfonicat/analytics/main
 const result = await mod.json({ test: true })
-mod.log('/m/symfonicat/analytics/main result:', result)
+      mod.log('/m/symfonicat/analytics/main result:', result)
 ```
 
 Module controllers should extend `Symfonicat\Controller\AbstractModuleController`, which only runs a module when it is attached to the active project, domain, or application context.
 
 ## Admin
 
-The magic is in the `/admin` section. Every path beginning with `/admin` is hard-disabled unless `<repo>/symfonicat.lock` exists. When the lock file is missing, Caddy catches the request before public static files can be served, marks it, and routes it into Symfony so Symfony renders the 404. Symfony has the same early request gate for non-Caddy runtimes. Create the ignored lock file with `touch symfonicat.lock` to open the admin area, and remove it to close the admin area again.
+The magic is in the `/admin` section. The entire `/admin` section is hard-disabled unless `<repo>/symfonicat.lock` exists. Create the ignored lock file with `touch symfonicat.lock` to open the admin area, and remove it to close the admin area again.
 
 ## Electron
 
-There are `electron` and `electron_favicon` Twig variables available in any template if the request is coming from an electron app:
+There is an `electron` Twig variable available in any template if the request is coming from a known Electron app. The variable is the `Electron` entity row from `symfonicat.yaml`:
 
 ```twig
 {% if electron %}
@@ -200,16 +193,9 @@ There are `electron` and `electron_favicon` Twig variables available in any temp
     {# output Electron-specific code #}
 
 {% endif %}
-
-{% if electron_icon %}
-
-    <img src="{{ electron_icon }}" />
-
-{% endif %}
 ```
 
-Electron rows have vendor-scoped ids, a `type` (`domain`, `project`, or `application`), a matching target relation, an optional favicon, and scoped env values.
-The checked-in example Electron row uses `public/electron/favicon/domain/example.com.svg`, matching the default SVG favicon.
+Electron rows have plain ids, a `type` (`domain`, `project`, or `application`), a matching target relation, and scoped env values. The generated Electron start URL includes `?electron={electron.id}` so Symfony can resolve the active Electron row on every request.
 
 Build outputs with:
 
@@ -222,13 +208,19 @@ The build command renders `templates/electron/{type}/main.twig.js` or `templates
 
 ## Sync
 
-`symfonicat:schema:update` first synchronizes the Doctrine schema and then synchronizes modules, domains, applications, and projects from package assets:
+`symfonicat:schema:update` first synchronizes the Doctrine schema and then synchronizes modules, applications, and projects from package assets. Run it explicitly when you want dev/admin tables:
 
 ```bash
 docker exec -it php bin/console symfonicat:schema:update
 ```
 
-In non-interactive runs, such as Composer install scripts, missing package-provided rows are created automatically. Removing a stale module that still has referencing rows requires an interactive run so the affected rows can be reviewed before deletion.
+Then load the checked-in YAML if you want to edit it through `/admin`:
+
+```bash
+docker exec php bin/console symfonicat:load
+```
+
+Composer and Docker startup do not run schema update or YAML load automatically. Removing a stale module that still has referencing rows requires an interactive run so the affected rows can be reviewed before deletion.
 
 ## Picture of @dunglas at the Zoo
 

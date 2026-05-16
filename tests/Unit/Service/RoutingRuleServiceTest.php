@@ -10,6 +10,7 @@ use Symfonicat\Entity\RoutingRule;
 use Symfonicat\Repository\RoutingRuleRepository;
 use Symfonicat\Service\PathService;
 use Symfonicat\Service\RoutingRuleService;
+use Symfonicat\Service\RuntimeConfig;
 use Symfony\Component\HttpFoundation\RequestStack;
 
 /**
@@ -20,7 +21,7 @@ final class RoutingRuleServiceTest extends TestCase
     #[DataProvider('reservedArgumentProvider')]
     public function testDomainLookupIgnoresReservedArguments(string $argument, string $path): void
     {
-        $domain = (new Domain())->setId('core/example.com');
+        $domain = (new Domain())->setId('example.com');
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_DOMAIN)
             ->setDomain($domain)
@@ -59,7 +60,7 @@ final class RoutingRuleServiceTest extends TestCase
 
     public function testDomainLookupReturnsFirstMatchingPathRule(): void
     {
-        $domain = (new Domain())->setId('core/example.com');
+        $domain = (new Domain())->setId('example.com');
         $rule = (new RoutingRule())
             ->setType(RoutingRule::TYPE_DOMAIN)
             ->setDomain($domain)
@@ -97,7 +98,7 @@ final class RoutingRuleServiceTest extends TestCase
 
     public function testCollectionLookupsAreStraightPassThrough(): void
     {
-        $domain = (new Domain())->setId('core/example.com');
+        $domain = (new Domain())->setId('example.com');
         $project = (new Project())->setId('core/project1');
 
         $domainRules = [new RoutingRule(), new RoutingRule()];
@@ -149,6 +150,6 @@ final class RoutingRuleServiceTest extends TestCase
 
     private function service(RoutingRuleRepository $repository): RoutingRuleService
     {
-        return new RoutingRuleService(new PathService(new RequestStack()), $repository);
+        return new RoutingRuleService(new PathService(new RequestStack()), $repository, new RuntimeConfig(dirname(__DIR__, 3)));
     }
 }

@@ -6,11 +6,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfonicat\Entity\Electron;
 use Symfonicat\Form\ElectronType;
 use Symfonicat\Repository\ElectronRepository;
-use Symfonicat\Service\FileUploadService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\FormError;
-use Symfony\Component\Form\FormInterface;
-use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -30,7 +27,6 @@ final class ElectronController extends AbstractController
     public function create(
         Request $request,
         EntityManagerInterface $entityManager,
-        FileUploadService $fileUploadService,
     ): Response {
         $electron = new Electron();
         $form = $this->createForm(ElectronType::class, $electron);
@@ -39,7 +35,6 @@ final class ElectronController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             try {
                 $this->normalizeTypeSelection($electron);
-                $this->handleFaviconUpload($form, $electron, $fileUploadService);
             } catch (\RuntimeException | \InvalidArgumentException $error) {
                 $form->addError(new FormError($error->getMessage()));
             }
@@ -63,7 +58,6 @@ final class ElectronController extends AbstractController
         Request $request,
         Electron $electron,
         EntityManagerInterface $entityManager,
-        FileUploadService $fileUploadService,
     ): Response {
         $form = $this->createForm(ElectronType::class, $electron);
         $form->handleRequest($request);
@@ -71,7 +65,6 @@ final class ElectronController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             try {
                 $this->normalizeTypeSelection($electron);
-                $this->handleFaviconUpload($form, $electron, $fileUploadService);
             } catch (\RuntimeException | \InvalidArgumentException $error) {
                 $form->addError(new FormError($error->getMessage()));
             }
@@ -119,22 +112,5 @@ final class ElectronController extends AbstractController
             $electron->setDomain(null);
             $electron->setProject(null);
         }
-    }
-
-    private function handleFaviconUpload(FormInterface $form, Electron $electron, FileUploadService $fileUploadService): void
-    {
-        $file = $form->get('favicon')->getData();
-        if (!$file instanceof UploadedFile) {
-            return;
-        }
-
-        $type = trim($electron->getType());
-        $targetId = trim((string) $electron->getTargetId(true));
-        if ($type === '' || $targetId === '') {
-            throw new \RuntimeException('Select the Electron target before uploading a favicon.');
-        }
-
-        $path = sprintf('electron/favicon/%s/%s.png', $type, $targetId);
-        $electron->setFavicon($fileUploadService->uploadPublicImageAsPng($file, $path));
     }
 }

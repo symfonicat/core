@@ -7,8 +7,6 @@ First boot can take several minutes.
 The `php` container:
 
 - installs Composer dependencies
-- runs `symfonicat:schema:update`
-- loads checked-in admin YAML
 - runs `npm install`
 - builds assets
 
@@ -20,7 +18,7 @@ Redis is used for application cache, sessions, locks, admin login throttling, an
 
 Routing rules can render domain and project shells, redirect hosts, hand a root request to a named Symfony route, or render application shells. Application rules can match regex arguments, bind an application to a bare domain, bind one to a project subdomain, bind one to a specific domain/project pair, or attach application context to a Symfony route without replacing that route's response.
 
-The `symfonicat_asset(path)` Twig helper resolves shell-specific public files. Without a second argument, it checks the current project folder first, then the current domain folder, then `public/default/`. A folder only wins if the requested file exists there. If the file is missing from `public/default/`, the helper throws. Passing an `Application`, `Project`, or `Domain` object as the second argument pins the asset base directly to that object, for example `/core/test/` for an application. Skeleton folders are included for `public/default/`, `public/domains/example.com/`, and `public/projects/project1/`.
+The `symfonicat_asset(path)` Twig helper resolves shell-specific public files. Without a second argument, it checks the current project folder first, then the current domain folder, then `public/default/`. Passing an `Application`, `Project`, `Domain`, or `Electron` object pins the asset base directly to that object; Electron assets resolve under `public/electron/{electron.id}/`.
 The public JavaScript entry is `assets/app.js`; its runtime helpers live under `assets/app/`.
 `path_application()` is simple:
 
@@ -28,14 +26,16 @@ The public JavaScript entry is `assets/app.js`; its runtime helpers live under `
 - one argument can be the wildcard replacement array
 - wildcard replacements are applied in array order
 
-Ids for `Domain`, `Project`, `Application`, `Module`, and `Electron` are stored with a vendor prefix. Default template access returns the full id:
+`Project`, `Application`, and `Module` ids are package-scoped. `Domain` ids are bare hostnames, and `Electron` ids are plain row ids:
 
 ```twig
+{{ domain.id }}        {# example.com #}
+{{ electron.id }}      {# example-test #}
 {{ project.id(false) }} {# project1 #}
 {{ project.id }}        {# core/project1 #}
 ```
 
-Manual rows use the special `core` vendor. Package rows use their Composer vendor. Admin lists use clean ids for readable host and project names while keeping full ids for edit/delete route parameters.
+Manual project/application rows use the special `core` vendor. Package rows use their Composer vendor.
 
 ## Package Discovery
 
@@ -51,14 +51,16 @@ Webpack and schema sync discover package entries under configured Composer vendo
 
 ## Admin YAML
 
-Admin YAML snapshots live in `config/packages/symfonicat.yaml` under `symfonicat.admin`. Dump and load them with:
+Runtime reads `config/packages/symfonicat.yaml` under `symfonicat.admin`. The database tables are for unlocked admin editing and dumping YAML; production runtime should not need those tables. For local admin work:
 
 ```bash
+docker exec -it php bin/console symfonicat:schema:update
 docker exec php bin/console symfonicat:dump
 docker exec php bin/console symfonicat:load
+docker exec php bin/console symfonicat:purge
 ```
 
-`symfonicat:dump` writes Symfonicat admin rows to YAML (excluding `symfonicat_admin`) and preserves `symfonicat.vendors`. Composer runs `symfonicat:schema:update` and then `symfonicat:load` after install, so fresh databases get their tables, package-provided rows, and checked-in admin YAML automatically. Without a `symfonicat.admin` section, load exits without changing the database. The admin header has a Bootstrap-backed `yaml` dropdown linking to `/admin/y/dump` and `/admin/y/load`.
+`symfonicat:dump` writes Symfonicat admin rows to YAML (excluding `symfonicat_admin`) and preserves `symfonicat.vendors`. Composer and Docker startup do not run schema update or YAML load automatically. Without a `symfonicat.admin` section, load exits without changing the database. The admin header has a Bootstrap-backed `yaml` dropdown linking to `/admin/y/dump` and `/admin/y/load`.
 
 ## Admin
 
@@ -96,7 +98,7 @@ docker exec php bin/console symfonicat:electron:build
 docker exec php bin/console symfonicat:electron:build <name>
 ```
 
-Build output and favicon paths use vendor-prefixed target ids; generated start URLs use clean host/path ids. The checked-in example Electron row uses `public/electron/favicon/domain/example.com.svg`, matching the default SVG favicon.
+Electron rows use plain ids. Generated start URLs include `?electron={electron.id}` so the `electron` Twig variable resolves to the active Electron entity row.
 
 ## Sync
 

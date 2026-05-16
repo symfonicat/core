@@ -18,9 +18,9 @@ final class DomainAdminRowTest extends SymfonicatKernelTestCase
         $html = $this->renderRow($domain);
 
         self::assertStringContainsString('href="http://example.com">example.com</a>', $html);
-        self::assertStringContainsString('href="/admin/d/core/example.com/edit"', $html);
-        self::assertStringContainsString('action="/admin/d/core/example.com"', $html);
-        self::assertStringNotContainsString('>core/example.com</a>', $html);
+        self::assertStringContainsString('href="/admin/d/example.com/edit"', $html);
+        self::assertStringContainsString('action="/admin/d/example.com"', $html);
+        self::assertStringNotContainsString('core/example.com', $html);
     }
 
     private function renderRow(Domain $domain): string

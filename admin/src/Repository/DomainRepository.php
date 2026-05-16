@@ -35,11 +35,8 @@ class DomainRepository extends ServiceEntityRepository
         }
 
         $qb = $this->createQueryBuilder('domain')
-            ->andWhere('domain.id = :coreHost OR domain.id LIKE :hostSuffix')
-            ->setParameter('coreHost', 'core/'.$host)
-            ->setParameter('hostSuffix', '%/'.$host)
-            ->orderBy('CASE WHEN domain.id = :coreHost THEN 0 ELSE 1 END', 'ASC')
-            ->addOrderBy('domain.id', 'ASC')
+            ->andWhere('domain.id = :host')
+            ->setParameter('host', $host)
             ->setMaxResults(1);
 
         return $qb->getQuery()->getOneOrNullResult();

@@ -93,7 +93,7 @@ trait DatabaseFixtureTrait
     protected function createDomain(string $id): Domain
     {
         $domain = (new Domain())
-            ->setId($this->vendorScopedId($id));
+            ->setId($id);
 
         $this->entityManager()->persist($domain);
         $this->entityManager()->flush();
@@ -142,7 +142,7 @@ trait DatabaseFixtureTrait
     protected function createElectron(string $name, string $type, ?Domain $domain = null, ?Project $project = null): Electron
     {
         $electron = (new Electron())
-            ->setId('core/'.strtolower(str_replace(' ', '-', $name)))
+            ->setId(strtolower(str_replace(' ', '-', $name)))
             ->setName($name)
             ->setType($type)
             ->setDomain($domain)

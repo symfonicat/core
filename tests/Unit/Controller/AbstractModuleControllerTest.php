@@ -16,6 +16,7 @@ use Symfonicat\Service\ModuleService;
 use Symfonicat\Service\PackageDiscoveryService;
 use Symfonicat\Service\PathService;
 use Symfonicat\Service\ProjectService;
+use Symfonicat\Service\RuntimeConfig;
 use Symfonicat\Service\SubdomainService;
 use Psr\Log\NullLogger;
 use Symfony\Component\HttpFoundation\Request;
@@ -142,8 +143,9 @@ final class AbstractModuleControllerTest extends TestCase
         $domainRepository->method('find')->willReturn($domain);
         $domainRepository->method('findOneByHost')->willReturn($domain);
         $packageDiscoveryService = new PackageDiscoveryService($projectDir);
+        $runtimeConfig = new RuntimeConfig($projectDir);
         $entityManager = $this->createStub(EntityManagerInterface::class);
-        $domainService = new DomainService($projectDir, $requestStack, $domainRepository, $entityManager, $packageDiscoveryService);
+        $domainService = new DomainService($projectDir, $requestStack, $domainRepository, $entityManager, $packageDiscoveryService, $runtimeConfig);
 
         $projectRepository = $this->createStub(ProjectRepository::class);
         $projectRepository->method('find')->willReturn($project);
@@ -155,6 +157,7 @@ final class AbstractModuleControllerTest extends TestCase
             $projectRepository,
             $entityManager,
             $packageDiscoveryService,
+            $runtimeConfig,
         );
 
         $pathService = new PathService($requestStack);
@@ -167,6 +170,7 @@ final class AbstractModuleControllerTest extends TestCase
             $moduleRepository,
             $entityManager,
             $packageDiscoveryService,
+            $runtimeConfig,
         );
 
         return new class($domainService, $moduleService, $projectService, $pathService) extends AbstractModuleController {
@@ -184,7 +188,7 @@ final class AbstractModuleControllerTest extends TestCase
 
     private function makeDomain(string $id): Domain
     {
-        return (new Domain())->setId(str_contains($id, '/') ? $id : 'core/'.$id);
+        return (new Domain())->setId($id);
     }
 
     private function makeHost(?Domain $domain, ?Project $project): string

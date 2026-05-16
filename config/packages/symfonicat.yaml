@@ -21,21 +21,19 @@ symfonicat:
                 env_id: primary
         symfonicat_domain:
             -
-                id: core/example.com
-                vendor: core
+                id: example.com
             -
-                id: core/localhost
-                vendor: core
+                id: localhost
         symfonicat_domain_env:
             -
                 id: 1
                 value: blue
-                domain_id: core/localhost
+                domain_id: localhost
                 env_id: primary
             -
                 id: 2
                 value: blue
-                domain_id: core/example.com
+                domain_id: example.com
                 env_id: primary
         symfonicat_project:
             -
@@ -43,23 +41,21 @@ symfonicat:
                 vendor: core
         symfonicat_domain_project:
             -
-                domain_id: core/example.com
+                domain_id: example.com
                 project_id: core/project1
         symfonicat_electron:
             -
-                id: core/example-test
+                id: example-test
                 name: 'Example Test'
                 type: domain
-                favicon: electron/favicon/domain/example.com.svg
-                vendor: core
-                domain_id: core/example.com
+                domain_id: example.com
                 project_id: null
                 application_id: null
         symfonicat_electron_env:
             -
                 id: 1
                 value: yellow
-                electron_id: core/example-test
+                electron_id: example-test
                 env_id: primary
         symfonicat_module:
             -
@@ -73,10 +69,10 @@ symfonicat:
         symfonicat_module_domain:
             -
                 module_id: symfonicat/analytics/main
-                domain_id: core/example.com
+                domain_id: example.com
             -
                 module_id: symfonicat/analytics/main
-                domain_id: core/localhost
+                domain_id: localhost
         symfonicat_module_project:
             -
                 module_id: symfonicat/analytics/main

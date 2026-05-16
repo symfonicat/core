@@ -14,7 +14,7 @@ use App\Tests\Support\SymfonicatWebTestCase;
  * We write to the real templates/ tree because Twig's cache + filesystem
  * loader is what actually resolves the override; stubbing it would skip the
  * exact code path we want to verify. Files are cleaned up in tearDown() and
- * their namespaces ("core/example.com", "core/project1") are unlikely to collide with
+ * their namespaces ("example.com", "core/project1") are unlikely to collide with
  * real overrides in the core repository.
  */
 final class TemplateOverrideTest extends SymfonicatWebTestCase
@@ -55,7 +55,7 @@ final class TemplateOverrideTest extends SymfonicatWebTestCase
         $this->createDomain('example.com');
 
         $this->writeTemplate(
-            'domain/overrides/core/example.com.html.twig',
+            'domain/overrides/example.com.html.twig',
             <<<'TWIG'
             {% extends 'base.html.twig' %}
             {% block body %}
@@ -72,7 +72,7 @@ final class TemplateOverrideTest extends SymfonicatWebTestCase
         self::assertSelectorTextContains(
             '[data-testid="domain-override"]',
             'custom example.com landing',
-            'domain/overrides/<vendor>/<domain-id>.html.twig must win over domain/main.html.twig',
+            'domain/overrides/<domain-id>.html.twig must win over domain/main.html.twig',
         );
     }
 

@@ -2,11 +2,8 @@
 
 namespace Symfonicat\Command;
 
-use Symfonicat\Repository\ApplicationRepository;
-use Symfonicat\Repository\DomainRepository;
-use Symfonicat\Repository\ModuleRepository;
-use Symfonicat\Repository\ProjectRepository;
 use Symfonicat\Service\PackageDiscoveryService;
+use Symfonicat\Service\RuntimeConfig;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -19,10 +16,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 final class WebpackModulesDataCommand extends Command
 {
     public function __construct(
-        private readonly ApplicationRepository $applicationRepository,
-        private readonly ModuleRepository $moduleRepository,
-        private readonly ProjectRepository $projectRepository,
         private readonly PackageDiscoveryService $packageDiscoveryService,
+        private readonly RuntimeConfig $runtimeConfig,
     ) {
         parent::__construct();
     }
@@ -31,15 +26,15 @@ final class WebpackModulesDataCommand extends Command
     {
         $output->writeln(json_encode([
             'applications' => $this->entriesFromRepositoryOrPackages(
-                fn (): array => $this->applicationRepository->findAll(),
+                fn (): array => $this->runtimeConfig->applications(),
                 'applications',
             ),
             'modules' => $this->entriesFromRepositoryOrPackages(
-                fn (): array => $this->moduleRepository->findAll(),
+                fn (): array => $this->runtimeConfig->modules(),
                 'modules',
             ),
             'projects' => $this->entriesFromRepositoryOrPackages(
-                fn (): array => $this->projectRepository->findAll(),
+                fn (): array => $this->runtimeConfig->projects(),
                 'projects',
             ),
         ], JSON_THROW_ON_ERROR));

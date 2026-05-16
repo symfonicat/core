@@ -18,7 +18,11 @@
             console.log('[window.env]', window.env)
             console.log('----------------------')
 
-            window.electron = {{ electron | json_encode }}
+            window.electron = {{ electron ? {
+                id: electron.id,
+                name: electron.name,
+                type: electron.type,
+            } | json_encode : 'null' }}
             console.log('[window.electron]', window.electron)
             console.log('----------------------')
 

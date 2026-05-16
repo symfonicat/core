@@ -26,7 +26,7 @@ These helpers are bootstrapped by `assets/app.js`. Module entrypoints do not nee
 - If no path is provided, the request goes to `/m/{moduleId}`.
 - Both helpers use `POST`.
 - Application shells set `window.application`; when present, module requests send the application id, request flag, and signed CSRF token headers so `/m/{moduleId}` can be authorized against the active application.
-- The base layout also sets `window.electron` to a boolean that indicates whether the current request is running in Electron mode.
+- The base layout also sets `window.electron` to the active Electron row data when the request includes a known Electron id.
 - `''.json(payload)` posts JSON to `/m/{moduleId}` and parses the response as JSON.
 - `''.json(path, payload)` posts JSON to `/m/{moduleId}/{path}` and parses the response as JSON.
 - `''.html(payload)` posts JSON to `/m/{moduleId}` and returns the response body as HTML text.

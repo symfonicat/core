@@ -15,13 +15,8 @@ final class ElectronExtension extends AbstractExtension implements GlobalsInterf
 
     public function getGlobals(): array
     {
-        $electron = $this->electronService->isElectronRequest();
-        $electronConfig = $this->electronService->load();
-        $electronIcon = $electronConfig?->getFavicon();
-
         return [
-            'electron' => $electron,
-            'electron_icon' => (is_string($electronIcon) && $electronIcon !== '') ? $electronIcon : null,
+            'electron' => $this->electronService->load(),
         ];
     }
 }

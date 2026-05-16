@@ -3,6 +3,7 @@
 namespace Symfonicat\Twig;
 
 use Symfonicat\Entity\Domain;
+use Symfonicat\Entity\Electron;
 use Symfonicat\Entity\Application;
 use Symfonicat\Entity\Project;
 use Symfonicat\Service\DomainService;
@@ -28,8 +29,17 @@ final class RuntimeAssetExtension extends AbstractExtension
         ];
     }
 
-    private function base(Application|Domain|Project|null $context = null, string $path = ''): string
+    private function base(Application|Domain|Electron|Project|null $context = null, string $path = ''): string
     {
+        if ($context instanceof Electron) {
+            $electronId = trim((string) $context->getId());
+            if ($electronId !== '') {
+                return sprintf('/electron/%s/', $this->encodePath($electronId));
+            }
+
+            return '/default/';
+        }
+
         if ($context instanceof Application) {
             $applicationId = trim((string) $context->getId());
             if ($applicationId !== '') {
@@ -79,7 +89,7 @@ final class RuntimeAssetExtension extends AbstractExtension
         return $this->defaultAssetBase($path);
     }
 
-    public function asset(string $path = '', Application|Domain|Project|null $context = null): string
+    public function asset(string $path = '', Application|Domain|Electron|Project|null $context = null): string
     {
         $path = trim($path, " \t\n\r\0\x0B/");
 

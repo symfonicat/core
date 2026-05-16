@@ -12,14 +12,6 @@ if [ "${SYMFONICAT_AUTO_COMPOSER_INSTALL:-1}" = "1" ] \
     (cd /symfonicat && composer install --no-interaction --prefer-dist --no-progress)
 fi
 
-if [ "${SYMFONICAT_AUTO_SCHEMA_SYNC:-1}" = "1" ] && [ -f /symfonicat/bin/console ]; then
-    php /symfonicat/bin/console symfonicat:schema:update --no-interaction
-fi
-
-if [ "${SYMFONICAT_AUTO_SCHEMA_SYNC:-1}" = "1" ] && [ -f /symfonicat/bin/console ]; then
-    php /symfonicat/bin/console symfonicat:load --no-interaction
-fi
-
 # Self-install frontend dependencies and build Encore assets on boot so
 # `git clone && docker compose up` works without Node.js on the host. Set
 # SYMFONICAT_AUTO_NPM_INSTALL=0 and/or SYMFONICAT_AUTO_NPM_BUILD=0 to opt out.

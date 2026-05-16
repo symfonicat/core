@@ -13,8 +13,8 @@ use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Process\Process;
 use Symfonicat\Entity\Electron;
 use Symfonicat\Entity\Project;
-use Symfonicat\Repository\ElectronRepository;
 use Symfonicat\Service\ApplicationService;
+use Symfonicat\Service\RuntimeConfig;
 use Twig\Environment;
 use Twig\Error\LoaderError;
 
@@ -27,7 +27,7 @@ final class ElectronBuildCommand extends Command
 {
     public function __construct(
         private readonly ApplicationService $applicationService,
-        private readonly ElectronRepository $electronRepository,
+        private readonly RuntimeConfig $runtimeConfig,
         private readonly Environment $twig,
         private readonly Filesystem $filesystem,
         #[Autowire('%symfonicat.asset_base_url%')]
@@ -48,7 +48,7 @@ final class ElectronBuildCommand extends Command
         $io = new SymfonyStyle($input, $output);
         $requestedName = trim((string) $input->getArgument('name'));
 
-        $electrons = $this->electronRepository->findAllOrdered();
+        $electrons = $this->runtimeConfig->electrons();
         if ($requestedName !== '') {
             $electrons = array_values(array_filter($electrons, static fn (Electron $electron): bool => $electron->getName() === $requestedName));
         }
@@ -75,31 +75,19 @@ final class ElectronBuildCommand extends Command
             $this->filesystem->remove([
                 $targetDir.'/app.js',
                 $targetDir.'/package.json',
-                $targetDir.'/icon.png',
                 $targetDir.'/build',
             ]);
-
-            $iconPath = null;
-            $publicFavicon = $electron->getFavicon();
-            if (is_string($publicFavicon) && $publicFavicon !== '') {
-                $sourceIcon = $this->projectDir.'/public/'.ltrim($publicFavicon, '/');
-                if (is_file($sourceIcon)) {
-                    $this->filesystem->copy($sourceIcon, $targetDir.'/icon.png', true);
-                    $iconPath = 'icon.png';
-                }
-            }
 
             $template = $this->resolveTemplate($electron, $targetId);
             $startUrl = $this->resolveStartUrl($electron);
 
             $rendered = $this->twig->render($template, [
                 'electron_config' => $electron,
-                'icon_path' => $iconPath,
                 'start_url' => $startUrl,
                 'target_id' => $targetId,
             ]);
             file_put_contents($targetDir.'/app.js', $rendered);
-            file_put_contents($targetDir.'/package.json', json_encode($this->packageManifest($electron, $targetId, $iconPath !== null), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+            file_put_contents($targetDir.'/package.json', json_encode($this->packageManifest($electron, $targetId), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
 
             $process = new Process([
                 'npx',
@@ -145,10 +133,10 @@ final class ElectronBuildCommand extends Command
         $baseUrl = $this->normalizedBaseUrl();
 
         return match ($electron->getType()) {
-            Electron::TYPE_DOMAIN => $this->appendElectronQuery($this->urlForHost($this->shortId($electron->getDomain()?->getId(false) ?? ''), '/')),
-            Electron::TYPE_PROJECT => $this->appendElectronQuery($this->urlForHost($this->projectHost($electron), '/')),
-            Electron::TYPE_APPLICATION => $this->appendElectronQuery($baseUrl.$this->applicationService->path($electron->getApplication() ?? throw new \RuntimeException('Application is required for Electron application builds.'))),
-            default => $this->appendElectronQuery($baseUrl.'/'),
+            Electron::TYPE_DOMAIN => $this->appendElectronQuery($this->urlForHost($this->shortId($electron->getDomain()?->getId(false) ?? ''), '/'), $electron),
+            Electron::TYPE_PROJECT => $this->appendElectronQuery($this->urlForHost($this->projectHost($electron), '/'), $electron),
+            Electron::TYPE_APPLICATION => $this->appendElectronQuery($baseUrl.$this->applicationService->path($electron->getApplication() ?? throw new \RuntimeException('Application is required for Electron application builds.')), $electron),
+            default => $this->appendElectronQuery($baseUrl.'/', $electron),
         };
     }
 
@@ -176,9 +164,11 @@ final class ElectronBuildCommand extends Command
         return sprintf('%s://%s%s%s', $scheme, $host, $port, $path);
     }
 
-    private function appendElectronQuery(string $url): string
+    private function appendElectronQuery(string $url, Electron $electron): string
     {
-        return str_contains($url, '?') ? $url.'&electron' : $url.'?electron';
+        $separator = str_contains($url, '?') ? '&' : '?';
+
+        return $url.$separator.'electron='.rawurlencode((string) $electron->getId());
     }
 
     private function projectHost(Electron $electron): string
@@ -220,7 +210,7 @@ final class ElectronBuildCommand extends Command
     /**
      * @return array<string, mixed>
      */
-    private function packageManifest(Electron $electron, string $targetId, bool $hasIcon): array
+    private function packageManifest(Electron $electron, string $targetId): array
     {
         $electronVersion = $this->rootElectronVersion();
 
@@ -240,11 +230,6 @@ final class ElectronBuildCommand extends Command
                 'files' => ['app.js'],
             ],
         ];
-
-        if ($hasIcon) {
-            $package['build']['icon'] = 'icon.png';
-            $package['build']['files'][] = 'icon.png';
-        }
 
         return $package;
     }

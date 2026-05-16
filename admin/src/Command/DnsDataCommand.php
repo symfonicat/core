@@ -2,8 +2,7 @@
 
 namespace Symfonicat\Command;
 
-use Symfonicat\Repository\DomainRepository;
-use Symfonicat\Repository\ProjectRepository;
+use Symfonicat\Service\RuntimeConfig;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -16,8 +15,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 final class DnsDataCommand extends Command
 {
     public function __construct(
-        private readonly ProjectRepository $projectRepository,
-        private readonly DomainRepository $domainRepository,
+        private readonly RuntimeConfig $runtimeConfig,
     ) {
         parent::__construct();
     }
@@ -25,7 +23,7 @@ final class DnsDataCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $projects = [];
-        foreach ($this->projectRepository->findAll() as $project) {
+        foreach ($this->runtimeConfig->projects() as $project) {
             $id = $project->getId(false);
             if ($id !== null && $id !== '') {
                 $projects[] = $id;
@@ -33,7 +31,7 @@ final class DnsDataCommand extends Command
         }
 
         $domains = [];
-        foreach ($this->domainRepository->findAll() as $domain) {
+        foreach ($this->runtimeConfig->domains() as $domain) {
             $id = $domain->getId(false);
             if ($id !== null && $id !== '') {
                 $domains[] = $id;

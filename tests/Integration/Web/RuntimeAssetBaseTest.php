@@ -4,6 +4,7 @@ namespace App\Tests\Integration\Web;
 
 use App\Tests\Support\SymfonicatWebTestCase;
 use Symfonicat\Entity\Application;
+use Symfonicat\Entity\Electron;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Twig\Environment;
@@ -150,6 +151,21 @@ final class RuntimeAssetBaseTest extends SymfonicatWebTestCase
             '/domains/example.com/favicon.svg',
             trim($twig->createTemplate('{{ symfonicat_asset("favicon.svg", domain) }}')->render([
                 'domain' => $domain,
+            ])),
+        );
+    }
+
+    public function testExplicitElectronContextUsesElectronAssetBase(): void
+    {
+        $electron = (new Electron())->setId('example-test');
+
+        /** @var Environment $twig */
+        $twig = self::getTestContainer()->get(Environment::class);
+
+        self::assertSame(
+            '/electron/example-test/favicon.svg',
+            trim($twig->createTemplate('{{ symfonicat_asset("favicon.svg", electron) }}')->render([
+                'electron' => $electron,
             ])),
         );
     }

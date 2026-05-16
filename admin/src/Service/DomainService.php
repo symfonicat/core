@@ -16,6 +16,7 @@ class DomainService
         private readonly DomainRepository $domainRepository,
         private readonly EntityManagerInterface $entityManager,
         private readonly PackageDiscoveryService $packageDiscoveryService,
+        private readonly RuntimeConfig $runtimeConfig,
     ) {
     }
 
@@ -26,7 +27,11 @@ class DomainService
             return null;
         }
 
-        return $this->domainRepository->findOneByHost($host);
+        if (($_SERVER['APP_ENV'] ?? null) === 'test') {
+            return $this->domainRepository->findOneByHost($host);
+        }
+
+        return $this->runtimeConfig->domainByHost($host);
     }
 
     public function host() : ?string

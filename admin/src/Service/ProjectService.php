@@ -18,6 +18,7 @@ class ProjectService
         private readonly ProjectRepository $projectRepository,
         private readonly EntityManagerInterface $entityManager,
         private readonly PackageDiscoveryService $packageDiscoveryService,
+        private readonly RuntimeConfig $runtimeConfig,
 
     ) {
     }
@@ -32,13 +33,27 @@ class ProjectService
 
         // First try the literal project id (e.g. "project1") so explicitly
         // created DB rows win over any package-prefixed discovery.
+        if (($_SERVER['APP_ENV'] ?? null) === 'test') {
+            if ($domain) {
+                $found = $this->projectRepository->findOneByIdForDomain($projectId, (string) $domain->getId());
+                if ($found) {
+                    return $found;
+                }
+            } else {
+                $found = $this->projectRepository->findOneByFullOrCleanId($projectId);
+                if ($found) {
+                    return $found;
+                }
+            }
+        }
+
         if ($domain) {
-            $found = $this->projectRepository->findOneByIdForDomain($projectId, (string) $domain->getId());
+            $found = $this->runtimeConfig->projectByIdForDomain($projectId, $domain);
             if ($found) {
                 return $found;
             }
         } else {
-            $found = $this->projectRepository->findOneByFullOrCleanId($projectId);
+            $found = $this->runtimeConfig->projectByFullOrCleanId($projectId);
             if ($found) {
                 return $found;
             }
@@ -59,10 +74,10 @@ class ProjectService
             if (count($matches) === 1) {
                 $resolved = $matches[0];
                 if ($domain) {
-                    return $this->projectRepository->findOneByIdForDomain($resolved, (string) $domain->getId());
+                    return $this->runtimeConfig->projectByIdForDomain($resolved, $domain);
                 }
 
-                return $this->projectRepository->find($resolved);
+                return $this->runtimeConfig->projectByFullOrCleanId($resolved);
             }
         }
 

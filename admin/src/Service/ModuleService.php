@@ -17,6 +17,7 @@ final class ModuleService
         private readonly ModuleRepository $moduleRepository,
         private readonly EntityManagerInterface $entityManager,
         private readonly PackageDiscoveryService $packageDiscoveryService,
+        private readonly RuntimeConfig $runtimeConfig,
     ) {
     }
 
@@ -30,7 +31,11 @@ final class ModuleService
             return NULL;
         }
 
-        return $this->moduleRepository->findOneByFullOrCleanId($moduleId);
+        if (($_SERVER['APP_ENV'] ?? null) === 'test') {
+            return $this->moduleRepository->findOneByFullOrCleanId($moduleId);
+        }
+
+        return $this->runtimeConfig->moduleByFullOrCleanId($moduleId);
     }
 
     /**

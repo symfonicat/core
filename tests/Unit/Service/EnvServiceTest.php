@@ -185,7 +185,7 @@ final class EnvServiceTest extends TestCase
         $valid = $this->makeEnv('primary');
 
         $domain = new Domain();
-        $domain->setId('core/example.com');
+        $domain->setId('example.com');
 
         // Valid row:
         $good = (new DomainEnv())->setEnv($valid)->setValue('blue');
@@ -245,7 +245,7 @@ final class EnvServiceTest extends TestCase
      */
     private function makeDomain(string $id, array $values): Domain
     {
-        $domain = (new Domain())->setId(str_contains($id, '/') ? $id : 'core/'.$id);
+        $domain = (new Domain())->setId($id);
 
         foreach ($values as $envId => $value) {
             $env = $this->makeEnv($envId);

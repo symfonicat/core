@@ -11,8 +11,6 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Table(name: 'symfonicat_domain')]
 class Domain
 {
-    use VendorScopedIdTrait;
-
     #[ORM\Id]
     #[ORM\Column(length: 255)]
     private ?string $id = null;
@@ -43,6 +41,23 @@ class Domain
         $this->projects = new ArrayCollection();
         $this->modules = new ArrayCollection();
         $this->env = new ArrayCollection();
+    }
+
+    public function getId(bool $includeVendor = true): ?string
+    {
+        return $this->id;
+    }
+
+    public function setId(string $id): static
+    {
+        $id = trim($id, " \t\n\r\0\x0B/");
+        if ($id === '' || str_contains($id, '/')) {
+            throw new \InvalidArgumentException(sprintf('Domain id must be a bare domain name, got "%s".', $id));
+        }
+
+        $this->id = $id;
+
+        return $this;
     }
 
     /**

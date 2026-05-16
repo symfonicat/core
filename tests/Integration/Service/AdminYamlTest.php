@@ -42,15 +42,14 @@ YAML);
             'mfa_secret' => 'totp-secret',
         ]);
         $connection->insert('symfonicat_domain', [
-            'id' => 'core/example.com',
-            'vendor' => 'core',
+            'id' => 'example.com',
         ]);
         $connection->insert('symfonicat_project', [
             'id' => 'core/project1',
             'vendor' => 'core',
         ]);
         $connection->insert('symfonicat_domain_project', [
-            'domain_id' => 'core/example.com',
+            'domain_id' => 'example.com',
             'project_id' => 'core/project1',
         ]);
 
@@ -77,18 +76,16 @@ YAML);
         self::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM symfonicat_domain_project'));
     }
 
-    public function testCheckedInElectronFaviconSeedUsesDefaultSvg(): void
+    public function testCheckedInElectronSeedHasPlainIdAndNoVendorOrFavicon(): void
     {
         $projectDir = self::getContainer()->getParameter('kernel.project_dir');
         $config = Yaml::parseFile($projectDir.'/config/packages/symfonicat.yaml');
         $electronRows = $config['symfonicat']['admin']['symfonicat_electron'];
 
-        self::assertSame('electron/favicon/domain/example.com.svg', $electronRows[0]['favicon']);
-        self::assertFileExists($projectDir.'/public/electron/favicon/domain/example.com.svg');
-        self::assertSame(
-            file_get_contents($projectDir.'/public/default/favicon.svg'),
-            file_get_contents($projectDir.'/public/electron/favicon/domain/example.com.svg'),
-        );
+        self::assertSame('example-test', $electronRows[0]['id']);
+        self::assertSame('example.com', $electronRows[0]['domain_id']);
+        self::assertArrayNotHasKey('vendor', $electronRows[0]);
+        self::assertArrayNotHasKey('favicon', $electronRows[0]);
     }
 
     private function removeDirectory(string $directory): void

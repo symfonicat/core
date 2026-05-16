@@ -13,12 +13,8 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 
 class DomainType extends AbstractType
 {
-    use VendorScopedIdFormTrait;
-
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-        $this->addDisabledVendorField($builder);
-
         $builder
             ->add('id', null, [
                 'label' => 'domain',
@@ -64,7 +60,6 @@ class DomainType extends AbstractType
             ])
         ;
 
-        $this->addVendorPrefixSubmitListener($builder, $options);
     }
 
     public function configureOptions(OptionsResolver $resolver): void
@@ -72,9 +67,6 @@ class DomainType extends AbstractType
         $resolver->setDefaults([
             'data_class' => Domain::class,
             'is_admin' => false,
-            'default_vendor' => 'core',
         ]);
-
-        $resolver->setAllowedTypes('default_vendor', 'string');
     }
 }

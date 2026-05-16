@@ -3,7 +3,6 @@
 namespace Symfonicat\Controller;
 
 use Symfonicat\Entity\Application;
-use Symfonicat\Repository\ApplicationRepository;
 use Symfonicat\Service\ApplicationService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -17,7 +16,6 @@ final class ApplicationController extends AbstractController
 {
     public function __construct(
         private readonly Environment $twig,
-        private readonly ApplicationRepository $applicationRepository,
         private readonly ApplicationService $applicationService,
     ) {
     }
@@ -30,7 +28,7 @@ final class ApplicationController extends AbstractController
         string $path,
     ): Response {
         $applicationId = trim($vendor).'/'.trim($id);
-        $application = $this->applicationRepository->findOneByFullOrCleanId($applicationId);
+        $application = $this->applicationService->find($applicationId);
         if (!$application instanceof Application) {
             throw new NotFoundHttpException(sprintf('Application "%s" was not found.', $applicationId));
         }
