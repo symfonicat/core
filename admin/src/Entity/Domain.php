@@ -15,9 +15,9 @@ class Domain
     #[ORM\Column(length: 255)]
     private ?string $id = null;
 
-    #[ORM\ManyToOne(targetEntity: Bundle::class)]
-    #[ORM\JoinColumn(name: 'bundle_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
-    private ?Bundle $bundle = null;
+    #[ORM\ManyToOne(targetEntity: Parcel::class)]
+    #[ORM\JoinColumn(name: 'parcel_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
+    private ?Parcel $parcel = null;
 
     #[ORM\Column(options: ['default' => false])]
     private bool $catch = false;
@@ -77,14 +77,14 @@ class Domain
         return $this;
     }
 
-    public function getBundle(): ?Bundle
+    public function getParcel(): ?Parcel
     {
-        return $this->bundle;
+        return $this->parcel;
     }
 
-    public function setBundle(?Bundle $bundle): static
+    public function setParcel(?Parcel $parcel): static
     {
-        $this->bundle = $bundle;
+        $this->parcel = $parcel;
 
         return $this;
     }

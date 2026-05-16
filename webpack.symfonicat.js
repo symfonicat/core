@@ -167,7 +167,7 @@ const loadModuleData = (projectDir) => {
         console.warn('[webpack] symfonicat:data:webpack failed; falling back to configured package vendors.');
 
         return {
-            bundles: discoverPackageEntries(projectDir, 'bundle'),
+            parcels: discoverPackageEntries(projectDir, 'parcel'),
             domains: discoverPackageEntries(projectDir, 'domain'),
             subdomains: discoverPackageEntries(projectDir, 'subdomain'),
             modules: discoverPackageEntries(projectDir, 'module'),
@@ -218,12 +218,12 @@ module.exports = function configureSymfonicat(Encore, options = __dirname) {
         Encore.addEntry(`module/${mod.id}`, toEntryPath(projectDir, mod.entry));
     });
 
-    (moduleData.bundles || []).forEach((bundle) => {
-        if (!bundle?.id || !bundle?.entry || !fs.existsSync(bundle.entry)) {
+    (moduleData.parcels || []).forEach((parcel) => {
+        if (!parcel?.id || !parcel?.entry || !fs.existsSync(parcel.entry)) {
             return;
         }
 
-        Encore.addEntry(`bundle/${bundle.id}`, toEntryPath(projectDir, bundle.entry));
+        Encore.addEntry(`parcel/${parcel.id}`, toEntryPath(projectDir, parcel.entry));
     });
 
     Encore

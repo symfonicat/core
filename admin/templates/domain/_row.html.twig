@@ -8,7 +8,7 @@
         {% endfor %}
     </td>
     <td>{% if domain.catch %}<i class="fa fa-check"></i>{% else %}<i class="fa fa-fw fa-times"></i>{% endif %}</td>
-    <td>{% if domain.bundle %}<code>{{ domain.bundle.id }}</code>{% else %}<i class="fa fa-fw fa-times"></i>{% endif %}</td>
+    <td>{% if domain.parcel %}<code>{{ domain.parcel.id }}</code>{% else %}<i class="fa fa-fw fa-times"></i>{% endif %}</td>
     <td>
         {% for middleware in domain.middlewares %}
             <div><code>{{ middleware.class }}</code></div>

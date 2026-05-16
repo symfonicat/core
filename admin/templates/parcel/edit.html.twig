@@ -1,0 +1,5 @@
+{% extends '@symfonicat/base.html.twig' %}
+{% block title %}Edit Parcel{% endblock %}
+{% block body %}
+    {{ include('@symfonicat/parcel/_form.html.twig', { form: form, button_label: 'save' }) }}
+{% endblock %}

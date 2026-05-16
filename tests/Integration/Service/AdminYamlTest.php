@@ -41,9 +41,9 @@ YAML);
             'password' => 'hashed-password',
             'mfa_secret' => 'totp-secret',
         ]);
-        $connection->insert('symfonicat_bundle', [
-            'id' => 'core/subdomainbundle',
-            'path' => 'assets/bundle/subdomainbundle',
+        $connection->insert('symfonicat_parcel', [
+            'id' => 'core/subdomainparcel',
+            'path' => 'assets/parcel/subdomainparcel',
             'vendor' => 'core',
         ]);
         $connection->insert('symfonicat_domain', [
@@ -52,7 +52,7 @@ YAML);
         $connection->insert('symfonicat_subdomain', [
             'id' => 'core/subdomain1',
             'vendor' => 'core',
-            'bundle_id' => 'core/subdomainbundle',
+            'parcel_id' => 'core/subdomainparcel',
         ]);
         $connection->insert('symfonicat_middleware', [
             'id' => 99,
@@ -75,7 +75,7 @@ YAML);
         $dumpCounts = $adminYaml->dump();
 
         self::assertArrayNotHasKey('symfonicat_admin', $dumpCounts);
-        self::assertSame(1, $dumpCounts['symfonicat_bundle']);
+        self::assertSame(1, $dumpCounts['symfonicat_parcel']);
         self::assertSame(1, $dumpCounts['symfonicat_domain']);
         self::assertSame(1, $dumpCounts['symfonicat_subdomain']);
         self::assertSame(1, $dumpCounts['symfonicat_domain_subdomain']);
@@ -90,7 +90,7 @@ YAML);
         $connection->executeStatement('DELETE FROM symfonicat_admin');
         $connection->executeStatement('DELETE FROM symfonicat_subdomain');
         $connection->executeStatement('DELETE FROM symfonicat_domain');
-        $connection->executeStatement('DELETE FROM symfonicat_bundle');
+        $connection->executeStatement('DELETE FROM symfonicat_parcel');
         $connection->executeStatement('DELETE FROM symfonicat_domain_middleware');
         $connection->executeStatement('DELETE FROM symfonicat_subdomain_middleware');
         $connection->executeStatement('DELETE FROM symfonicat_middleware');
@@ -98,17 +98,17 @@ YAML);
         $loadCounts = $adminYaml->load();
 
         self::assertArrayNotHasKey('symfonicat_admin', $loadCounts);
-        self::assertSame(1, $loadCounts['symfonicat_bundle']);
+        self::assertSame(1, $loadCounts['symfonicat_parcel']);
         self::assertSame(1, $loadCounts['symfonicat_domain']);
         self::assertSame(1, $loadCounts['symfonicat_subdomain']);
         self::assertSame(1, $loadCounts['symfonicat_domain_subdomain']);
         self::assertSame(1, $loadCounts['symfonicat_domain_middleware']);
         self::assertSame(1, $loadCounts['symfonicat_subdomain_middleware']);
-        self::assertSame('core/subdomainbundle', (string) $connection->fetchOne('SELECT bundle_id FROM symfonicat_subdomain WHERE id = \'core/subdomain1\''));
+        self::assertSame('core/subdomainparcel', (string) $connection->fetchOne('SELECT parcel_id FROM symfonicat_subdomain WHERE id = \'core/subdomain1\''));
         self::assertSame('example.com', (string) $connection->fetchOne('SELECT id FROM symfonicat_domain WHERE id = \'example.com\''));
         self::assertSame('core/subdomain1', (string) $connection->fetchOne('SELECT id FROM symfonicat_subdomain WHERE id = \'core/subdomain1\''));
         self::assertFalse($connection->fetchOne('SELECT email FROM symfonicat_admin WHERE id = 7'));
-        self::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM symfonicat_bundle'));
+        self::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM symfonicat_parcel'));
         self::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM symfonicat_domain'));
         self::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM symfonicat_subdomain'));
         self::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM symfonicat_domain_subdomain'));

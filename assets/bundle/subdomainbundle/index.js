@@ -1,1 +1,0 @@
-console.log('SUBDOMAIN bundle loaded -__-')

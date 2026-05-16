@@ -4,25 +4,25 @@ namespace Symfonicat\Repository;
 
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
-use Symfonicat\Entity\Bundle;
+use Symfonicat\Entity\Parcel;
 
 /**
- * @extends ServiceEntityRepository<Bundle>
+ * @extends ServiceEntityRepository<Parcel>
  */
-final class BundleRepository extends ServiceEntityRepository
+final class ParcelRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
     {
-        parent::__construct($registry, Bundle::class);
+        parent::__construct($registry, Parcel::class);
     }
 
     /**
-     * @return Bundle[]
+     * @return Parcel[]
      */
     public function findAllOrderedById(): array
     {
-        return $this->createQueryBuilder('bundle')
-            ->orderBy('bundle.id', 'ASC')
+        return $this->createQueryBuilder('parcel')
+            ->orderBy('parcel.id', 'ASC')
             ->getQuery()
             ->getResult();
     }

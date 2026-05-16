@@ -1118,8 +1118,8 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  * }
  * @psalm-type MercureConfig = array{
  *     hubs?: array<string, array{ // Default: []
- *         url?: scalar|Param|null, // URL of the hub's publish endpoint // Default: null
- *         public_url?: scalar|Param|null, // URL of the hub's public endpoint
+ *         url?: scalar|Param|null, // URL of the hub's publish endpoint
+ *         public_url?: scalar|Param|null, // URL of the hub's public endpoint // Default: null
  *         jwt?: string|array{ // JSON Web Token configuration.
  *             value?: scalar|Param|null, // JSON Web Token to use to publish to this hub.
  *             provider?: scalar|Param|null, // The ID of a service to call to provide the JSON Web Token.
@@ -1370,23 +1370,6 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     symiddleware?: SymiddlewareConfig,
  *     symfonicat?: SymfonicatConfig,
  *     scheb_two_factor?: SchebTwoFactorConfig,
- *     "when@dev"?: array{
- *         imports?: ImportsConfig,
- *         parameters?: ParametersConfig,
- *         services?: ServicesConfig,
- *         framework?: FrameworkConfig,
- *         twig?: TwigConfig,
- *         twig_extra?: TwigExtraConfig,
- *         webpack_encore?: WebpackEncoreConfig,
- *         stimulus?: StimulusConfig,
- *         turbo?: TurboConfig,
- *         security?: SecurityConfig,
- *         mercure?: MercureConfig,
- *         doctrine?: DoctrineConfig,
- *         symiddleware?: SymiddlewareConfig,
- *         symfonicat?: SymfonicatConfig,
- *         scheb_two_factor?: SchebTwoFactorConfig,
- *     },
  *     "when@prod"?: array{
  *         imports?: ImportsConfig,
  *         parameters?: ParametersConfig,
@@ -1503,7 +1486,6 @@ namespace Symfony\Component\Routing\Loader\Configurator;
  *     deprecated?: array{package:string, version:string, message?:string},
  * }
  * @psalm-type RoutesConfig = array{
- *     "when@dev"?: array<string, RouteConfig|ImportConfig|AliasConfig>,
  *     "when@prod"?: array<string, RouteConfig|ImportConfig|AliasConfig>,
  *     "when@test"?: array<string, RouteConfig|ImportConfig|AliasConfig>,
  *     ...<string, RouteConfig|ImportConfig|AliasConfig>

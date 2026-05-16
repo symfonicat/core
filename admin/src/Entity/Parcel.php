@@ -5,11 +5,11 @@ namespace Symfonicat\Entity;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
-use Symfonicat\Repository\BundleRepository;
+use Symfonicat\Repository\ParcelRepository;
 
-#[ORM\Entity(repositoryClass: BundleRepository::class)]
-#[ORM\Table(name: 'symfonicat_bundle')]
-class Bundle
+#[ORM\Entity(repositoryClass: ParcelRepository::class)]
+#[ORM\Table(name: 'symfonicat_parcel')]
+class Parcel
 {
     use VendorScopedIdTrait;
 
@@ -21,9 +21,9 @@ class Bundle
     private string $path = '';
 
     /**
-     * @var Collection<int, BundleEnv>
+     * @var Collection<int, ParcelEnv>
      */
-    #[ORM\OneToMany(targetEntity: BundleEnv::class, mappedBy: 'bundle', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[ORM\OneToMany(targetEntity: ParcelEnv::class, mappedBy: 'parcel', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $env;
 
     public function __construct()
@@ -44,27 +44,27 @@ class Bundle
     }
 
     /**
-     * @return Collection<int, BundleEnv>
+     * @return Collection<int, ParcelEnv>
      */
     public function getEnv(): Collection
     {
         return $this->env;
     }
 
-    public function addEnv(BundleEnv $env): static
+    public function addEnv(ParcelEnv $env): static
     {
         if (!$this->env->contains($env)) {
             $this->env->add($env);
-            $env->setBundle($this);
+            $env->setParcel($this);
         }
 
         return $this;
     }
 
-    public function removeEnv(BundleEnv $env): static
+    public function removeEnv(ParcelEnv $env): static
     {
-        if ($this->env->removeElement($env) && $env->getBundle() === $this) {
-            $env->setBundle(null);
+        if ($this->env->removeElement($env) && $env->getParcel() === $this) {
+            $env->setParcel(null);
         }
 
         return $this;

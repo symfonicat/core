@@ -2,7 +2,7 @@
 
 namespace Symfonicat\Form;
 
-use Symfonicat\Entity\Bundle;
+use Symfonicat\Entity\Parcel;
 use Symfonicat\Entity\Endpoint;
 use Symfonicat\Entity\Module;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
@@ -28,11 +28,11 @@ final class EndpointType extends AbstractType
         }
 
         $builder
-            ->add('bundle', EntityType::class, [
-                'class' => Bundle::class,
-                'choice_label' => static fn (Bundle $bundle): string => (string) $bundle->getId(),
-                'label' => 'bundle',
-                'placeholder' => 'select bundle',
+            ->add('parcel', EntityType::class, [
+                'class' => Parcel::class,
+                'choice_label' => static fn (Parcel $parcel): string => (string) $parcel->getId(),
+                'label' => 'parcel',
+                'placeholder' => 'select parcel',
                 'required' => false,
             ])
             ->add('modules', EntityType::class, [

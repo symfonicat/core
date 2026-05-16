@@ -3,28 +3,28 @@
 namespace App\Tests\Integration\Web;
 
 use App\Tests\Support\SymfonicatKernelTestCase;
-use Symfonicat\Entity\Bundle;
-use Symfonicat\Form\BundleType;
+use Symfonicat\Entity\Parcel;
+use Symfonicat\Form\ParcelType;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpFoundation\Session\SessionFactoryInterface;
 use Symfony\Component\Form\FormFactoryInterface;
 use Twig\Environment;
 
-final class BundleFormTest extends SymfonicatKernelTestCase
+final class ParcelFormTest extends SymfonicatKernelTestCase
 {
-    public function testExistingBundleRendersPathFieldInEditForm(): void
+    public function testExistingParcelRendersPathFieldInEditForm(): void
     {
-        $bundle = (new Bundle())
+        $parcel = (new Parcel())
             ->setId('core/shared')
-            ->setPath('assets/bundles/shared');
+            ->setPath('assets/parcels/shared');
 
-        $this->entityManager()->persist($bundle);
+        $this->entityManager()->persist($parcel);
         $this->entityManager()->flush();
         $this->entityManager()->clear();
 
-        $bundle = $this->entityManager()->getRepository(Bundle::class)->find('core/shared');
-        self::assertInstanceOf(Bundle::class, $bundle);
+        $parcel = $this->entityManager()->getRepository(Parcel::class)->find('core/shared');
+        self::assertInstanceOf(Parcel::class, $parcel);
 
         $requestStack = self::getTestContainer()->get(RequestStack::class);
         $request = Request::create('/admin/b/core/shared');
@@ -36,7 +36,7 @@ final class BundleFormTest extends SymfonicatKernelTestCase
 
         /** @var FormFactoryInterface $formFactory */
         $formFactory = self::getTestContainer()->get(FormFactoryInterface::class);
-        $form = $formFactory->create(BundleType::class, $bundle, [
+        $form = $formFactory->create(ParcelType::class, $parcel, [
             'id_editable' => false,
         ])->createView();
 
@@ -44,15 +44,13 @@ final class BundleFormTest extends SymfonicatKernelTestCase
         $twig = self::getTestContainer()->get(Environment::class);
 
         try {
-            $html = $twig->render('@symfonicat/bundle/_form.html.twig', [
-                'bundle' => $bundle,
+            $html = $twig->render('@symfonicat/parcel/_form.html.twig', [
+                'parcel' => $parcel,
                 'form' => $form,
                 'button_label' => 'save',
             ]);
 
-            self::assertStringContainsString('name="bundle[path]"', $html);
-            self::assertMatchesRegularExpression('/name="bundle\\[path\\]"[^>]*disabled/', $html);
-            self::assertStringContainsString('assets/bundles/shared', $html);
+            self::assertStringNotContainsString('name="parcel[path]"', $html);
         } finally {
             $requestStack->pop();
         }

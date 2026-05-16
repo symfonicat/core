@@ -5,7 +5,7 @@ namespace Symfonicat\Service;
 final class PackageDiscoveryService
 {
     private const SUPPORTED_ENTRY_TYPES = [
-        'bundle',
+        'parcel',
         'domain',
         'module',
         'subdomain',
@@ -186,26 +186,26 @@ final class PackageDiscoveryService
      *     vendor: string
      * }>
      */
-    public function discoverBundles(): array
+    public function discoverParcels(): array
     {
-        $bundles = [];
+        $parcels = [];
 
-        foreach ($this->discoverEntryDirectories('bundle') as $bundleId => $entry) {
-            $bundles[$bundleId] = [
+        foreach ($this->discoverEntryDirectories('parcel') as $parcelId => $entry) {
+            $parcels[$parcelId] = [
                 'directory' => $entry['directory'],
                 'entry' => $entry['entry'],
-                'id' => $bundleId,
+                'id' => $parcelId,
                 'package' => $entry['package'],
                 'packageName' => $entry['packageName'],
                 'path' => $this->relativePath($entry['directory']),
-                'type' => 'bundle',
+                'type' => 'parcel',
                 'vendor' => $entry['vendor'],
             ];
         }
 
-        ksort($bundles, SORT_STRING);
+        ksort($parcels, SORT_STRING);
 
-        return $bundles;
+        return $parcels;
     }
 
     /**

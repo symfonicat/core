@@ -3,7 +3,7 @@
 namespace App\Tests\Support;
 
 use Doctrine\ORM\EntityManagerInterface;
-use Symfonicat\Entity\Bundle;
+use Symfonicat\Entity\Parcel;
 use Symfonicat\Entity\Application;
 use Symfonicat\Entity\ApplicationEnv;
 use Symfonicat\Entity\Domain;
@@ -51,7 +51,7 @@ trait DatabaseFixtureTrait
         $tables = [
             // Children first to keep the intent readable even though FK checks are off.
             'symfonicat_application_env',
-            'symfonicat_bundle_env',
+            'symfonicat_parcel_env',
             'symfonicat_subdomain_env',
             'symfonicat_domain_env',
             'symfonicat_endpoint_env',
@@ -71,7 +71,7 @@ trait DatabaseFixtureTrait
             'symfonicat_module',
             'symfonicat_subdomain',
             'symfonicat_domain',
-            'symfonicat_bundle',
+            'symfonicat_parcel',
             'symfonicat_env',
             'symfonicat_env_parent',
             'symfonicat_admin',
@@ -161,11 +161,11 @@ trait DatabaseFixtureTrait
         return $application;
     }
 
-    protected function createEndpoint(string $id, ?Bundle $bundle = null): Endpoint
+    protected function createEndpoint(string $id, ?Parcel $parcel = null): Endpoint
     {
         $endpoint = (new Endpoint())
             ->setId($id)
-            ->setBundle($bundle);
+            ->setParcel($parcel);
 
         $this->entityManager()->persist($endpoint);
         $this->entityManager()->flush();

@@ -8,7 +8,7 @@
         {{- encore_entry_link_tags_module(module) | indent_links(8) -}}
     {%- endfor %}
 
-    {{- encore_entry_link_tags_bundle(domain.bundle) | indent_links(8) -}}
+    {{- encore_entry_link_tags_parcel(domain.parcel) | indent_links(8) -}}
     {{- encore_entry_link_tags_domain(domain) | indent_links(8) -}}
 
 {%- endblock %}
@@ -20,7 +20,7 @@
         {{- encore_entry_script_tags_module(module) | indent_scripts(8) -}}
     {%- endfor %}
 
-    {{- encore_entry_script_tags_bundle(domain.bundle) | indent_scripts(8) -}}
+    {{- encore_entry_script_tags_parcel(domain.parcel) | indent_scripts(8) -}}
     {{- encore_entry_script_tags_domain(domain) | indent_scripts(8) -}}
 
 {%- endblock %}

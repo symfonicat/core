@@ -5,18 +5,18 @@ namespace Symfonicat\Entity;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity]
-#[ORM\Table(name: 'symfonicat_bundle_env')]
-#[ORM\UniqueConstraint(name: 'uniq_symfonicat_bundle_env_bundle_env', columns: ['bundle_id', 'env_id'])]
-class BundleEnv
+#[ORM\Table(name: 'symfonicat_parcel_env')]
+#[ORM\UniqueConstraint(name: 'uniq_symfonicat_parcel_env_parcel_env', columns: ['parcel_id', 'env_id'])]
+class ParcelEnv
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\ManyToOne(targetEntity: Bundle::class, inversedBy: 'env')]
-    #[ORM\JoinColumn(name: 'bundle_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
-    private ?Bundle $bundle = null;
+    #[ORM\ManyToOne(targetEntity: Parcel::class, inversedBy: 'env')]
+    #[ORM\JoinColumn(name: 'parcel_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
+    private ?Parcel $parcel = null;
 
     #[ORM\ManyToOne(targetEntity: Env::class)]
     #[ORM\JoinColumn(name: 'env_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
@@ -30,14 +30,14 @@ class BundleEnv
         return $this->id;
     }
 
-    public function getBundle(): ?Bundle
+    public function getParcel(): ?Parcel
     {
-        return $this->bundle;
+        return $this->parcel;
     }
 
-    public function setBundle(?Bundle $bundle): static
+    public function setParcel(?Parcel $parcel): static
     {
-        $this->bundle = $bundle;
+        $this->parcel = $parcel;
 
         return $this;
     }

@@ -12,7 +12,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 #[AsCommand(
     name: 'symfonicat:data:webpack',
-    description: 'Output bundle, domain, subdomain, and module package entry data for webpack.',
+    description: 'Output parcel, domain, subdomain, and module package entry data for webpack.',
 )]
 final class WebpackModulesDataCommand extends Command
 {
@@ -28,7 +28,7 @@ final class WebpackModulesDataCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $output->writeln(json_encode([
-            'bundles' => $this->bundleEntriesFromRepositoryOrPackages(),
+            'parcels' => $this->parcelEntriesFromRepositoryOrPackages(),
             'domains' => $this->entriesFromRepositoryOrPackages(
                 fn (): array => $this->runtimeConfig->domains(),
                 'domain',
@@ -54,16 +54,16 @@ final class WebpackModulesDataCommand extends Command
      *     packageName: string
      * }>
      */
-    private function bundleEntriesFromRepositoryOrPackages(): array
+    private function parcelEntriesFromRepositoryOrPackages(): array
     {
-        $packageEntries = $this->packageDiscoveryService->discoverBundles();
+        $packageEntries = $this->packageDiscoveryService->discoverParcels();
 
         try {
             $resolvedEntries = [];
 
-            foreach ($this->runtimeConfig->bundles() as $bundle) {
-                $id = trim((string) $bundle->getId());
-                $path = trim((string) $bundle->getPath());
+            foreach ($this->runtimeConfig->parcels() as $parcel) {
+                $id = trim((string) $parcel->getId());
+                $path = trim((string) $parcel->getPath());
                 if ($id === '' || $path === '') {
                     continue;
                 }

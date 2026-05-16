@@ -2,8 +2,8 @@
 
 namespace Symfonicat\Service;
 
-use Symfonicat\Entity\Bundle;
-use Symfonicat\Entity\BundleEnv;
+use Symfonicat\Entity\Parcel;
+use Symfonicat\Entity\ParcelEnv;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\Subdomain;
 use Symfonicat\Entity\Endpoint;
@@ -57,7 +57,7 @@ final class EnvService
     {
         if ($entity instanceof Domain) {
             return $this->mergeValues(
-                $this->flattenBundleValues($entity->getBundle()),
+                $this->flattenParcelValues($entity->getParcel()),
                 $this->flattenDomainValues($entity),
                 $this->flattenApplicationValues($this->applicationService->load()),
             );
@@ -68,9 +68,9 @@ final class EnvService
             $application = $this->applicationService->loadForContext(null, $domain, $entity);
 
             return $this->mergeValues(
-                $this->flattenBundleValues($domain?->getBundle()),
+                $this->flattenParcelValues($domain?->getParcel()),
                 $this->flattenDomainValues($domain),
-                $this->flattenBundleValues($entity->getBundle()),
+                $this->flattenParcelValues($entity->getParcel()),
                 $this->flattenSubdomainValues($entity),
                 $this->flattenApplicationValues($application),
             );
@@ -80,7 +80,7 @@ final class EnvService
             $application = $this->applicationService->load();
 
             return $this->mergeValues(
-                $this->flattenBundleValues($entity->getBundle()),
+                $this->flattenParcelValues($entity->getParcel()),
                 $this->flattenEndpointValues($entity),
                 $this->flattenApplicationValues($application),
             );
@@ -93,9 +93,9 @@ final class EnvService
 
         if ($subdomain instanceof Subdomain) {
             return $this->mergeValues(
-                $this->flattenBundleValues($domain?->getBundle()),
+                $this->flattenParcelValues($domain?->getParcel()),
                 $this->flattenDomainValues($domain),
-                $this->flattenBundleValues($subdomain->getBundle()),
+                $this->flattenParcelValues($subdomain->getParcel()),
                 $this->flattenSubdomainValues($subdomain),
                 $this->flattenEndpointValues($endpoint),
                 $this->flattenApplicationValues($application),
@@ -103,9 +103,9 @@ final class EnvService
         }
 
         return $this->mergeValues(
-            $this->flattenBundleValues($domain?->getBundle()),
+            $this->flattenParcelValues($domain?->getParcel()),
             $this->flattenDomainValues($domain),
-            $this->flattenBundleValues($subdomain?->getBundle()),
+            $this->flattenParcelValues($subdomain?->getParcel()),
             $this->flattenSubdomainValues($subdomain),
             $this->flattenEndpointValues($endpoint),
             $this->flattenApplicationValues($application),
@@ -140,16 +140,16 @@ final class EnvService
     /**
      * @return array<string, array<string, string>>
      */
-    public function flattenBundleValues(?Bundle $bundle): array
+    public function flattenParcelValues(?Parcel $parcel): array
     {
-        if (!$bundle instanceof Bundle) {
+        if (!$parcel instanceof Parcel) {
             return [];
         }
 
         $values = [];
 
-        foreach ($bundle->getEnv() as $item) {
-            if (!$item instanceof BundleEnv) {
+        foreach ($parcel->getEnv() as $item) {
+            if (!$item instanceof ParcelEnv) {
                 continue;
             }
 

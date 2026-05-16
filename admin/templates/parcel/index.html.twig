@@ -1,5 +1,5 @@
 {% extends '@symfonicat/base.html.twig' %}
-{% block title %}Bundles{% endblock %}
+{% block title %}Parcels{% endblock %}
 {% block body %}
 
     <div class="d-flex justify-content-end mb-1">
@@ -9,7 +9,7 @@
     <table class="table table-sm align-middle">
         <thead>
             <tr>
-                <th>bundle</th>
+                <th>parcel</th>
                 <th>path</th>
                 {% for env_parent in env_parents %}
                     <th>{{ env_parent.id }}</th>
@@ -18,8 +18,8 @@
             </tr>
         </thead>
         <tbody>
-        {% for bundle in bundles %}
-            {{ include('@symfonicat/bundle/_row.html.twig') }}
+        {% for parcel in parcels %}
+            {{ include('@symfonicat/parcel/_row.html.twig') }}
         {% else %}
             <tr>
                 <td colspan="{{ 3 + env_parents|length }}">no records found</td>

@@ -4,8 +4,8 @@ namespace Symfonicat\Service;
 
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Yaml\Yaml;
-use Symfonicat\Entity\Bundle;
-use Symfonicat\Entity\BundleEnv;
+use Symfonicat\Entity\Parcel;
+use Symfonicat\Entity\ParcelEnv;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\DomainEnv;
 use Symfonicat\Entity\Application;
@@ -63,11 +63,11 @@ final class RuntimeConfig
     }
 
     /**
-     * @return list<Bundle>
+     * @return list<Parcel>
      */
-    public function bundles(): array
+    public function parcels(): array
     {
-        return array_values($this->catalog()['bundles']);
+        return array_values($this->catalog()['parcels']);
     }
 
     public function subdomainByIdForDomain(string $id, Domain $domain): ?Subdomain
@@ -186,11 +186,11 @@ final class RuntimeConfig
 
         $rows = $this->readAdminRows();
 
-        $bundles = [];
-        foreach ($this->rows($rows, 'symfonicat_bundle') as $row) {
+        $parcels = [];
+        foreach ($this->rows($rows, 'symfonicat_parcel') as $row) {
             $id = trim((string) ($row['id'] ?? ''));
             if ($id !== '') {
-                $bundles[$id] = (new Bundle())
+                $parcels[$id] = (new Parcel())
                     ->setId($id)
                     ->setPath((string) ($row['path'] ?? ''));
             }
@@ -202,7 +202,7 @@ final class RuntimeConfig
             if ($id !== '') {
                 $domains[$id] = (new Domain())
                     ->setId($id)
-                    ->setBundle($bundles[(string) ($row['bundle_id'] ?? '')] ?? null);
+                    ->setParcel($parcels[(string) ($row['parcel_id'] ?? '')] ?? null);
             }
         }
 
@@ -212,7 +212,7 @@ final class RuntimeConfig
             if ($id !== '') {
                 $subdomains[$id] = (new Subdomain())
                     ->setId($id)
-                    ->setBundle($bundles[(string) ($row['bundle_id'] ?? '')] ?? null);
+                    ->setParcel($parcels[(string) ($row['parcel_id'] ?? '')] ?? null);
             }
         }
 
@@ -283,11 +283,11 @@ final class RuntimeConfig
             }
         }
 
-        foreach ($this->rows($rows, 'symfonicat_bundle_env') as $row) {
-            $bundle = $bundles[(string) ($row['bundle_id'] ?? '')] ?? null;
+        foreach ($this->rows($rows, 'symfonicat_parcel_env') as $row) {
+            $parcel = $parcels[(string) ($row['parcel_id'] ?? '')] ?? null;
             $env = $envs[(string) ($row['env_id'] ?? '')] ?? null;
-            if ($bundle instanceof Bundle && $env instanceof Env) {
-                $bundle->addEnv((new BundleEnv())->setEnv($env)->setValue((string) ($row['value'] ?? '')));
+            if ($parcel instanceof Parcel && $env instanceof Env) {
+                $parcel->addEnv((new ParcelEnv())->setEnv($env)->setValue((string) ($row['value'] ?? '')));
             }
         }
 
@@ -300,7 +300,7 @@ final class RuntimeConfig
 
             $endpoint = (new Endpoint())
                 ->setId($id)
-                ->setBundle($bundles[(string) ($row['bundle_id'] ?? '')] ?? null)
+                ->setParcel($parcels[(string) ($row['parcel_id'] ?? '')] ?? null)
                 ->setCatch((bool) ($row['catch'] ?? false))
                 ->setArguments(isset($row['arguments']) && is_array($row['arguments']) ? $row['arguments'] : []);
 
@@ -384,7 +384,7 @@ final class RuntimeConfig
         }
 
         return $this->catalog = [
-            'bundles' => $bundles,
+            'parcels' => $parcels,
             'domains' => $domains,
             'subdomains' => $subdomains,
             'modules' => $modules,

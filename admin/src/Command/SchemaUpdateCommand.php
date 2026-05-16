@@ -3,7 +3,7 @@
 namespace Symfonicat\Command;
 
 use Symfonicat\Entity\Module;
-use Symfonicat\Service\BundleService;
+use Symfonicat\Service\ParcelService;
 use Symfonicat\Service\DomainService;
 use Symfonicat\Service\ModuleService;
 use Symfonicat\Service\SubdomainService;
@@ -21,7 +21,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 final class SchemaUpdateCommand extends Command
 {
     public function __construct(
-        private readonly BundleService $bundleService,
+        private readonly ParcelService $parcelService,
         private readonly DomainService $domainService,
         private readonly ModuleService $moduleService,
         private readonly SubdomainService $subdomainService,
@@ -38,7 +38,7 @@ final class SchemaUpdateCommand extends Command
             $this->schemaSynchronizer->synchronize();
             $shouldAskForConfirmation = $this->shouldAskForConfirmation($input);
 
-            $bundleResult = $this->bundleService->sync();
+            $parcelResult = $this->parcelService->sync();
 
             $moduleResult = $this->moduleService->sync($shouldAskForConfirmation ? function (Module $module, array $references) use ($input, $io): bool {
                 $io->warning(sprintf(
@@ -92,34 +92,34 @@ final class SchemaUpdateCommand extends Command
             return Command::FAILURE;
         }
 
-        if ($bundleResult['created'] !== []) {
-            $io->section('Created bundles');
+        if ($parcelResult['created'] !== []) {
+            $io->section('Created parcels');
             $io->listing(array_map(
-                static fn (array $bundle): string => sprintf('%s (%s)', $bundle['id'], $bundle['path']),
-                $bundleResult['created'],
+                static fn (array $parcel): string => sprintf('%s (%s)', $parcel['id'], $parcel['path']),
+                $parcelResult['created'],
             ));
         }
 
-        if ($bundleResult['updated'] !== []) {
-            $io->section('Updated bundles');
+        if ($parcelResult['updated'] !== []) {
+            $io->section('Updated parcels');
             $io->listing(array_map(
-                static fn (array $bundle): string => sprintf('%s path: "%s" -> "%s"', $bundle['id'], $bundle['from'], $bundle['to']),
-                $bundleResult['updated'],
+                static fn (array $parcel): string => sprintf('%s path: "%s" -> "%s"', $parcel['id'], $parcel['from'], $parcel['to']),
+                $parcelResult['updated'],
             ));
         }
 
-        if ($bundleResult['deleted'] !== []) {
-            $io->section('Deleted bundles');
+        if ($parcelResult['deleted'] !== []) {
+            $io->section('Deleted parcels');
             $io->listing(array_map(
-                static function (array $bundle): string {
-                    $references = array_sum($bundle['references']);
+                static function (array $parcel): string {
+                    $references = array_sum($parcel['references']);
                     if ($references === 0) {
-                        return sprintf('%s (%s)', $bundle['id'], $bundle['path']);
+                        return sprintf('%s (%s)', $parcel['id'], $parcel['path']);
                     }
 
-                    return sprintf('%s (%s) after clearing %d references', $bundle['id'], $bundle['path'], $references);
+                    return sprintf('%s (%s) after clearing %d references', $parcel['id'], $parcel['path'], $references);
                 },
-                $bundleResult['deleted'],
+                $parcelResult['deleted'],
             ));
         }
 
@@ -179,18 +179,18 @@ final class SchemaUpdateCommand extends Command
             $moduleResult['created'] === []
             && $moduleResult['updated'] === []
             && $moduleResult['deleted'] === []
-            && $bundleResult['created'] === []
-            && $bundleResult['updated'] === []
-            && $bundleResult['deleted'] === []
+            && $parcelResult['created'] === []
+            && $parcelResult['updated'] === []
+            && $parcelResult['deleted'] === []
             && $domainResult['created'] === []
             && $subdomainResult['created'] === []
         ) {
-            $io->success('Bundle, module, domain, and subdomain rows already match installed configured-vendor packages.');
+            $io->success('Parcel, module, domain, and subdomain rows already match installed configured-vendor packages.');
 
             return Command::SUCCESS;
         }
 
-        $io->success('Bundle, module, domain, and subdomain rows synchronized from installed configured-vendor packages.');
+        $io->success('Parcel, module, domain, and subdomain rows synchronized from installed configured-vendor packages.');
 
         return Command::SUCCESS;
     }

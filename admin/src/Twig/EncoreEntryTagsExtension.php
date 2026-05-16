@@ -2,7 +2,7 @@
 
 namespace Symfonicat\Twig;
 
-use Symfonicat\Entity\Bundle;
+use Symfonicat\Entity\Parcel;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\Module;
 use Symfonicat\Entity\Subdomain;
@@ -31,8 +31,8 @@ final class EncoreEntryTagsExtension extends AbstractExtension
             new TwigFunction('encore_entry_link_tags_endpoint', $this->renderEndpointLinkTags(...), ['is_safe' => ['html']]),
             new TwigFunction('encore_entry_script_tags_module', $this->renderModuleScriptTags(...), ['is_safe' => ['html']]),
             new TwigFunction('encore_entry_link_tags_module', $this->renderModuleLinkTags(...), ['is_safe' => ['html']]),
-            new TwigFunction('encore_entry_script_tags_bundle', $this->renderBundleScriptTags(...), ['is_safe' => ['html']]),
-            new TwigFunction('encore_entry_link_tags_bundle', $this->renderBundleLinkTags(...), ['is_safe' => ['html']]),
+            new TwigFunction('encore_entry_script_tags_parcel', $this->renderParcelScriptTags(...), ['is_safe' => ['html']]),
+            new TwigFunction('encore_entry_link_tags_parcel', $this->renderParcelLinkTags(...), ['is_safe' => ['html']]),
         ];
     }
 
@@ -76,14 +76,14 @@ final class EncoreEntryTagsExtension extends AbstractExtension
         return $this->renderLinkTags($this->moduleEntryName($module));
     }
 
-    public function renderBundleScriptTags(?Bundle $bundle): string
+    public function renderParcelScriptTags(?Parcel $parcel): string
     {
-        return $this->renderScriptTags($this->bundleEntryName($bundle));
+        return $this->renderScriptTags($this->parcelEntryName($parcel));
     }
 
-    public function renderBundleLinkTags(?Bundle $bundle): string
+    public function renderParcelLinkTags(?Parcel $parcel): string
     {
-        return $this->renderLinkTags($this->bundleEntryName($bundle));
+        return $this->renderLinkTags($this->parcelEntryName($parcel));
     }
 
     private function renderScriptTags(?string $entryName): string
@@ -236,14 +236,14 @@ final class EncoreEntryTagsExtension extends AbstractExtension
         return $entryName;
     }
 
-    private function bundleEntryName(?Bundle $bundle): ?string
+    private function parcelEntryName(?Parcel $parcel): ?string
     {
-        $id = trim((string) $bundle?->getId());
+        $id = trim((string) $parcel?->getId());
         if ($id === '') {
             return null;
         }
 
-        $entryName = 'bundle/'.$id;
+        $entryName = 'parcel/'.$id;
         if ($this->entryFilesTwigExtension->entryExists($entryName)) {
             return $entryName;
         }
@@ -252,7 +252,7 @@ final class EncoreEntryTagsExtension extends AbstractExtension
             return $entryName;
         }
 
-        $packages = $this->packageDiscoveryService->discoverEntryDirectories('bundle');
+        $packages = $this->packageDiscoveryService->discoverEntryDirectories('parcel');
         $matches = [];
         foreach (array_keys($packages) as $pkgId) {
             $parts = explode('/', $pkgId);
@@ -262,7 +262,7 @@ final class EncoreEntryTagsExtension extends AbstractExtension
         }
 
         if (count($matches) === 1) {
-            return 'bundle/'.$matches[0];
+            return 'parcel/'.$matches[0];
         }
 
         return $entryName;

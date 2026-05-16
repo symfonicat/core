@@ -2,11 +2,11 @@
 
 namespace Symfonicat\Form;
 
-use Symfonicat\Entity\BundleEnv;
+use Symfonicat\Entity\ParcelEnv;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
-final class BundleEnvType extends AbstractScopedEnvType
+final class ParcelEnvType extends AbstractScopedEnvType
 {
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
@@ -16,7 +16,7 @@ final class BundleEnvType extends AbstractScopedEnvType
     public function configureOptions(OptionsResolver $resolver): void
     {
         $resolver->setDefaults([
-            'data_class' => BundleEnv::class,
+            'data_class' => ParcelEnv::class,
         ]);
     }
 }

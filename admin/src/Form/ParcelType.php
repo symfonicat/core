@@ -2,24 +2,24 @@
 
 namespace Symfonicat\Form;
 
-use Symfonicat\Entity\Bundle;
+use Symfonicat\Entity\Parcel;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
-final class BundleType extends AbstractType
+final class ParcelType extends AbstractType
 {
     use VendorScopedIdFormTrait;
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-        $bundle = $builder->getData();
-        $bundleId = $bundle instanceof Bundle ? trim((string) $bundle->getId(false)) : '';
+        $parcel = $builder->getData();
+        $parcelId = $parcel instanceof Parcel ? trim((string) $parcel->getId(false)) : '';
 
         $this->addDisabledVendorField($builder);
 
-        if ($bundleId === '') {
+        if ($parcelId === '') {
             $builder->add('id', null, [
                 'label' => 'id',
                 'disabled' => !$options['id_editable'],
@@ -33,7 +33,7 @@ final class BundleType extends AbstractType
             ])
             ->add('env', CollectionType::class, [
                 'label' => 'env',
-                'entry_type' => BundleEnvType::class,
+                'entry_type' => ParcelEnvType::class,
                 'allow_add' => true,
                 'allow_delete' => true,
                 'by_reference' => false,
@@ -48,7 +48,7 @@ final class BundleType extends AbstractType
     public function configureOptions(OptionsResolver $resolver): void
     {
         $resolver->setDefaults([
-            'data_class' => Bundle::class,
+            'data_class' => Parcel::class,
             'id_editable' => true,
             'default_vendor' => 'core',
         ]);
