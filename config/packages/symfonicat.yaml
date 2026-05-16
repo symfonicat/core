@@ -33,18 +33,18 @@ symfonicat:
             -
                 domain_id: example.com
                 subdomain_id: core/subdomain1
-        symfonicat_electron:
+        symfonicat_application:
             -
                 id: example-test
                 name: 'Example Test'
                 type: domain
                 domain_id: example.com
                 subdomain_id: null
-        symfonicat_electron_env:
+        symfonicat_application_env:
             -
                 id: 1
                 value: yellow
-                electron_id: example-test
+                application_id: example-test
                 env_id: primary
         symfonicat_module:
             -

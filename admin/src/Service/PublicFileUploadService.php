@@ -19,7 +19,7 @@ final class PublicFileUploadService
         $fileName = $this->normalizeFileName($name);
         $relativeDirectory = match ($type) {
             FileUploadItemType::FILE_TYPE_DOMAIN => $this->domainDirectory($domain),
-            FileUploadItemType::FILE_TYPE_PROJECT => $this->subdomainDirectory($subdomain),
+            FileUploadItemType::FILE_TYPE_SUBDOMAIN => $this->subdomainDirectory($subdomain),
             default => throw new \InvalidArgumentException(sprintf('Unsupported file upload type "%s".', $type)),
         };
 

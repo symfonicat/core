@@ -7,14 +7,14 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Validator\Context\ExecutionContextInterface;
-use Symfonicat\Repository\ElectronRepository;
+use Symfonicat\Repository\ApplicationRepository;
 
-#[ORM\Entity(repositoryClass: ElectronRepository::class)]
-#[ORM\Table(name: 'symfonicat_electron')]
-class Electron
+#[ORM\Entity(repositoryClass: ApplicationRepository::class)]
+#[ORM\Table(name: 'symfonicat_application')]
+class Application
 {
     public const TYPE_DOMAIN = 'domain';
-    public const TYPE_PROJECT = 'subdomain';
+    public const TYPE_SUBDOMAIN = 'subdomain';
 
     #[ORM\Id]
     #[ORM\Column(length: 255)]
@@ -35,9 +35,9 @@ class Electron
     private ?Subdomain $subdomain = null;
 
     /**
-     * @var Collection<int, ElectronEnv>
+     * @var Collection<int, ApplicationEnv>
      */
-    #[ORM\OneToMany(targetEntity: ElectronEnv::class, mappedBy: 'electron', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[ORM\OneToMany(targetEntity: ApplicationEnv::class, mappedBy: 'application', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $env;
 
     public function __construct()
@@ -54,7 +54,7 @@ class Electron
     {
         $id = trim($id, " \t\n\r\0\x0B/");
         if ($id === '') {
-            throw new \InvalidArgumentException('Electron id must be non-empty.');
+            throw new \InvalidArgumentException('Application id must be non-empty.');
         }
 
         $this->id = $id;
@@ -66,7 +66,7 @@ class Electron
     {
         return [
             'domain' => self::TYPE_DOMAIN,
-            'subdomain' => self::TYPE_PROJECT,
+            'subdomain' => self::TYPE_SUBDOMAIN,
         ];
     }
 
@@ -119,27 +119,27 @@ class Electron
     }
 
     /**
-     * @return Collection<int, ElectronEnv>
+     * @return Collection<int, ApplicationEnv>
      */
     public function getEnv(): Collection
     {
         return $this->env;
     }
 
-    public function addEnv(ElectronEnv $env): static
+    public function addEnv(ApplicationEnv $env): static
     {
         if (!$this->env->contains($env)) {
             $this->env->add($env);
-            $env->setElectron($this);
+            $env->setApplication($this);
         }
 
         return $this;
     }
 
-    public function removeEnv(ElectronEnv $env): static
+    public function removeEnv(ApplicationEnv $env): static
     {
-        if ($this->env->removeElement($env) && $env->getElectron() === $this) {
-            $env->setElectron(null);
+        if ($this->env->removeElement($env) && $env->getApplication() === $this) {
+            $env->setApplication(null);
         }
 
         return $this;
@@ -152,14 +152,14 @@ class Electron
 
     public function isSubdomainType(): bool
     {
-        return $this->type === self::TYPE_PROJECT;
+        return $this->type === self::TYPE_SUBDOMAIN;
     }
 
     public function getTargetId(bool $includeVendor = false): ?string
     {
         return match ($this->type) {
             self::TYPE_DOMAIN => $this->domain?->getId($includeVendor),
-            self::TYPE_PROJECT => $this->subdomainTargetId($includeVendor),
+            self::TYPE_SUBDOMAIN => $this->subdomainTargetId($includeVendor),
             default => null,
         };
     }
@@ -185,7 +185,7 @@ class Electron
         $type = trim($this->type);
 
         if (!in_array($type, self::typeChoices(), true)) {
-            $context->buildViolation('Choose a valid Electron type.')
+            $context->buildViolation('Choose a valid Application type.')
                 ->atPath('type')
                 ->addViolation();
 
@@ -198,13 +198,13 @@ class Electron
                 ->addViolation();
         }
 
-        if ($type === self::TYPE_PROJECT && !$this->subdomain instanceof Subdomain) {
+        if ($type === self::TYPE_SUBDOMAIN && !$this->subdomain instanceof Subdomain) {
             $context->buildViolation('Select a subdomain.')
                 ->atPath('subdomain')
                 ->addViolation();
         }
 
-        if ($type === self::TYPE_PROJECT && !$this->domain instanceof Domain) {
+        if ($type === self::TYPE_SUBDOMAIN && !$this->domain instanceof Domain) {
             $context->buildViolation('Select a domain.')
                 ->atPath('domain')
                 ->addViolation();

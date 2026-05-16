@@ -1,7 +1,7 @@
 {{ form_start(form, {
     attr: {
-        'data-controller': 'electron-form',
-        'data-action': 'change->electron-form#update',
+        'data-controller': 'application-form',
+        'data-action': 'change->application-form#update',
     }
 }) }}
 
@@ -23,18 +23,18 @@
     <div class="col-md-3">
         {{ form_row(form.type, {
             attr: {
-                'data-electron-form-target': 'type',
+                'data-application-form-target': 'type',
             }
         }) }}
     </div>
 
     <div class="col-md-3">
-        <div data-electron-form-target="domainRow">
+        <div data-application-form-target="domainRow">
             {{ form_row(form.domain) }}
         </div>
     </div>
     <div class="col-md-3">
-        <div data-electron-form-target="subdomainRow">
+        <div data-application-form-target="subdomainRow">
             {{ form_row(form.subdomain) }}
         </div>
     </div>

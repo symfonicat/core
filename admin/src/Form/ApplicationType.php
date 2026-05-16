@@ -3,7 +3,7 @@
 namespace Symfonicat\Form;
 
 use Symfonicat\Entity\Domain;
-use Symfonicat\Entity\Electron;
+use Symfonicat\Entity\Application;
 use Symfonicat\Entity\Subdomain;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
@@ -12,24 +12,24 @@ use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
-final class ElectronType extends AbstractType
+final class ApplicationType extends AbstractType
 {
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-        $electron = $builder->getData();
-        $electronId = $electron instanceof Electron ? trim((string) $electron->getId()) : '';
+        $application = $builder->getData();
+        $applicationId = $application instanceof Application ? trim((string) $application->getId()) : '';
 
         $builder
             ->add('id', null, [
                 'label' => 'id',
-                'disabled' => $electronId !== '' || !$options['id_editable'],
+                'disabled' => $applicationId !== '' || !$options['id_editable'],
             ])
             ->add('name', null, [
                 'label' => 'name',
             ])
             ->add('type', ChoiceType::class, [
                 'label' => 'type',
-                'choices' => Electron::typeChoices(),
+                'choices' => Application::typeChoices(),
             ])
             ->add('domain', EntityType::class, [
                 'class' => Domain::class,
@@ -47,7 +47,7 @@ final class ElectronType extends AbstractType
             ])
             ->add('env', CollectionType::class, [
                 'label' => 'env',
-                'entry_type' => ElectronEnvType::class,
+                'entry_type' => ApplicationEnvType::class,
                 'allow_add' => true,
                 'allow_delete' => true,
                 'by_reference' => false,
@@ -61,7 +61,7 @@ final class ElectronType extends AbstractType
     public function configureOptions(OptionsResolver $resolver): void
     {
         $resolver->setDefaults([
-            'data_class' => Electron::class,
+            'data_class' => Application::class,
             'id_editable' => true,
         ]);
 

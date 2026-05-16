@@ -15,7 +15,7 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 final class FileUploadItemType extends AbstractType
 {
     public const FILE_TYPE_DOMAIN = 'domain';
-    public const FILE_TYPE_PROJECT = 'subdomain';
+    public const FILE_TYPE_SUBDOMAIN = 'subdomain';
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
@@ -24,7 +24,7 @@ final class FileUploadItemType extends AbstractType
                 'label' => 'type',
                 'choices' => [
                     'domain' => self::FILE_TYPE_DOMAIN,
-                    'subdomain' => self::FILE_TYPE_PROJECT,
+                    'subdomain' => self::FILE_TYPE_SUBDOMAIN,
                 ],
             ])
             ->add('domain', EntityType::class, [

@@ -6,8 +6,8 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Yaml\Yaml;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\DomainEnv;
-use Symfonicat\Entity\Electron;
-use Symfonicat\Entity\ElectronEnv;
+use Symfonicat\Entity\Application;
+use Symfonicat\Entity\ApplicationEnv;
 use Symfonicat\Entity\Env;
 use Symfonicat\Entity\EnvParent;
 use Symfonicat\Entity\Module;
@@ -128,30 +128,30 @@ final class RuntimeConfig
             && $rule->getSubdomain()?->getId() === $subdomain->getId());
     }
 
-    public function electronById(string $id): ?Electron
+    public function applicationById(string $id): ?Application
     {
-        return $this->catalog()['electrons'][trim($id)] ?? null;
+        return $this->catalog()['applications'][trim($id)] ?? null;
     }
 
     /**
-     * @return list<Electron>
+     * @return list<Application>
      */
-    public function electrons(): array
+    public function applications(): array
     {
-        return array_values($this->catalog()['electrons']);
+        return array_values($this->catalog()['applications']);
     }
 
-    public function electronForDomain(Domain $domain): ?Electron
+    public function applicationForDomain(Domain $domain): ?Application
     {
-        return $this->firstElectron(static fn (Electron $electron): bool => $electron->isDomainType()
-            && $electron->getDomain()?->getId() === $domain->getId());
+        return $this->firstApplication(static fn (Application $application): bool => $application->isDomainType()
+            && $application->getDomain()?->getId() === $domain->getId());
     }
 
-    public function electronForSubdomain(Subdomain $subdomain, ?Domain $domain = null): ?Electron
+    public function applicationForSubdomain(Subdomain $subdomain, ?Domain $domain = null): ?Application
     {
-        return $this->firstElectron(static fn (Electron $electron): bool => $electron->isSubdomainType()
-            && $electron->getSubdomain()?->getId() === $subdomain->getId()
-            && (!$domain instanceof Domain || $electron->getDomain()?->getId() === $domain->getId()));
+        return $this->firstApplication(static fn (Application $application): bool => $application->isSubdomainType()
+            && $application->getSubdomain()?->getId() === $subdomain->getId()
+            && (!$domain instanceof Domain || $application->getDomain()?->getId() === $domain->getId()));
     }
 
     /**
@@ -248,28 +248,28 @@ final class RuntimeConfig
             }
         }
 
-        $electrons = [];
-        foreach ($this->rows($rows, 'symfonicat_electron') as $row) {
+        $applications = [];
+        foreach ($this->rows($rows, 'symfonicat_application') as $row) {
             $id = trim((string) ($row['id'] ?? ''));
             if ($id === '') {
                 continue;
             }
 
-            $electron = (new Electron())
+            $application = (new Application())
                 ->setId($id)
                 ->setName((string) ($row['name'] ?? $id))
-                ->setType((string) ($row['type'] ?? Electron::TYPE_DOMAIN))
+                ->setType((string) ($row['type'] ?? Application::TYPE_DOMAIN))
                 ->setDomain($domains[(string) ($row['domain_id'] ?? '')] ?? null)
                 ->setSubdomain($subdomains[(string) ($row['subdomain_id'] ?? '')] ?? null);
 
-            $electrons[$id] = $electron;
+            $applications[$id] = $application;
         }
 
-        foreach ($this->rows($rows, 'symfonicat_electron_env') as $row) {
-            $electron = $electrons[(string) ($row['electron_id'] ?? '')] ?? null;
+        foreach ($this->rows($rows, 'symfonicat_application_env') as $row) {
+            $application = $applications[(string) ($row['application_id'] ?? '')] ?? null;
             $env = $envs[(string) ($row['env_id'] ?? '')] ?? null;
-            if ($electron instanceof Electron && $env instanceof Env) {
-                $electron->addEnv((new ElectronEnv())->setEnv($env)->setValue((string) ($row['value'] ?? '')));
+            if ($application instanceof Application && $env instanceof Env) {
+                $application->addEnv((new ApplicationEnv())->setEnv($env)->setValue((string) ($row['value'] ?? '')));
             }
         }
 
@@ -277,7 +277,7 @@ final class RuntimeConfig
             'domains' => $domains,
             'subdomains' => $subdomains,
             'modules' => $modules,
-            'electrons' => $electrons,
+            'applications' => $applications,
         ];
     }
 
@@ -356,11 +356,11 @@ final class RuntimeConfig
         return null;
     }
 
-    private function firstElectron(callable $predicate): ?Electron
+    private function firstApplication(callable $predicate): ?Application
     {
-        foreach ($this->catalog()['electrons'] as $electron) {
-            if ($predicate($electron)) {
-                return $electron;
+        foreach ($this->catalog()['applications'] as $application) {
+            if ($predicate($application)) {
+                return $application;
             }
         }
 

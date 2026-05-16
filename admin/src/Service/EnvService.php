@@ -5,15 +5,15 @@ namespace Symfonicat\Service;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\Subdomain;
 use Symfonicat\Entity\DomainEnv;
-use Symfonicat\Entity\Electron;
-use Symfonicat\Entity\ElectronEnv;
+use Symfonicat\Entity\Application;
+use Symfonicat\Entity\ApplicationEnv;
 use Symfonicat\Entity\SubdomainEnv;
 
 final class EnvService
 {
     public function __construct(
         private readonly DomainService $domainService,
-        private readonly ElectronService $electronService,
+        private readonly ApplicationService $applicationService,
         private readonly SubdomainService $subdomainService,
     ) {
     }
@@ -59,25 +59,25 @@ final class EnvService
             return $this->mergeValues(
                 $this->collectDomainValues($this->resolveDomainForSubdomain($entity)),
                 $this->collectSubdomainValues($entity),
-                $this->collectElectronValues($this->electronService->loadForContext(null, $this->resolveDomainForSubdomain($entity), $entity)),
+                $this->collectApplicationValues($this->applicationService->loadForContext(null, $this->resolveDomainForSubdomain($entity), $entity)),
             );
         }
 
         $domain = $this->domainService->load();
         $subdomain = $this->subdomainService->load();
-        $electron = $this->electronService->load();
+        $application = $this->applicationService->load();
 
         if ($subdomain instanceof Subdomain) {
             return $this->mergeValues(
                 $this->collectDomainValues($domain),
                 $this->collectSubdomainValues($subdomain),
-                $this->collectElectronValues($electron),
+                $this->collectApplicationValues($application),
             );
         }
 
         return $this->mergeValues(
             $this->collectDomainValues($domain),
-            $this->collectElectronValues($electron),
+            $this->collectApplicationValues($application),
         );
     }
 
@@ -165,16 +165,16 @@ final class EnvService
     /**
      * @return array<string, array<string, string>>
      */
-    private function collectElectronValues(?Electron $electron): array
+    private function collectApplicationValues(?Application $application): array
     {
-        if (!$electron instanceof Electron) {
+        if (!$application instanceof Application) {
             return [];
         }
 
         $values = [];
 
-        foreach ($electron->getEnv() as $item) {
-            if (!$item instanceof ElectronEnv) {
+        foreach ($application->getEnv() as $item) {
+            if (!$item instanceof ApplicationEnv) {
                 continue;
             }
 

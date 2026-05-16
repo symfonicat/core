@@ -1,0 +1,5 @@
+{% extends '@symfonicat/base.html.twig' %}
+{% block title %}Edit Application{% endblock %}
+{% block body %}
+    {{ include('@symfonicat/application/_form.html.twig', { button_label: 'save' }) }}
+{% endblock %}

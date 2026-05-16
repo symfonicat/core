@@ -5,18 +5,18 @@ namespace Symfonicat\Entity;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity]
-#[ORM\Table(name: 'symfonicat_electron_env')]
-#[ORM\UniqueConstraint(name: 'uniq_symfonicat_electron_env_electron_env', columns: ['electron_id', 'env_id'])]
-class ElectronEnv
+#[ORM\Table(name: 'symfonicat_application_env')]
+#[ORM\UniqueConstraint(name: 'uniq_symfonicat_application_env_application_env', columns: ['application_id', 'env_id'])]
+class ApplicationEnv
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\ManyToOne(targetEntity: Electron::class, inversedBy: 'env')]
-    #[ORM\JoinColumn(name: 'electron_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
-    private ?Electron $electron = null;
+    #[ORM\ManyToOne(targetEntity: Application::class, inversedBy: 'env')]
+    #[ORM\JoinColumn(name: 'application_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
+    private ?Application $application = null;
 
     #[ORM\ManyToOne(targetEntity: Env::class)]
     #[ORM\JoinColumn(name: 'env_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
@@ -30,14 +30,14 @@ class ElectronEnv
         return $this->id;
     }
 
-    public function getElectron(): ?Electron
+    public function getApplication(): ?Application
     {
-        return $this->electron;
+        return $this->application;
     }
 
-    public function setElectron(?Electron $electron): static
+    public function setApplication(?Application $application): static
     {
-        $this->electron = $electron;
+        $this->application = $application;
 
         return $this;
     }
