@@ -42,7 +42,7 @@ final class RuntimeAssetExtension extends AbstractExtension
         if ($context instanceof Subdomain) {
             $subdomainId = trim((string) $context->getId(false));
             if ($subdomainId !== '') {
-                return sprintf('/subdomains/%s/', $this->encodePath($subdomainId));
+                return sprintf('/subdomain/%s/', $this->encodePath($subdomainId));
             }
 
             return '/default/';
@@ -67,8 +67,8 @@ final class RuntimeAssetExtension extends AbstractExtension
         }
 
         $subdomain = $this->subdomainService->load();
-        if ($subdomain instanceof Subdomain && $this->assetFileExists('subdomains', (string) $subdomain->getId(false), $path)) {
-            return sprintf('/subdomains/%s/', $this->encodePath((string) $subdomain->getId(false)));
+        if ($subdomain instanceof Subdomain && $this->assetFileExists('subdomain', (string) $subdomain->getId(false), $path)) {
+            return sprintf('/subdomain/%s/', $this->encodePath((string) $subdomain->getId(false)));
         }
 
         $domain = $this->domainService->load();

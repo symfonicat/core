@@ -122,7 +122,7 @@ final class EncoreEntryTagsExtension extends AbstractExtension
             return null;
         }
 
-        $entryName = 'subdomains/'.$id;
+        $entryName = 'subdomain/'.$id;
         if ($this->entryFilesTwigExtension->entryExists($entryName)) {
             return $entryName;
         }
@@ -131,7 +131,7 @@ final class EncoreEntryTagsExtension extends AbstractExtension
             return $entryName;
         }
 
-        $packages = $this->packageDiscoveryService->discoverEntryDirectories('subdomains');
+        $packages = $this->packageDiscoveryService->discoverEntryDirectories('subdomain');
         $matches = [];
         foreach (array_keys($packages) as $pkgId) {
             $parts = explode('/', $pkgId);
@@ -141,7 +141,7 @@ final class EncoreEntryTagsExtension extends AbstractExtension
         }
 
         if (count($matches) === 1) {
-            return 'subdomains/'.$matches[0];
+            return 'subdomain/'.$matches[0];
         }
 
         return $entryName;

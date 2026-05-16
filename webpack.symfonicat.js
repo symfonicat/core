@@ -27,8 +27,8 @@ const shortPackageName = (packageName) => {
 
 const vendorName = (packageName) => packageName.split('/')[0] || '';
 
-const loadConfiguredVendors = (subdomainDir) => {
-    const configPath = path.join(subdomainDir, 'config', 'packages', 'symfonicat.yaml');
+const loadConfiguredVendors = (projectDir) => {
+    const configPath = path.join(projectDir, 'config', 'packages', 'symfonicat.yaml');
     const fallback = ['symfonicat'];
 
     if (!fs.existsSync(configPath)) {
@@ -65,22 +65,22 @@ const loadConfiguredVendors = (subdomainDir) => {
 
 const isConfiguredVendorPackage = (packageName, vendors) => vendors.includes(vendorName(packageName));
 
-const loadSymfonicatPackages = (subdomainDir) => {
+const loadSymfonicatPackages = (projectDir) => {
     const packages = new Map();
-    const vendors = loadConfiguredVendors(subdomainDir);
-    const rootComposer = readJson(path.join(subdomainDir, 'composer.json'));
+    const vendors = loadConfiguredVendors(projectDir);
+    const rootComposer = readJson(path.join(projectDir, 'composer.json'));
     const rootPackageName = typeof rootComposer?.name === 'string' ? rootComposer.name.trim() : '';
 
     if (isConfiguredVendorPackage(rootPackageName, vendors)) {
         packages.set(rootPackageName, {
-            installPath: subdomainDir,
+            installPath: projectDir,
             name: rootPackageName,
             package: shortPackageName(rootPackageName),
             vendor: 'core',
         });
     }
 
-    const installed = readJson(path.join(subdomainDir, 'vendor', 'composer', 'installed.json'));
+    const installed = readJson(path.join(projectDir, 'vendor', 'composer', 'installed.json'));
     const installedPackages = Array.isArray(installed?.packages) ? installed.packages : [];
 
     installedPackages.forEach((pkg) => {
@@ -92,7 +92,7 @@ const loadSymfonicatPackages = (subdomainDir) => {
         }
 
         packages.set(packageName, {
-            installPath: path.resolve(subdomainDir, 'vendor', 'composer', installPath),
+            installPath: path.resolve(projectDir, 'vendor', 'composer', installPath),
             name: packageName,
             package: shortPackageName(packageName),
             vendor: vendorName(packageName),
@@ -102,10 +102,10 @@ const loadSymfonicatPackages = (subdomainDir) => {
     return Array.from(packages.values()).sort((a, b) => a.name.localeCompare(b.name));
 };
 
-const discoverPackageEntries = (subdomainDir, type) => {
+const discoverPackageEntries = (projectDir, type) => {
     const entries = new Map();
 
-    loadSymfonicatPackages(subdomainDir).forEach((pkg) => {
+    loadSymfonicatPackages(projectDir).forEach((pkg) => {
         const baseDir = path.join(pkg.installPath, 'assets', type);
 
         listDirEntries(baseDir).forEach((entry) => {
@@ -131,10 +131,10 @@ const discoverPackageEntries = (subdomainDir, type) => {
     return Array.from(entries.values()).sort((a, b) => a.id.localeCompare(b.id));
 };
 
-const loadModuleData = (subdomainDir) => {
+const loadModuleData = (projectDir) => {
     try {
         const raw = execSync(`${CONSOLE_PREFIX} symfonicat:data:webpack`, {
-            cwd: subdomainDir,
+            cwd: projectDir,
             encoding: 'utf8',
         });
 
@@ -143,16 +143,16 @@ const loadModuleData = (subdomainDir) => {
         console.warn('[webpack] symfonicat:data:webpack failed; falling back to configured package vendors.');
 
         return {
-            applications: discoverPackageEntries(subdomainDir, 'applications'),
-            domains: discoverPackageEntries(subdomainDir, 'domains'),
-            subdomains: discoverPackageEntries(subdomainDir, 'subdomains'),
-            modules: discoverPackageEntries(subdomainDir, 'modules'),
+            applications: discoverPackageEntries(projectDir, 'application'),
+            domains: discoverPackageEntries(projectDir, 'domain'),
+            subdomains: discoverPackageEntries(projectDir, 'subdomain'),
+            modules: discoverPackageEntries(projectDir, 'module'),
         };
     }
 };
 
-const toEntryPath = (subdomainDir, filePath) => {
-    let relativePath = path.relative(subdomainDir, filePath).replace(/\\/g, '/');
+const toEntryPath = (projectDir, filePath) => {
+    let relativePath = path.relative(projectDir, filePath).replace(/\\/g, '/');
     if (!relativePath.startsWith('.')) {
         relativePath = `./${relativePath}`;
     }
@@ -162,20 +162,20 @@ const toEntryPath = (subdomainDir, filePath) => {
 
 module.exports = function configureSymfonicat(Encore, options = __dirname) {
     const config = typeof options === 'string'
-        ? { subdomainDir: options, packageDir: options }
+        ? { projectDir: options, packageDir: options }
         : {
-            subdomainDir: options.subdomainDir || __dirname,
-            packageDir: options.packageDir || options.subdomainDir || __dirname,
+            projectDir: options.projectDir || __dirname,
+            packageDir: options.packageDir || options.projectDir || __dirname,
         };
-    const { subdomainDir, packageDir } = config;
-    const moduleData = loadModuleData(subdomainDir);
+    const { projectDir, packageDir } = config;
+    const moduleData = loadModuleData(projectDir);
 
     (moduleData.subdomains || []).forEach((subdomain) => {
         if (!subdomain?.id || !subdomain?.entry || !fs.existsSync(subdomain.entry)) {
             return;
         }
 
-        Encore.addEntry(`subdomains/${subdomain.id}`, toEntryPath(subdomainDir, subdomain.entry));
+        Encore.addEntry(`subdomain/${subdomain.id}`, toEntryPath(projectDir, subdomain.entry));
     });
 
     (moduleData.domains || []).forEach((domain) => {
@@ -183,7 +183,7 @@ module.exports = function configureSymfonicat(Encore, options = __dirname) {
             return;
         }
 
-        Encore.addEntry(`domains/${domain.id}`, toEntryPath(subdomainDir, domain.entry));
+        Encore.addEntry(`domain/${domain.id}`, toEntryPath(projectDir, domain.entry));
     });
 
     (moduleData.modules || []).forEach((mod) => {
@@ -191,13 +191,13 @@ module.exports = function configureSymfonicat(Encore, options = __dirname) {
             return;
         }
 
-        Encore.addEntry(`modules/${mod.id}`, toEntryPath(subdomainDir, mod.entry));
+        Encore.addEntry(`module/${mod.id}`, toEntryPath(projectDir, mod.entry));
     });
 
     Encore
         .enableStimulusBridge('./assets/controllers.json')
-        .addEntry('app', toEntryPath(subdomainDir, path.join(packageDir, 'assets', 'app.js')))
-        .addEntry('admin', toEntryPath(subdomainDir, path.join(packageDir, 'admin', 'assets', 'admin.js')))
+        .addEntry('app', toEntryPath(projectDir, path.join(packageDir, 'assets', 'app.js')))
+        .addEntry('admin', toEntryPath(projectDir, path.join(packageDir, 'admin', 'assets', 'admin.js')))
         .splitEntryChunks()
         .enableSingleRuntimeChunk()
         .cleanupOutputBeforeBuild()
