@@ -4,6 +4,8 @@ namespace Symfonicat\Service;
 
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Yaml\Yaml;
+use Symfonicat\Entity\Bundle;
+use Symfonicat\Entity\BundleEnv;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\DomainEnv;
 use Symfonicat\Entity\Application;
@@ -55,6 +57,14 @@ final class RuntimeConfig
     public function modules(): array
     {
         return array_values($this->catalog()['modules']);
+    }
+
+    /**
+     * @return list<Bundle>
+     */
+    public function bundles(): array
+    {
+        return array_values($this->catalog()['bundles']);
     }
 
     public function subdomainByIdForDomain(string $id, Domain $domain): ?Subdomain
@@ -165,11 +175,23 @@ final class RuntimeConfig
 
         $rows = $this->readAdminRows();
 
+        $bundles = [];
+        foreach ($this->rows($rows, 'symfonicat_bundle') as $row) {
+            $id = trim((string) ($row['id'] ?? ''));
+            if ($id !== '') {
+                $bundles[$id] = (new Bundle())
+                    ->setId($id)
+                    ->setPath((string) ($row['path'] ?? ''));
+            }
+        }
+
         $domains = [];
         foreach ($this->rows($rows, 'symfonicat_domain') as $row) {
             $id = trim((string) ($row['id'] ?? ''));
             if ($id !== '') {
-                $domains[$id] = (new Domain())->setId($id);
+                $domains[$id] = (new Domain())
+                    ->setId($id)
+                    ->setBundle($bundles[(string) ($row['bundle_id'] ?? '')] ?? null);
             }
         }
 
@@ -177,7 +199,9 @@ final class RuntimeConfig
         foreach ($this->rows($rows, 'symfonicat_subdomain') as $row) {
             $id = trim((string) ($row['id'] ?? ''));
             if ($id !== '') {
-                $subdomains[$id] = (new Subdomain())->setId($id);
+                $subdomains[$id] = (new Subdomain())
+                    ->setId($id)
+                    ->setBundle($bundles[(string) ($row['bundle_id'] ?? '')] ?? null);
             }
         }
 
@@ -248,6 +272,14 @@ final class RuntimeConfig
             }
         }
 
+        foreach ($this->rows($rows, 'symfonicat_bundle_env') as $row) {
+            $bundle = $bundles[(string) ($row['bundle_id'] ?? '')] ?? null;
+            $env = $envs[(string) ($row['env_id'] ?? '')] ?? null;
+            if ($bundle instanceof Bundle && $env instanceof Env) {
+                $bundle->addEnv((new BundleEnv())->setEnv($env)->setValue((string) ($row['value'] ?? '')));
+            }
+        }
+
         $applications = [];
         foreach ($this->rows($rows, 'symfonicat_application') as $row) {
             $id = trim((string) ($row['id'] ?? ''));
@@ -260,7 +292,8 @@ final class RuntimeConfig
                 ->setName((string) ($row['name'] ?? $id))
                 ->setType((string) ($row['type'] ?? Application::TYPE_DOMAIN))
                 ->setDomain($domains[(string) ($row['domain_id'] ?? '')] ?? null)
-                ->setSubdomain($subdomains[(string) ($row['subdomain_id'] ?? '')] ?? null);
+                ->setSubdomain($subdomains[(string) ($row['subdomain_id'] ?? '')] ?? null)
+                ->setBundle($bundles[(string) ($row['bundle_id'] ?? '')] ?? null);
 
             $applications[$id] = $application;
         }
@@ -274,6 +307,7 @@ final class RuntimeConfig
         }
 
         return $this->catalog = [
+            'bundles' => $bundles,
             'domains' => $domains,
             'subdomains' => $subdomains,
             'modules' => $modules,

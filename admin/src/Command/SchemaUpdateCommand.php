@@ -3,6 +3,7 @@
 namespace Symfonicat\Command;
 
 use Symfonicat\Entity\Module;
+use Symfonicat\Service\BundleService;
 use Symfonicat\Service\DomainService;
 use Symfonicat\Service\ModuleService;
 use Symfonicat\Service\SubdomainService;
@@ -20,6 +21,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 final class SchemaUpdateCommand extends Command
 {
     public function __construct(
+        private readonly BundleService $bundleService,
         private readonly DomainService $domainService,
         private readonly ModuleService $moduleService,
         private readonly SubdomainService $subdomainService,
@@ -35,6 +37,8 @@ final class SchemaUpdateCommand extends Command
         try {
             $this->schemaSynchronizer->synchronize();
             $shouldAskForConfirmation = $this->shouldAskForConfirmation($input);
+
+            $bundleResult = $this->bundleService->sync();
 
             $moduleResult = $this->moduleService->sync($shouldAskForConfirmation ? function (Module $module, array $references) use ($input, $io): bool {
                 $io->warning(sprintf(
@@ -86,6 +90,22 @@ final class SchemaUpdateCommand extends Command
             $io->error($exception->getMessage());
 
             return Command::FAILURE;
+        }
+
+        if ($bundleResult['created'] !== []) {
+            $io->section('Created bundles');
+            $io->listing(array_map(
+                static fn (array $bundle): string => sprintf('%s (%s)', $bundle['id'], $bundle['path']),
+                $bundleResult['created'],
+            ));
+        }
+
+        if ($bundleResult['updated'] !== []) {
+            $io->section('Updated bundles');
+            $io->listing(array_map(
+                static fn (array $bundle): string => sprintf('%s path: "%s" -> "%s"', $bundle['id'], $bundle['from'], $bundle['to']),
+                $bundleResult['updated'],
+            ));
         }
 
         if ($moduleResult['created'] !== []) {
@@ -144,15 +164,17 @@ final class SchemaUpdateCommand extends Command
             $moduleResult['created'] === []
             && $moduleResult['updated'] === []
             && $moduleResult['deleted'] === []
+            && $bundleResult['created'] === []
+            && $bundleResult['updated'] === []
             && $domainResult['created'] === []
             && $subdomainResult['created'] === []
         ) {
-            $io->success('Module, domain, and subdomain rows already match installed configured-vendor packages.');
+            $io->success('Bundle, module, domain, and subdomain rows already match installed configured-vendor packages.');
 
             return Command::SUCCESS;
         }
 
-        $io->success('Module, domain, and subdomain rows synchronized from installed configured-vendor packages.');
+        $io->success('Bundle, module, domain, and subdomain rows synchronized from installed configured-vendor packages.');
 
         return Command::SUCCESS;
     }

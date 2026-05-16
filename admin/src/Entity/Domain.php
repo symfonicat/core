@@ -15,6 +15,10 @@ class Domain
     #[ORM\Column(length: 255)]
     private ?string $id = null;
 
+    #[ORM\ManyToOne(targetEntity: Bundle::class)]
+    #[ORM\JoinColumn(name: 'bundle_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
+    private ?Bundle $bundle = null;
+
     /**
      * @var Collection<int, Subdomain>
      */
@@ -56,6 +60,18 @@ class Domain
         }
 
         $this->id = $id;
+
+        return $this;
+    }
+
+    public function getBundle(): ?Bundle
+    {
+        return $this->bundle;
+    }
+
+    public function setBundle(?Bundle $bundle): static
+    {
+        $this->bundle = $bundle;
 
         return $this;
     }

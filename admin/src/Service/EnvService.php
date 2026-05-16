@@ -2,6 +2,8 @@
 
 namespace Symfonicat\Service;
 
+use Symfonicat\Entity\Bundle;
+use Symfonicat\Entity\BundleEnv;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\Subdomain;
 use Symfonicat\Entity\DomainEnv;
@@ -51,15 +53,22 @@ final class EnvService
 
         if ($entity instanceof Domain) {
             return $this->mergeValues(
+                $this->collectBundleValues($entity->getBundle()),
                 $this->collectDomainValues($entity),
             );
         }
 
         if ($entity instanceof Subdomain) {
+            $domain = $this->resolveDomainForSubdomain($entity);
+            $application = $this->applicationService->loadForContext(null, $domain, $entity);
+
             return $this->mergeValues(
-                $this->collectDomainValues($this->resolveDomainForSubdomain($entity)),
+                $this->collectBundleValues($domain?->getBundle()),
+                $this->collectDomainValues($domain),
+                $this->collectBundleValues($entity->getBundle()),
                 $this->collectSubdomainValues($entity),
-                $this->collectApplicationValues($this->applicationService->loadForContext(null, $this->resolveDomainForSubdomain($entity), $entity)),
+                $this->collectBundleValues($application?->getBundle()),
+                $this->collectApplicationValues($application),
             );
         }
 
@@ -69,14 +78,19 @@ final class EnvService
 
         if ($subdomain instanceof Subdomain) {
             return $this->mergeValues(
+                $this->collectBundleValues($domain?->getBundle()),
                 $this->collectDomainValues($domain),
+                $this->collectBundleValues($subdomain->getBundle()),
                 $this->collectSubdomainValues($subdomain),
+                $this->collectBundleValues($application?->getBundle()),
                 $this->collectApplicationValues($application),
             );
         }
 
         return $this->mergeValues(
+            $this->collectBundleValues($domain?->getBundle()),
             $this->collectDomainValues($domain),
+            $this->collectBundleValues($application?->getBundle()),
             $this->collectApplicationValues($application),
         );
     }
@@ -119,6 +133,34 @@ final class EnvService
 
         foreach ($domain->getEnv() as $item) {
             if (!$item instanceof DomainEnv) {
+                continue;
+            }
+
+            $envParentId = $item->getEnv()?->getEnvParent()?->getId();
+            $envId = $item->getEnv()?->getId();
+            if ($envParentId === null || $envParentId === '' || $envId === null || $envId === '') {
+                continue;
+            }
+
+            $values[$envParentId][$envId] = $item->getValue();
+        }
+
+        return $values;
+    }
+
+    /**
+     * @return array<string, array<string, string>>
+     */
+    private function collectBundleValues(?Bundle $bundle): array
+    {
+        if (!$bundle instanceof Bundle) {
+            return [];
+        }
+
+        $values = [];
+
+        foreach ($bundle->getEnv() as $item) {
+            if (!$item instanceof BundleEnv) {
                 continue;
             }
 

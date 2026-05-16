@@ -4,6 +4,7 @@ namespace Symfonicat\Form;
 
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\Application;
+use Symfonicat\Entity\Bundle;
 use Symfonicat\Entity\Subdomain;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
@@ -44,6 +45,13 @@ final class ApplicationType extends AbstractType
                 'label' => 'subdomain',
                 'required' => false,
                 'placeholder' => 'select subdomain',
+            ])
+            ->add('bundle', EntityType::class, [
+                'class' => Bundle::class,
+                'choice_label' => static fn (Bundle $bundle): string => (string) $bundle->getId(),
+                'label' => 'bundle',
+                'required' => false,
+                'placeholder' => 'select bundle',
             ])
             ->add('env', CollectionType::class, [
                 'label' => 'env',

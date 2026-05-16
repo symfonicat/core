@@ -47,7 +47,7 @@ symfonicat:
         - symfonicat
 ```
 
-Webpack and schema sync discover package entries under configured Composer vendors. Core bundle entries live under `assets/bundles/{domain,subdomain,module}/`; installed package bundle entries live under `{composer-package-dir}/bundles/{domain,subdomain,module}/`. The root package is emitted as `core/...`; installed package entries use ids such as `symfonicat/analytics/main`. The same vendor list is used for package service imports and package controller route imports.
+Webpack and schema sync discover package entries under configured Composer vendors. Core entries live under `assets/{domain,subdomain,module,bundle}/`; installed package entries live under `{composer-package-dir}/assets/{domain,subdomain,module,bundle}/`. The root package is emitted as `core/...`; installed package entries use ids such as `symfonicat/analytics/main`. Bundle rows use the same vendor-scoped id style and can be attached to domains, subdomains, and applications.
 
 ## Admin YAML
 
@@ -73,7 +73,7 @@ touch symfonicat.lock # enables /admin
 
 and then visit `/admin`. Every path beginning with `/admin` returns a Symfony-rendered 404 until the root `symfonicat.lock` file exists; Caddy catches those requests before public static files can be served, marks them, and routes them into Symfony. Symfony keeps the same guard for non-Caddy runtimes. Remove the ignored lock file to close the admin area again.
 
-The admin header includes the YAML tools and `/admin/f`, which uploads named files into `public/domains/{domain-id}/` or `public/subdomains/{subdomain-id}/` for domain and subdomain asset scopes. Project and application lookups by clean id are strict; if multiple rows share the same clean id, runtime resolution throws, the matching admin list flashes a duplicate-id warning, and `symfonicat:schema:update` fails fast before syncing those rows.
+The admin header includes bundle management at `/admin/b`, schema sync at `/admin/s`, the YAML tools, and `/admin/f`, which uploads named files into `public/domains/{domain-id}/` or `public/subdomains/{subdomain-id}/` for domain and subdomain asset scopes. Project and application lookups by clean id are strict; if multiple rows share the same clean id, runtime resolution throws, the matching admin list flashes a duplicate-id warning, and schema sync fails fast before syncing those rows.
 
 ## Modules
 
@@ -102,7 +102,7 @@ Electron rows use plain ids. Generated start URLs include `?electron={electron.i
 
 ## Sync
 
-`symfonicat:schema:update` synchronizes the Doctrine schema and then synchronizes package-provided modules, domains, applications, and subdomains. Non-interactive runs create missing package rows automatically; stale modules with referencing rows still require an interactive confirmation before deletion.
+`symfonicat:schema:update` synchronizes the Doctrine schema and then synchronizes package-provided bundles, modules, domains, applications, and subdomains. Non-interactive runs create missing package rows automatically; stale modules with referencing rows still require an interactive confirmation before deletion.
 
 ```bash
 docker exec -it php bin/console symfonicat:schema:update

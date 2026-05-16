@@ -65,6 +65,24 @@ const loadConfiguredVendors = (projectDir) => {
 
 const isConfiguredVendorPackage = (packageName, vendors) => vendors.includes(vendorName(packageName));
 
+const resolveEntryFile = (basePath) => {
+    if (!basePath) {
+        return null;
+    }
+
+    if (!fs.existsSync(basePath)) {
+        return null;
+    }
+
+    if (fs.statSync(basePath).isDirectory()) {
+        const indexPath = path.join(basePath, 'index.js');
+
+        return fs.existsSync(indexPath) ? indexPath : null;
+    }
+
+    return basePath;
+};
+
 const loadSymfonicatPackages = (projectDir) => {
     const packages = new Map();
     const vendors = loadConfiguredVendors(projectDir);
@@ -106,9 +124,7 @@ const discoverPackageEntries = (projectDir, type) => {
     const entries = new Map();
 
     loadSymfonicatPackages(projectDir).forEach((pkg) => {
-        const baseDir = pkg.vendor === 'core'
-            ? path.join(pkg.installPath, 'assets', 'bundles', type)
-            : path.join(pkg.installPath, 'bundles', type);
+        const baseDir = path.join(pkg.installPath, 'assets', type);
 
         listDirEntries(baseDir).forEach((entry) => {
             const id = type === 'domain'
@@ -121,8 +137,13 @@ const discoverPackageEntries = (projectDir, type) => {
                 throw new Error(`Duplicate Symfonicat ${type} entry "${id}" found in both "${existing.packageName}" and "${pkg.name}".`);
             }
 
+            const entryPath = resolveEntryFile(path.join(baseDir, entry.name));
+            if (!entryPath) {
+                return;
+            }
+
             entries.set(id, {
-                entry: path.join(baseDir, entry.name, 'index.js'),
+                entry: entryPath,
                 id: id,
                 package: pkg.package,
                 packageName: pkg.name,
@@ -146,6 +167,7 @@ const loadModuleData = (projectDir) => {
         console.warn('[webpack] symfonicat:data:webpack failed; falling back to configured package vendors.');
 
         return {
+            bundles: discoverPackageEntries(projectDir, 'bundle'),
             domains: discoverPackageEntries(projectDir, 'domain'),
             subdomains: discoverPackageEntries(projectDir, 'subdomain'),
             modules: discoverPackageEntries(projectDir, 'module'),
@@ -194,6 +216,14 @@ module.exports = function configureSymfonicat(Encore, options = __dirname) {
         }
 
         Encore.addEntry(`module/${mod.id}`, toEntryPath(projectDir, mod.entry));
+    });
+
+    (moduleData.bundles || []).forEach((bundle) => {
+        if (!bundle?.id || !bundle?.entry || !fs.existsSync(bundle.entry)) {
+            return;
+        }
+
+        Encore.addEntry(`bundle/${bundle.id}`, toEntryPath(projectDir, bundle.entry));
     });
 
     Encore

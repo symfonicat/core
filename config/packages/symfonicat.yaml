@@ -9,11 +9,14 @@ symfonicat:
             -
                 id: primary
                 env_parent_id: colors
+        symfonicat_bundle: []
         symfonicat_domain:
             -
                 id: example.com
+                bundle_id: null
             -
                 id: localhost
+                bundle_id: null
         symfonicat_domain_env:
             -
                 id: 1
@@ -29,6 +32,7 @@ symfonicat:
             -
                 id: core/subdomain1
                 vendor: core
+                bundle_id: null
         symfonicat_domain_subdomain:
             -
                 domain_id: example.com
@@ -40,12 +44,14 @@ symfonicat:
                 type: domain
                 domain_id: example.com
                 subdomain_id: null
+                bundle_id: null
         symfonicat_application_env:
             -
                 id: 1
                 value: yellow
                 application_id: example-test
                 env_id: primary
+        symfonicat_bundle_env: []
         symfonicat_module:
             -
                 id: symfonicat/analytics/main

@@ -107,9 +107,7 @@ class DomainService
      */
     private function discoverPackageDomains(): array
     {
-        // Domain rows are intentionally *not* discovered from installed packages here.
-        // Domains are intentionally not auto-created during runtime.
-        return [];
+        return array_keys($this->packageDiscoveryService->discoverEntryDirectories('domain'));
     }
 
     /**

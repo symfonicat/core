@@ -1,0 +1,21 @@
+<tr id="bundle_{{ bundle.id(false)|replace({'/': '_'}) }}" class="btn-row">
+    <td class="fw-semibold">{{ bundle.id }}</td>
+    <td><code>{{ bundle.path }}</code></td>
+    {% for env_parent in env_parents %}
+        <td>
+            {% set entries = env_parent_entries(bundle.env, env_parent) %}
+            {% for entry in entries %}
+                <div><code>{{ entry }}</code></div>
+            {% else %}
+                <i class="fa fa-fw fa-times"></i>
+            {% endfor %}
+        </td>
+    {% endfor %}
+    <td class="text-end btn-cell">
+        <div class="btn-group btn-group-sm">
+            <a href="{{ path('symfonicat_bundle_edit', { id: bundle.id }) }}" class="btn btn-sm btn-warning">
+                <i class="fa fa-pencil">&nbsp;</i>
+            </a>
+        </div>
+    </td>
+</tr>

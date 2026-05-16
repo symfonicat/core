@@ -2,6 +2,7 @@
 
 namespace Symfonicat\Form;
 
+use Symfonicat\Entity\Bundle;
 use Symfonicat\Entity\Module;
 use Symfonicat\Entity\Subdomain;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
@@ -29,6 +30,13 @@ class SubdomainType extends AbstractType
         }
 
         $builder
+            ->add('bundle', EntityType::class, [
+                'class' => Bundle::class,
+                'choice_label' => static fn (Bundle $bundle): string => (string) $bundle->getId(),
+                'label' => 'bundle',
+                'placeholder' => 'select bundle',
+                'required' => false,
+            ])
             ->add('modules', EntityType::class, [
                 'class' => Module::class,
                 'choice_label' => static fn (Module $module): string => (function (Module $m): string {

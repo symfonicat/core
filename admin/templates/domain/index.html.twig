@@ -10,6 +10,7 @@
         <thead>
             <tr>
                 <th>domain</th>
+                <th>bundle</th>
                 <th>subdomains</th>
                 <th>modules</th>
                 {% for env_parent in env_parents %}
@@ -23,7 +24,7 @@
             {{ include('@symfonicat/domain/_row.html.twig') }}
         {% else %}
             <tr id="domains-empty">
-                <td colspan="{{ 4 + env_parents|length }}">no records found</td>
+                <td colspan="{{ 5 + env_parents|length }}">no records found</td>
             </tr>
         {% endfor %}
         </tbody>

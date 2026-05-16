@@ -5,6 +5,7 @@ namespace Symfonicat\Service;
 final class PackageDiscoveryService
 {
     private const SUPPORTED_ENTRY_TYPES = [
+        'bundle',
         'domain',
         'module',
         'subdomain',
@@ -101,9 +102,7 @@ final class PackageDiscoveryService
         $entries = [];
 
         foreach ($this->findSymfonicatPackages() as $package) {
-            $baseDirectory = $package['vendor'] === 'core'
-                ? $package['installPath'].'/assets/bundles/'.$type
-                : $package['installPath'].'/bundles/'.$type;
+            $baseDirectory = $package['installPath'].'/assets/'.$type;
             $directories = glob($baseDirectory.'/*', GLOB_ONLYDIR) ?: [];
             sort($directories, SORT_STRING);
 
@@ -151,6 +150,40 @@ final class PackageDiscoveryService
      *     directory: string,
      *     entry: string,
      *     id: string,
+     *     package: string,
+     *     packageName: string,
+     *     path: string,
+     *     type: string,
+     *     vendor: string
+     * }>
+     */
+    public function discoverBundles(): array
+    {
+        $bundles = [];
+
+        foreach ($this->discoverEntryDirectories('bundle') as $bundleId => $entry) {
+            $bundles[$bundleId] = [
+                'directory' => $entry['directory'],
+                'entry' => $entry['entry'],
+                'id' => $bundleId,
+                'package' => $entry['package'],
+                'packageName' => $entry['packageName'],
+                'path' => $this->relativePath($entry['directory']),
+                'type' => 'bundle',
+                'vendor' => $entry['vendor'],
+            ];
+        }
+
+        ksort($bundles, SORT_STRING);
+
+        return $bundles;
+    }
+
+    /**
+     * @return array<string, array{
+     *     directory: string,
+     *     entry: string,
+     *     id: string,
      *     name: string,
      *     package: string,
      *     packageName: string,
@@ -191,6 +224,18 @@ final class PackageDiscoveryService
         $parts = explode('/', $packageName, 2);
 
         return trim($parts[0] ?? '');
+    }
+
+    private function relativePath(string $path): string
+    {
+        $root = rtrim(str_replace('\\', '/', $this->subdomainDir), '/').'/';
+        $path = str_replace('\\', '/', $path);
+
+        if (str_starts_with($path, $root)) {
+            return substr($path, strlen($root));
+        }
+
+        return $path;
     }
 
     private function isConfiguredVendorPackage(string $packageName): bool

@@ -2,6 +2,7 @@
 
 namespace Symfonicat\Twig;
 
+use Symfonicat\Entity\Bundle;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\Module;
 use Symfonicat\Entity\Subdomain;
@@ -28,6 +29,8 @@ final class EncoreEntryTagsExtension extends AbstractExtension
             new TwigFunction('encore_entry_link_tags_subdomain', $this->renderSubdomainLinkTags(...), ['is_safe' => ['html']]),
             new TwigFunction('encore_entry_script_tags_module', $this->renderModuleScriptTags(...), ['is_safe' => ['html']]),
             new TwigFunction('encore_entry_link_tags_module', $this->renderModuleLinkTags(...), ['is_safe' => ['html']]),
+            new TwigFunction('encore_entry_script_tags_bundle', $this->renderBundleScriptTags(...), ['is_safe' => ['html']]),
+            new TwigFunction('encore_entry_link_tags_bundle', $this->renderBundleLinkTags(...), ['is_safe' => ['html']]),
         ];
     }
 
@@ -59,6 +62,16 @@ final class EncoreEntryTagsExtension extends AbstractExtension
     public function renderModuleLinkTags(?Module $module): string
     {
         return $this->renderLinkTags($this->moduleEntryName($module));
+    }
+
+    public function renderBundleScriptTags(?Bundle $bundle): string
+    {
+        return $this->renderScriptTags($this->bundleEntryName($bundle));
+    }
+
+    public function renderBundleLinkTags(?Bundle $bundle): string
+    {
+        return $this->renderLinkTags($this->bundleEntryName($bundle));
     }
 
     private function renderScriptTags(?string $entryName): string
@@ -174,6 +187,38 @@ final class EncoreEntryTagsExtension extends AbstractExtension
 
         if (count($matches) === 1) {
             return 'module/'.$matches[0];
+        }
+
+        return $entryName;
+    }
+
+    private function bundleEntryName(?Bundle $bundle): ?string
+    {
+        $id = trim((string) $bundle?->getId());
+        if ($id === '') {
+            return null;
+        }
+
+        $entryName = 'bundle/'.$id;
+        if ($this->entryFilesTwigExtension->entryExists($entryName)) {
+            return $entryName;
+        }
+
+        if (strpos($id, '/') !== false) {
+            return $entryName;
+        }
+
+        $packages = $this->packageDiscoveryService->discoverEntryDirectories('bundle');
+        $matches = [];
+        foreach (array_keys($packages) as $pkgId) {
+            $parts = explode('/', $pkgId);
+            if (end($parts) === $id) {
+                $matches[] = $pkgId;
+            }
+        }
+
+        if (count($matches) === 1) {
+            return 'bundle/'.$matches[0];
         }
 
         return $entryName;

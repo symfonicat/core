@@ -1,5 +1,6 @@
 <tr id="subdomain_{{ subdomain.id(false) }}" class="btn-row">
     <td class="fw-semibold">{{ subdomain.id }}</td>
+    <td>{% if subdomain.bundle %}<code>{{ subdomain.bundle.id }}</code>{% else %}<i class="fa fa-fw fa-times"></i>{% endif %}</td>
     <td>
         {% set groups = {} %}
         {% for module in subdomain.modules %}

@@ -17,7 +17,21 @@ class Subdomain
     #[ORM\Column(length: 255)]
     private ?string $id = null;
 
+    #[ORM\ManyToOne(targetEntity: Bundle::class)]
+    #[ORM\JoinColumn(name: 'bundle_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
+    private ?Bundle $bundle = null;
 
+    public function getBundle(): ?Bundle
+    {
+        return $this->bundle;
+    }
+
+    public function setBundle(?Bundle $bundle): static
+    {
+        $this->bundle = $bundle;
+
+        return $this;
+    }
 
     /**
      * @var Collection<int, Domain>

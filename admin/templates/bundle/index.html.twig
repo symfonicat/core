@@ -1,19 +1,16 @@
 {% extends '@symfonicat/base.html.twig' %}
-{% block title %}Application{% endblock %}
+{% block title %}Bundles{% endblock %}
 {% block body %}
 
     <div class="d-flex justify-content-end mb-1">
-        <a href="{{ path('symfonicat_application_create') }}" class="btn btn-sm btn-success">create application</a>
+        <a href="{{ path('symfonicat_admin_schema_update') }}" class="btn btn-sm btn-success">update schema</a>
     </div>
 
     <table class="table table-sm align-middle">
         <thead>
             <tr>
-                <th>name</th>
-                <th>type</th>
-                <th>domain</th>
-                <th>subdomain</th>
                 <th>bundle</th>
+                <th>path</th>
                 {% for env_parent in env_parents %}
                     <th>{{ env_parent.id }}</th>
                 {% endfor %}
@@ -21,11 +18,11 @@
             </tr>
         </thead>
         <tbody>
-        {% for application in applications %}
-            {{ include('@symfonicat/application/_row.html.twig') }}
+        {% for bundle in bundles %}
+            {{ include('@symfonicat/bundle/_row.html.twig') }}
         {% else %}
             <tr>
-                <td colspan="{{ 7 + env_parents|length }}">no records found</td>
+                <td colspan="{{ 3 + env_parents|length }}">no records found</td>
             </tr>
         {% endfor %}
         </tbody>

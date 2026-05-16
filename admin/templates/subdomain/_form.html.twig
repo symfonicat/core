@@ -21,10 +21,14 @@
 <div class="row g-3">
 
     <div class="col-md-3">
+        {{ form_row(form.bundle) }}
+    </div>
+
+    <div class="col-md-3">
         {{ form_row(form.modules) }}
     </div>
 
-    <div class="col-md-9">
+    <div class="col-md-6">
         {{ include('@symfonicat/env/_env_collection.html.twig', { form: form.env }) }}
     </div>
 
