@@ -1370,6 +1370,23 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     symiddleware?: SymiddlewareConfig,
  *     symfonicat?: SymfonicatConfig,
  *     scheb_two_factor?: SchebTwoFactorConfig,
+ *     "when@dev"?: array{
+ *         imports?: ImportsConfig,
+ *         parameters?: ParametersConfig,
+ *         services?: ServicesConfig,
+ *         framework?: FrameworkConfig,
+ *         twig?: TwigConfig,
+ *         twig_extra?: TwigExtraConfig,
+ *         webpack_encore?: WebpackEncoreConfig,
+ *         stimulus?: StimulusConfig,
+ *         turbo?: TurboConfig,
+ *         security?: SecurityConfig,
+ *         mercure?: MercureConfig,
+ *         doctrine?: DoctrineConfig,
+ *         symiddleware?: SymiddlewareConfig,
+ *         symfonicat?: SymfonicatConfig,
+ *         scheb_two_factor?: SchebTwoFactorConfig,
+ *     },
  *     "when@prod"?: array{
  *         imports?: ImportsConfig,
  *         parameters?: ParametersConfig,
@@ -1486,6 +1503,7 @@ namespace Symfony\Component\Routing\Loader\Configurator;
  *     deprecated?: array{package:string, version:string, message?:string},
  * }
  * @psalm-type RoutesConfig = array{
+ *     "when@dev"?: array<string, RouteConfig|ImportConfig|AliasConfig>,
  *     "when@prod"?: array<string, RouteConfig|ImportConfig|AliasConfig>,
  *     "when@test"?: array<string, RouteConfig|ImportConfig|AliasConfig>,
  *     ...<string, RouteConfig|ImportConfig|AliasConfig>
