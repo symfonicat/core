@@ -2,41 +2,24 @@ symfonicat:
     vendors:
         - symfonicat
     admin:
-        symfonicat_env_parent:
+        symfonicat_bundle:
             -
-                id: colors
-        symfonicat_env:
+                id: core/domainbundle
+                path: assets/bundle/domainbundle
+                vendor: core
             -
-                id: primary
-                env_parent_id: colors
-        symfonicat_bundle: []
+                id: core/subdomainbundle
+                path: assets/bundle/subdomainbundle
+                vendor: core
         symfonicat_domain:
             -
                 id: example.com
-                bundle_id: null
-            -
-                id: localhost
-                bundle_id: null
-        symfonicat_domain_env:
-            -
-                id: 1
-                value: blue
-                domain_id: localhost
-                env_id: primary
-            -
-                id: 2
-                value: blue
-                domain_id: example.com
-                env_id: primary
+                bundle_id: core/domainbundle
         symfonicat_subdomain:
             -
                 id: core/subdomain1
                 vendor: core
-                bundle_id: null
-        symfonicat_domain_subdomain:
-            -
-                domain_id: example.com
-                subdomain_id: core/subdomain1
+                bundle_id: core/subdomainbundle
         symfonicat_application:
             -
                 id: example-test
@@ -45,6 +28,13 @@ symfonicat:
                 domain_id: example.com
                 subdomain_id: null
                 bundle_id: null
+        symfonicat_env_parent:
+            -
+                id: colors
+        symfonicat_env:
+            -
+                id: primary
+                env_parent_id: colors
         symfonicat_application_env:
             -
                 id: 1
@@ -52,6 +42,16 @@ symfonicat:
                 application_id: example-test
                 env_id: primary
         symfonicat_bundle_env: []
+        symfonicat_domain_env:
+            -
+                id: 2
+                value: blue
+                domain_id: example.com
+                env_id: primary
+        symfonicat_domain_subdomain:
+            -
+                domain_id: example.com
+                subdomain_id: core/subdomain1
         symfonicat_module:
             -
                 id: symfonicat/analytics/main
@@ -61,9 +61,6 @@ symfonicat:
             -
                 module_id: symfonicat/analytics/main
                 domain_id: example.com
-            -
-                module_id: symfonicat/analytics/main
-                domain_id: localhost
         symfonicat_module_subdomain:
             -
                 module_id: symfonicat/analytics/main

@@ -227,7 +227,7 @@ module.exports = function configureSymfonicat(Encore, options = __dirname) {
     });
 
     Encore
-        .enableStimulusBridge('./assets/controllers.json')
+        .enableStimulusBridge('./assets/controller.json')
         .addEntry('app', toEntryPath(projectDir, path.join(packageDir, 'assets', 'app.js')))
         .addEntry('admin', toEntryPath(projectDir, path.join(packageDir, 'admin', 'assets', 'admin.js')))
         .splitEntryChunks()

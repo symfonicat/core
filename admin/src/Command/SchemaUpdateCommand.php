@@ -108,6 +108,21 @@ final class SchemaUpdateCommand extends Command
             ));
         }
 
+        if ($bundleResult['deleted'] !== []) {
+            $io->section('Deleted bundles');
+            $io->listing(array_map(
+                static function (array $bundle): string {
+                    $references = array_sum($bundle['references']);
+                    if ($references === 0) {
+                        return sprintf('%s (%s)', $bundle['id'], $bundle['path']);
+                    }
+
+                    return sprintf('%s (%s) after clearing %d references', $bundle['id'], $bundle['path'], $references);
+                },
+                $bundleResult['deleted'],
+            ));
+        }
+
         if ($moduleResult['created'] !== []) {
             $io->section('Created modules');
             $io->listing(array_map(
@@ -166,6 +181,7 @@ final class SchemaUpdateCommand extends Command
             && $moduleResult['deleted'] === []
             && $bundleResult['created'] === []
             && $bundleResult['updated'] === []
+            && $bundleResult['deleted'] === []
             && $domainResult['created'] === []
             && $subdomainResult['created'] === []
         ) {

@@ -40,6 +40,7 @@ final class SchemaController extends AbstractController
                 implode(', ', array_filter([
                     $this->countSummary('bundles created', $bundleResult['created']),
                     $this->countSummary('bundles updated', $bundleResult['updated']),
+                    $this->countSummary('bundles deleted', $bundleResult['deleted']),
                     $this->countSummary('modules created', $moduleResult['created']),
                     $this->countSummary('modules updated', $moduleResult['updated']),
                     $this->countSummary('modules deleted', $moduleResult['deleted']),

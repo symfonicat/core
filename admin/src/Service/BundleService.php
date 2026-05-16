@@ -3,7 +3,10 @@
 namespace Symfonicat\Service;
 
 use Doctrine\ORM\EntityManagerInterface;
+use Symfonicat\Entity\Application;
 use Symfonicat\Entity\Bundle;
+use Symfonicat\Entity\Domain;
+use Symfonicat\Entity\Subdomain;
 use Symfonicat\Repository\BundleRepository;
 
 final class BundleService
@@ -18,6 +21,7 @@ final class BundleService
     /**
      * @return array{
      *     created: list<array{id: string, path: string}>,
+     *     deleted: list<array{id: string, path: string, references: array{applications: int, domains: int, subdomains: int}}>,
      *     updated: list<array{id: string, from: string, to: string}>
      * }
      */
@@ -28,6 +32,7 @@ final class BundleService
 
         $created = [];
         $updated = [];
+        $deleted = [];
 
         foreach ($packageBundles as $bundleId => $bundleData) {
             $bundle = $databaseBundles[$bundleId] ?? null;
@@ -56,12 +61,82 @@ final class BundleService
             }
         }
 
+        foreach ($databaseBundles as $bundleId => $bundle) {
+            if (isset($packageBundles[$bundleId]) || !$this->isPackageBundlePath($bundle->getPath())) {
+                continue;
+            }
+
+            $deleted[] = [
+                'id' => $bundleId,
+                'path' => $bundle->getPath(),
+                'references' => $this->clearBundleReferences($bundle),
+            ];
+
+            $this->entityManager->remove($bundle);
+        }
+
         $this->entityManager->flush();
 
         return [
             'created' => $created,
+            'deleted' => $deleted,
             'updated' => $updated,
         ];
+    }
+
+    private function isPackageBundlePath(string $path): bool
+    {
+        $path = $this->normalizePath($path);
+        if ($path === '') {
+            return false;
+        }
+
+        foreach ($this->packageDiscoveryService->packageEntryBaseDirectories('bundle') as $baseDirectory) {
+            $relativeBasePath = rtrim($this->normalizePath($baseDirectory['relative']), '/');
+            $absoluteBasePath = rtrim($this->normalizePath($baseDirectory['absolute']), '/');
+
+            if (
+                $path === $relativeBasePath
+                || str_starts_with($path, $relativeBasePath.'/')
+                || $path === $absoluteBasePath
+                || str_starts_with($path, $absoluteBasePath.'/')
+            ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @return array{applications: int, domains: int, subdomains: int}
+     */
+    private function clearBundleReferences(Bundle $bundle): array
+    {
+        return [
+            'applications' => $this->clearBundleReference(Application::class, $bundle),
+            'domains' => $this->clearBundleReference(Domain::class, $bundle),
+            'subdomains' => $this->clearBundleReference(Subdomain::class, $bundle),
+        ];
+    }
+
+    /**
+     * @param class-string $entityClass
+     */
+    private function clearBundleReference(string $entityClass, Bundle $bundle): int
+    {
+        return (int) $this->entityManager->createQueryBuilder()
+            ->update($entityClass, 'row')
+            ->set('row.bundle', 'NULL')
+            ->where('row.bundle = :bundle')
+            ->setParameter('bundle', $bundle)
+            ->getQuery()
+            ->execute();
+    }
+
+    private function normalizePath(string $path): string
+    {
+        return trim(str_replace('\\', '/', $path), " \t\n\r\0\x0B/");
     }
 
     /**

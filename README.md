@@ -211,7 +211,7 @@ The build command renders `templates/electron/{type}/main.twig.js` or `templates
 
 ## Sync
 
-`symfonicat:schema:update` first synchronizes the Doctrine schema and then synchronizes bundles, modules, applications, and subdomains from package assets. Run it explicitly when you want dev/admin tables:
+`symfonicat:schema:update` first synchronizes the Doctrine schema and then synchronizes bundles, modules, applications, and subdomains from package assets. Package-backed bundle rows whose `assets/bundle/{id}` directory disappears are removed, and domain/subdomain/application references to those bundles are cleared. Run it explicitly when you want dev/admin tables:
 
 ```bash
 docker exec -it php bin/console symfonicat:schema:update

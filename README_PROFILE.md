@@ -102,7 +102,7 @@ Electron rows use plain ids. Generated start URLs include `?electron={electron.i
 
 ## Sync
 
-`symfonicat:schema:update` synchronizes the Doctrine schema and then synchronizes package-provided bundles, modules, domains, applications, and subdomains. Non-interactive runs create missing package rows automatically; stale modules with referencing rows still require an interactive confirmation before deletion.
+`symfonicat:schema:update` synchronizes the Doctrine schema and then synchronizes package-provided bundles, modules, domains, applications, and subdomains. Non-interactive runs create missing package rows automatically; stale package-backed bundle rows are removed and any domain/subdomain/application references to them are cleared. Stale modules with referencing rows still require an interactive confirmation before deletion.
 
 ```bash
 docker exec -it php bin/console symfonicat:schema:update

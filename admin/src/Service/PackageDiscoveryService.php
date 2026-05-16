@@ -146,6 +146,35 @@ final class PackageDiscoveryService
     }
 
     /**
+     * @return list<array{
+     *     absolute: string,
+     *     packageName: string,
+     *     relative: string,
+     *     type: string
+     * }>
+     */
+    public function packageEntryBaseDirectories(string $type): array
+    {
+        if (!in_array($type, self::SUPPORTED_ENTRY_TYPES, true)) {
+            throw new \InvalidArgumentException(sprintf('Unsupported package entry type "%s".', $type));
+        }
+
+        $directories = [];
+
+        foreach ($this->findSymfonicatPackages() as $package) {
+            $absolute = $package['installPath'].'/assets/'.$type;
+            $directories[] = [
+                'absolute' => $absolute,
+                'packageName' => $package['name'],
+                'relative' => $this->relativePath($absolute),
+                'type' => $type,
+            ];
+        }
+
+        return $directories;
+    }
+
+    /**
      * @return array<string, array{
      *     directory: string,
      *     entry: string,
