@@ -5,31 +5,30 @@ namespace App\Tests\Integration\Form;
 use App\Tests\Support\SymfonicatKernelTestCase;
 use Symfonicat\Entity\Application;
 use Symfonicat\Entity\ApplicationEnv;
+use Symfonicat\Entity\Endpoint;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\DomainEnv;
-use Symfonicat\Entity\Electron;
 use Symfonicat\Entity\Env;
-use Symfonicat\Entity\Project;
-use Symfonicat\Entity\ProjectEnv;
+use Symfonicat\Entity\Subdomain;
+use Symfonicat\Entity\SubdomainEnv;
 use Symfonicat\Form\ApplicationType;
 use Symfonicat\Form\DomainType;
-use Symfonicat\Form\ElectronType;
-use Symfonicat\Form\ProjectType;
+use Symfonicat\Form\SubdomainType;
 use Symfony\Component\Form\FormFactoryInterface;
 
 final class ScopedEnvFormTypeTest extends SymfonicatKernelTestCase
 {
-    public function testProjectFormRestoresSelectedEnvParent(): void
+    public function testSubdomainFormRestoresSelectedEnvParent(): void
     {
         $env = $this->createEnv('primary', 'colors');
-        $subdomain = $this->createProject('subdomain1');
-        $this->setProjectEnv($subdomain, $env, 'green');
+        $subdomain = $this->createSubdomain('subdomain1');
+        $this->setSubdomainEnv($subdomain, $env, 'green');
 
-        $subdomain = $this->entityManager()->getRepository(Project::class)->find('core/subdomain1');
-        self::assertInstanceOf(Project::class, $subdomain);
+        $subdomain = $this->entityManager()->getRepository(Subdomain::class)->find('core/subdomain1');
+        self::assertInstanceOf(Subdomain::class, $subdomain);
 
         $view = $this->formFactory()
-            ->create(ProjectType::class, $subdomain, ['id_editable' => false])
+            ->create(SubdomainType::class, $subdomain, ['id_editable' => false])
             ->createView();
 
         self::assertSame('colors', $view['env'][0]['envParent']->vars['value']);
@@ -53,11 +52,12 @@ final class ScopedEnvFormTypeTest extends SymfonicatKernelTestCase
         self::assertSame('primary', $view['env'][0]['env']->vars['value']);
     }
 
-    public function testApplicationFormRestoresSelectedEnvParent(): void
+    public function testProjectApplicationFormRestoresSelectedEnvParent(): void
     {
         $env = $this->createEnv('primary', 'colors');
         $application = (new Application())
-            ->setId('core/test');
+            ->setId('core/test')
+            ->setName('Test Application');
         $applicationEnv = (new ApplicationEnv())
             ->setEnv($env)
             ->setValue('red');
@@ -80,23 +80,38 @@ final class ScopedEnvFormTypeTest extends SymfonicatKernelTestCase
         self::assertSame('primary', $view['env'][0]['env']->vars['value']);
     }
 
-    public function testElectronFormRestoresSelectedEnvParent(): void
+    public function testApplicationFormRestoresSelectedEnvParent(): void
     {
         $env = $this->createEnv('primary', 'colors');
         $domain = $this->createDomain('example.com');
-        $subdomain = $this->createProject('subdomain1', $domain);
-        $electron = $this->createElectron('Example Electron', Electron::TYPE_PROJECT, $domain, $subdomain);
-        $this->setElectronEnv($electron, $env, 'purple');
+        $subdomain = $this->createSubdomain('subdomain1', $domain);
+        $application = $this->createApplication('Example Application', Application::TYPE_SUBDOMAIN, $domain, $subdomain);
+        $this->setApplicationEnv($application, $env, 'purple');
 
-        $electron = $this->entityManager()->getRepository(Electron::class)->find($electron->getId());
-        self::assertInstanceOf(Electron::class, $electron);
+        $application = $this->entityManager()->getRepository(Application::class)->find($application->getId());
+        self::assertInstanceOf(Application::class, $application);
 
         $view = $this->formFactory()
-            ->create(ElectronType::class, $electron)
+            ->create(ApplicationType::class, $application)
             ->createView();
 
         self::assertSame('colors', $view['env'][0]['envParent']->vars['value']);
         self::assertSame('primary', $view['env'][0]['env']->vars['value']);
+    }
+
+    public function testEndpointApplicationFormRestoresSelectedEndpoint(): void
+    {
+        $endpoint = $this->createEndpoint('core/test');
+        $application = $this->createApplication('Example Endpoint Application', Application::TYPE_ENDPOINT, null, null, $endpoint);
+
+        $application = $this->entityManager()->getRepository(Application::class)->find($application->getId());
+        self::assertInstanceOf(Application::class, $application);
+
+        $view = $this->formFactory()
+            ->create(ApplicationType::class, $application)
+            ->createView();
+
+        self::assertSame('core/test', $view['endpoint']->vars['value']);
     }
 
     private function formFactory(): FormFactoryInterface

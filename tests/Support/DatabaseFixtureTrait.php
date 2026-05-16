@@ -3,17 +3,18 @@
 namespace App\Tests\Support;
 
 use Doctrine\ORM\EntityManagerInterface;
+use Symfonicat\Entity\Bundle;
 use Symfonicat\Entity\Application;
+use Symfonicat\Entity\ApplicationEnv;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\DomainEnv;
-use Symfonicat\Entity\Electron;
-use Symfonicat\Entity\ElectronEnv;
+use Symfonicat\Entity\Endpoint;
+use Symfonicat\Entity\EndpointEnv;
 use Symfonicat\Entity\Env;
 use Symfonicat\Entity\EnvParent;
 use Symfonicat\Entity\Module;
-use Symfonicat\Entity\Project;
-use Symfonicat\Entity\ProjectEnv;
-use Symfonicat\Entity\RoutingRule;
+use Symfonicat\Entity\Subdomain;
+use Symfonicat\Entity\SubdomainEnv;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -49,17 +50,23 @@ trait DatabaseFixtureTrait
 
         $tables = [
             // Children first to keep the intent readable even though FK checks are off.
-            'symfonicat_routing_rule',
-            'symfonicat_electron_env',
             'symfonicat_application_env',
             'symfonicat_bundle_env',
             'symfonicat_subdomain_env',
             'symfonicat_domain_env',
+            'symfonicat_endpoint_env',
+            'symfonicat_endpoint_module',
+            'symfonicat_endpoint_middleware',
+            'symfonicat_module_endpoint',
             'symfonicat_module_application',
             'symfonicat_module_subdomain',
             'symfonicat_module_domain',
+            'symfonicat_subdomain_middleware',
+            'symfonicat_domain_middleware',
             'symfonicat_domain_subdomain',
-            'symfonicat_electron',
+            'symfonicat_endpoint',
+            'symfonicat_middleware',
+            'symfonicat_application',
             'symfonicat_application',
             'symfonicat_module',
             'symfonicat_subdomain',
@@ -103,30 +110,19 @@ trait DatabaseFixtureTrait
         return $domain;
     }
 
-    protected function createProject(string $id, ?Domain $domain = null): Project
+    protected function createSubdomain(string $id, ?Domain $domain = null): Subdomain
     {
-        $subdomain = (new Project())
+        $subdomain = (new Subdomain())
             ->setId($this->vendorScopedId($id));
 
         if ($domain instanceof Domain) {
-            $domain->addProject($subdomain);
+            $domain->addSubdomain($subdomain);
         }
 
         $this->entityManager()->persist($subdomain);
         $this->entityManager()->flush();
 
         return $subdomain;
-    }
-
-    protected function createApplication(string $id): Application
-    {
-        $application = (new Application())
-            ->setId($this->vendorScopedId($id));
-
-        $this->entityManager()->persist($application);
-        $this->entityManager()->flush();
-
-        return $application;
     }
 
     protected function createModule(string $id, ?string $package = null): Module
@@ -141,19 +137,53 @@ trait DatabaseFixtureTrait
         return $module;
     }
 
-    protected function createElectron(string $name, string $type, ?Domain $domain = null, ?Project $subdomain = null): Electron
+    protected function createApplication(string $idOrName, ?string $type = null, ?Domain $domain = null, ?Subdomain $subdomain = null, ?Endpoint $endpoint = null): Application
     {
-        $electron = (new Electron())
-            ->setId(strtolower(str_replace(' ', '-', $name)))
-            ->setName($name)
-            ->setType($type)
-            ->setDomain($domain)
-            ->setProject($subdomain);
+        $application = (new Application())
+            ->setId(
+                $type === null
+                    ? $this->vendorScopedId($idOrName)
+                    : strtolower(str_replace(' ', '-', $idOrName)),
+            )
+            ->setName($type === null ? basename(str_replace('\\', '/', $idOrName)) ?: $idOrName : $idOrName);
 
-        $this->entityManager()->persist($electron);
+        if ($type !== null) {
+            $application
+                ->setType($type)
+                ->setDomain($domain)
+                ->setSubdomain($subdomain)
+                ->setEndpoint($endpoint);
+        }
+
+        $this->entityManager()->persist($application);
         $this->entityManager()->flush();
 
-        return $electron;
+        return $application;
+    }
+
+    protected function createEndpoint(string $id, ?Bundle $bundle = null): Endpoint
+    {
+        $endpoint = (new Endpoint())
+            ->setId($id)
+            ->setBundle($bundle);
+
+        $this->entityManager()->persist($endpoint);
+        $this->entityManager()->flush();
+
+        return $endpoint;
+    }
+
+    protected function setEndpointEnv(Endpoint $endpoint, Env $env, string $value): EndpointEnv
+    {
+        $endpointEnv = (new EndpointEnv())
+            ->setEnv($env)
+            ->setValue($value);
+
+        $endpoint->addEnv($endpointEnv);
+        $this->entityManager()->persist($endpointEnv);
+        $this->entityManager()->flush();
+
+        return $endpointEnv;
     }
 
     private function vendorScopedId(string $id): string
@@ -193,9 +223,9 @@ trait DatabaseFixtureTrait
         return $domainEnv;
     }
 
-    protected function setProjectEnv(Project $subdomain, Env $env, string $value): ProjectEnv
+    protected function setSubdomainEnv(Subdomain $subdomain, Env $env, string $value): SubdomainEnv
     {
-        $subdomainEnv = (new ProjectEnv())
+        $subdomainEnv = (new SubdomainEnv())
             ->setEnv($env)
             ->setValue($value);
 
@@ -206,42 +236,16 @@ trait DatabaseFixtureTrait
         return $subdomainEnv;
     }
 
-    protected function setElectronEnv(Electron $electron, Env $env, string $value): ElectronEnv
+    protected function setApplicationEnv(Application $application, Env $env, string $value): ApplicationEnv
     {
-        $electronEnv = (new ElectronEnv())
+        $applicationEnv = (new ApplicationEnv())
             ->setEnv($env)
             ->setValue($value);
 
-        $electron->addEnv($electronEnv);
-        $this->entityManager()->persist($electronEnv);
+        $application->addEnv($applicationEnv);
+        $this->entityManager()->persist($applicationEnv);
         $this->entityManager()->flush();
 
-        return $electronEnv;
-    }
-
-    protected function createDomainRoutingRule(Domain $domain, string $argument): RoutingRule
-    {
-        $rule = (new RoutingRule())
-            ->setType(RoutingRule::TYPE_DOMAIN)
-            ->setDomain($domain)
-            ->setArguments([$argument]);
-
-        $this->entityManager()->persist($rule);
-        $this->entityManager()->flush();
-
-        return $rule;
-    }
-
-    protected function createProjectRoutingRule(Project $subdomain, string $argument): RoutingRule
-    {
-        $rule = (new RoutingRule())
-            ->setType(RoutingRule::TYPE_PROJECT)
-            ->setProject($subdomain)
-            ->setArguments([$argument]);
-
-        $this->entityManager()->persist($rule);
-        $this->entityManager()->flush();
-
-        return $rule;
+        return $applicationEnv;
     }
 }

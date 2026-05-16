@@ -53,12 +53,20 @@ final class ApplicationController extends AbstractController
         ]);
     }
 
-    #[Route('/admin/a/{id}', name: 'symfonicat_application_edit', methods: ['GET', 'POST'], requirements: ['id' => '.+'])]
+    #[Route('/admin/a/{id}', name: 'symfonicat_application_edit', methods: ['GET', 'POST'], requirements: ['id' => '[^/]+'])]
     public function edit(
         Request $request,
-        Application $application,
+        string $id,
+        ApplicationRepository $applicationRepository,
         EntityManagerInterface $entityManager,
     ): Response {
+        $application = $applicationRepository->find($id);
+        if (!$application instanceof Application) {
+            $this->addFlash('warning', sprintf('Application "%s" not found.', $id));
+
+            return $this->redirectToRoute('symfonicat_application_index', [], Response::HTTP_SEE_OTHER);
+        }
+
         $form = $this->createForm(ApplicationType::class, $application);
         $form->handleRequest($request);
 
@@ -82,9 +90,21 @@ final class ApplicationController extends AbstractController
         ]);
     }
 
-    #[Route('/admin/a/{id}/delete', name: 'symfonicat_application_delete', methods: ['POST'], requirements: ['id' => '.+'])]
-    public function delete(Request $request, Application $application, EntityManagerInterface $entityManager): Response
+    #[Route('/admin/a/{id}/delete', name: 'symfonicat_application_delete', methods: ['POST'], requirements: ['id' => '[^/]+'])]
+    public function delete(
+        Request $request,
+        string $id,
+        ApplicationRepository $applicationRepository,
+        EntityManagerInterface $entityManager,
+    ): Response
     {
+        $application = $applicationRepository->find($id);
+        if (!$application instanceof Application) {
+            $this->addFlash('warning', sprintf('Application "%s" not found.', $id));
+
+            return $this->redirectToRoute('symfonicat_application_index', [], Response::HTTP_SEE_OTHER);
+        }
+
         if ($this->isCsrfTokenValid('delete'.$application->getId(), $request->getPayload()->getString('_token'))) {
             $entityManager->remove($application);
             $entityManager->flush();
@@ -97,11 +117,20 @@ final class ApplicationController extends AbstractController
     {
         if ($application->isDomainType()) {
             $application->setSubdomain(null);
+            $application->setEndpoint(null);
 
             return;
         }
 
         if ($application->isSubdomainType()) {
+            $application->setEndpoint(null);
+
+            return;
+        }
+
+        if ($application->isEndpointType()) {
+            $application->setDomain(null);
+            $application->setSubdomain(null);
 
             return;
         }

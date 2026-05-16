@@ -3,14 +3,16 @@
 {% block body %}
     
     <div class="d-flex justify-content-end mb-1">
-        <a href="{{ path('symfonicat_admin_schema_update') }}" class="btn btn-sm btn-success">update schema</a>
+        <a href="{{ path('symfonicat_subdomain_create') }}" class="btn btn-sm btn-success">create subdomain</a>
     </div>
 
     <table class="table" id="subdomain">
         <thead>
             <tr>
                 <th>name</th>
+                <th>catch</th>
                 <th>bundle</th>
+                <th>middlewares</th>
                 <th>modules</th>
                 {% for env_parent in env_parents %}
                     <th>{{ env_parent.id }}</th>
@@ -23,7 +25,7 @@
             {{ include('@symfonicat/subdomain/_row.html.twig') }}
         {% else %}
             <tr id="subdomain-empty">
-                <td colspan="{{ 4 + env_parents|length }}">no records found</td>
+                <td colspan="{{ 6 + env_parents|length }}">no records found</td>
             </tr>
         {% endfor %}
         </tbody>

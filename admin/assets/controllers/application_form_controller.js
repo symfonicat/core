@@ -1,7 +1,7 @@
 import { Controller } from '@hotwired/stimulus'
 
 export default class extends Controller {
-    static targets = ['type', 'domainRow', 'subdomainRow', 'applicationRow']
+    static targets = ['type', 'domainRow', 'subdomainRow', 'endpointRow', 'applicationRow']
 
     connect() {
         this.update()
@@ -16,6 +16,7 @@ export default class extends Controller {
 
         this.toggleRow(this.domainRowTarget, type === 'domain' || type === 'subdomain')
         this.toggleRow(this.subdomainRowTarget, type === 'subdomain')
+        this.toggleRow(this.endpointRowTarget, type === 'endpoint')
         this.toggleRow(this.applicationRowTarget, type === 'application')
     }
 

@@ -2,8 +2,11 @@
 
 namespace Symfonicat\Twig;
 
-use Symfonicat\Service\EnvService;
+use Symfonicat\Entity\Domain;
+use Symfonicat\Entity\Endpoint;
 use Symfonicat\Entity\EnvParent;
+use Symfonicat\Entity\Subdomain;
+use Symfonicat\Service\EnvService;
 use Twig\Extension\AbstractExtension;
 use Twig\Extension\GlobalsInterface;
 use Twig\TwigFunction;
@@ -32,23 +35,23 @@ final class EnvExtension extends AbstractExtension implements GlobalsInterface
         ];
     }
 
-    public function render(string $id): ?string
+    public function render(string $id, Domain|Subdomain|Endpoint|null $entity = null): ?string
     {
-        return $this->envService->get($id);
+        return $this->envService->get($id, $entity);
     }
 
-    public function renderJson(): string
+    public function renderJson(Domain|Subdomain|Endpoint|null $entity = null): string
     {
         return json_encode(
-            $this->envService->all(),
+            $this->envService->all($entity),
             JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR,
         );
     }
 
-    public function renderHelper(): string
+    public function renderHelper(Domain|Subdomain|Endpoint|null $entity = null): string
     {
         return json_encode(
-            $this->envService->all(),
+            $this->envService->all($entity),
             JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR,
         );
     }

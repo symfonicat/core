@@ -5,7 +5,18 @@
         {% if form.id is defined %}
             {{ form_row(form.id) }}
         {% else %}
-            <h3 class="mb-0">{{ bundle.id }}</h3>
+            <h3 class="mb-0">
+                
+                {{ bundle.id }}
+                
+                &nbsp;
+                &nbsp;
+
+                <code>
+                    {{ bundle.path }}
+                </code>
+                
+            </h3>
         {% endif %}
     </div>
     <button class="btn btn-sm btn-success ms-auto">{{ button_label|default('save') }}</button>

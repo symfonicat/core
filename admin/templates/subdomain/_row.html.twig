@@ -1,6 +1,14 @@
 <tr id="subdomain_{{ subdomain.id(false) }}" class="btn-row">
     <td class="fw-semibold">{{ subdomain.id }}</td>
+    <td>{% if subdomain.catch %}<i class="fa fa-check"></i>{% else %}<i class="fa fa-fw fa-times"></i>{% endif %}</td>
     <td>{% if subdomain.bundle %}<code>{{ subdomain.bundle.id }}</code>{% else %}<i class="fa fa-fw fa-times"></i>{% endif %}</td>
+    <td>
+        {% for middleware in subdomain.middlewares %}
+            <div><code>{{ middleware.class }}</code></div>
+        {% else %}
+            <i class="fa fa-fw fa-times"></i>
+        {% endfor %}
+    </td>
     <td>
         {% set groups = {} %}
         {% for module in subdomain.modules %}
@@ -40,6 +48,7 @@
             <a href="{{ path('symfonicat_subdomain_edit', {'id': subdomain.id}) }}" class="btn btn-sm btn-warning">
                 <i class="fa fa-pencil">&nbsp;</i>
             </a>
+            {{ include('@symfonicat/subdomain/_delete_form.html.twig') }}
         </div>
 
     </td>

@@ -1,0 +1,5 @@
+{% extends '@symfonicat/base.html.twig' %}
+{% block title %}Create Endpoint{% endblock %}
+{% block body %}
+    {{ include('@symfonicat/endpoint/_form.html.twig', { form: form, endpoint: endpoint, button_label: 'create' }) }}
+{% endblock %}

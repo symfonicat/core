@@ -8,6 +8,7 @@ use Symfonicat\Entity\Module;
 use Symfonicat\Entity\Subdomain;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
@@ -26,6 +27,11 @@ class DomainType extends AbstractType
                 'label' => 'bundle',
                 'placeholder' => 'select bundle',
                 'required' => false,
+            ])
+            ->add('catch', CheckboxType::class, [
+                'label' => 'catch',
+                'required' => false,
+                'false_values' => [null, ''],
             ])
             ->add('subdomains', EntityType::class, [
                 'class' => Subdomain::class,
@@ -56,6 +62,16 @@ class DomainType extends AbstractType
                 'multiple' => true,
                 'by_reference' => false,
                 'required' => false,
+            ])
+            ->add('middlewares', CollectionType::class, [
+                'label' => 'middlewares',
+                'entry_type' => MiddlewareReferenceType::class,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'delete_empty' => true,
+                'by_reference' => false,
+                'required' => false,
+                'prototype' => true,
             ])
             ->add('env', CollectionType::class, [
                 'label' => 'env',

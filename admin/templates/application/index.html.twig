@@ -10,9 +10,11 @@
         <thead>
             <tr>
                 <th>name</th>
+                <th>id</th>
                 <th>type</th>
                 <th>domain</th>
                 <th>subdomain</th>
+                <th>endpoint</th>
                 {% for env_parent in env_parents %}
                     <th>{{ env_parent.id }}</th>
                 {% endfor %}
@@ -24,7 +26,7 @@
             {{ include('@symfonicat/application/_row.html.twig') }}
         {% else %}
             <tr>
-                <td colspan="{{ 6 + env_parents|length }}">no records found</td>
+                <td colspan="{{ 7 + env_parents|length }}">no records found</td>
             </tr>
         {% endfor %}
         </tbody>

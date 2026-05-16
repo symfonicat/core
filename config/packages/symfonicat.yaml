@@ -8,6 +8,10 @@ symfonicat:
                 path: assets/bundle/domainbundle
                 vendor: core
             -
+                id: core/endpointbundle
+                path: assets/bundle/endpointbundle
+                vendor: core
+            -
                 id: core/subdomainbundle
                 path: assets/bundle/subdomainbundle
                 vendor: core
@@ -15,18 +19,22 @@ symfonicat:
             -
                 id: example.com
                 bundle_id: core/domainbundle
+                catch: false
+        symfonicat_endpoint:
+            -
+                id: test
+                catch: true
+                arguments:
+                    - symfonicat
+                    - test
+                bundle_id: core/endpointbundle
         symfonicat_subdomain:
             -
                 id: core/subdomain1
                 vendor: core
                 bundle_id: core/subdomainbundle
-        symfonicat_application:
-            -
-                id: example-test
-                name: 'Example Test'
-                type: domain
-                domain_id: example.com
-                subdomain_id: null
+                catch: false
+        symfonicat_application: []
         symfonicat_env_parent:
             -
                 id: colors
@@ -34,23 +42,60 @@ symfonicat:
             -
                 id: primary
                 env_parent_id: colors
-        symfonicat_application_env:
+        symfonicat_application_env: []
+        symfonicat_bundle_env:
             -
                 id: 1
-                value: yellow
-                application_id: example-test
+                value: red
+                bundle_id: core/domainbundle
                 env_id: primary
-        symfonicat_bundle_env: []
-        symfonicat_domain_env:
             -
                 id: 2
+                value: orange
+                bundle_id: core/endpointbundle
+                env_id: primary
+            -
+                id: 3
+                value: turquoise
+                bundle_id: core/subdomainbundle
+                env_id: primary
+        symfonicat_domain_env:
+            -
+                id: 1
                 value: blue
                 domain_id: example.com
                 env_id: primary
+        symfonicat_middleware:
+            -
+                id: 2
+                class: Symfonicat\Middleware\TestMiddleware
+            -
+                id: 3
+                class: Symfonicat\Middleware\DomainMiddleware
+            -
+                id: 4
+                class: Symfonicat\Middleware\SubdomainMiddleware
+            -
+                id: 5
+                class: Symfonicat\Middleware\EndpointMiddleware
+        symfonicat_domain_middleware:
+            -
+                domain_id: example.com
+                middleware_id: 3
         symfonicat_domain_subdomain:
             -
                 domain_id: example.com
                 subdomain_id: core/subdomain1
+        symfonicat_endpoint_env:
+            -
+                id: 1
+                value: purple
+                endpoint_id: test
+                env_id: primary
+        symfonicat_endpoint_middleware:
+            -
+                endpoint_id: test
+                middleware_id: 5
         symfonicat_module:
             -
                 id: symfonicat/analytics/main
@@ -60,13 +105,21 @@ symfonicat:
             -
                 module_id: symfonicat/analytics/main
                 domain_id: example.com
+        symfonicat_module_endpoint:
+            -
+                module_id: symfonicat/analytics/main
+                endpoint_id: test
         symfonicat_module_subdomain:
             -
                 module_id: symfonicat/analytics/main
                 subdomain_id: core/subdomain1
         symfonicat_subdomain_env:
             -
-                id: 1
+                id: 2
                 value: green
                 subdomain_id: core/subdomain1
                 env_id: primary
+        symfonicat_subdomain_middleware:
+            -
+                subdomain_id: core/subdomain1
+                middleware_id: 4

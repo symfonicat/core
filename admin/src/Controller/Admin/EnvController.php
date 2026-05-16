@@ -17,7 +17,7 @@ use Symfony\Component\Routing\Attribute\Route;
 
 final class EnvController extends AbstractController
 {
-    #[Route('/admin/e', name: 'symfonicat_env_index', methods: ['GET', 'POST'])]
+    #[Route('/admin/env', name: 'symfonicat_env_index', methods: ['GET', 'POST'])]
     public function index(
         Request $request,
         EnvRepository $envRepository,
@@ -56,7 +56,7 @@ final class EnvController extends AbstractController
         ]);
     }
 
-    #[Route('/admin/e/{id}', name: 'symfonicat_env_delete', methods: ['POST'])]
+    #[Route('/admin/env/{id}', name: 'symfonicat_env_delete', methods: ['POST'])]
     public function delete(Request $request, string $id, EnvRepository $envRepository, EntityManagerInterface $entityManager): Response
     {
         $env = $envRepository->find($id);
@@ -72,7 +72,7 @@ final class EnvController extends AbstractController
         return $this->redirectToRoute('symfonicat_env_index', [], Response::HTTP_SEE_OTHER);
     }
 
-    #[Route('/admin/e/parent/{id}', name: 'symfonicat_env_parent_delete', methods: ['POST'])]
+    #[Route('/admin/env/parent/{id}', name: 'symfonicat_env_parent_delete', methods: ['POST'])]
     public function deleteParent(
         Request $request,
         string $id,

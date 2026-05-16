@@ -29,6 +29,7 @@ final class BundleType extends AbstractType
         $builder
             ->add('path', null, [
                 'label' => 'path',
+                'disabled' => true,
             ])
             ->add('env', CollectionType::class, [
                 'label' => 'env',

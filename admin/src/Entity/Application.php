@@ -15,6 +15,7 @@ class Application
 {
     public const TYPE_DOMAIN = 'domain';
     public const TYPE_SUBDOMAIN = 'subdomain';
+    public const TYPE_ENDPOINT = 'endpoint';
 
     #[ORM\Id]
     #[ORM\Column(length: 255)]
@@ -33,6 +34,10 @@ class Application
     #[ORM\ManyToOne(targetEntity: Subdomain::class)]
     #[ORM\JoinColumn(name: 'subdomain_id', referencedColumnName: 'id', nullable: true, onDelete: 'CASCADE')]
     private ?Subdomain $subdomain = null;
+
+    #[ORM\ManyToOne(targetEntity: Endpoint::class)]
+    #[ORM\JoinColumn(name: 'endpoint_id', referencedColumnName: 'id', nullable: true, onDelete: 'CASCADE')]
+    private ?Endpoint $endpoint = null;
 
     /**
      * @var Collection<int, ApplicationEnv>
@@ -67,6 +72,7 @@ class Application
         return [
             'domain' => self::TYPE_DOMAIN,
             'subdomain' => self::TYPE_SUBDOMAIN,
+            'endpoint' => self::TYPE_ENDPOINT,
         ];
     }
 
@@ -118,6 +124,18 @@ class Application
         return $this;
     }
 
+    public function getEndpoint(): ?Endpoint
+    {
+        return $this->endpoint;
+    }
+
+    public function setEndpoint(?Endpoint $endpoint): static
+    {
+        $this->endpoint = $endpoint;
+
+        return $this;
+    }
+
     /**
      * @return Collection<int, ApplicationEnv>
      */
@@ -155,11 +173,17 @@ class Application
         return $this->type === self::TYPE_SUBDOMAIN;
     }
 
+    public function isEndpointType(): bool
+    {
+        return $this->type === self::TYPE_ENDPOINT;
+    }
+
     public function getTargetId(bool $includeVendor = false): ?string
     {
         return match ($this->type) {
             self::TYPE_DOMAIN => $this->domain?->getId($includeVendor),
             self::TYPE_SUBDOMAIN => $this->subdomainTargetId($includeVendor),
+            self::TYPE_ENDPOINT => $this->endpoint?->getId($includeVendor),
             default => null,
         };
     }
@@ -207,6 +231,12 @@ class Application
         if ($type === self::TYPE_SUBDOMAIN && !$this->domain instanceof Domain) {
             $context->buildViolation('Select a domain.')
                 ->atPath('domain')
+                ->addViolation();
+        }
+
+        if ($type === self::TYPE_ENDPOINT && !$this->endpoint instanceof Endpoint) {
+            $context->buildViolation('Select an endpoint.')
+                ->atPath('endpoint')
                 ->addViolation();
         }
 

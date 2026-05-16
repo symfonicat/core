@@ -18,12 +18,12 @@
             console.log('[window.env]', window.env)
             console.log('----------------------')
 
-            window.electron = {{ electron ? {
-                id: electron.id,
-                name: electron.name,
-                type: electron.type,
+            window.application = {{ application ? {
+                id: application.id,
+                name: application.name,
+                type: application.type,
             } | json_encode : 'null' }}
-            console.log('[window.electron]', window.electron)
+            console.log('[window.application]', window.application)
             console.log('----------------------')
 
         </script>

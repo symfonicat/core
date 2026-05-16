@@ -7,6 +7,7 @@ use Symfonicat\Entity\Module;
 use Symfonicat\Entity\Subdomain;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
@@ -17,17 +18,12 @@ class SubdomainType extends AbstractType
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-        $subdomain = $builder->getData();
-        $subdomainId = $subdomain instanceof Subdomain ? trim((string) $subdomain->getId(false)) : '';
 
         $this->addDisabledVendorField($builder);
 
-        if ($subdomainId === '') {
-            $builder->add('id', null, [
-                'label' => 'id',
-                'disabled' => !$options['id_editable'],
-            ]);
-        }
+        $builder->add('id', null, [
+            'label' => 'subdomain',
+        ]);
 
         $builder
             ->add('bundle', EntityType::class, [
@@ -36,6 +32,11 @@ class SubdomainType extends AbstractType
                 'label' => 'bundle',
                 'placeholder' => 'select bundle',
                 'required' => false,
+            ])
+            ->add('catch', CheckboxType::class, [
+                'label' => 'catch',
+                'required' => false,
+                'false_values' => [null, ''],
             ])
             ->add('modules', EntityType::class, [
                 'class' => Module::class,
@@ -60,6 +61,16 @@ class SubdomainType extends AbstractType
                 'by_reference' => false,
                 'required' => false,
             ])
+            ->add('middlewares', CollectionType::class, [
+                'label' => 'middlewares',
+                'entry_type' => MiddlewareReferenceType::class,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'delete_empty' => true,
+                'by_reference' => false,
+                'required' => false,
+                'prototype' => true,
+            ])
             ->add('env', CollectionType::class, [
                 'label' => 'env',
                 'entry_type' => SubdomainEnvType::class,
@@ -80,9 +91,11 @@ class SubdomainType extends AbstractType
             'data_class' => Subdomain::class,
             'id_editable' => true,
             'default_vendor' => 'core',
+            'is_admin' => false,
         ]);
 
         $resolver->setAllowedTypes('id_editable', 'bool');
         $resolver->setAllowedTypes('default_vendor', 'string');
+        $resolver->setAllowedTypes('is_admin', 'bool');
     }
 }

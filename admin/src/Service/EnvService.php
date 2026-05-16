@@ -6,10 +6,14 @@ use Symfonicat\Entity\Bundle;
 use Symfonicat\Entity\BundleEnv;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\Subdomain;
+use Symfonicat\Entity\Endpoint;
 use Symfonicat\Entity\DomainEnv;
 use Symfonicat\Entity\Application;
 use Symfonicat\Entity\ApplicationEnv;
 use Symfonicat\Entity\SubdomainEnv;
+use Symfonicat\Entity\EndpointEnv;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 final class EnvService
 {
@@ -17,10 +21,11 @@ final class EnvService
         private readonly DomainService $domainService,
         private readonly ApplicationService $applicationService,
         private readonly SubdomainService $subdomainService,
+        private readonly RequestStack $requestStack,
     ) {
     }
 
-    public function get(string $id, Domain|Subdomain|null $entity = null): ?string
+    public function get(string $id, Domain|Subdomain|Endpoint|null $entity = null): ?string
     {
         $id = trim($id);
         if ($id === '') {
@@ -48,13 +53,13 @@ final class EnvService
     /**
      * @return array<string, array<string, string>>
      */
-    public function all(Domain|Subdomain|null $entity = null): array
+    public function all(Domain|Subdomain|Endpoint|null $entity = null): array
     {
         if ($entity instanceof Domain) {
             return $this->mergeValues(
-                $this->collectBundleValues($entity->getBundle()),
-                $this->collectDomainValues($entity),
-                $this->collectApplicationValues($this->applicationService->load()),
+                $this->flattenBundleValues($entity->getBundle()),
+                $this->flattenDomainValues($entity),
+                $this->flattenApplicationValues($this->applicationService->load()),
             );
         }
 
@@ -63,34 +68,47 @@ final class EnvService
             $application = $this->applicationService->loadForContext(null, $domain, $entity);
 
             return $this->mergeValues(
-                $this->collectBundleValues($domain?->getBundle()),
-                $this->collectDomainValues($domain),
-                $this->collectBundleValues($entity->getBundle()),
-                $this->collectSubdomainValues($entity),
-                $this->collectApplicationValues($application),
+                $this->flattenBundleValues($domain?->getBundle()),
+                $this->flattenDomainValues($domain),
+                $this->flattenBundleValues($entity->getBundle()),
+                $this->flattenSubdomainValues($entity),
+                $this->flattenApplicationValues($application),
+            );
+        }
+
+        if ($entity instanceof Endpoint) {
+            $application = $this->applicationService->load();
+
+            return $this->mergeValues(
+                $this->flattenBundleValues($entity->getBundle()),
+                $this->flattenEndpointValues($entity),
+                $this->flattenApplicationValues($application),
             );
         }
 
         $domain = $this->domainService->load();
         $subdomain = $this->subdomainService->load();
+        $endpoint = $this->endpointFromRequest();
         $application = $this->applicationService->load();
 
         if ($subdomain instanceof Subdomain) {
             return $this->mergeValues(
-                $this->collectBundleValues($domain?->getBundle()),
-                $this->collectDomainValues($domain),
-                $this->collectBundleValues($subdomain->getBundle()),
-                $this->collectSubdomainValues($subdomain),
-                $this->collectApplicationValues($application),
+                $this->flattenBundleValues($domain?->getBundle()),
+                $this->flattenDomainValues($domain),
+                $this->flattenBundleValues($subdomain->getBundle()),
+                $this->flattenSubdomainValues($subdomain),
+                $this->flattenEndpointValues($endpoint),
+                $this->flattenApplicationValues($application),
             );
         }
 
         return $this->mergeValues(
-            $this->collectBundleValues($domain?->getBundle()),
-            $this->collectDomainValues($domain),
-            $this->collectBundleValues($subdomain?->getBundle()),
-            $this->collectSubdomainValues($subdomain),
-            $this->collectApplicationValues($application),
+            $this->flattenBundleValues($domain?->getBundle()),
+            $this->flattenDomainValues($domain),
+            $this->flattenBundleValues($subdomain?->getBundle()),
+            $this->flattenSubdomainValues($subdomain),
+            $this->flattenEndpointValues($endpoint),
+            $this->flattenApplicationValues($application),
         );
     }
 
@@ -122,35 +140,7 @@ final class EnvService
     /**
      * @return array<string, array<string, string>>
      */
-    private function collectDomainValues(?Domain $domain): array
-    {
-        if (!$domain instanceof Domain) {
-            return [];
-        }
-
-        $values = [];
-
-        foreach ($domain->getEnv() as $item) {
-            if (!$item instanceof DomainEnv) {
-                continue;
-            }
-
-            $envParentId = $item->getEnv()?->getEnvParent()?->getId();
-            $envId = $item->getEnv()?->getId();
-            if ($envParentId === null || $envParentId === '' || $envId === null || $envId === '') {
-                continue;
-            }
-
-            $values[$envParentId][$envId] = $item->getValue();
-        }
-
-        return $values;
-    }
-
-    /**
-     * @return array<string, array<string, string>>
-     */
-    private function collectBundleValues(?Bundle $bundle): array
+    public function flattenBundleValues(?Bundle $bundle): array
     {
         if (!$bundle instanceof Bundle) {
             return [];
@@ -178,7 +168,35 @@ final class EnvService
     /**
      * @return array<string, array<string, string>>
      */
-    private function collectSubdomainValues(?Subdomain $subdomain): array
+    public function flattenDomainValues(?Domain $domain): array
+    {
+        if (!$domain instanceof Domain) {
+            return [];
+        }
+
+        $values = [];
+
+        foreach ($domain->getEnv() as $item) {
+            if (!$item instanceof DomainEnv) {
+                continue;
+            }
+
+            $envParentId = $item->getEnv()?->getEnvParent()?->getId();
+            $envId = $item->getEnv()?->getId();
+            if ($envParentId === null || $envParentId === '' || $envId === null || $envId === '') {
+                continue;
+            }
+
+            $values[$envParentId][$envId] = $item->getValue();
+        }
+
+        return $values;
+    }
+
+    /**
+     * @return array<string, array<string, string>>
+     */
+    public function flattenSubdomainValues(?Subdomain $subdomain): array
     {
         if (!$subdomain instanceof Subdomain) {
             return [];
@@ -206,7 +224,35 @@ final class EnvService
     /**
      * @return array<string, array<string, string>>
      */
-    private function collectApplicationValues(?Application $application): array
+    public function flattenEndpointValues(?Endpoint $endpoint): array
+    {
+        if (!$endpoint instanceof Endpoint) {
+            return [];
+        }
+
+        $values = [];
+
+        foreach ($endpoint->getEnv() as $item) {
+            if (!$item instanceof EndpointEnv) {
+                continue;
+            }
+
+            $envParentId = $item->getEnv()?->getEnvParent()?->getId();
+            $envId = $item->getEnv()?->getId();
+            if ($envParentId === null || $envParentId === '' || $envId === null || $envId === '') {
+                continue;
+            }
+
+            $values[$envParentId][$envId] = $item->getValue();
+        }
+
+        return $values;
+    }
+
+    /**
+     * @return array<string, array<string, string>>
+     */
+    public function flattenApplicationValues(?Application $application): array
     {
         if (!$application instanceof Application) {
             return [];
@@ -229,5 +275,17 @@ final class EnvService
         }
 
         return $values;
+    }
+
+    private function endpointFromRequest(): ?Endpoint
+    {
+        $request = $this->requestStack->getCurrentRequest();
+        if (!$request instanceof Request) {
+            return null;
+        }
+
+        $endpoint = $request->attributes->get('endpoint');
+
+        return $endpoint instanceof Endpoint ? $endpoint : null;
     }
 }

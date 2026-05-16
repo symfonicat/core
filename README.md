@@ -27,7 +27,9 @@ The `php` container:
 
 ## Configuration
 
-Package discovery is configured in `config/packages/symfonicat.yaml`. The vendors list determines what composer package vendors are searched for Symfonicat modules:
+Package discovery is configured in `config/packages/symfonicat.yaml`.
+
+The `vendors` list determines which Composer package vendors are searched for Symfonicat modules:
 
 ```yaml
 symfonicat:
@@ -35,70 +37,71 @@ symfonicat:
         - symfonicat
 ```
 
+Admin YAML commands:
+
 ```bash
 docker exec php bin/console symfonicat:dump # writes database to symfonicat.yaml
 docker exec php bin/console symfonicat:load # imports symfonicat.yaml into database
 docker exec php bin/console symfonicat:purge # drops all symfonicat_* tables
 ```
 
-Runtime reads `symfonicat.admin` from this YAML file. The `symfonicat_*` tables are for unlocked admin editing and regenerating YAML; production runtime should not need them after deployment.
+Runtime reads `symfonicat.admin` from this YAML file.
+
+The `symfonicat_*` tables are for unlocked admin editing and regenerating YAML.
+Production runtime should not need them after deployment.
 
 ## Ids
 
-`Project`, `Application`, and `Module` store package-scoped ids. `Domain` ids are always bare domain names, and `Electron` ids are plain row ids:
+Id rules:
+
+- `Project`, `Application`, and `Module` store package-scoped ids
+- `Domain` ids are always bare domain names
+- `Electron` ids are plain row ids
 
 ```twig
 {{ domain.id }}        {# example.com #}
-{{ electron.id }}      {# example-test #}
+{{ application.id }}      {# example-test #}
 {{ subdomain.id }}        {# core/subdomain1 #}
 {{ subdomain.id(false) }} {# subdomain1 #}
 ```
-
-## Public Runtime
-
-Runtime resolution is layered:
-
-1. `DomainService` resolves the base host.
-2. `ProjectService` resolves the first affix when present.
-3. `RoutingRuleSubscriber` applies redirect, route, domain, subdomain, and application rules.
-4. `ApplicationService` loads application shells from argument rules, route-bound rules, or domain/subdomain application bindings.
-
-Public routes:
-
-- `/` renders the domain shell.
-- `/{path}` renders the subdomain shell when a subdomain affix is active.
-- `/application/{vendor}/{id}/{path}` is the internal application entry route and uses the full vendor-prefixed application id in the URL.
-
 ## Assets
 
 ### Private
 
-Webpack entry discovery is driven by `symfonicat:data:webpack`. It scans the root package plus installed Composer packages from configured vendors and resolves:
+Webpack entry discovery is driven by `symfonicat:data:webpack`.
 
-- core entries from `assets/{domain,subdomain,module,bundle}/{id}`
-- installed package entries from `{composer-package-dir}/assets/{domain,subdomain,module,bundle}/{id}`
+It scans the root package plus installed Composer packages from configured vendors and resolves:
 
-Bundle rows live in `symfonicat_bundle`, use vendor-scoped ids like `core/shared` or `symfonicat/analytics/shared`, and point at a `path` that is either a directory containing `index.js` or a direct entry file. Domains and subdomains can reference a bundle; the public shell renders the referenced bundle entry before the shell-specific entry.
+- core entries from `assets/{module,bundle}/{id}`
+- installed package entries from `{composer-package-dir}/assets/{module,bundle}/{id}`
+
+Endpoint rows can also attach modules with the same grouped multi-select used on domains and subdomains.
 
 Bootstrap is available at `assets/bootstrap` with some overrides at `assets/scss`
 
 ### Public
 
-The `symfonicat_asset(path)` Twig helper resolves shell-specific public assets. Without a second argument, it automatically searches the public folder for the file, prioritizing subdomain, then domain, then the default folder.
+The `symfonicat_asset(path)` Twig helper resolves shell-specific public assets.
 
-Notice how the favicons work on each url:
+Without a second argument, it searches the public folder for the file, prioritizing:
+
+1. subdomain
+2. domain
+3. default
+
+Favicons by URL:
 
 - `example.com`: purple favicon, `public/domains/example.com/favicon.svg`
 - `subdomain1.example.com`: green favicon, `public/subdomains/subdomain1/favicon.svg`
 - `example.com/admin`: blue favicon, `public/default/favicon.svg`
 
-But notice that in `admin/templates/base.html.twig` and `templates/base.html.twig` the only `symfonicat_asset()` call is this:
+In `admin/templates/base.html.twig` and `templates/base.html.twig` the common call is:
 
 ```twig
 <link rel="icon" href="{{ symfonicat_asset('favicon.svg') }}" />
 ```
 
-but it can be used like this:
+It can also target an entity directly:
 
 ```twig
 <link rel="icon" href="{{ symfonicat_asset('favicon.svg', application) }}" />
@@ -109,7 +112,17 @@ Passing an Electron row resolves assets under `public/electron/{electron.id}/`.
 
 ## Env
 
-Env resolution is bundle, then domain, then subdomain, then application, then Electron for Electron requests only. The same grouped structure is emitted into `window.env`. Twig uses the `env()` helper for dotted lookups:
+Env resolution order:
+
+- bundle
+- domain
+- subdomain
+- application
+- Electron requests only: Electron layer last
+
+The same grouped structure is emitted into `window.env`.
+
+Twig uses the `env()` helper for dotted lookups:
 
 ```twig
 {{ env('colors.primary') }}
@@ -117,11 +130,11 @@ Env resolution is bundle, then domain, then subdomain, then application, then El
 
 ## Paths
 
-`path_application()` generates URLs for application routing rules:
+`path_application()` generates URLs for application shells:
 
 ```twig
 {# for the test application #}
-{# which has a catch-all routing rule pointing it to /symfonicat/*/test* #}
+{# which has a catch-all application binding pointing it to /symfonicat/*/test* #}
 
 {# /symfonicat/*/test #}
 {{ path_application(application) }}
@@ -136,13 +149,27 @@ Env resolution is bundle, then domain, then subdomain, then application, then El
 {{ path_application('core/test', 'somepath', ['tay']) }}
 ```
 
-The helper is simple:
+Application rows can target a domain, subdomain, or endpoint.
+
+Endpoint-backed applications use the endpoint id in the admin select and in runtime resolution.
+
+- Domain, subdomain, and endpoint catch flags are submitted through checkbox fields that treat blank values as false.
+- Empty POST data does not leak into boolean columns.
+
+- `symfonicat:load` binds boolean columns explicitly when it restores admin rows, so `catch` values load cleanly on PostgreSQL.
+- Admin YAML dump/load round-trips domains, subdomains, bundles, endpoints, middleware, modules, and their join rows together.
+- Subdomains keep their bundle ownership when they are dumped and loaded again.
+- The checked-in sample YAML includes `example.com` and `core/subdomain1` as starter rows.
+
+`path_application()` is simple:
 
 - one argument can be the extra path, like `somepath/testpath`
 - one argument can be the wildcard replacement array
 - wildcard replacements are applied in array order
 
-For domain-bound and subdomain-bound application rules, `path_application()` returns the bound path on the current host. Use the matching domain or subdomain host when linking across hosts.
+For domain-bound and subdomain-bound application rules, `path_application()` returns the bound path on the current host.
+
+Use the matching domain or subdomain host when linking across hosts.
 
 ## Routing Rules
 
@@ -162,11 +189,15 @@ Application rules support these application types:
 - `subdomain`: render the application shell for the matching subdomain affix.
 - `domain_subdomain`: render the application shell for the matching subdomain on the matching domain.
 
-Root-level `route` rules are evaluated before domain/subdomain application bindings, so a domain or subdomain can still hand its root request to a Symfony-only route.
+Root-level `route` rules are evaluated before domain/subdomain application bindings.
+
+That means a domain or subdomain can still hand its root request to a Symfony-only route.
 
 ## Modules
 
-Backend module controllers live in installed packages and are exposed under full package routes such as `/m/symfonicat/analytics/main`. Frontend module code should use the same full qualifier:
+Backend module controllers live in installed packages and are exposed under full package routes such as `/m/symfonicat/analytics/main`.
+
+Frontend module code should use the same full qualifier:
 
 ```javascript
 const mod = 'symfonicat/analytics/main'
@@ -181,10 +212,29 @@ Module controllers should extend `Symfonicat\Controller\AbstractModuleController
 
 ## Admin
 
-The magic is in the `/admin` section. The entire `/admin` section is hard-disabled unless `<repo>/symfonicat.lock` exists. Create the ignored lock file with `touch symfonicat.lock` to open the admin area, and remove it to close the admin area again.
+The `/admin` section is hard-disabled unless `<repo>/symfonicat.lock` exists.
 
-Bundle CRUD is under `/admin/b`; domain and subdomain forms can attach one bundle row.
-The admin schema action is `/admin/s`; it runs the same non-interactive synchronization as `symfonicat:schema:update`, flashes the result, and returns to the referring admin page.
+Admin basics:
+
+- create the ignored lock file with `touch symfonicat.lock` to open the admin area
+- remove it to close the admin area again
+- applications live at `/admin/a`
+- application edit/delete routes resolve ids explicitly so missing rows fall back to the index with a flash instead of throwing a Doctrine entity-resolution 404
+- the delete route is routed separately from edit so `/admin/a/{id}/delete` does not get swallowed by the edit matcher
+
+CRUD routes:
+
+- bundle CRUD: `/admin/b`
+- endpoint CRUD: `/admin/end`
+- middleware CRUD: `/admin/m`
+- schema action: `/admin/s`
+- subdomain delete routes use `/admin/s/{id}/delete` so POST deletes do not collide with edit
+
+Forms and rows:
+
+- domain and subdomain forms can attach one bundle row, repeatable middleware rows, and a `catch` flag
+- endpoint rows attach to a bundle, can carry repeatable middleware rows and scoped env rows, and can define repeatable arguments through the shared multifield editor
+- the schema action runs the same non-interactive synchronization as `symfonicat:schema:update`, flashes the result, and returns to the referring admin page
 
 ## Electron
 
@@ -211,7 +261,21 @@ The build command renders `templates/electron/{type}/main.twig.js` or `templates
 
 ## Sync
 
-`symfonicat:schema:update` first synchronizes the Doctrine schema and then synchronizes bundles, modules, applications, and subdomains from package assets. Package-backed bundle rows whose `assets/bundle/{id}` directory disappears are removed, and domain/subdomain references to those bundles are cleared. Run it explicitly when you want dev/admin tables:
+`symfonicat:schema:update` first synchronizes the Doctrine schema and then synchronizes bundles, middleware, endpoints, modules, applications, domains, and subdomains from package assets.
+
+It does the following:
+
+- removes package-backed bundle rows whose `assets/bundle/{id}` directory disappears
+- clears domain/subdomain references to missing bundles
+- mirrors tagged middleware services into `symfonicat_middleware`
+- removes stale middleware rows when their class is no longer available
+- stores domain, subdomain, and endpoint middleware attachments in their own join tables
+- uses the shared env collection pattern for domain, subdomain, bundle, application, and endpoint env rows
+- exposes named `EnvService` flatten helpers for bundle, domain, subdomain, endpoint, and application layers in that order
+- persists domain and subdomain `catch` flags on their own rows
+- keeps endpoint rows keyed by string id with bundle reference, `catch`, repeatable middleware rows, scoped env rows, and repeatable arguments
+
+Run it explicitly when you want dev/admin tables:
 
 ```bash
 docker exec -it php bin/console symfonicat:schema:update
@@ -223,7 +287,9 @@ Then load the checked-in YAML if you want to edit it through `/admin`:
 docker exec php bin/console symfonicat:load
 ```
 
-Composer and Docker startup do not run schema update or YAML load automatically. Removing a stale module that still has referencing rows requires an interactive run so the affected rows can be reviewed before deletion.
+Composer and Docker startup do not run schema update or YAML load automatically.
+
+Removing a stale module that still has referencing rows requires an interactive run so the affected rows can be reviewed before deletion.
 
 ## Picture of @dunglas at the Zoo
 

@@ -37,6 +37,29 @@ final class SubdomainController extends AbstractController
         ]);
     }
 
+
+    #[Route('/admin/s/create', name: 'symfonicat_subdomain_create', methods: ['GET', 'POST'])]
+    public function new(Request $request, EntityManagerInterface $entityManager): Response
+    {
+        $subdomain = new Subdomain();
+        $form = $this->createForm(SubdomainType::class, $subdomain, [
+            'is_admin' => true,
+        ]);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $entityManager->persist($subdomain);
+            $entityManager->flush();
+
+            return $this->redirectToRoute('symfonicat_subdomain_index', [], Response::HTTP_SEE_OTHER);
+        }
+
+        return $this->render('@symfonicat/subdomain/create.html.twig', [
+            'subdomain' => $subdomain,
+            'form' => $form,
+        ]);
+    }
+
     #[Route('/admin/s/{id}', name: 'symfonicat_subdomain_edit', methods: ['GET', 'POST'], requirements: ['id' => '.+'])]
     public function edit(
         Request $request,
@@ -65,5 +88,21 @@ final class SubdomainController extends AbstractController
             'subdomain' => $subdomain,
             'form' => $form,
         ]);
+    }
+
+    #[Route('/admin/s/{id}/delete', name: 'symfonicat_subdomain_delete', methods: ['POST'], requirements: ['id' => '.+'], priority: 10)]
+    public function delete(Request $request, string $id, SubdomainRepository $subdomainRepository, EntityManagerInterface $entityManager): Response
+    {
+        $subdomain = $subdomainRepository->find($id);
+        if (!$subdomain) {
+            return $this->redirectToRoute('symfonicat_subdomain_index', [], Response::HTTP_SEE_OTHER);
+        }
+
+        if ($this->isCsrfTokenValid('delete'.$subdomain->getId(), $request->getPayload()->getString('_token'))) {
+            $entityManager->remove($subdomain);
+            $entityManager->flush();
+        }
+
+        return $this->redirectToRoute('symfonicat_subdomain_index', [], Response::HTTP_SEE_OTHER);
     }
 }

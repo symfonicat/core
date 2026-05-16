@@ -38,10 +38,20 @@ class Module
     #[ORM\InverseJoinColumn(name: 'domain_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
     private Collection $domains;
 
+    /**
+     * @var Collection<int, Endpoint>
+     */
+    #[ORM\ManyToMany(targetEntity: Endpoint::class, inversedBy: 'modules')]
+    #[ORM\JoinTable(name: 'symfonicat_module_endpoint')]
+    #[ORM\JoinColumn(name: 'module_id', referencedColumnName: 'id')]
+    #[ORM\InverseJoinColumn(name: 'endpoint_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
+    private Collection $endpoints;
+
     public function __construct()
     {
         $this->subdomains = new ArrayCollection();
         $this->domains = new ArrayCollection();
+        $this->endpoints = new ArrayCollection();
     }
 
 
@@ -118,6 +128,36 @@ class Module
         return $this;
     }
 
+    /**
+     * @return Collection<int, Endpoint>
+     */
+    public function getEndpoints(): Collection
+    {
+        return $this->endpoints;
+    }
+
+    public function addEndpoint(Endpoint $endpoint): static
+    {
+        if (!$this->hasEndpoint($endpoint)) {
+            $this->endpoints->add($endpoint);
+
+            if (!$endpoint->hasModule($this)) {
+                $endpoint->getModules()->add($this);
+            }
+        }
+
+        return $this;
+    }
+
+    public function removeEndpoint(Endpoint $endpoint): static
+    {
+        if ($this->endpoints->removeElement($endpoint) && $endpoint->hasModule($this)) {
+            $endpoint->getModules()->removeElement($this);
+        }
+
+        return $this;
+    }
+
     public function hasSubdomain(Subdomain $subdomain): bool
     {
         foreach ($this->subdomains as $existingSubdomain) {
@@ -141,6 +181,21 @@ class Module
             }
 
             if ($existingDomain->getId() !== null && $domain->getId() !== null && $existingDomain->getId() === $domain->getId()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function hasEndpoint(Endpoint $endpoint): bool
+    {
+        foreach ($this->endpoints as $existingEndpoint) {
+            if ($existingEndpoint === $endpoint) {
+                return true;
+            }
+
+            if ($existingEndpoint->getId() !== null && $endpoint->getId() !== null && $existingEndpoint->getId() === $endpoint->getId()) {
                 return true;
             }
         }

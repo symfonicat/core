@@ -21,6 +21,18 @@ class Subdomain
     #[ORM\JoinColumn(name: 'bundle_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
     private ?Bundle $bundle = null;
 
+    #[ORM\Column(options: ['default' => false])]
+    private bool $catch = false;
+
+    /**
+     * @var Collection<int, Middleware>
+     */
+    #[ORM\ManyToMany(targetEntity: Middleware::class)]
+    #[ORM\JoinTable(name: 'symfonicat_subdomain_middleware')]
+    #[ORM\JoinColumn(name: 'subdomain_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
+    #[ORM\InverseJoinColumn(name: 'middleware_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
+    private Collection $middlewares;
+
     public function getBundle(): ?Bundle
     {
         return $this->bundle;
@@ -29,6 +41,18 @@ class Subdomain
     public function setBundle(?Bundle $bundle): static
     {
         $this->bundle = $bundle;
+
+        return $this;
+    }
+
+    public function isCatch(): bool
+    {
+        return $this->catch;
+    }
+
+    public function setCatch(bool $catch): static
+    {
+        $this->catch = $catch;
 
         return $this;
     }
@@ -56,8 +80,46 @@ class Subdomain
         $this->domains = new ArrayCollection();
         $this->modules = new ArrayCollection();
         $this->env = new ArrayCollection();
+        $this->middlewares = new ArrayCollection();
+    }
+    /**
+     * @return Collection<int, Middleware>
+     */
+    public function getMiddlewares(): Collection
+    {
+        return $this->middlewares;
     }
 
+    public function addMiddleware(Middleware $middleware): static
+    {
+        if (!$this->hasMiddleware($middleware)) {
+            $this->middlewares->add($middleware);
+        }
+
+        return $this;
+    }
+
+    public function removeMiddleware(Middleware $middleware): static
+    {
+        $this->middlewares->removeElement($middleware);
+
+        return $this;
+    }
+
+    public function hasMiddleware(Middleware $middleware): bool
+    {
+        foreach ($this->middlewares as $existingMiddleware) {
+            if ($existingMiddleware === $middleware) {
+                return true;
+            }
+
+            if ($existingMiddleware->getId() !== null && $middleware->getId() !== null && $existingMiddleware->getId() === $middleware->getId()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     /**
      * @return Collection<int, Domain>

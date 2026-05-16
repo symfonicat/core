@@ -27,6 +27,8 @@ final class EncoreEntryTagsExtension extends AbstractExtension
             new TwigFunction('encore_entry_link_tags_domain', $this->renderDomainLinkTags(...), ['is_safe' => ['html']]),
             new TwigFunction('encore_entry_script_tags_subdomain', $this->renderSubdomainScriptTags(...), ['is_safe' => ['html']]),
             new TwigFunction('encore_entry_link_tags_subdomain', $this->renderSubdomainLinkTags(...), ['is_safe' => ['html']]),
+            new TwigFunction('encore_entry_script_tags_endpoint', $this->renderEndpointScriptTags(...), ['is_safe' => ['html']]),
+            new TwigFunction('encore_entry_link_tags_endpoint', $this->renderEndpointLinkTags(...), ['is_safe' => ['html']]),
             new TwigFunction('encore_entry_script_tags_module', $this->renderModuleScriptTags(...), ['is_safe' => ['html']]),
             new TwigFunction('encore_entry_link_tags_module', $this->renderModuleLinkTags(...), ['is_safe' => ['html']]),
             new TwigFunction('encore_entry_script_tags_bundle', $this->renderBundleScriptTags(...), ['is_safe' => ['html']]),
@@ -52,6 +54,16 @@ final class EncoreEntryTagsExtension extends AbstractExtension
     public function renderSubdomainLinkTags(?Subdomain $subdomain): string
     {
         return $this->renderLinkTags($this->subdomainEntryName($subdomain));
+    }
+
+    public function renderEndpointScriptTags(?Endpoint $endpoint): string
+    {
+        return $this->renderScriptTags($this->endpointEntryName($endpoint));
+    }
+
+    public function renderEndpointLinkTags(?Endpoint $endpoint): string
+    {
+        return $this->renderLinkTags($this->endpointEntryName($endpoint));
     }
 
     public function renderModuleScriptTags(?Module $module): string
@@ -155,6 +167,38 @@ final class EncoreEntryTagsExtension extends AbstractExtension
 
         if (count($matches) === 1) {
             return 'subdomain/'.$matches[0];
+        }
+
+        return $entryName;
+    }
+
+    private function endpointEntryName(?Endpoint $endpoint): ?string
+    {
+        $id = trim((string) $endpoint?->getId());
+        if ($id === '') {
+            return null;
+        }
+
+        $entryName = 'endpoint/'.$id;
+        if ($this->entryFilesTwigExtension->entryExists($entryName)) {
+            return $entryName;
+        }
+
+        if (strpos($id, '/') !== false) {
+            return $entryName;
+        }
+
+        $packages = $this->packageDiscoveryService->discoverEntryDirectories('endpoint');
+        $matches = [];
+        foreach (array_keys($packages) as $pkgId) {
+            $parts = explode('/', $pkgId);
+            if (end($parts) === $id) {
+                $matches[] = $pkgId;
+            }
+        }
+
+        if (count($matches) === 1) {
+            return 'endpoint/'.$matches[0];
         }
 
         return $entryName;

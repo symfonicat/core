@@ -9,7 +9,9 @@ use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Doctrine\DBAL\Schema\AbstractSchemaManager;
 use Doctrine\DBAL\Schema\Column;
 use Doctrine\DBAL\Schema\Table;
+use Doctrine\DBAL\Types\BooleanType;
 use Doctrine\DBAL\Types\JsonType;
+use Doctrine\DBAL\Types\Types;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Yaml\Yaml;
 
@@ -128,7 +130,12 @@ final class AdminYaml
                             throw new \RuntimeException(sprintf('Expected every "%s" row to be a YAML map.', $table));
                         }
 
-                        $this->connection->insert($table, $this->normalizeLoadRow($table, $row, $this->columnsByName($schemas[$table]->getColumns())));
+                        $columns = $this->columnsByName($schemas[$table]->getColumns());
+                        $this->connection->insert(
+                            $table,
+                            $this->normalizeLoadRow($table, $row, $columns),
+                            $this->typesForLoadRow($table, $row, $columns),
+                        );
                         ++$counts[$table];
                     }
                 }
@@ -299,6 +306,29 @@ final class AdminYaml
         }
 
         return $normalized;
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @param array<string, Column> $columns
+     *
+     * @return array<string, string>
+     */
+    private function typesForLoadRow(string $table, array $row, array $columns): array
+    {
+        $types = [];
+
+        foreach ($row as $column => $value) {
+            if (!is_string($column) || !isset($columns[$column])) {
+                continue;
+            }
+
+            if ($columns[$column]->getType() instanceof BooleanType) {
+                $types[$column] = Types::BOOLEAN;
+            }
+        }
+
+        return $types;
     }
 
     /**

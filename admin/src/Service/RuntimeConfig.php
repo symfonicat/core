@@ -10,6 +10,9 @@ use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\DomainEnv;
 use Symfonicat\Entity\Application;
 use Symfonicat\Entity\ApplicationEnv;
+use Symfonicat\Entity\Endpoint;
+use Symfonicat\Entity\EndpointEnv;
+use Symfonicat\Entity\Middleware;
 use Symfonicat\Entity\Env;
 use Symfonicat\Entity\EnvParent;
 use Symfonicat\Entity\Module;
@@ -151,6 +154,14 @@ final class RuntimeConfig
         return array_values($this->catalog()['applications']);
     }
 
+    /**
+     * @return list<Middleware>
+     */
+    public function middlewares(): array
+    {
+        return array_values($this->catalog()['middlewares']);
+    }
+
     public function applicationForDomain(Domain $domain): ?Application
     {
         return $this->firstApplication(static fn (Application $application): bool => $application->isDomainType()
@@ -280,6 +291,46 @@ final class RuntimeConfig
             }
         }
 
+        $endpoints = [];
+        foreach ($this->rows($rows, 'symfonicat_endpoint') as $row) {
+            $id = trim((string) ($row['id'] ?? ''));
+            if ($id === '') {
+                continue;
+            }
+
+            $endpoint = (new Endpoint())
+                ->setId($id)
+                ->setBundle($bundles[(string) ($row['bundle_id'] ?? '')] ?? null)
+                ->setCatch((bool) ($row['catch'] ?? false))
+                ->setArguments(isset($row['arguments']) && is_array($row['arguments']) ? $row['arguments'] : []);
+
+            $endpoints[$id] = $endpoint;
+        }
+
+        foreach ($this->rows($rows, 'symfonicat_endpoint_env') as $row) {
+            $endpoint = $endpoints[(string) ($row['endpoint_id'] ?? '')] ?? null;
+            $env = $envs[(string) ($row['env_id'] ?? '')] ?? null;
+            if ($endpoint instanceof Endpoint && $env instanceof Env) {
+                $endpoint->addEnv((new EndpointEnv())->setEnv($env)->setValue((string) ($row['value'] ?? '')));
+            }
+        }
+
+        foreach ($this->rows($rows, 'symfonicat_endpoint_module') as $row) {
+            $endpoint = $endpoints[(string) ($row['endpoint_id'] ?? '')] ?? null;
+            $module = $modules[(string) ($row['module_id'] ?? '')] ?? null;
+            if ($endpoint instanceof Endpoint && $module instanceof Module) {
+                $endpoint->addModule($module);
+            }
+        }
+
+        foreach ($this->rows($rows, 'symfonicat_endpoint_middleware') as $row) {
+            $endpoint = $endpoints[(string) ($row['endpoint_id'] ?? '')] ?? null;
+            $middleware = $middlewares[(int) ($row['middleware_id'] ?? 0)] ?? null;
+            if ($endpoint instanceof Endpoint && $middleware instanceof Middleware) {
+                $endpoint->addMiddleware($middleware);
+            }
+        }
+
         $applications = [];
         foreach ($this->rows($rows, 'symfonicat_application') as $row) {
             $id = trim((string) ($row['id'] ?? ''));
@@ -292,9 +343,36 @@ final class RuntimeConfig
                 ->setName((string) ($row['name'] ?? $id))
                 ->setType((string) ($row['type'] ?? Application::TYPE_DOMAIN))
                 ->setDomain($domains[(string) ($row['domain_id'] ?? '')] ?? null)
-                ->setSubdomain($subdomains[(string) ($row['subdomain_id'] ?? '')] ?? null);
+                ->setSubdomain($subdomains[(string) ($row['subdomain_id'] ?? '')] ?? null)
+                ->setEndpoint($endpoints[(string) ($row['endpoint_id'] ?? '')] ?? null);
 
             $applications[$id] = $application;
+        }
+
+        $middlewares = [];
+        foreach ($this->rows($rows, 'symfonicat_middleware') as $row) {
+            $id = (int) ($row['id'] ?? 0);
+            $class = trim((string) ($row['class'] ?? ''));
+            if ($id > 0 && $class !== '') {
+                $middlewares[$id] = (new Middleware())
+                    ->setClass($class);
+            }
+        }
+
+        foreach ($this->rows($rows, 'symfonicat_domain_middleware') as $row) {
+            $domain = $domains[(string) ($row['domain_id'] ?? '')] ?? null;
+            $middleware = $middlewares[(int) ($row['middleware_id'] ?? 0)] ?? null;
+            if ($domain instanceof Domain && $middleware instanceof Middleware) {
+                $domain->addMiddleware($middleware);
+            }
+        }
+
+        foreach ($this->rows($rows, 'symfonicat_subdomain_middleware') as $row) {
+            $subdomain = $subdomains[(string) ($row['subdomain_id'] ?? '')] ?? null;
+            $middleware = $middlewares[(int) ($row['middleware_id'] ?? 0)] ?? null;
+            if ($subdomain instanceof Subdomain && $middleware instanceof Middleware) {
+                $subdomain->addMiddleware($middleware);
+            }
         }
 
         foreach ($this->rows($rows, 'symfonicat_application_env') as $row) {
@@ -311,6 +389,8 @@ final class RuntimeConfig
             'subdomains' => $subdomains,
             'modules' => $modules,
             'applications' => $applications,
+            'endpoints' => $endpoints,
+            'middlewares' => $middlewares,
         ];
     }
 

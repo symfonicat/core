@@ -1,1 +1,1 @@
-console.log('TEST bundle loaded -__-')
+console.log('DOMAIN bundle loaded -__-')

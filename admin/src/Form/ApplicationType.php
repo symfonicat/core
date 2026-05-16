@@ -4,6 +4,7 @@ namespace Symfonicat\Form;
 
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\Application;
+use Symfonicat\Entity\Endpoint;
 use Symfonicat\Entity\Subdomain;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
@@ -44,6 +45,13 @@ final class ApplicationType extends AbstractType
                 'label' => 'subdomain',
                 'required' => false,
                 'placeholder' => 'select subdomain',
+            ])
+            ->add('endpoint', EntityType::class, [
+                'class' => Endpoint::class,
+                'choice_label' => static fn (Endpoint $endpoint): string => (string) $endpoint->getId(),
+                'label' => 'endpoint',
+                'required' => false,
+                'placeholder' => 'select endpoint',
             ])
             ->add('env', CollectionType::class, [
                 'label' => 'env',

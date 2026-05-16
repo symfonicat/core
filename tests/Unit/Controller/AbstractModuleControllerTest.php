@@ -7,15 +7,15 @@ use PHPUnit\Framework\TestCase;
 use Symfonicat\Controller\AbstractModuleController;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\Module;
-use Symfonicat\Entity\Project;
+use Symfonicat\Entity\Subdomain;
 use Symfonicat\Repository\DomainRepository;
 use Symfonicat\Repository\ModuleRepository;
-use Symfonicat\Repository\ProjectRepository;
+use Symfonicat\Repository\SubdomainRepository;
 use Symfonicat\Service\DomainService;
 use Symfonicat\Service\ModuleService;
 use Symfonicat\Service\PackageDiscoveryService;
 use Symfonicat\Service\PathService;
-use Symfonicat\Service\ProjectService;
+use Symfonicat\Service\SubdomainService;
 use Symfonicat\Service\RuntimeConfig;
 use Symfonicat\Service\AffixService;
 use Psr\Log\NullLogger;
@@ -33,10 +33,10 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 final class AbstractModuleControllerTest extends TestCase
 {
-    public function testProjectWithInstalledModuleAllowsExecution(): void
+    public function testSubdomainWithInstalledModuleAllowsExecution(): void
     {
         $module = $this->makeModule('analytics');
-        $subdomain = (new Project())->setId('core/subdomain1');
+        $subdomain = (new Subdomain())->setId('core/subdomain1');
         $subdomain->addModule($module);
 
         $controller = $this->makeController(
@@ -49,10 +49,10 @@ final class AbstractModuleControllerTest extends TestCase
         self::assertSame($shouldRun, $controller->runModule($shouldRun));
     }
 
-    public function testProjectWithoutModuleThrowsNotFound(): void
+    public function testSubdomainWithoutModuleThrowsNotFound(): void
     {
         $module = $this->makeModule('analytics');
-        $subdomain = (new Project())->setId('core/subdomain1');
+        $subdomain = (new Subdomain())->setId('core/subdomain1');
 
         $controller = $this->makeController(
             domain: $this->makeDomain('example.com'),
@@ -64,7 +64,7 @@ final class AbstractModuleControllerTest extends TestCase
         $controller->runModule(new Response('must not reach here'));
     }
 
-    public function testDomainWithInstalledModuleAllowsExecutionWhenNoProject(): void
+    public function testDomainWithInstalledModuleAllowsExecutionWhenNoSubdomain(): void
     {
         $module = $this->makeModule('analytics');
         $domain = $this->makeDomain('example.com');
@@ -99,14 +99,14 @@ final class AbstractModuleControllerTest extends TestCase
         );
     }
 
-    public function testDomainModuleBranchIsDisabledWhenProjectPresent(): void
+    public function testDomainModuleBranchIsDisabledWhenSubdomainPresent(): void
     {
         // Module is on the domain, not the subdomain: the subdomain branch takes
         // precedence and the domain fallback must NOT fire.
         $module = $this->makeModule('analytics');
         $domain = $this->makeDomain('example.com');
         $domain->addModule($module);
-        $subdomain = (new Project())->setId('core/subdomain1');
+        $subdomain = (new Subdomain())->setId('core/subdomain1');
 
         $controller = $this->makeController(
             domain: $domain,
@@ -131,7 +131,7 @@ final class AbstractModuleControllerTest extends TestCase
         $controller->runModule(new Response('must not reach here'));
     }
 
-    private function makeController(?Domain $domain, ?Project $subdomain, ?Module $module): object
+    private function makeController(?Domain $domain, ?Subdomain $subdomain, ?Module $module): object
     {
         $subdomainDir = dirname(__DIR__, 3);
         $requestStack = new RequestStack();
@@ -147,11 +147,11 @@ final class AbstractModuleControllerTest extends TestCase
         $entityManager = $this->createStub(EntityManagerInterface::class);
         $domainService = new DomainService($subdomainDir, $requestStack, $domainRepository, $entityManager, $packageDiscoveryService, $runtimeConfig);
 
-        $subdomainRepository = $this->createStub(ProjectRepository::class);
+        $subdomainRepository = $this->createStub(SubdomainRepository::class);
         $subdomainRepository->method('find')->willReturn($subdomain);
         $subdomainRepository->method('findOneByIdForDomain')->willReturn($subdomain);
         $affixService = new AffixService($subdomainDir, $requestStack, new NullLogger(), $domainService);
-        $subdomainService = new ProjectService(
+        $subdomainService = new SubdomainService(
             $domainService,
             $affixService,
             $subdomainRepository,
@@ -191,11 +191,11 @@ final class AbstractModuleControllerTest extends TestCase
         return (new Domain())->setId($id);
     }
 
-    private function makeHost(?Domain $domain, ?Project $subdomain): string
+    private function makeHost(?Domain $domain, ?Subdomain $subdomain): string
     {
         $domainId = $domain?->getId(false) ?? 'example.com';
 
-        if ($subdomain instanceof Project && $subdomain->getId(false) !== null) {
+        if ($subdomain instanceof Subdomain && $subdomain->getId(false) !== null) {
             return $subdomain->getId(false).'.'.$domainId;
         }
 

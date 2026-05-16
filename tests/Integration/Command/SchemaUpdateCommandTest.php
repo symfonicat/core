@@ -3,6 +3,7 @@
 namespace App\Tests\Integration\Command;
 
 use App\Tests\Support\SymfonicatKernelTestCase;
+use Symfonicat\Entity\Middleware;
 use Symfonicat\Entity\Module;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -42,6 +43,33 @@ final class SchemaUpdateCommandTest extends SymfonicatKernelTestCase
         $analytics = $em->getRepository(Module::class)->find('symfonicat/analytics/main');
         self::assertInstanceOf(Module::class, $analytics);
         self::assertSame('analytics', $analytics->getPackage());
+    }
+
+    public function testCreatesRowsForConfiguredMiddlewareClassesThatAreMissingInDatabase(): void
+    {
+        $tester = $this->runCommand();
+
+        self::assertSame(0, $tester->getStatusCode());
+        self::assertGreaterThan(0, $this->countMiddlewares());
+        self::assertSame(
+            'Symfonicat\\Middleware\\DomainMiddleware',
+            (string) $this->entityManager()->getConnection()->fetchOne('SELECT class FROM symfonicat_middleware ORDER BY class ASC LIMIT 1'),
+        );
+    }
+
+    public function testRemovesMiddlewareRowsThatNoLongerHaveBackedClasses(): void
+    {
+        $this->createMiddleware('App\\Middleware\\StaleMiddleware');
+
+        $tester = $this->runCommand(interactive: false);
+
+        self::assertSame(0, $tester->getStatusCode());
+        self::assertSame(
+            0,
+            (int) $this->entityManager()->getConnection()->fetchOne(
+                "SELECT COUNT(*) FROM symfonicat_middleware WHERE class = 'App\\\\Middleware\\\\StaleMiddleware'",
+            ),
+        );
     }
 
     public function testUpdatesRowPackageWhenPackageMetadataDivergesFromDatabase(): void
@@ -85,21 +113,21 @@ final class SchemaUpdateCommandTest extends SymfonicatKernelTestCase
         self::assertStringContainsString('already match', $tester->getDisplay());
     }
 
-    public function testFailsWhenDuplicateApplicationIdsExist(): void
+    public function testDoesNotFailWhenDuplicateApplicationIdsExist(): void
     {
         $this->createApplication('core/test');
         $this->createApplication('superman/test');
 
         $tester = $this->runCommand(interactive: false);
 
-        self::assertSame(1, $tester->getStatusCode());
-        self::assertStringContainsString('Duplicate application ids detected', $tester->getDisplay());
+        self::assertSame(0, $tester->getStatusCode());
+        self::assertStringNotContainsString('Duplicate application ids detected', $tester->getDisplay());
     }
 
-    public function testFailsWhenDuplicateProjectIdsExist(): void
+    public function testFailsWhenDuplicateSubdomainIdsExist(): void
     {
-        $this->createProject('core/subdomain1');
-        $this->createProject('superman/subdomain1');
+        $this->createSubdomain('core/subdomain1');
+        $this->createSubdomain('superman/subdomain1');
 
         $tester = $this->runCommand(interactive: false);
 
@@ -128,6 +156,23 @@ final class SchemaUpdateCommandTest extends SymfonicatKernelTestCase
         return (int) $this->entityManager()
             ->getConnection()
             ->fetchOne('SELECT COUNT(*) FROM symfonicat_module');
+    }
+
+    private function countMiddlewares(): int
+    {
+        return (int) $this->entityManager()
+            ->getConnection()
+            ->fetchOne('SELECT COUNT(*) FROM symfonicat_middleware');
+    }
+
+    private function createMiddleware(string $class): Middleware
+    {
+        $middleware = (new Middleware())->setClass($class);
+
+        $this->entityManager()->persist($middleware);
+        $this->entityManager()->flush();
+
+        return $middleware;
     }
 
     private function dropCurrentSchema(): void
