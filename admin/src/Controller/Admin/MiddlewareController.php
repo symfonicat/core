@@ -17,11 +17,11 @@ final class MiddlewareController extends AbstractController
     public function index(MiddlewareRepository $middlewareRepository): Response
     {
         return $this->render('@symfonicat/middleware/index.html.twig', [
-            'middlewares' => $middlewareRepository->findAllOrderedByClass(),
+            'middlewares' => $middlewareRepository->findAllOrderedById(),
         ]);
     }
 
-    #[Route('/admin/m/{id}', name: 'symfonicat_middleware_edit', methods: ['GET', 'POST'])]
+    #[Route('/admin/m/{id}', name: 'symfonicat_middleware_edit', methods: ['GET', 'POST'], requirements: ['id' => '.+'])]
     public function edit(Request $request, Middleware $middleware, EntityManagerInterface $entityManager): Response
     {
         $form = $this->createForm(MiddlewareType::class, $middleware);

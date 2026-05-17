@@ -2,6 +2,7 @@
 
 <div class="d-flex align-items-start justify-content-between gap-3">
     <div class="me-auto">
+        {{ form_row(form.id) }}
         {{ form_row(form.class) }}
     </div>
     <button class="btn btn-sm btn-success ms-auto">{{ button_label|default('save') }}</button>

@@ -19,10 +19,11 @@ final class MiddlewareRepository extends ServiceEntityRepository
     /**
      * @return Middleware[]
      */
-    public function findAllOrderedByClass(): array
+    public function findAllOrderedById(): array
     {
         return $this->createQueryBuilder('middleware')
-            ->orderBy('middleware.class', 'ASC')
+            ->orderBy('middleware.id', 'ASC')
+            ->addOrderBy('middleware.class', 'ASC')
             ->getQuery()
             ->getResult();
     }

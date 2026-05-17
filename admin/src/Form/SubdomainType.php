@@ -15,6 +15,7 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 class SubdomainType extends AbstractType
 {
     use VendorScopedIdFormTrait;
+    use ParcelChoiceFormTrait;
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
@@ -28,7 +29,8 @@ class SubdomainType extends AbstractType
         $builder
             ->add('parcel', EntityType::class, [
                 'class' => Parcel::class,
-                'choice_label' => static fn (Parcel $parcel): string => (string) $parcel->getId(),
+                'choice_label' => self::parcelChoiceLabel(...),
+                'group_by' => self::parcelChoiceGroup(...),
                 'label' => 'parcel',
                 'placeholder' => 'select parcel',
                 'required' => false,

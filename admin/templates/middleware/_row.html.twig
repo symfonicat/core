@@ -1,3 +1,14 @@
-<tr id="middleware_{{ middleware.id }}">
-    <td class="fw-semibold"><code>{{ middleware.class }}</code></td>
+<tr id="middleware_{{ middleware.id|replace({'/': '_'}) }}" class="btn-row">
+    <td class="fw-semibold text-end">{{ middleware.id|split('/')|slice(0, -1)|join('/') }}</td>
+    <td class="text-center">
+        <i class="fa fa-angle-right"></i>
+    </td>
+    <td><code>{{ middleware.class|split('\\')|last }}</code></td>
+    <td class="text-end btn-cell">
+        <div class="btn-group btn-group-sm">
+            <a href="{{ path('symfonicat_middleware_edit', { id: middleware.id }) }}" class="btn btn-sm btn-warning">
+                <i class="fa fa-pencil">&nbsp;</i>
+            </a>
+        </div>
+    </td>
 </tr>

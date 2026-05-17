@@ -6,7 +6,7 @@
     </td>
     <td class="fw-semibold">
         {% if endpoint.arguments is not empty %}
-            <code>{{ endpoint.arguments|join('/') }}</code>
+            <code>/{{ endpoint.arguments|join('/') }}</code>
         {% else %}
             <i class="fa fa-fw fa-times"></i>
         {% endif %}
@@ -21,7 +21,7 @@
     <td><code>{{ endpoint.parcel ? endpoint.parcel.id : '' }}</code></td>
     <td>
         {% for middleware in endpoint.middlewares %}
-            <div><code>{{ middleware.class }}</code></div>
+            <div><code>{{ middleware.id }}</code></div>
         {% else %}
             <i class="fa fa-fw fa-times"></i>
         {% endfor %}

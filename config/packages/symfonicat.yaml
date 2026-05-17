@@ -38,7 +38,14 @@ symfonicat:
                 catch: false
                 vendor: core
                 parcel_id: core/subdomainparcel
-        symfonicat_application: []
+        symfonicat_application:
+            -
+                id: example-test
+                name: 'Example Test'
+                type: domain
+                domain_id: example.com
+                subdomain_id: null
+                endpoint_id: null
         symfonicat_env_parent:
             -
                 id: colors
@@ -46,7 +53,12 @@ symfonicat:
             -
                 id: primary
                 env_parent_id: colors
-        symfonicat_application_env: []
+        symfonicat_application_env:
+            -
+                id: 1
+                value: yellow
+                application_id: example-test
+                env_id: primary
         symfonicat_domain_env:
             -
                 id: 1
@@ -55,21 +67,27 @@ symfonicat:
                 env_id: primary
         symfonicat_middleware:
             -
-                id: 2
-                class: Symfonicat\Middleware\TestMiddleware
-            -
-                id: 3
+                id: core/DomainMiddleware
                 class: Symfonicat\Middleware\DomainMiddleware
             -
-                id: 4
+                id: core/EndpointMiddleware
+                class: Symfonicat\Middleware\EndpointMiddleware
+            -
+                id: core/SubdomainMiddleware
                 class: Symfonicat\Middleware\SubdomainMiddleware
             -
-                id: 5
-                class: Symfonicat\Middleware\EndpointMiddleware
+                id: core/TestMiddleware
+                class: Symfonicat\Middleware\TestMiddleware
+            -
+                id: symfonicat/analytics/AnalyticsMiddleware
+                class: Symfonicat\Middleware\AnalyticsMiddleware
         symfonicat_domain_middleware:
             -
                 domain_id: example.com
-                middleware_id: 3
+                middleware_id: core/DomainMiddleware
+            -
+                domain_id: example.com
+                middleware_id: symfonicat/analytics/AnalyticsMiddleware
         symfonicat_domain_subdomain:
             -
                 domain_id: example.com
@@ -83,7 +101,7 @@ symfonicat:
         symfonicat_endpoint_middleware:
             -
                 endpoint_id: test
-                middleware_id: 5
+                middleware_id: core/EndpointMiddleware
         symfonicat_module:
             -
                 id: symfonicat/analytics/main
@@ -126,4 +144,4 @@ symfonicat:
         symfonicat_subdomain_middleware:
             -
                 subdomain_id: core/subdomain1
-                middleware_id: 4
+                middleware_id: core/SubdomainMiddleware

@@ -1,5 +1,10 @@
 <tr id="parcel_{{ parcel.id(false)|replace({'/': '_'}) }}" class="btn-row">
-    <td class="fw-semibold">{{ parcel.id }}</td>
+    {% set parcel_parts = parcel.id|split('/') %}
+    {% set parcel_base = parcel_parts|last %}
+    {% set parcel_bucket = parcel_parts|slice(0, -1)|join('/') %}
+    <td class="fw-semibold text-end">{{ parcel_bucket }}</td>
+    <td class="fw-semibold text-center"><i class="fa fa-angle-right"></i></td>
+    <td>{{ parcel_base }}</td>
     <td><code>{{ parcel.path }}</code></td>
     {% for env_parent in env_parents %}
         <td>

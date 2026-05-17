@@ -351,17 +351,18 @@ final class RuntimeConfig
 
         $middlewares = [];
         foreach ($this->rows($rows, 'symfonicat_middleware') as $row) {
-            $id = (int) ($row['id'] ?? 0);
+            $id = trim((string) ($row['id'] ?? ''));
             $class = trim((string) ($row['class'] ?? ''));
-            if ($id > 0 && $class !== '') {
+            if ($id !== '' && $class !== '') {
                 $middlewares[$id] = (new Middleware())
+                    ->setId($id)
                     ->setClass($class);
             }
         }
 
         foreach ($this->rows($rows, 'symfonicat_domain_middleware') as $row) {
             $domain = $domains[(string) ($row['domain_id'] ?? '')] ?? null;
-            $middleware = $middlewares[(int) ($row['middleware_id'] ?? 0)] ?? null;
+            $middleware = $middlewares[trim((string) ($row['middleware_id'] ?? ''))] ?? null;
             if ($domain instanceof Domain && $middleware instanceof Middleware) {
                 $domain->addMiddleware($middleware);
             }
@@ -369,7 +370,7 @@ final class RuntimeConfig
 
         foreach ($this->rows($rows, 'symfonicat_subdomain_middleware') as $row) {
             $subdomain = $subdomains[(string) ($row['subdomain_id'] ?? '')] ?? null;
-            $middleware = $middlewares[(int) ($row['middleware_id'] ?? 0)] ?? null;
+            $middleware = $middlewares[trim((string) ($row['middleware_id'] ?? ''))] ?? null;
             if ($subdomain instanceof Subdomain && $middleware instanceof Middleware) {
                 $subdomain->addMiddleware($middleware);
             }

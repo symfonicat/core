@@ -15,6 +15,8 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 
 final class EndpointType extends AbstractType
 {
+    use ParcelChoiceFormTrait;
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $endpoint = $builder->getData();
@@ -30,7 +32,8 @@ final class EndpointType extends AbstractType
         $builder
             ->add('parcel', EntityType::class, [
                 'class' => Parcel::class,
-                'choice_label' => static fn (Parcel $parcel): string => (string) $parcel->getId(),
+                'choice_label' => self::parcelChoiceLabel(...),
+                'group_by' => self::parcelChoiceGroup(...),
                 'label' => 'parcel',
                 'placeholder' => 'select parcel',
                 'required' => false,

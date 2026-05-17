@@ -158,8 +158,12 @@ Endpoint-backed applications use the endpoint id in the admin select and in runt
 
 - `symfonicat:load` binds boolean columns explicitly when it restores admin rows, so `catch` values load cleanly on PostgreSQL.
 - Admin YAML dump/load round-trips domains, subdomains, bundles, endpoints, middleware, modules, and their join rows together.
+- Middleware sync discovers tagged services and package `src/Middleware` classes during schema update.
+- Middleware rows use string ids derived from their package bucket and short class name, and the selector groups them by bucket.
 - Subdomains keep their bundle ownership when they are dumped and loaded again.
 - The checked-in sample YAML includes `example.com` and `core/subdomain1` as starter rows.
+
+The test environment pins a router default URI so CLI schema sync and Turbo listeners have request context.
 
 `path_application()` is simple:
 
@@ -233,6 +237,7 @@ CRUD routes:
 Forms and rows:
 
 - domain and subdomain forms can attach one bundle row, repeatable middleware rows, and a `catch` flag
+- parcel selects are grouped by parcel vendor, with the final path segment shown as the option label
 - endpoint rows attach to a bundle, can carry repeatable middleware rows and scoped env rows, and can define repeatable arguments through the shared multifield editor
 - the schema action runs the same non-interactive synchronization as `symfonicat:schema:update`, flashes the result, and returns to the referring admin page
 

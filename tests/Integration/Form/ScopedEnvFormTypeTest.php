@@ -9,12 +9,17 @@ use Symfonicat\Entity\Endpoint;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\DomainEnv;
 use Symfonicat\Entity\Env;
+use Symfonicat\Entity\Parcel;
 use Symfonicat\Entity\Subdomain;
 use Symfonicat\Entity\SubdomainEnv;
 use Symfonicat\Form\ApplicationType;
 use Symfonicat\Form\DomainType;
 use Symfonicat\Form\SubdomainType;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpFoundation\Session\SessionFactoryInterface;
 use Symfony\Component\Form\FormFactoryInterface;
+use Twig\Environment;
 
 final class ScopedEnvFormTypeTest extends SymfonicatKernelTestCase
 {
@@ -50,6 +55,52 @@ final class ScopedEnvFormTypeTest extends SymfonicatKernelTestCase
 
         self::assertSame('colors', $view['env'][0]['envParent']->vars['value']);
         self::assertSame('primary', $view['env'][0]['env']->vars['value']);
+    }
+
+    public function testDomainFormGroupsParcelChoicesByVendor(): void
+    {
+        $domainParcel = (new Parcel())
+            ->setId('core/subdomainparcel')
+            ->setPath('assets/parcel/subdomainparcel');
+        $analyticsParcel = (new Parcel())
+            ->setId('symfonicat/analytics/parcel2')
+            ->setPath('vendor/symfonicat/analytics/assets/parcel/parcel2');
+
+        $domain = $this->createDomain('example.com');
+
+        $this->entityManager()->persist($domainParcel);
+        $this->entityManager()->persist($analyticsParcel);
+        $this->entityManager()->flush();
+
+        $requestStack = self::getTestContainer()->get(RequestStack::class);
+        $request = Request::create('/admin/d/example.com');
+
+        /** @var SessionFactoryInterface $sessionFactory */
+        $sessionFactory = self::getTestContainer()->get('session.factory');
+        $request->setSession($sessionFactory->createSession());
+        $requestStack->push($request);
+
+        /** @var FormFactoryInterface $formFactory */
+        $formFactory = self::getTestContainer()->get(FormFactoryInterface::class);
+        $form = $formFactory->create(DomainType::class, $domain)->createView();
+
+        /** @var Environment $twig */
+        $twig = self::getTestContainer()->get(Environment::class);
+
+        try {
+            $html = $twig->render('@symfonicat/domain/_form.html.twig', [
+                'domain' => $domain,
+                'form' => $form,
+                'button_label' => 'save',
+            ]);
+
+            self::assertStringContainsString('<optgroup label="core">', $html);
+            self::assertStringContainsString('>subdomainparcel<', $html);
+            self::assertStringContainsString('<optgroup label="symfonicat/analytics">', $html);
+            self::assertStringContainsString('>parcel2<', $html);
+        } finally {
+            $requestStack->pop();
+        }
     }
 
     public function testProjectApplicationFormRestoresSelectedEnvParent(): void

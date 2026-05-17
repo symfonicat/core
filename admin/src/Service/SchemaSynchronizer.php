@@ -31,19 +31,27 @@ final class SchemaSynchronizer
     {
         $existing = [];
 
-        foreach ($this->middlewareRepository->findAllOrderedByClass() as $middleware) {
+        foreach ($this->middlewareRepository->findAllOrderedById() as $middleware) {
             $existing[$middleware->getClass()] = $middleware;
         }
 
-        $configuredClasses = $this->middlewareClassProvider->classes();
-        $configuredClassSet = array_fill_keys($configuredClasses, true);
+        $configuredDefinitions = $this->middlewareClassProvider->definitions();
+        $configuredClassSet = array_fill_keys(array_column($configuredDefinitions, 'class'), true);
 
-        foreach ($configuredClasses as $class) {
-            if (isset($existing[$class])) {
+        foreach ($configuredDefinitions as $definition) {
+            $class = $definition['class'];
+            $middleware = $existing[$class] ?? null;
+            if ($middleware instanceof Middleware) {
+                if ($middleware->getId() !== $definition['id']) {
+                    $this->rekeyMiddleware((string) $middleware->getId(), $definition['id']);
+                }
+
                 continue;
             }
 
-            $this->entityManager->persist((new Middleware())->setClass($class));
+            $this->entityManager->persist((new Middleware())
+                ->setId($definition['id'])
+                ->setClass($class));
         }
 
         foreach ($existing as $class => $middleware) {
@@ -55,5 +63,39 @@ final class SchemaSynchronizer
         }
 
         $this->entityManager->flush();
+    }
+
+    private function rekeyMiddleware(string $oldId, string $newId): void
+    {
+        $oldId = trim($oldId);
+        $newId = trim($newId);
+        if ($oldId === '' || $newId === '' || $oldId === $newId) {
+            return;
+        }
+
+        $connection = $this->entityManager->getConnection();
+        $platform = $connection->getDatabasePlatform();
+
+        foreach ([
+            'symfonicat_domain_middleware',
+            'symfonicat_subdomain_middleware',
+            'symfonicat_endpoint_middleware',
+        ] as $table) {
+            $connection->executeStatement(sprintf(
+                'UPDATE %s SET middleware_id = :new_id WHERE middleware_id = :old_id',
+                $platform->quoteIdentifier($table),
+            ), [
+                'new_id' => $newId,
+                'old_id' => $oldId,
+            ]);
+        }
+
+        $connection->executeStatement(sprintf(
+            'UPDATE %s SET id = :new_id WHERE id = :old_id',
+            $platform->quoteIdentifier('symfonicat_middleware'),
+        ), [
+            'new_id' => $newId,
+            'old_id' => $oldId,
+        ]);
     }
 }

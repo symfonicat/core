@@ -9,6 +9,8 @@
     <table class="table table-sm align-middle">
         <thead>
             <tr>
+                <th class="text-end">bucket</th>
+                <th class="text-center">&nbsp;</th>
                 <th>parcel</th>
                 <th>path</th>
                 {% for env_parent in env_parents %}
@@ -22,7 +24,7 @@
             {{ include('@symfonicat/parcel/_row.html.twig') }}
         {% else %}
             <tr>
-                <td colspan="{{ 3 + env_parents|length }}">no records found</td>
+                <td colspan="{{ 4 + env_parents|length }}">no records found</td>
             </tr>
         {% endfor %}
         </tbody>

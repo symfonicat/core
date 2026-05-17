@@ -15,6 +15,8 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 
 class DomainType extends AbstractType
 {
+    use ParcelChoiceFormTrait;
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
@@ -23,7 +25,8 @@ class DomainType extends AbstractType
             ])
             ->add('parcel', EntityType::class, [
                 'class' => Parcel::class,
-                'choice_label' => static fn (Parcel $parcel): string => (string) $parcel->getId(),
+                'choice_label' => self::parcelChoiceLabel(...),
+                'group_by' => self::parcelChoiceGroup(...),
                 'label' => 'parcel',
                 'placeholder' => 'select parcel',
                 'required' => false,

@@ -55,7 +55,7 @@ YAML);
             'parcel_id' => 'core/subdomainparcel',
         ]);
         $connection->insert('symfonicat_middleware', [
-            'id' => 99,
+            'id' => 'core/DomainAndSubdomainMiddleware',
             'class' => 'App\\Middleware\\DomainAndSubdomainMiddleware',
         ]);
         $connection->insert('symfonicat_domain_subdomain', [
@@ -64,11 +64,11 @@ YAML);
         ]);
         $connection->insert('symfonicat_domain_middleware', [
             'domain_id' => 'example.com',
-            'middleware_id' => 99,
+            'middleware_id' => 'core/DomainAndSubdomainMiddleware',
         ]);
         $connection->insert('symfonicat_subdomain_middleware', [
             'subdomain_id' => 'core/subdomain1',
-            'middleware_id' => 99,
+            'middleware_id' => 'core/DomainAndSubdomainMiddleware',
         ]);
 
         $adminYaml = new AdminYaml($connection, $this->subdomainDir);

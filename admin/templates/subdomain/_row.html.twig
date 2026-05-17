@@ -4,7 +4,7 @@
     <td>{% if subdomain.parcel %}<code>{{ subdomain.parcel.id }}</code>{% else %}<i class="fa fa-fw fa-times"></i>{% endif %}</td>
     <td>
         {% for middleware in subdomain.middlewares %}
-            <div><code>{{ middleware.class }}</code></div>
+            <div><code>{{ middleware.id }}</code></div>
         {% else %}
             <i class="fa fa-fw fa-times"></i>
         {% endfor %}

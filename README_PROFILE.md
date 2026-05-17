@@ -114,8 +114,12 @@ The admin header has a Bootstrap-backed `yaml` dropdown linking to `/admin/y/dum
 `symfonicat:load` binds boolean columns explicitly when it restores admin rows, so `catch` values load cleanly on PostgreSQL.
 
 Admin YAML dump/load round-trips domains, subdomains, bundles, endpoints, middleware, modules, and their join rows together.
+- Middleware sync discovers tagged services and package `src/Middleware` classes during schema update.
+- Middleware rows use string ids derived from their package bucket and short class name, and the selector groups them by bucket.
 Subdomains keep their bundle ownership when they are dumped and loaded again.
 - The checked-in sample YAML includes `example.com` and `core/subdomain1` as starter rows.
+
+Test env pins a router default URI so CLI schema sync and Turbo listeners have context.
 
 ## Admin
 
@@ -148,6 +152,7 @@ Admin header and forms:
 Form behavior:
 
 - domain and subdomain edit forms can attach bundle rows, repeatable middleware rows, and a `catch` flag
+- parcel selects are grouped by vendor, with the last path segment used as the visible option label
 - endpoint rows belong to a bundle, can be marked as catch-all, can carry repeatable middleware rows, modules, and scoped env rows, and use the shared multifield editor for repeatable arguments
 - application edit/delete routes resolve their ids explicitly and fall back to the index with a flash when the row is missing
 - the delete route is kept separate from the edit matcher so `/admin/a/{id}/delete` is not captured by edit routing

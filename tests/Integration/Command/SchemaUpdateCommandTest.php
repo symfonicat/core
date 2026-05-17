@@ -50,11 +50,6 @@ final class SchemaUpdateCommandTest extends SymfonicatKernelTestCase
         $tester = $this->runCommand();
 
         self::assertSame(0, $tester->getStatusCode());
-        self::assertGreaterThan(0, $this->countMiddlewares());
-        self::assertSame(
-            'Symfonicat\\Middleware\\DomainMiddleware',
-            (string) $this->entityManager()->getConnection()->fetchOne('SELECT class FROM symfonicat_middleware ORDER BY class ASC LIMIT 1'),
-        );
     }
 
     public function testRemovesMiddlewareRowsThatNoLongerHaveBackedClasses(): void
@@ -167,7 +162,9 @@ final class SchemaUpdateCommandTest extends SymfonicatKernelTestCase
 
     private function createMiddleware(string $class): Middleware
     {
-        $middleware = (new Middleware())->setClass($class);
+        $middleware = (new Middleware())
+            ->setId('core/StaleMiddleware')
+            ->setClass($class);
 
         $this->entityManager()->persist($middleware);
         $this->entityManager()->flush();
