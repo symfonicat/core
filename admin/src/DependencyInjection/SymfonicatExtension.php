@@ -7,6 +7,7 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Extension\Extension;
 use Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface;
 use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
+use Symfonicat\Service\PackageDiscoveryService;
 
 final class SymfonicatExtension extends Extension implements PrependExtensionInterface
 {
@@ -39,23 +40,25 @@ final class SymfonicatExtension extends Extension implements PrependExtensionInt
     public function load(array $configs, ContainerBuilder $container): void
     {
         $configuration = new Configuration();
-        $config = $this->processConfiguration($configuration, $configs);
-
-        $vendors = array_values(array_unique(array_filter(array_map(
-            static fn (mixed $vendor): string => trim((string) $vendor),
-            $config['vendors'],
-        ))));
-        $container->setParameter('symfonicat.vendors', $vendors);
+        $this->processConfiguration($configuration, $configs);
 
         $root = dirname(__DIR__, 3);
         $loader = new YamlFileLoader($container, new FileLocator($root.'/config'));
         $loader->load('services.yaml');
 
-        foreach ($vendors as $vendor) {
-            foreach (glob($root.'/vendor/'.trim($vendor, '/').'/*/config/services.yaml') ?: [] as $serviceConfig) {
-                $packageLoader = new YamlFileLoader($container, new FileLocator(dirname($serviceConfig)));
-                $packageLoader->load(basename($serviceConfig));
+        $packageDiscoveryService = new PackageDiscoveryService($root);
+        foreach ($packageDiscoveryService->findSymfonicatPackages() as $package) {
+            if ($package['installPath'] === $root) {
+                continue;
             }
+
+            $serviceConfig = $package['installPath'].'/config/services.yaml';
+            if (!is_file($serviceConfig)) {
+                continue;
+            }
+
+            $packageLoader = new YamlFileLoader($container, new FileLocator(dirname($serviceConfig)));
+            $packageLoader->load(basename($serviceConfig));
         }
     }
 }

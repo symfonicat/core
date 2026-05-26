@@ -131,13 +131,34 @@ final class AbstractModuleControllerTest extends TestCase
         $controller->runModule(new Response('must not reach here'));
     }
 
-    private function makeController(?Domain $domain, ?Subdomain $subdomain, ?Module $module): object
+    public function testUnvalidatedModuleRequestAlwaysBlocks(): void
+    {
+        $module = $this->makeModule('analytics');
+        $domain = $this->makeDomain('example.com');
+        $domain->addModule($module);
+
+        $controller = $this->makeController(
+            domain: $domain,
+            subdomain: null,
+            module: $module,
+            validatedModuleRequest: false,
+        );
+
+        $this->expectException(NotFoundHttpException::class);
+        $controller->runModule(new Response('must not reach here'));
+    }
+
+    private function makeController(?Domain $domain, ?Subdomain $subdomain, ?Module $module, bool $validatedModuleRequest = true): object
     {
         $subdomainDir = dirname(__DIR__, 3);
         $requestStack = new RequestStack();
-        $requestStack->push(Request::create('/m/symfonicat/analytics/main', 'POST', [], [], [], [
+        $request = Request::create('/m/symfonicat/analytics/main', 'POST', [], [], [], [
             'HTTP_HOST' => $this->makeHost($domain, $subdomain),
-        ]));
+        ]);
+        $requestStack->push($request);
+        if ($validatedModuleRequest) {
+            $requestStack->getCurrentRequest()?->attributes->set('symfonicat_module_request_valid', true);
+        }
 
         $domainRepository = $this->createStub(DomainRepository::class);
         $domainRepository->method('find')->willReturn($domain);
@@ -173,7 +194,7 @@ final class AbstractModuleControllerTest extends TestCase
             $runtimeConfig,
         );
 
-        return new class($domainService, $moduleService, $subdomainService, $pathService) extends AbstractModuleController {
+        return new class($domainService, $moduleService, $subdomainService, $pathService, $requestStack) extends AbstractModuleController {
             public function runModule(Response $shouldRun, Response|false $fallback = false): Response
             {
                 return $this->module($shouldRun, $fallback);

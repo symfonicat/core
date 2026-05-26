@@ -7,6 +7,7 @@ use Symfonicat\Entity\Endpoint;
 use Symfonicat\Entity\Subdomain;
 use Symfonicat\Repository\EndpointRepository;
 use Symfonicat\Service\DomainService;
+use Symfonicat\Service\ModuleRequestContextStore;
 use Symfonicat\Service\PathService;
 use Symfonicat\Service\RuntimeConfig;
 use Symfonicat\Service\RuntimeRenderer;
@@ -24,6 +25,7 @@ final class PublicRuntimeSubscriber implements EventSubscriberInterface
         private readonly PathService $pathService,
         private readonly RuntimeConfig $runtimeConfig,
         private readonly EndpointRepository $endpointRepository,
+        private readonly ModuleRequestContextStore $moduleRequestContextStore,
     ) {
     }
 
@@ -49,9 +51,19 @@ final class PublicRuntimeSubscriber implements EventSubscriberInterface
         }
 
         if ($this->isModulePath($request)) {
-            $endpoint = $this->endpointFromHeader($request);
-            if ($endpoint instanceof Endpoint) {
-                $request->attributes->set('endpoint', $endpoint);
+            $moduleContext = $this->moduleRequestContextStore->resolve($request);
+            if ($moduleContext === null) {
+                return;
+            }
+
+            $request->attributes->set('symfonicat_module_request_valid', true);
+
+            $endpointId = trim((string) ($moduleContext['endpoint_id'] ?? ''));
+            if ($endpointId !== '') {
+                $endpoint = $this->endpointById($endpointId);
+                if ($endpoint instanceof Endpoint) {
+                    $request->attributes->set('endpoint', $endpoint);
+                }
             }
 
             return;
@@ -65,13 +77,13 @@ final class PublicRuntimeSubscriber implements EventSubscriberInterface
             return;
         }
 
-        if ($subdomain instanceof Subdomain && $this->isRootOrCatch($request, $subdomain->isCatch())) {
+        if ($subdomain instanceof Subdomain) {
             $this->allowRuntimeRoute($request, RuntimeRenderer::TARGET_SUBDOMAIN);
 
             return;
         }
 
-        if (!$subdomain instanceof Subdomain && $domain instanceof Domain && $this->isRootOrCatch($request, $domain->isCatch())) {
+        if ($domain instanceof Domain) {
             $this->allowRuntimeRoute($request, RuntimeRenderer::TARGET_DOMAIN);
         }
     }
@@ -151,18 +163,8 @@ final class PublicRuntimeSubscriber implements EventSubscriberInterface
         $request->attributes->set('symfonicat_runtime_route_allowed', true);
     }
 
-    private function isRootOrCatch(Request $request, bool $catch): bool
+    private function endpointById(string $endpointId): ?Endpoint
     {
-        return $request->getPathInfo() === '/' || $catch;
-    }
-
-    private function endpointFromHeader(Request $request): ?Endpoint
-    {
-        $endpointId = trim((string) $request->headers->get('X-Symfonicat-Endpoint', ''));
-        if ($endpointId === '') {
-            return null;
-        }
-
         if ($this->usesDatabaseRuntime()) {
             $endpoint = $this->endpointRepository->find($endpointId);
 

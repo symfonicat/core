@@ -21,6 +21,7 @@ final class RuntimeRenderer
     public function __construct(
         private readonly Environment $twig,
         private readonly RuntimeMiddlewareRunner $middlewareRunner,
+        private readonly ModuleRequestContextStore $moduleRequestContextStore,
     ) {
     }
 
@@ -33,6 +34,8 @@ final class RuntimeRenderer
 
         $entity = $this->entityForTarget($request, $target);
         $template = $this->resolveTemplate($target, $this->templateId($entity));
+        $moduleRequest = $this->moduleRequestContextStore->issue($request, $entity);
+        $request->attributes->set('request', $moduleRequest);
         $response = new Response($this->twig->render($template, [
             'domain' => $request->attributes->get('domain'),
             'subdomain' => $request->attributes->get('subdomain'),

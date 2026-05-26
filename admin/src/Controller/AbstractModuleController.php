@@ -60,6 +60,15 @@ abstract class AbstractModuleController extends AbstractController
 
     ) : Response {
 
+        $moduleRequestValid = $this->requestStack?->getCurrentRequest()?->attributes->getBoolean('symfonicat_module_request_valid');
+        if (!$moduleRequestValid) {
+            if ($shouldNotRunResponse !== FALSE) {
+                return $shouldNotRunResponse;
+            }
+
+            throw $this->createNotFoundException();
+        }
+
         if ($this->shouldRun) {
 
             return $shouldRunResponse;

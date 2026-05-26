@@ -2,13 +2,12 @@
 
 namespace Symfonicat\Form;
 
-use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\Application;
+use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\Endpoint;
 use Symfonicat\Entity\Subdomain;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
@@ -28,15 +27,11 @@ final class ApplicationType extends AbstractType
             ->add('name', null, [
                 'label' => 'name',
             ])
-            ->add('type', ChoiceType::class, [
-                'label' => 'type',
-                'choices' => Application::typeChoices(),
-            ])
             ->add('domain', EntityType::class, [
                 'class' => Domain::class,
                 'choice_label' => 'id',
                 'label' => 'domain',
-                'required' => false,
+                'required' => true,
                 'placeholder' => 'select domain',
             ])
             ->add('subdomain', EntityType::class, [

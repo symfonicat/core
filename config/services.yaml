@@ -34,7 +34,11 @@ services:
     Symfonicat\Service\PackageDiscoveryService:
         arguments:
             $subdomainDir: '%kernel.project_dir%'
-            $vendors: '%symfonicat.vendors%'
+
+    Symfonicat\Contract\AdminYamlDumper: '@Symfonicat\Service\AdminYaml'
+
+    Symfonicat\EventSubscriber\AdminYamlDumpSubscriber:
+        tags: ['doctrine.event_subscriber']
 
     Symfonicat\Service\AffixService:
         arguments:

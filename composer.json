@@ -108,7 +108,8 @@
         "symfonicat:public-suffix-install": "@php bin/public-suffix",
         "post-install-cmd": [
             "@auto-scripts",
-            "@symfonicat:public-suffix-install"
+            "@symfonicat:public-suffix-install",
+            "@php bin/console symfonicat:purge --no-interaction"
         ],
         "post-update-cmd": [
             "@auto-scripts",
@@ -116,6 +117,7 @@
         ]
     },
     "extra": {
+        "symfonicat": true,
         "symfony": {
             "allow-contrib": false,
             "require": "8.0.*"

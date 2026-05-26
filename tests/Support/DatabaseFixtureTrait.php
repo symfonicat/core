@@ -148,8 +148,23 @@ trait DatabaseFixtureTrait
             ->setName($type === null ? basename(str_replace('\\', '/', $idOrName)) ?: $idOrName : $idOrName);
 
         if ($type !== null) {
+            $application->setDomain($domain);
+
+            if ($type === Application::TYPE_SUBDOMAIN) {
+                $application
+                    ->setSubdomain($subdomain)
+                    ->setEndpoint(null);
+            } elseif ($type === Application::TYPE_ENDPOINT) {
+                $application
+                    ->setSubdomain(null)
+                    ->setEndpoint($endpoint);
+            } else {
+                $application
+                    ->setSubdomain(null)
+                    ->setEndpoint(null);
+            }
+        } else {
             $application
-                ->setType($type)
                 ->setDomain($domain)
                 ->setSubdomain($subdomain)
                 ->setEndpoint($endpoint);

@@ -400,7 +400,7 @@ final class RuntimeConfig
             return [];
         }
 
-        $rows = $config['symfonicat']['admin'] ?? [];
+        $rows = $config['symfonicat'] ?? [];
 
         return is_array($rows) ? $rows : [];
     }

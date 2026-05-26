@@ -90,6 +90,18 @@ class Application
 
     public function getType(): string
     {
+        if ($this->endpoint instanceof Endpoint) {
+            return self::TYPE_ENDPOINT;
+        }
+
+        if ($this->subdomain instanceof Subdomain) {
+            return self::TYPE_SUBDOMAIN;
+        }
+
+        if ($this->domain instanceof Domain) {
+            return self::TYPE_DOMAIN;
+        }
+
         return $this->type;
     }
 
@@ -165,22 +177,22 @@ class Application
 
     public function isDomainType(): bool
     {
-        return $this->type === self::TYPE_DOMAIN;
+        return $this->getType() === self::TYPE_DOMAIN;
     }
 
     public function isSubdomainType(): bool
     {
-        return $this->type === self::TYPE_SUBDOMAIN;
+        return $this->getType() === self::TYPE_SUBDOMAIN;
     }
 
     public function isEndpointType(): bool
     {
-        return $this->type === self::TYPE_ENDPOINT;
+        return $this->getType() === self::TYPE_ENDPOINT;
     }
 
     public function getTargetId(bool $includeVendor = false): ?string
     {
-        return match ($this->type) {
+        return match ($this->getType()) {
             self::TYPE_DOMAIN => $this->domain?->getId($includeVendor),
             self::TYPE_SUBDOMAIN => $this->subdomainTargetId($includeVendor),
             self::TYPE_ENDPOINT => $this->endpoint?->getId($includeVendor),
@@ -206,39 +218,10 @@ class Application
     #[Assert\Callback]
     public function validate(ExecutionContextInterface $context): void
     {
-        $type = trim($this->type);
-
-        if (!in_array($type, self::typeChoices(), true)) {
-            $context->buildViolation('Choose a valid Application type.')
-                ->atPath('type')
-                ->addViolation();
-
-            return;
-        }
-
-        if ($type === self::TYPE_DOMAIN && !$this->domain instanceof Domain) {
+        if (!$this->domain instanceof Domain) {
             $context->buildViolation('Select a domain.')
                 ->atPath('domain')
                 ->addViolation();
         }
-
-        if ($type === self::TYPE_SUBDOMAIN && !$this->subdomain instanceof Subdomain) {
-            $context->buildViolation('Select a subdomain.')
-                ->atPath('subdomain')
-                ->addViolation();
-        }
-
-        if ($type === self::TYPE_SUBDOMAIN && !$this->domain instanceof Domain) {
-            $context->buildViolation('Select a domain.')
-                ->atPath('domain')
-                ->addViolation();
-        }
-
-        if ($type === self::TYPE_ENDPOINT && !$this->endpoint instanceof Endpoint) {
-            $context->buildViolation('Select an endpoint.')
-                ->atPath('endpoint')
-                ->addViolation();
-        }
-
     }
 }

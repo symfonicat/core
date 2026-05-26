@@ -12,10 +12,11 @@ use Doctrine\DBAL\Schema\Table;
 use Doctrine\DBAL\Types\BooleanType;
 use Doctrine\DBAL\Types\JsonType;
 use Doctrine\DBAL\Types\Types;
+use Symfonicat\Contract\AdminYamlDumper;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Yaml\Yaml;
 
-final class AdminYaml
+final class AdminYaml implements AdminYamlDumper
 {
     private const TABLE_PREFIX = 'symfonicat_';
     private const CONFIG_PATH = '/config/packages/symfonicat.yaml';
@@ -55,9 +56,7 @@ final class AdminYaml
 
         $configPath = $this->configPath();
         $config = $this->readConfig($configPath);
-        $config['symfonicat'] = is_array($config['symfonicat'] ?? null) ? $config['symfonicat'] : [];
-        $config['symfonicat']['vendors'] = $config['symfonicat']['vendors'] ?? ['symfonicat'];
-        $config['symfonicat']['admin'] = $admin;
+        $config['symfonicat'] = $admin;
 
         $directory = dirname($configPath);
         if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) {
@@ -82,19 +81,15 @@ final class AdminYaml
         $config = $this->readConfig($this->configPath());
         $symfonicat = $config['symfonicat'] ?? null;
 
-        if (!is_array($symfonicat) || !array_key_exists('admin', $symfonicat)) {
+        if (!is_array($symfonicat)) {
             return [];
-        }
-
-        if (!is_array($symfonicat['admin'])) {
-            throw new \RuntimeException('Expected "symfonicat.admin" to be a YAML map of table rows.');
         }
 
         $schemaManager = $this->connection->createSchemaManager();
         $tables = $this->orderedTables($schemaManager);
         $tableSet = array_fill_keys($tables, true);
 
-        foreach (array_keys($symfonicat['admin']) as $table) {
+        foreach (array_keys($symfonicat) as $table) {
             if (!is_string($table) || !isset($tableSet[$table])) {
                 throw new \RuntimeException(sprintf('Unknown Symfonicat admin table "%s".', (string) $table));
             }
@@ -119,9 +114,9 @@ final class AdminYaml
                 }
 
                 foreach ($tables as $table) {
-                    $rows = $symfonicat['admin'][$table] ?? [];
+                    $rows = $symfonicat[$table] ?? [];
                     if (!is_array($rows)) {
-                        throw new \RuntimeException(sprintf('Expected "symfonicat.admin.%s" to be a list of rows.', $table));
+                        throw new \RuntimeException(sprintf('Expected "symfonicat.%s" to be a list of rows.', $table));
                     }
 
                     $counts[$table] = 0;
@@ -145,6 +140,10 @@ final class AdminYaml
                 if ($platform instanceof SQLitePlatform) {
                     $this->connection->executeStatement('PRAGMA foreign_keys = ON');
                 }
+            }
+
+            if ($counts !== []) {
+                $this->dump();
             }
 
             return $counts;

@@ -7,7 +7,6 @@ use Symfonicat\Entity\Application;
 use Symfonicat\Form\ApplicationType;
 use Symfonicat\Repository\ApplicationRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -33,12 +32,6 @@ final class ApplicationController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            try {
-                $this->normalizeTypeSelection($application);
-            } catch (\RuntimeException | \InvalidArgumentException $error) {
-                $form->addError(new FormError($error->getMessage()));
-            }
-
             if ($form->isValid()) {
                 $entityManager->persist($application);
                 $entityManager->flush();
@@ -71,12 +64,6 @@ final class ApplicationController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            try {
-                $this->normalizeTypeSelection($application);
-            } catch (\RuntimeException | \InvalidArgumentException $error) {
-                $form->addError(new FormError($error->getMessage()));
-            }
-
             if ($form->isValid()) {
                 $entityManager->flush();
 
@@ -111,28 +98,5 @@ final class ApplicationController extends AbstractController
         }
 
         return $this->redirectToRoute('symfonicat_application_index', [], Response::HTTP_SEE_OTHER);
-    }
-
-    private function normalizeTypeSelection(Application $application): void
-    {
-        if ($application->isDomainType()) {
-            $application->setSubdomain(null);
-            $application->setEndpoint(null);
-
-            return;
-        }
-
-        if ($application->isSubdomainType()) {
-            $application->setEndpoint(null);
-
-            return;
-        }
-
-        if ($application->isEndpointType()) {
-            $application->setDomain(null);
-            $application->setSubdomain(null);
-
-            return;
-        }
     }
 }

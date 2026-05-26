@@ -14,22 +14,21 @@
 
         <!-- Symfonicat -->
         <script type="text/javascript">
+            
             window.env = {{ env_helper() | indent_json(12) }}
             console.log('[window.env]', window.env)
             console.log('----------------------')
 
-            window.application = {{ application ? {
-                id: application.id,
-                name: application.name,
-                type: application.type,
-            } | json_encode | raw : 'null' }}
+            window.application = {{ application_helper() | indent_json(12) }}
             console.log('[window.application]', window.application)
             console.log('----------------------')
 
-            window.endpoint = {{ endpoint is defined and endpoint ? {
-                id: endpoint.id,
-            } | json_encode | raw : 'null' }}
+            window.endpoint = {{ endpoint_helper() | indent_json(12) }}
             console.log('[window.endpoint]', window.endpoint)
+            console.log('----------------------')
+
+            window.request = {{ request_helper() | indent_json(12) }}
+            console.log('[window.request]', window.request)
             console.log('----------------------')
 
         </script>

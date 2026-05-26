@@ -12,12 +12,8 @@ final class PackageDiscoveryService
         'subdomain',
     ];
 
-    /**
-     * @param list<string> $vendors
-     */
     public function __construct(
         private readonly string $subdomainDir,
-        private readonly array $vendors = ['symfonicat'],
     ) {
     }
 
@@ -35,15 +31,9 @@ final class PackageDiscoveryService
 
         $rootComposerPath = $this->subdomainDir.'/composer.json';
         if (is_file($rootComposerPath)) {
-            $rootComposer = $this->decodeJsonFile($rootComposerPath);
-            $packageName = trim((string) ($rootComposer['name'] ?? 'symfonicat/core'));
-            if ($packageName !== '' && $this->isConfiguredVendorPackage($packageName)) {
-                $packages[$packageName] = [
-                    'installPath' => $this->subdomainDir,
-                    'name' => $packageName,
-                    'package' => $this->shortPackageName($packageName),
-                    'vendor' => 'core',
-                ];
+            $package = $this->symfonicatPackageFromComposerFile($rootComposerPath, $this->subdomainDir);
+            if ($package !== null) {
+                $packages[$package['name']] = $package;
             }
         }
 
@@ -60,9 +50,8 @@ final class PackageDiscoveryService
                 continue;
             }
 
-            $packageName = trim((string) ($package['name'] ?? ''));
             $relativeInstallPath = trim((string) ($package['install-path'] ?? ''));
-            if ($packageName === '' || $relativeInstallPath === '' || !$this->isConfiguredVendorPackage($packageName)) {
+            if ($relativeInstallPath === '') {
                 continue;
             }
 
@@ -71,12 +60,17 @@ final class PackageDiscoveryService
                 continue;
             }
 
-            $packages[$packageName] = [
-                'installPath' => $installPath,
-                'name' => $packageName,
-                'package' => $this->shortPackageName($packageName),
-                'vendor' => $this->vendorName($packageName),
-            ];
+            $composerPath = $installPath.'/composer.json';
+            if (!is_file($composerPath)) {
+                continue;
+            }
+
+            $packageData = $this->symfonicatPackageFromComposerFile($composerPath, $installPath);
+            if ($packageData === null) {
+                continue;
+            }
+
+            $packages[$packageData['name']] = $packageData;
         }
 
         ksort($packages, SORT_STRING);
@@ -256,6 +250,35 @@ final class PackageDiscoveryService
         return trim($parts[0] ?? '');
     }
 
+    /**
+     * @return array{
+     *     installPath: string,
+     *     name: string,
+     *     package: string,
+     *     vendor: string
+     * }|null
+     */
+    private function symfonicatPackageFromComposerFile(string $composerPath, string $installPath): ?array
+    {
+        $composer = $this->decodeJsonFile($composerPath);
+        $extra = is_array($composer['extra'] ?? null) ? $composer['extra'] : [];
+        if (($extra['symfonicat'] ?? false) !== true) {
+            return null;
+        }
+
+        $packageName = trim((string) ($composer['name'] ?? ''));
+        if ($packageName === '') {
+            return null;
+        }
+
+        return [
+            'installPath' => $installPath,
+            'name' => $packageName,
+            'package' => $this->shortPackageName($packageName),
+            'vendor' => $this->vendorName($packageName),
+        ];
+    }
+
     private function relativePath(string $path): string
     {
         $root = rtrim(str_replace('\\', '/', $this->subdomainDir), '/').'/';
@@ -266,26 +289,6 @@ final class PackageDiscoveryService
         }
 
         return $path;
-    }
-
-    private function isConfiguredVendorPackage(string $packageName): bool
-    {
-        $vendor = $this->vendorName($packageName);
-
-        return $vendor !== '' && in_array($vendor, $this->normalizedVendors(), true);
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function normalizedVendors(): array
-    {
-        $vendors = array_values(array_unique(array_filter(array_map(
-            static fn (mixed $vendor): string => trim((string) $vendor),
-            $this->vendors,
-        ))));
-
-        return $vendors === [] ? ['symfonicat'] : $vendors;
     }
 
     /**

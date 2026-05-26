@@ -16,7 +16,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
     name: 'symfonicat:schema:update',
-    description: 'Synchronize the Doctrine schema and installed configured-vendor package rows.',
+    description: 'Synchronize the Doctrine schema and installed Symfonicat package rows.',
 )]
 final class SchemaUpdateCommand extends Command
 {
@@ -42,7 +42,7 @@ final class SchemaUpdateCommand extends Command
 
             $moduleResult = $this->moduleService->sync($shouldAskForConfirmation ? function (Module $module, array $references) use ($input, $io): bool {
                 $io->warning(sprintf(
-                    'Module "%s" is no longer provided by an installed configured-vendor package and still has referencing entity rows.',
+                    'Module "%s" is no longer provided by an installed Symfonicat package and still has referencing entity rows.',
                     $module->getId(),
                 ));
 
@@ -185,12 +185,12 @@ final class SchemaUpdateCommand extends Command
             && $domainResult['created'] === []
             && $subdomainResult['created'] === []
         ) {
-            $io->success('Parcel, module, domain, and subdomain rows already match installed configured-vendor packages.');
+            $io->success('Parcel, module, domain, and subdomain rows already match installed Symfonicat packages.');
 
             return Command::SUCCESS;
         }
 
-        $io->success('Parcel, module, domain, and subdomain rows synchronized from installed configured-vendor packages.');
+        $io->success('Parcel, module, domain, and subdomain rows synchronized from installed Symfonicat packages.');
 
         return Command::SUCCESS;
     }

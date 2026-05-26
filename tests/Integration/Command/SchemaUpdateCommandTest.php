@@ -11,7 +11,7 @@ use Symfony\Component\Console\Tester\CommandTester;
 /**
  * End-to-end coverage of the installed-package ⇆ database module sync command.
  *
- * The command is the contract between installed configured-vendor packages
+ * The command is the contract between installed Symfonicat packages
  * and the symfonicat_module table (runtime-authoritative). These tests make
  * sure that contract holds for the three transitions that matter in practice:
  *   - package-provided module with no matching row -> row is created
@@ -84,7 +84,7 @@ final class SchemaUpdateCommandTest extends SymfonicatKernelTestCase
 
     public function testRemovesUnreferencedRowsThatNoLongerExistOnDisk(): void
     {
-        // An orphan module exists in the DB with no corresponding installed configured-vendor package module.
+        // An orphan module exists in the DB with no corresponding installed Symfonicat package module.
         $this->createModule('orphan');
 
         $tester = $this->runCommand();

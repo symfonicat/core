@@ -2,6 +2,7 @@
 
 namespace Symfonicat\Controller\Admin;
 
+use Symfonicat\Contract\AdminYamlDumper;
 use Symfonicat\Service\ParcelService;
 use Symfonicat\Service\DomainService;
 use Symfonicat\Service\ModuleService;
@@ -21,6 +22,7 @@ final class SchemaController extends AbstractController
         private readonly ModuleService $moduleService,
         private readonly SubdomainService $subdomainService,
         private readonly SchemaSynchronizer $schemaSynchronizer,
+        private readonly AdminYamlDumper $adminYaml,
     ) {
     }
 
@@ -34,6 +36,9 @@ final class SchemaController extends AbstractController
             $moduleResult = $this->moduleService->sync();
             $domainResult = $this->domainService->sync();
             $subdomainResult = $this->subdomainService->sync();
+            if (!$request->attributes->getBoolean('symfonicat_admin_yaml_dumped')) {
+                $this->adminYaml->dump();
+            }
 
             $this->addFlash('success', sprintf(
                 'schema synchronized: %s',

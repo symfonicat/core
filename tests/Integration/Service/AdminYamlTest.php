@@ -17,10 +17,7 @@ final class AdminYamlTest extends SymfonicatKernelTestCase
         $this->subdomainDir = sys_get_temp_dir().'/symfonicat_admin_yaml_'.bin2hex(random_bytes(6));
         mkdir($this->subdomainDir.'/config/packages', 0755, true);
         file_put_contents($this->subdomainDir.'/config/packages/symfonicat.yaml', <<<'YAML'
-symfonicat:
-    vendors:
-        - symfonicat
-        - custom
+symfonicat: []
 YAML);
     }
 
@@ -31,7 +28,7 @@ YAML);
         parent::tearDown();
     }
 
-    public function testDumpPreservesVendorsAndLoadRestoresRows(): void
+    public function testDumpWritesAdminUnderSymfonicatAndLoadRestoresRows(): void
     {
         $connection = $this->entityManager()->getConnection();
         $connection->insert('symfonicat_admin', [
@@ -82,8 +79,8 @@ YAML);
         self::assertSame(1, $dumpCounts['symfonicat_subdomain_middleware']);
 
         $config = Yaml::parseFile($this->subdomainDir.'/config/packages/symfonicat.yaml');
-        self::assertSame(['symfonicat', 'custom'], $config['symfonicat']['vendors']);
-        self::assertArrayNotHasKey('symfonicat_admin', $config['symfonicat']['admin']);
+        self::assertArrayNotHasKey('vendors', $config['symfonicat']);
+        self::assertArrayNotHasKey('admin', $config['symfonicat']);
 
         $connection->executeStatement('DELETE FROM symfonicat_domain_subdomain');
         $connection->executeStatement('DELETE FROM symfonicat_admin');
@@ -113,6 +110,27 @@ YAML);
         self::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM symfonicat_domain_subdomain'));
         self::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM symfonicat_domain_middleware'));
         self::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM symfonicat_subdomain_middleware'));
+    }
+
+    public function testLoadDumpsYamlAfterImportingRows(): void
+    {
+        file_put_contents($this->subdomainDir.'/config/packages/symfonicat.yaml', <<<'YAML'
+# keep this comment if load does not rewrite the file
+symfonicat:
+    symfonicat_domain:
+        -
+            id: example.com
+YAML);
+
+        $adminYaml = new AdminYaml($this->entityManager()->getConnection(), $this->subdomainDir);
+        $counts = $adminYaml->load();
+
+        self::assertSame(1, $counts['symfonicat_domain']);
+        self::assertSame(1, (int) $this->entityManager()->getConnection()->fetchOne('SELECT COUNT(*) FROM symfonicat_domain'));
+
+        $rewritten = file_get_contents($this->subdomainDir.'/config/packages/symfonicat.yaml');
+        self::assertIsString($rewritten);
+        self::assertStringNotContainsString('keep this comment', $rewritten);
     }
 
     private function removeDirectory(string $directory): void

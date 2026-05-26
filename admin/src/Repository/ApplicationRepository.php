@@ -27,9 +27,9 @@ final class ApplicationRepository extends ServiceEntityRepository
         return $this->createQueryBuilder('application')
             ->leftJoin('application.domain', 'domain')
             ->leftJoin('application.subdomain', 'subdomain')
-            ->addSelect('domain', 'subdomain')
-            ->orderBy('application.type', 'ASC')
-            ->addOrderBy('application.name', 'ASC')
+            ->leftJoin('application.endpoint', 'endpoint')
+            ->addSelect('domain', 'subdomain', 'endpoint')
+            ->orderBy('application.name', 'ASC')
             ->addOrderBy('application.id', 'ASC')
             ->getQuery()
             ->getResult();

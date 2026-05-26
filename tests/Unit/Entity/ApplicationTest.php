@@ -45,4 +45,21 @@ final class ApplicationTest extends TestCase
         self::assertSame('subdomain1.example.com', $application->subdomainTargetId());
         self::assertSame('subdomain1.example.com', $application->getTargetId());
     }
+
+    public function testEndpointSelectionTakesPrecedenceForDerivedApplicationType(): void
+    {
+        $domain = (new Domain())
+            ->setId('example.com');
+        $endpoint = (new \Symfonicat\Entity\Endpoint())
+            ->setId('core/test');
+
+        $application = (new Application())
+            ->setDomain($domain)
+            ->setEndpoint($endpoint)
+            ->setType(Application::TYPE_DOMAIN);
+
+        self::assertSame(Application::TYPE_ENDPOINT, $application->getType());
+        self::assertTrue($application->isEndpointType());
+        self::assertSame('core/test', $application->getTargetId());
+    }
 }

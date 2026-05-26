@@ -21,10 +21,23 @@ final class RuntimeRoutingTest extends SymfonicatWebTestCase
         self::assertStringContainsString('example.com', (string) $this->client()->getResponse()->getContent());
     }
 
-    public function testSubdomainRendersWithPlainSubdomainId(): void
+    public function testDomainRendersOnNonRootPathWithoutCatch(): void
+    {
+        $this->createDomain('example.com');
+        $this->setHost('example.com');
+
+        $this->client()->request('GET', '/docs');
+
+        self::assertResponseIsSuccessful();
+        $content = (string) $this->client()->getResponse()->getContent();
+        self::assertStringContainsString('Main Domain Router', $content);
+        self::assertStringContainsString('example.com', $content);
+    }
+
+    public function testSubdomainRendersWithPlainSubdomainIdOnNonRootPathWithoutCatch(): void
     {
         $domain = $this->createDomain('example.com');
-        $this->createSubdomain('core/subdomain1', $domain)->setCatch(true);
+        $this->createSubdomain('core/subdomain1', $domain);
         $this->entityManager()->flush();
         $this->setHost('subdomain1.example.com');
 
@@ -86,7 +99,7 @@ final class RuntimeRoutingTest extends SymfonicatWebTestCase
             ]);
 
             self::assertStringContainsString('window.application = {', $html);
-            self::assertStringContainsString('"name":"Example Application"', $html);
+            self::assertStringContainsString('"name": "Example Application"', $html);
         } finally {
             $requestStack->pop();
         }

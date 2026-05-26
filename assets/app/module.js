@@ -26,20 +26,23 @@ function normalizeRequestArguments(pathOrPayload, payload) {
     };
 }
 
-function getEndpointContextHeaders() {
+function getRequestHeaders() {
     if (typeof window === 'undefined') {
-        return {};
+        throw new Error('Missing request context.');
     }
 
-    const endpoint = window.endpoint ?? {};
-    const endpointId = String(endpoint.id ?? '').trim();
-    const headers = {};
+    const requestContext = window.request ?? {};
+    const contextId = String(requestContext.contextId ?? '').trim();
+    const token = String(requestContext.token ?? '').trim();
 
-    if (endpointId !== '') {
-        headers['X-Symfonicat-Endpoint'] = endpointId;
+    if (contextId === '' || token === '') {
+        throw new Error('Missing request context.');
     }
 
-    return headers;
+    return {
+        'X-Symfonicat-Module-Context': contextId,
+        'X-CSRF-Token': token,
+    };
 }
 
 async function requestModule(moduleName, responseType, path = '', payload = {}) {
@@ -50,7 +53,7 @@ async function requestModule(moduleName, responseType, path = '', payload = {}) 
             Accept: responseType === 'html' ? 'text/html' : 'application/json',
             'Content-Type': 'application/json',
             'X-Requested-With': 'XMLHttpRequest',
-            ...getEndpointContextHeaders(),
+            ...getRequestHeaders(),
         },
         body: JSON.stringify(payload ?? {}),
     });

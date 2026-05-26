@@ -10,17 +10,9 @@ final class Configuration implements ConfigurationInterface
     public function getConfigTreeBuilder(): TreeBuilder
     {
         $treeBuilder = new TreeBuilder('symfonicat');
-
         $treeBuilder->getRootNode()
-            ->children()
-                ->arrayNode('vendors')
-                    ->scalarPrototype()->end()
-                    ->defaultValue(['symfonicat'])
-                ->end()
-                ->arrayNode('admin')
-                    ->ignoreExtraKeys(false)
-                    ->variablePrototype()->end()
-                ->end()
+            ->useAttributeAsKey('name')
+            ->variablePrototype()
             ->end();
 
         return $treeBuilder;

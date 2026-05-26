@@ -25,8 +25,8 @@ Core runtime services:
 
 Runtime route behavior:
 
-- domain root and domain catch render `templates/domain/*`
-- subdomain root and subdomain catch render `templates/subdomain/*`
+- matched domains render `templates/domain/*` on any public path for that host
+- matched subdomains render `templates/subdomain/*` on any public path for that host
 - endpoint arguments and endpoint catch render `templates/endpoint/*`
 - endpoint argument `*` matches one segment
 - endpoint catch permits trailing path after the argument match
@@ -42,21 +42,18 @@ Subdomains use plain ids everywhere. They do not have vendors.
 
 ## Applications
 
-`Application` is the app-packaging target for this branch. It carries the role that the old separate Electron type carried: select a URL/runtime context, then generate an Electron app from that selected target.
+`Application` is the app-scaffold target for this branch. It carries the role that the old separate Electron type carried: select a URL/runtime context from the application row's domain, subdomain, and endpoint fields, then generate an Electron skeleton from that selected target.
 
-Application target types:
-
-- `domain`
-- `subdomain`
-- `endpoint`
+The application target is derived from the populated relation fields: `endpoint` wins when present, otherwise `subdomain`, otherwise `domain`. `domain` is always required.
 
 Build-application requests can still expose the `application` Twig variable and `window.application` when the request context provides it. There is no public `/application/...` runtime route in this branch, and the build-app path helper has not been implemented.
 
-Electron main-process templates are under:
+Application build templates are under:
 
-- `templates/application/domain/main.twig.js`
-- `templates/application/subdomain/main.twig.js`
-- `templates/application/endpoint/main.twig.js`
+- `templates/application/main.js.twig`
+- `templates/application/overrides/{application-id}.js.twig`
+
+The build command is `symfonicat:application:build` (alias `symfonicat:electron:build`), and it generates a buildable Electron skeleton in `application/{application.id}/` with `main.js`, `package.json`, and a local README.
 
 ## Entity Ids
 
@@ -70,15 +67,14 @@ Legacy subdomain inputs with a slash are normalized to the final segment on load
 
 ## Package Discovery
 
-Configured package vendors live in `config/packages/symfonicat.yaml`:
+Packages participate in discovery when their `composer.json` sets `extra.symfonicat: true`:
 
 ```yaml
-symfonicat:
-    vendors:
-        - symfonicat
+extra:
+    symfonicat: true
 ```
 
-Webpack and schema sync discover entries in the root package and installed Composer packages from `vendor/composer/installed.json`.
+Webpack and schema sync discover entries in the root package and installed Composer packages whose `composer.json` sets `extra.symfonicat: true`.
 
 Entry families:
 
@@ -113,11 +109,11 @@ The grouped env structure is also emitted as `window.env`.
 
 ## Middleware And Modules
 
-PSR-15 middleware services are auto-tagged as `symfonicat.middleware`. Runtime rendering selects middleware attached to the active domain, subdomain, or endpoint and runs it directly through the PSR HTTP bridge.
+PSR-15 middleware services are auto-tagged as `symfonicat.middleware`. Runtime rendering always runs middleware attached to the active domain and subdomain, plus endpoint middleware when an endpoint render wins, and passes them through the PSR HTTP bridge.
 
 The old `kafkiansky/symfony-middleware` bundle and vendored package copy are removed.
 
-Module controllers extend `AbstractModuleController` and only run when their module is attached to the active domain, subdomain, or endpoint. Endpoint module requests preserve endpoint context through `X-Symfonicat-Endpoint`.
+Module controllers extend `AbstractModuleController` and only run when their module is attached to the active domain, subdomain, or endpoint. Runtime pages expose `application_helper()`, `endpoint_helper()`, and `request_helper()` for `window.application`, `window.endpoint`, and `window.request`. Module requests replay the server-issued request context through `X-Symfonicat-Module-Context` and `X-CSRF-Token` so endpoint scope is restored server-side before module checks run.
 
 ## Admin
 
@@ -138,7 +134,11 @@ Forms support parcel attachments, repeatable middleware, modules, scoped env val
 
 ## YAML And Commands
 
-Runtime reads `symfonicat.admin` from `config/packages/symfonicat.yaml`. The database tables are for unlocked admin editing and dumping YAML.
+Runtime reads the `symfonicat` block from `config/packages/symfonicat.yaml`. The database tables are for unlocked admin editing and dumping YAML.
+
+Admin CRUD and schema sync actions automatically refresh `config/packages/symfonicat.yaml` after successful writes.
+
+`composer install` and `composer update` also run `symfonicat:purge` so deployments start by rebuilding `symfonicat_*` tables from `symfonicat.yaml`.
 
 Commands:
 
@@ -152,7 +152,7 @@ Commands:
 - `symfonicat:data:dns`
 - `symfonicat:public-suffix:refresh`
 
-`symfonicat:schema:update` synchronizes the Doctrine schema and configured-vendor rows for parcels, middleware, endpoints, modules, domains, applications, and subdomains.
+`symfonicat:schema:update` synchronizes the Doctrine schema and Symfonicat package rows for parcels, middleware, endpoints, modules, domains, applications, and subdomains.
 
 Local PHPUnit can bypass a root-owned container cache with:
 

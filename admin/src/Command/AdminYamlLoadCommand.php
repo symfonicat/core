@@ -11,7 +11,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
     name: 'symfonicat:load',
-    description: 'Load config/packages/symfonicat.yaml symfonicat.admin rows into the database.',
+    description: 'Load config/packages/symfonicat.yaml symfonicat tables into the database.',
 )]
 final class AdminYamlLoadCommand extends Command
 {
@@ -34,7 +34,7 @@ final class AdminYamlLoadCommand extends Command
         }
 
         if ($counts === []) {
-            $io->success('No symfonicat.admin YAML found in config/packages/symfonicat.yaml.');
+            $io->success('No symfonicat YAML found in config/packages/symfonicat.yaml.');
 
             return Command::SUCCESS;
         }
