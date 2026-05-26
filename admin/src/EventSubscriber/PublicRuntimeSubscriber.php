@@ -92,10 +92,54 @@ final class PublicRuntimeSubscriber implements EventSubscriberInterface
 
         usort($endpoints, static fn (Endpoint $left, Endpoint $right): int => count($right->getArguments()) <=> count($left->getArguments()));
 
+        $domain = $this->domainService->load();
+        $subdomain = $this->subdomainService->load();
+
         foreach ($endpoints as $endpoint) {
-            if ($this->pathService->matchesArguments($endpoint->getArguments(), $path, $endpoint->isCatch())) {
-                return $endpoint;
+            if (!$this->pathService->matchesArguments($endpoint->getArguments(), $path, $endpoint->isCatch())) {
+                continue;
             }
+
+            $enforcement = $endpoint->getEnforce();
+
+            if ($enforcement === Endpoint::ENFORCE_DOMAIN) {
+                // require a domain and no subdomain, and domain must match
+                if (!($domain instanceof Domain) || $subdomain instanceof Subdomain) {
+                    continue;
+                }
+
+                $targetDomain = $endpoint->getDomain();
+                if (!($targetDomain instanceof Domain) || $targetDomain->getId() !== $domain->getId()) {
+                    continue;
+                }
+            } elseif ($enforcement === Endpoint::ENFORCE_SUBDOMAIN) {
+                // require a subdomain match, domain may be any
+                if (!($subdomain instanceof Subdomain)) {
+                    continue;
+                }
+
+                $targetSubdomain = $endpoint->getSubdomain();
+                if (!($targetSubdomain instanceof Subdomain) || $targetSubdomain->getId() !== $subdomain->getId()) {
+                    continue;
+                }
+            } elseif ($enforcement === Endpoint::ENFORCE_BOTH) {
+                // require both domain and subdomain and both must match
+                if (!($domain instanceof Domain) || !($subdomain instanceof Subdomain)) {
+                    continue;
+                }
+
+                $targetDomain = $endpoint->getDomain();
+                $targetSubdomain = $endpoint->getSubdomain();
+                if (!($targetDomain instanceof Domain) || !($targetSubdomain instanceof Subdomain)) {
+                    continue;
+                }
+
+                if ($targetDomain->getId() !== $domain->getId() || $targetSubdomain->getId() !== $subdomain->getId()) {
+                    continue;
+                }
+            }
+
+            return $endpoint;
         }
 
         return null;

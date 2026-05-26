@@ -1,6 +1,6 @@
 {{ form_start(form, {
     attr: {
-        'data-controller': 'multifield'
+        'data-controller': 'multifield endpoint'
     }
 }) }}
 
@@ -11,6 +11,22 @@
 {% else %}
     <h3 class="">{{ endpoint.id }}</h3>
 {% endif %}
+
+<hr />
+
+<div class="row g-3">
+    <div class="col-md-3" data-endpoint-target="enforceWrapper">
+        {{ form_row(form.enforce) }}
+    </div>
+    {# determine current enforce value to set initial visibility server-side #}
+    {% set enforce_val = form.enforce.vars.value is defined ? form.enforce.vars.value : null %}
+    <div class="col-md-3 {% if enforce_val is not defined or (enforce_val != 'subdomain' and enforce_val != 'both') %}d-none{% endif %}" data-endpoint-target="subdomainWrapper">
+        {{ form_row(form.subdomain) }}
+    </div>
+    <div class="col-md-3 {% if enforce_val is not defined or (enforce_val != 'domain' and enforce_val != 'both') %}d-none{% endif %}" data-endpoint-target="domainWrapper">
+        {{ form_row(form.domain) }}
+    </div>
+</div>
 
 <hr />
 

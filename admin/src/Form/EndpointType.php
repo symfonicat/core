@@ -5,11 +5,14 @@ namespace Symfonicat\Form;
 use Symfonicat\Entity\Parcel;
 use Symfonicat\Entity\Endpoint;
 use Symfonicat\Entity\Module;
+use Symfonicat\Entity\Domain;
+use Symfonicat\Entity\Subdomain;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
@@ -30,6 +33,30 @@ final class EndpointType extends AbstractType
         }
 
         $builder
+            ->add('enforce', ChoiceType::class, [
+                'label' => 'enforce',
+                'choices' => [
+                    'domain' => Endpoint::ENFORCE_DOMAIN,
+                    'subdomain' => Endpoint::ENFORCE_SUBDOMAIN,
+                    'both' => Endpoint::ENFORCE_BOTH,
+                ],
+                'required' => false,
+                'placeholder' => 'select enforce',
+            ])
+            ->add('domain', EntityType::class, [
+                'class' => Domain::class,
+                'choice_label' => static fn (Domain $d): string => (string) $d->getId(),
+                'label' => 'domain',
+                'placeholder' => 'select domain',
+                'required' => false,
+            ])
+            ->add('subdomain', EntityType::class, [
+                'class' => Subdomain::class,
+                'choice_label' => static fn (Subdomain $s): string => (string) $s->getId(),
+                'label' => 'subdomain',
+                'placeholder' => 'select subdomain',
+                'required' => false,
+            ])
             ->add('parcel', EntityType::class, [
                 'class' => Parcel::class,
                 'choice_label' => self::parcelChoiceLabel(...),

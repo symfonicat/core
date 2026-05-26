@@ -299,7 +299,10 @@ final class RuntimeConfig
                 ->setId($id)
                 ->setParcel($parcels[(string) ($row['parcel_id'] ?? '')] ?? null)
                 ->setCatch((bool) ($row['catch'] ?? false))
-                ->setArguments(isset($row['arguments']) && is_array($row['arguments']) ? $row['arguments'] : []);
+                ->setArguments(isset($row['arguments']) && is_array($row['arguments']) ? $row['arguments'] : [])
+                ->setEnforce((string) ($row['enforce'] ?? $row['enforcement'] ?? ''))
+                ->setDomain($domains[(string) ($row['domain_id'] ?? '')] ?? null)
+                ->setSubdomain($subdomains[$this->normalizeSubdomainId($row['subdomain_id'] ?? '')] ?? null);
 
             $endpoints[$id] = $endpoint;
         }
@@ -315,6 +318,23 @@ final class RuntimeConfig
         foreach ($this->rows($rows, 'symfonicat_endpoint_module') as $row) {
             $endpoint = $endpoints[(string) ($row['endpoint_id'] ?? '')] ?? null;
             $module = $modules[(string) ($row['module_id'] ?? '')] ?? null;
+            if ($endpoint instanceof Endpoint && $module instanceof Module) {
+                $endpoint->addModule($module);
+            }
+        }
+
+        // Backwards-compatible: accept symfonicat_module_endpoint YAML key (module_id + endpoint_id)
+        foreach ($this->rows($rows, 'symfonicat_module_endpoint') as $row) {
+            $endpoint = $endpoints[(string) ($row['endpoint_id'] ?? '')] ?? null;
+            $module = $modules[(string) ($row['module_id'] ?? '')] ?? null;
+            // also support older keys named 'endpoint'/'module' if present
+            if ($endpoint === null) {
+                $endpoint = $endpoints[(string) ($row['endpoint'] ?? '')] ?? null;
+            }
+            if ($module === null) {
+                $module = $modules[(string) ($row['module'] ?? '')] ?? null;
+            }
+
             if ($endpoint instanceof Endpoint && $module instanceof Module) {
                 $endpoint->addModule($module);
             }

@@ -24,6 +24,11 @@ symfonicat:
                 id: example.com
                 catch: false
                 parcel_id: core/domainparcel
+        symfonicat_subdomain:
+            -
+                id: subdomain1
+                catch: false
+                parcel_id: core/subdomainparcel
         symfonicat_endpoint:
             -
                 id: test
@@ -32,11 +37,9 @@ symfonicat:
                     - symfonicat
                     - test
                 parcel_id: core/endpointparcel
-        symfonicat_subdomain:
-            -
-                id: core/subdomain1
-                catch: false
-                parcel_id: core/subdomainparcel
+                enforce: both
+                domain_id: example.com
+                subdomain_id: subdomain1
         symfonicat_application:
             -
                 id: example-test
@@ -90,7 +93,7 @@ symfonicat:
         symfonicat_domain_subdomain:
             -
                 domain_id: example.com
-                subdomain_id: core/subdomain1
+                subdomain_id: subdomain1
         symfonicat_endpoint_env:
             -
                 id: 1
@@ -117,7 +120,7 @@ symfonicat:
         symfonicat_module_subdomain:
             -
                 module_id: symfonicat/analytics/main
-                subdomain_id: core/subdomain1
+                subdomain_id: subdomain1
         symfonicat_parcel_env:
             -
                 id: 1
@@ -138,9 +141,9 @@ symfonicat:
             -
                 id: 2
                 value: green
-                subdomain_id: core/subdomain1
+                subdomain_id: subdomain1
                 env_id: primary
         symfonicat_subdomain_middleware:
             -
-                subdomain_id: core/subdomain1
+                subdomain_id: subdomain1
                 middleware_id: core/SubdomainMiddleware

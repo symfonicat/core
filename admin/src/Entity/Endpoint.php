@@ -6,6 +6,8 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfonicat\Repository\EndpointRepository;
+use Symfonicat\Entity\Domain;
+use Symfonicat\Entity\Subdomain;
 
 #[ORM\Entity(repositoryClass: EndpointRepository::class)]
 #[ORM\Table(name: 'symfonicat_endpoint')]
@@ -18,6 +20,21 @@ class Endpoint
     #[ORM\ManyToOne(targetEntity: Parcel::class)]
     #[ORM\JoinColumn(name: 'parcel_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
     private ?Parcel $parcel = null;
+
+    public const ENFORCE_DOMAIN = 'domain';
+    public const ENFORCE_SUBDOMAIN = 'subdomain';
+    public const ENFORCE_BOTH = 'both';
+
+    #[ORM\Column(length: 16, options: ['default' => null], nullable: true, name: 'enforce')]
+    private ?string $enforce = null;
+
+    #[ORM\ManyToOne(targetEntity: Domain::class)]
+    #[ORM\JoinColumn(name: 'domain_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
+    private ?Domain $domain = null;
+
+    #[ORM\ManyToOne(targetEntity: Subdomain::class)]
+    #[ORM\JoinColumn(name: 'subdomain_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
+    private ?Subdomain $subdomain = null;
 
     /**
      * @var Collection<int, Module>
@@ -244,6 +261,48 @@ class Endpoint
         }
 
         return '/'.implode('/', $this->arguments);
+    }
+
+    public function getEnforce(): ?string
+    {
+        return $this->enforce;
+    }
+
+    public function setEnforce(?string $enforce): static
+    {
+        if ($enforce === null) {
+            $this->enforce = null;
+            return $this;
+        }
+
+        $normalized = trim((string) $enforce);
+        $this->enforce = $normalized === '' ? null : strtolower($normalized);
+
+        return $this;
+    }
+
+    public function getDomain(): ?Domain
+    {
+        return $this->domain;
+    }
+
+    public function setDomain(?Domain $domain): static
+    {
+        $this->domain = $domain;
+
+        return $this;
+    }
+
+    public function getSubdomain(): ?Subdomain
+    {
+        return $this->subdomain;
+    }
+
+    public function setSubdomain(?Subdomain $subdomain): static
+    {
+        $this->subdomain = $subdomain;
+
+        return $this;
     }
 
     public function __toString(): string

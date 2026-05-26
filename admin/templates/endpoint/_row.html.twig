@@ -4,6 +4,19 @@
         &nbsp;
         &nbsp;
     </td>
+    <td>
+        {% if endpoint.enforce is null %}
+            <i class="fa fa-fw fa-times"></i>
+        {% elseif endpoint.enforce == 'domain' %}
+            <b>{{ endpoint.domain ? endpoint.domain.id : '' }}</b>
+        {% elseif endpoint.enforce == 'subdomain' %}
+            <b>{{ endpoint.subdomain ? endpoint.subdomain.id : '' }}</b>
+        {% elseif endpoint.enforce == 'both' %}
+            <b>{{ endpoint.subdomain ? endpoint.subdomain.id : '' }}.{{ endpoint.domain ? endpoint.domain.id : '' }}</b>
+        {% else %}
+            <i class="fa fa-fw fa-times"></i>
+        {% endif %}
+    </td>
     <td class="fw-semibold">
         {% if endpoint.arguments is not empty %}
             <code>/{{ endpoint.arguments|join('/') }}</code>
@@ -49,16 +62,7 @@
             {% endfor %}
         {% endif %}
     </td>
-    {% for env_parent in env_parents %}
-        <td>
-            {% set entries = env_parent_entries(endpoint.env, env_parent) %}
-            {% for entry in entries %}
-                <div><code>{{ entry }}</code></div>
-            {% else %}
-                <i class="fa fa-fw fa-times"></i>
-            {% endfor %}
-        </td>
-    {% endfor %}
+
     <td class="text-end btn-cell">
         <div class="btn-group btn-group-sm">
             <a href="{{ path('symfonicat_endpoint_edit', { id: endpoint.id }) }}" class="btn btn-sm btn-warning">

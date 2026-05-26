@@ -10,14 +10,12 @@
         <thead>
             <tr>
                 <th><i class="fa fa-hashtag"></i></th>
+                <th>enforce</th>
                 <th>arguments</th>
                 <th>catch</th>
                 <th>parcel</th>
                 <th>middlewares</th>
                 <th>modules</th>
-                {% for env_parent in env_parents %}
-                    <th>{{ env_parent.id }}</th>
-                {% endfor %}
                 <th class="text-end">&nbsp;</th>
             </tr>
         </thead>
@@ -26,7 +24,7 @@
             {{ include('@symfonicat/endpoint/_row.html.twig') }}
         {% else %}
             <tr>
-                <td colspan="{{ 7 + env_parents|length }}">no records found</td>
+                <td colspan="8">no records found</td>
             </tr>
         {% endfor %}
         </tbody>
