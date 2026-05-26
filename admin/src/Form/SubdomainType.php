@@ -14,13 +14,10 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 
 class SubdomainType extends AbstractType
 {
-    use VendorScopedIdFormTrait;
     use ParcelChoiceFormTrait;
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-
-        $this->addDisabledVendorField($builder);
 
         $builder->add('id', null, [
             'label' => 'subdomain',
@@ -84,7 +81,6 @@ class SubdomainType extends AbstractType
             ])
         ;
 
-        $this->addVendorPrefixSubmitListener($builder, $options);
     }
 
     public function configureOptions(OptionsResolver $resolver): void
@@ -92,12 +88,10 @@ class SubdomainType extends AbstractType
         $resolver->setDefaults([
             'data_class' => Subdomain::class,
             'id_editable' => true,
-            'default_vendor' => 'core',
             'is_admin' => false,
         ]);
 
         $resolver->setAllowedTypes('id_editable', 'bool');
-        $resolver->setAllowedTypes('default_vendor', 'string');
         $resolver->setAllowedTypes('is_admin', 'bool');
     }
 }

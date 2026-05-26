@@ -27,13 +27,13 @@ final class MiddlewareIndexTest extends SymfonicatKernelTestCase
         $normalized = preg_replace('/\s+/', '', $html);
         self::assertIsString($normalized);
 
-        self::assertStringContainsString('<th>id</th><th>class</th>', $normalized);
+        self::assertStringContainsString('<thclass="text-end"><iclass="fafa-hashtag"></i></th><thclass="text-center">&nbsp;</th><th>class</th>', $normalized);
         self::assertStringContainsString(
-            '<tdclass="fw-semibold"><code>core</code></td><td><code>DomainMiddleware</code></td>',
+            '<tdclass="fw-semiboldtext-end">core</td><tdclass="text-center"><iclass="fafa-angle-right"></i></td><td><code>DomainMiddleware</code></td>',
             $normalized,
         );
         self::assertStringContainsString(
-            '<tdclass="fw-semibold"><code>symfonicat/analytics</code></td><td><code>AnalyticsMiddleware</code></td>',
+            '<tdclass="fw-semiboldtext-end">symfonicat/analytics</td><tdclass="text-center"><iclass="fafa-angle-right"></i></td><td><code>AnalyticsMiddleware</code></td>',
             $normalized,
         );
         self::assertStringNotContainsString('Symfonicat\\Middleware\\DomainMiddleware', $html);

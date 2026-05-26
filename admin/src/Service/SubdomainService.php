@@ -40,7 +40,7 @@ class SubdomainService
                     return $found;
                 }
             } else {
-                $found = $this->subdomainRepository->findOneByFullOrCleanId($subdomainId);
+                $found = $this->subdomainRepository->findOneById($subdomainId);
                 if ($found) {
                     return $found;
                 }
@@ -53,31 +53,9 @@ class SubdomainService
                 return $found;
             }
         } else {
-            $found = $this->runtimeConfig->subdomainByFullOrCleanId($subdomainId);
+            $found = $this->runtimeConfig->subdomainById($subdomainId);
             if ($found) {
                 return $found;
-            }
-        }
-
-        // If the literal id didn't match, resolve short affix names like
-        // "subdomain1" to package-prefixed subdomain ids such as "core/subdomain1"
-        // when there is exactly one match among discovered package entries.
-        if (strpos($subdomainId, '/') === false) {
-            $packages = $this->packageDiscoveryService->discoverEntryDirectories('subdomain');
-            $matches = [];
-            foreach (array_keys($packages) as $pkgId) {
-                $parts = explode('/', $pkgId);
-                if (end($parts) === $subdomainId) {
-                    $matches[] = $pkgId;
-                }
-            }
-            if (count($matches) === 1) {
-                $resolved = $matches[0];
-                if ($domain) {
-                    return $this->runtimeConfig->subdomainByIdForDomain($resolved, $domain);
-                }
-
-                return $this->runtimeConfig->subdomainByFullOrCleanId($resolved);
             }
         }
 
@@ -92,8 +70,6 @@ class SubdomainService
      */
     public function sync(?callable $confirmSubdomainCreation = null): array
     {
-        $this->assertNoDuplicateSubdomains();
-
         $packageSubdomains = $this->discoverPackageSubdomains();
         $databaseSubdomains = $this->indexDatabaseSubdomains();
 
@@ -147,23 +123,5 @@ class SubdomainService
         }
 
         return $subdomains;
-    }
-
-    private function assertNoDuplicateSubdomains(): void
-    {
-        $duplicates = $this->subdomainRepository->findDuplicateCleanIdGroups();
-        if ($duplicates === []) {
-            return;
-        }
-
-        $details = array_map(
-            static fn (array $group): string => sprintf('%s: %s', $group['cleanId'], implode(', ', $group['ids'])),
-            $duplicates,
-        );
-
-        throw new \RuntimeException(sprintf(
-            'Duplicate subdomain ids detected: %s',
-            implode('; ', $details),
-        ));
     }
 }

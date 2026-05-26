@@ -1321,13 +1321,6 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         resolve_target_entities?: array<string, scalar|Param|null>,
  *     },
  * }
- * @psalm-type SymiddlewareConfig = array{
- *     global?: list<scalar|Param|null>,
- *     groups?: list<array{ // Default: []
- *         if?: scalar|Param|null,
- *         middlewares?: list<scalar|Param|null>,
- *     }>,
- * }
  * @psalm-type SymfonicatConfig = array{
  *     vendors?: list<scalar|Param|null>,
  *     admin?: list<mixed>,
@@ -1367,7 +1360,6 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *     security?: SecurityConfig,
  *     mercure?: MercureConfig,
  *     doctrine?: DoctrineConfig,
- *     symiddleware?: SymiddlewareConfig,
  *     symfonicat?: SymfonicatConfig,
  *     scheb_two_factor?: SchebTwoFactorConfig,
  *     "when@dev"?: array{
@@ -1383,7 +1375,6 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         security?: SecurityConfig,
  *         mercure?: MercureConfig,
  *         doctrine?: DoctrineConfig,
- *         symiddleware?: SymiddlewareConfig,
  *         symfonicat?: SymfonicatConfig,
  *         scheb_two_factor?: SchebTwoFactorConfig,
  *     },
@@ -1400,7 +1391,6 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         security?: SecurityConfig,
  *         mercure?: MercureConfig,
  *         doctrine?: DoctrineConfig,
- *         symiddleware?: SymiddlewareConfig,
  *         symfonicat?: SymfonicatConfig,
  *         scheb_two_factor?: SchebTwoFactorConfig,
  *     },
@@ -1417,7 +1407,6 @@ use Symfony\Component\Config\Loader\ParamConfigurator as Param;
  *         security?: SecurityConfig,
  *         mercure?: MercureConfig,
  *         doctrine?: DoctrineConfig,
- *         symiddleware?: SymiddlewareConfig,
  *         symfonicat?: SymfonicatConfig,
  *         scheb_two_factor?: SchebTwoFactorConfig,
  *     },

@@ -18,19 +18,6 @@ final class SubdomainController extends AbstractController
     #[Route('/admin/s', name: 'symfonicat_subdomain_index', methods: ['GET'])]
     public function index(SubdomainRepository $subdomainRepository, EnvParentRepository $envParentRepository): Response
     {
-        $duplicateGroups = $subdomainRepository->findDuplicateCleanIdGroups();
-        if ($duplicateGroups !== []) {
-            $messages = array_map(
-                static fn (array $group): string => sprintf('%s: %s', $group['cleanId'], implode(', ', $group['ids'])),
-                $duplicateGroups,
-            );
-
-            $this->addFlash(
-                'error',
-                sprintf('duplicate subdomain ids detected: %s', implode('; ', $messages)),
-            );
-        }
-
         return $this->render('@symfonicat/subdomain/index.html.twig', [
             'subdomains' => $subdomainRepository->findAll(),
             'env_parents' => $envParentRepository->findAllOrdered(),

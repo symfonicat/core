@@ -294,8 +294,16 @@ final class AdminYaml
         $normalized = [];
 
         foreach ($row as $column => $value) {
+            if ($table === 'symfonicat_subdomain' && $column === 'vendor') {
+                continue;
+            }
+
             if (!is_string($column) || !isset($columns[$column])) {
                 throw new \RuntimeException(sprintf('Unknown column "%s" for Symfonicat admin table "%s".', (string) $column, $table));
+            }
+
+            if (($column === 'subdomain_id' || ($table === 'symfonicat_subdomain' && $column === 'id')) && is_string($value)) {
+                $value = $this->normalizeSubdomainId($value);
             }
 
             if ($value !== null && (is_array($value) || is_object($value))) {
@@ -306,6 +314,13 @@ final class AdminYaml
         }
 
         return $normalized;
+    }
+
+    private function normalizeSubdomainId(string $id): string
+    {
+        $id = trim($id, " \t\n\r\0\x0B/");
+
+        return str_contains($id, '/') ? substr($id, strrpos($id, '/') + 1) : $id;
     }
 
     /**

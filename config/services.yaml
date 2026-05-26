@@ -5,6 +5,10 @@ services:
         autowire: true
         autoconfigure: true
 
+    _instanceof:
+        Psr\Http\Server\MiddlewareInterface:
+            tags: ['symfonicat.middleware']
+
     App\:
         resource: '../src/'
         exclude:
@@ -51,6 +55,19 @@ services:
             $driver: '@Intervention\Image\Drivers\Imagick\Driver'
 
     Intervention\Image\Interfaces\ImageManagerInterface: '@Intervention\Image\ImageManager'
+
+    Nyholm\Psr7\Factory\Psr17Factory: ~
+
+    Symfony\Bridge\PsrHttpMessage\HttpFoundationFactoryInterface:
+        class: Symfony\Bridge\PsrHttpMessage\Factory\HttpFoundationFactory
+
+    Symfony\Bridge\PsrHttpMessage\HttpMessageFactoryInterface:
+        class: Symfony\Bridge\PsrHttpMessage\Factory\PsrHttpFactory
+        arguments:
+            $serverRequestFactory: '@Nyholm\Psr7\Factory\Psr17Factory'
+            $streamFactory: '@Nyholm\Psr7\Factory\Psr17Factory'
+            $uploadedFileFactory: '@Nyholm\Psr7\Factory\Psr17Factory'
+            $responseFactory: '@Nyholm\Psr7\Factory\Psr17Factory'
 
     Symfonicat\Security\AdminUserProvider:
         arguments:

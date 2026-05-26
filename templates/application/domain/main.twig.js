@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, shell } = require('application');
+const { app, BrowserWindow, shell } = require('electron');
 
 const config = {
     name: {{ application_config.name|json_encode|raw }},

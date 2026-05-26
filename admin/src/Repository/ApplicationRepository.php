@@ -5,6 +5,7 @@ namespace Symfonicat\Repository;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfonicat\Entity\Domain;
+use Symfonicat\Entity\Endpoint;
 use Symfonicat\Entity\Application;
 use Symfonicat\Entity\Subdomain;
 
@@ -56,6 +57,14 @@ final class ApplicationRepository extends ServiceEntityRepository
             'type' => Application::TYPE_SUBDOMAIN,
             'subdomain' => $subdomain,
             'domain' => $domain,
+        ]);
+    }
+
+    public function findOneForEndpoint(Endpoint $endpoint): ?Application
+    {
+        return $this->findOneBy([
+            'type' => Application::TYPE_ENDPOINT,
+            'endpoint' => $endpoint,
         ]);
     }
 }

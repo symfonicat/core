@@ -65,7 +65,7 @@ final class EnvService
 
         if ($entity instanceof Subdomain) {
             $domain = $this->resolveDomainForSubdomain($entity);
-            $application = $this->applicationService->loadForContext(null, $domain, $entity);
+            $application = $this->applicationService->loadForContext($domain, $entity);
 
             return $this->mergeValues(
                 $this->flattenParcelValues($domain?->getParcel()),

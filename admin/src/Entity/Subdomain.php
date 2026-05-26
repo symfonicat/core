@@ -11,8 +11,6 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Table(name: 'symfonicat_subdomain')]
 class Subdomain
 {
-    use VendorScopedIdTrait;
-
     #[ORM\Id]
     #[ORM\Column(length: 255)]
     private ?string $id = null;
@@ -82,6 +80,28 @@ class Subdomain
         $this->env = new ArrayCollection();
         $this->middlewares = new ArrayCollection();
     }
+
+    public function getId(bool $includeVendor = true): ?string
+    {
+        return $this->id;
+    }
+
+    public function setId(string $id): static
+    {
+        $id = trim($id, " \t\n\r\0\x0B/");
+        if (str_contains($id, '/')) {
+            $id = substr($id, strrpos($id, '/') + 1);
+        }
+
+        if ($id === '') {
+            throw new \InvalidArgumentException(sprintf('Subdomain id must be an unprefixed subdomain label, got "%s".', $id));
+        }
+
+        $this->id = $id;
+
+        return $this;
+    }
+
     /**
      * @return Collection<int, Middleware>
      */

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "1260235504a803e057195eb572ed30f3",
+    "content-hash": "69601c42dd3e962bd9733dbbd1b194ef",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -1267,70 +1267,6 @@
                 }
             ],
             "time": "2025-04-26T11:19:48+00:00"
-        },
-        {
-            "name": "kafkiansky/symfony-middleware",
-            "version": "1.0.0",
-            "dist": {
-                "type": "path",
-                "url": "packages/kafkiansky-symfony-middleware",
-                "reference": "77fa0b1c85b70d9dd1210326a354b65de3fe3e12"
-            },
-            "require": {
-                "nyholm/psr7": "^1.4",
-                "php": "^8.2",
-                "psr/http-server-handler": "^1.0",
-                "psr/http-server-middleware": "^1.0",
-                "symfony/cache": "^7.0 || ^8.0",
-                "symfony/config": "^7.0 || ^8.0",
-                "symfony/dependency-injection": "^7.0 || ^8.0",
-                "symfony/event-dispatcher": "^7.0 || ^8.0",
-                "symfony/http-foundation": "^7.0 || ^8.0",
-                "symfony/http-kernel": "^7.0 || ^8.0",
-                "symfony/psr-http-message-bridge": "^7.0 || ^8.0"
-            },
-            "require-dev": {
-                "phpunit/phpunit": "^10.0",
-                "vimeo/psalm": "^5.0"
-            },
-            "type": "library",
-            "autoload": {
-                "psr-4": {
-                    "Kafkiansky\\SymfonyMiddleware\\": "src/"
-                }
-            },
-            "autoload-dev": {
-                "psr-4": {
-                    "Kafkiansky\\SymfonyMiddleware\\Tests\\": "tests/"
-                }
-            },
-            "scripts": {
-                "lint": [
-                    "./vendor/bin/psalm --no-cache"
-                ],
-                "test": [
-                    "./vendor/bin/phpunit --do-not-cache-result --no-coverage"
-                ]
-            },
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "v.zanfir",
-                    "email": "vadimzanfir@gmail.com"
-                }
-            ],
-            "description": "PSR-15 Middleware for symfony.",
-            "keywords": [
-                "middleware",
-                "psr-15",
-                "symfony"
-            ],
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
         },
         {
             "name": "lcobucci/jwt",

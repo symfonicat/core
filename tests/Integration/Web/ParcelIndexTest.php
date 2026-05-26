@@ -26,13 +26,13 @@ final class ParcelIndexTest extends SymfonicatKernelTestCase
         $normalized = preg_replace('/\s+/', '', $html);
         self::assertIsString($normalized);
 
-        self::assertStringContainsString('<th>bucket</th><th>parcel</th><th>path</th>', $normalized);
+        self::assertStringContainsString('<thclass="text-end">bucket</th><thclass="text-center">&nbsp;</th><th>parcel</th><th>path</th>', $normalized);
         self::assertStringContainsString(
-            '<tdclass="fw-semibold">core</td><tdclass="fw-semibold">subdomainparcel</td><td><code>assets/parcels/subdomain</code></td>',
+            '<tdclass="fw-semiboldtext-end">core</td><tdclass="fw-semiboldtext-center"><iclass="fafa-angle-right"></i></td><td>subdomainparcel</td><td><code>assets/parcels/subdomain</code></td>',
             $normalized,
         );
         self::assertStringContainsString(
-            '<tdclass="fw-semibold">symfonicat/analytics</td><tdclass="fw-semibold">parcel2</td><td><code>assets/parcels/analytics</code></td>',
+            '<tdclass="fw-semiboldtext-end">symfonicat/analytics</td><tdclass="fw-semiboldtext-center"><iclass="fafa-angle-right"></i></td><td>parcel2</td><td><code>assets/parcels/analytics</code></td>',
             $normalized,
         );
         self::assertStringNotContainsString('core/subdomainparcel</td><tdclass="fw-semibold">core/subdomainparcel', $normalized);

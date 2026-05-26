@@ -41,72 +41,27 @@ class SubdomainRepository extends ServiceEntityRepository
         $qb = $this->createQueryBuilder('subdomain')
             ->innerJoin('subdomain.domains', 'd')
             ->andWhere('d.id = :domainId')
+            ->andWhere('subdomain.id = :id')
             ->setParameter('domainId', $domainId)
-            ->orderBy('CASE WHEN subdomain.id = :id THEN 0 ELSE 1 END', 'ASC')
-            ->addOrderBy('subdomain.id', 'ASC');
-
-        // Match either exact id or package-prefixed id that ends with "/{id}".
-        $qb->andWhere($qb->expr()->orX('subdomain.id = :id', 'subdomain.id LIKE :idSuffix'))
             ->setParameter('id', $id)
-            ->setParameter('idSuffix', '%/'.$id);
+            ->setMaxResults(1);
 
-        $subdomains = $qb->getQuery()->getResult();
-
-        return $this->singleOrAmbiguousSubdomain($subdomains, $id);
+        return $qb->getQuery()->getOneOrNullResult();
     }
 
-    public function findOneByFullOrCleanId(string $id): ?Subdomain
+    public function findOneById(string $id): ?Subdomain
     {
         $id = trim($id);
         if ($id === '') {
             return null;
         }
 
-        $subdomains = $this->createQueryBuilder('subdomain')
-            ->andWhere('subdomain.id = :id OR subdomain.id LIKE :idSuffix')
+        return $this->createQueryBuilder('subdomain')
+            ->andWhere('subdomain.id = :id')
             ->setParameter('id', $id)
-            ->setParameter('idSuffix', '%/'.$id)
-            ->orderBy('CASE WHEN subdomain.id = :id THEN 0 ELSE 1 END', 'ASC')
-            ->addOrderBy('subdomain.id', 'ASC')
+            ->setMaxResults(1)
             ->getQuery()
-            ->getResult();
-
-        return $this->singleOrAmbiguousSubdomain($subdomains, $id);
-    }
-
-    /**
-     * @return list<array{cleanId: string, ids: list<string>}>
-     */
-    public function findDuplicateCleanIdGroups(): array
-    {
-        $groups = [];
-
-        foreach ($this->findAllOrderedById() as $subdomain) {
-            $cleanId = trim((string) $subdomain->getId(false));
-            $fullId = trim((string) $subdomain->getId());
-
-            if ($cleanId === '' || $fullId === '') {
-                continue;
-            }
-
-            $groups[$cleanId][] = $fullId;
-        }
-
-        $duplicates = [];
-
-        foreach ($groups as $cleanId => $ids) {
-            $ids = array_values(array_unique($ids));
-            if (count($ids) < 2) {
-                continue;
-            }
-
-            $duplicates[] = [
-                'cleanId' => $cleanId,
-                'ids' => $ids,
-            ];
-        }
-
-        return $duplicates;
+            ->getOneOrNullResult();
     }
 
     /**
@@ -118,32 +73,5 @@ class SubdomainRepository extends ServiceEntityRepository
             ->orderBy('subdomain.id', 'ASC')
             ->getQuery()
             ->getResult();
-    }
-
-    /**
-     * @param list<Subdomain> $subdomains
-     */
-    private function singleOrAmbiguousSubdomain(array $subdomains, string $lookupId): ?Subdomain
-    {
-        $subdomains = array_values(array_filter($subdomains, static fn ($subdomain): bool => $subdomain instanceof Subdomain));
-
-        if ($subdomains === []) {
-            return null;
-        }
-
-        if (count($subdomains) > 1 && !str_contains($lookupId, '/')) {
-            $matches = array_map(
-                static fn (Subdomain $subdomain): string => (string) $subdomain->getId(),
-                $subdomains,
-            );
-
-            throw new \RuntimeException(sprintf(
-                'Subdomain id "%s" is ambiguous. Matching ids: %s',
-                $lookupId,
-                implode(', ', $matches),
-            ));
-        }
-
-        return $subdomains[0];
     }
 }

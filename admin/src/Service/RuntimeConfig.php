@@ -18,7 +18,6 @@ use Symfonicat\Entity\EnvParent;
 use Symfonicat\Entity\Module;
 use Symfonicat\Entity\Subdomain;
 use Symfonicat\Entity\SubdomainEnv;
-use Symfonicat\Entity\RoutingRule;
 
 final class RuntimeConfig
 {
@@ -72,16 +71,16 @@ final class RuntimeConfig
 
     public function subdomainByIdForDomain(string $id, Domain $domain): ?Subdomain
     {
-        $subdomain = $this->subdomainByFullOrCleanId($id);
+        $subdomain = $this->subdomainById($id);
 
         return $subdomain instanceof Subdomain && $subdomain->hasDomain($domain) ? $subdomain : null;
     }
 
-    public function subdomainByFullOrCleanId(string $id): ?Subdomain
+    public function subdomainById(string $id): ?Subdomain
     {
-        $subdomain = $this->singleByFullOrCleanId($this->catalog()['subdomains'], $id, 'Subdomain');
+        $id = $this->normalizeSubdomainId($id);
 
-        return $subdomain instanceof Subdomain ? $subdomain : null;
+        return $id === '' ? null : ($this->catalog()['subdomains'][$id] ?? null);
     }
 
     public function moduleByFullOrCleanId(string $id): ?Module
@@ -92,53 +91,18 @@ final class RuntimeConfig
     }
 
     /**
-     * @return list<RoutingRule>
+     * @return list<Endpoint>
      */
-    public function domainRules(Domain $domain): array
+    public function endpoints(): array
     {
-        return array_values(array_filter(
-            $this->catalog()['rules'],
-            static fn (RoutingRule $rule): bool => $rule->isDomainType() && $rule->getDomain()?->getId() === $domain->getId(),
-        ));
+        return array_values($this->catalog()['endpoints']);
     }
 
-    /**
-     * @return list<RoutingRule>
-     */
-    public function subdomainRules(Subdomain $subdomain): array
+    public function endpointById(string $id): ?Endpoint
     {
-        return array_values(array_filter(
-            $this->catalog()['rules'],
-            static fn (RoutingRule $rule): bool => $rule->isSubdomainType() && $rule->getSubdomain()?->getId() === $subdomain->getId(),
-        ));
-    }
+        $id = trim($id);
 
-    public function redirectRuleForDomain(Domain $domain): ?RoutingRule
-    {
-        return $this->firstRule(static fn (RoutingRule $rule): bool => $rule->isRedirectRule()
-            && $rule->isDomainRedirectType()
-            && $rule->getDomain()?->getId() === $domain->getId());
-    }
-
-    public function redirectRuleForSubdomain(Subdomain $subdomain): ?RoutingRule
-    {
-        return $this->firstRule(static fn (RoutingRule $rule): bool => $rule->isRedirectRule()
-            && $rule->isSubdomainRedirectType()
-            && $rule->getSubdomain()?->getId() === $subdomain->getId());
-    }
-
-    public function routeRuleForDomain(Domain $domain): ?RoutingRule
-    {
-        return $this->firstRule(static fn (RoutingRule $rule): bool => $rule->isRouteRule()
-            && $rule->isDomainRouteType()
-            && $rule->getDomain()?->getId() === $domain->getId());
-    }
-
-    public function routeRuleForSubdomain(Subdomain $subdomain): ?RoutingRule
-    {
-        return $this->firstRule(static fn (RoutingRule $rule): bool => $rule->isRouteRule()
-            && $rule->isSubdomainRouteType()
-            && $rule->getSubdomain()?->getId() === $subdomain->getId());
+        return $id === '' ? null : ($this->catalog()['endpoints'][$id] ?? null);
     }
 
     public function applicationById(string $id): ?Application
@@ -175,6 +139,12 @@ final class RuntimeConfig
             && (!$domain instanceof Domain || $application->getDomain()?->getId() === $domain->getId()));
     }
 
+    public function applicationForEndpoint(Endpoint $endpoint): ?Application
+    {
+        return $this->firstApplication(static fn (Application $application): bool => $application->isEndpointType()
+            && $application->getEndpoint()?->getId() === $endpoint->getId());
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -208,7 +178,7 @@ final class RuntimeConfig
 
         $subdomains = [];
         foreach ($this->rows($rows, 'symfonicat_subdomain') as $row) {
-            $id = trim((string) ($row['id'] ?? ''));
+            $id = $this->normalizeSubdomainId($row['id'] ?? '');
             if ($id !== '') {
                 $subdomains[$id] = (new Subdomain())
                     ->setId($id)
@@ -228,7 +198,7 @@ final class RuntimeConfig
 
         foreach ($this->rows($rows, 'symfonicat_domain_subdomain') as $row) {
             $domain = $domains[(string) ($row['domain_id'] ?? '')] ?? null;
-            $subdomain = $subdomains[(string) ($row['subdomain_id'] ?? '')] ?? null;
+            $subdomain = $subdomains[$this->normalizeSubdomainId($row['subdomain_id'] ?? '')] ?? null;
             if ($domain instanceof Domain && $subdomain instanceof Subdomain) {
                 $domain->addSubdomain($subdomain);
             }
@@ -244,7 +214,7 @@ final class RuntimeConfig
 
         foreach ($this->rows($rows, 'symfonicat_module_subdomain') as $row) {
             $module = $modules[(string) ($row['module_id'] ?? '')] ?? null;
-            $subdomain = $subdomains[(string) ($row['subdomain_id'] ?? '')] ?? null;
+            $subdomain = $subdomains[$this->normalizeSubdomainId($row['subdomain_id'] ?? '')] ?? null;
             if ($module instanceof Module && $subdomain instanceof Subdomain) {
                 $module->addSubdomain($subdomain);
             }
@@ -276,7 +246,7 @@ final class RuntimeConfig
         }
 
         foreach ($this->rows($rows, 'symfonicat_subdomain_env') as $row) {
-            $subdomain = $subdomains[(string) ($row['subdomain_id'] ?? '')] ?? null;
+            $subdomain = $subdomains[$this->normalizeSubdomainId($row['subdomain_id'] ?? '')] ?? null;
             $env = $envs[(string) ($row['env_id'] ?? '')] ?? null;
             if ($subdomain instanceof Subdomain && $env instanceof Env) {
                 $subdomain->addEnv((new SubdomainEnv())->setEnv($env)->setValue((string) ($row['value'] ?? '')));
@@ -288,6 +258,33 @@ final class RuntimeConfig
             $env = $envs[(string) ($row['env_id'] ?? '')] ?? null;
             if ($parcel instanceof Parcel && $env instanceof Env) {
                 $parcel->addEnv((new ParcelEnv())->setEnv($env)->setValue((string) ($row['value'] ?? '')));
+            }
+        }
+
+        $middlewares = [];
+        foreach ($this->rows($rows, 'symfonicat_middleware') as $row) {
+            $id = trim((string) ($row['id'] ?? ''));
+            $class = trim((string) ($row['class'] ?? ''));
+            if ($id !== '' && $class !== '') {
+                $middlewares[$id] = (new Middleware())
+                    ->setId($id)
+                    ->setClass($class);
+            }
+        }
+
+        foreach ($this->rows($rows, 'symfonicat_domain_middleware') as $row) {
+            $domain = $domains[(string) ($row['domain_id'] ?? '')] ?? null;
+            $middleware = $middlewares[trim((string) ($row['middleware_id'] ?? ''))] ?? null;
+            if ($domain instanceof Domain && $middleware instanceof Middleware) {
+                $domain->addMiddleware($middleware);
+            }
+        }
+
+        foreach ($this->rows($rows, 'symfonicat_subdomain_middleware') as $row) {
+            $subdomain = $subdomains[$this->normalizeSubdomainId($row['subdomain_id'] ?? '')] ?? null;
+            $middleware = $middlewares[trim((string) ($row['middleware_id'] ?? ''))] ?? null;
+            if ($subdomain instanceof Subdomain && $middleware instanceof Middleware) {
+                $subdomain->addMiddleware($middleware);
             }
         }
 
@@ -325,7 +322,7 @@ final class RuntimeConfig
 
         foreach ($this->rows($rows, 'symfonicat_endpoint_middleware') as $row) {
             $endpoint = $endpoints[(string) ($row['endpoint_id'] ?? '')] ?? null;
-            $middleware = $middlewares[(int) ($row['middleware_id'] ?? 0)] ?? null;
+            $middleware = $middlewares[trim((string) ($row['middleware_id'] ?? ''))] ?? null;
             if ($endpoint instanceof Endpoint && $middleware instanceof Middleware) {
                 $endpoint->addMiddleware($middleware);
             }
@@ -343,37 +340,10 @@ final class RuntimeConfig
                 ->setName((string) ($row['name'] ?? $id))
                 ->setType((string) ($row['type'] ?? Application::TYPE_DOMAIN))
                 ->setDomain($domains[(string) ($row['domain_id'] ?? '')] ?? null)
-                ->setSubdomain($subdomains[(string) ($row['subdomain_id'] ?? '')] ?? null)
+                ->setSubdomain($subdomains[$this->normalizeSubdomainId($row['subdomain_id'] ?? '')] ?? null)
                 ->setEndpoint($endpoints[(string) ($row['endpoint_id'] ?? '')] ?? null);
 
             $applications[$id] = $application;
-        }
-
-        $middlewares = [];
-        foreach ($this->rows($rows, 'symfonicat_middleware') as $row) {
-            $id = trim((string) ($row['id'] ?? ''));
-            $class = trim((string) ($row['class'] ?? ''));
-            if ($id !== '' && $class !== '') {
-                $middlewares[$id] = (new Middleware())
-                    ->setId($id)
-                    ->setClass($class);
-            }
-        }
-
-        foreach ($this->rows($rows, 'symfonicat_domain_middleware') as $row) {
-            $domain = $domains[(string) ($row['domain_id'] ?? '')] ?? null;
-            $middleware = $middlewares[trim((string) ($row['middleware_id'] ?? ''))] ?? null;
-            if ($domain instanceof Domain && $middleware instanceof Middleware) {
-                $domain->addMiddleware($middleware);
-            }
-        }
-
-        foreach ($this->rows($rows, 'symfonicat_subdomain_middleware') as $row) {
-            $subdomain = $subdomains[(string) ($row['subdomain_id'] ?? '')] ?? null;
-            $middleware = $middlewares[trim((string) ($row['middleware_id'] ?? ''))] ?? null;
-            if ($subdomain instanceof Subdomain && $middleware instanceof Middleware) {
-                $subdomain->addMiddleware($middleware);
-            }
         }
 
         foreach ($this->rows($rows, 'symfonicat_application_env') as $row) {
@@ -459,15 +429,14 @@ final class RuntimeConfig
         return reset($matches) ?: null;
     }
 
-    private function firstRule(callable $predicate): ?RoutingRule
+    private function normalizeSubdomainId(mixed $id): string
     {
-        foreach ($this->catalog()['rules'] as $rule) {
-            if ($predicate($rule)) {
-                return $rule;
-            }
+        $id = trim((string) $id, " \t\n\r\0\x0B/");
+        if ($id === '') {
+            return '';
         }
 
-        return null;
+        return str_contains($id, '/') ? substr($id, strrpos($id, '/') + 1) : $id;
     }
 
     private function firstApplication(callable $predicate): ?Application

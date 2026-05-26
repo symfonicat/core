@@ -29,7 +29,7 @@ final class ScopedEnvFormTypeTest extends SymfonicatKernelTestCase
         $subdomain = $this->createSubdomain('subdomain1');
         $this->setSubdomainEnv($subdomain, $env, 'green');
 
-        $subdomain = $this->entityManager()->getRepository(Subdomain::class)->find('core/subdomain1');
+        $subdomain = $this->entityManager()->getRepository(Subdomain::class)->find('subdomain1');
         self::assertInstanceOf(Subdomain::class, $subdomain);
 
         $view = $this->formFactory()

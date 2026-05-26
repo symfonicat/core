@@ -50,8 +50,7 @@ YAML);
             'id' => 'example.com',
         ]);
         $connection->insert('symfonicat_subdomain', [
-            'id' => 'core/subdomain1',
-            'vendor' => 'core',
+            'id' => 'subdomain1',
             'parcel_id' => 'core/subdomainparcel',
         ]);
         $connection->insert('symfonicat_middleware', [
@@ -60,14 +59,14 @@ YAML);
         ]);
         $connection->insert('symfonicat_domain_subdomain', [
             'domain_id' => 'example.com',
-            'subdomain_id' => 'core/subdomain1',
+            'subdomain_id' => 'subdomain1',
         ]);
         $connection->insert('symfonicat_domain_middleware', [
             'domain_id' => 'example.com',
             'middleware_id' => 'core/DomainAndSubdomainMiddleware',
         ]);
         $connection->insert('symfonicat_subdomain_middleware', [
-            'subdomain_id' => 'core/subdomain1',
+            'subdomain_id' => 'subdomain1',
             'middleware_id' => 'core/DomainAndSubdomainMiddleware',
         ]);
 
@@ -104,9 +103,9 @@ YAML);
         self::assertSame(1, $loadCounts['symfonicat_domain_subdomain']);
         self::assertSame(1, $loadCounts['symfonicat_domain_middleware']);
         self::assertSame(1, $loadCounts['symfonicat_subdomain_middleware']);
-        self::assertSame('core/subdomainparcel', (string) $connection->fetchOne('SELECT parcel_id FROM symfonicat_subdomain WHERE id = \'core/subdomain1\''));
+        self::assertSame('core/subdomainparcel', (string) $connection->fetchOne('SELECT parcel_id FROM symfonicat_subdomain WHERE id = \'subdomain1\''));
         self::assertSame('example.com', (string) $connection->fetchOne('SELECT id FROM symfonicat_domain WHERE id = \'example.com\''));
-        self::assertSame('core/subdomain1', (string) $connection->fetchOne('SELECT id FROM symfonicat_subdomain WHERE id = \'core/subdomain1\''));
+        self::assertSame('subdomain1', (string) $connection->fetchOne('SELECT id FROM symfonicat_subdomain WHERE id = \'subdomain1\''));
         self::assertFalse($connection->fetchOne('SELECT email FROM symfonicat_admin WHERE id = 7'));
         self::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM symfonicat_parcel'));
         self::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM symfonicat_domain'));

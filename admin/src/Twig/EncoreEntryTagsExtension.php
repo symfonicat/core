@@ -4,6 +4,7 @@ namespace Symfonicat\Twig;
 
 use Symfonicat\Entity\Parcel;
 use Symfonicat\Entity\Domain;
+use Symfonicat\Entity\Endpoint;
 use Symfonicat\Entity\Module;
 use Symfonicat\Entity\Subdomain;
 use Symfony\WebpackEncoreBundle\Exception\EntrypointNotFoundException;
@@ -152,23 +153,6 @@ final class EncoreEntryTagsExtension extends AbstractExtension
             return $entryName;
         }
 
-        if (strpos($id, '/') !== false) {
-            return $entryName;
-        }
-
-        $packages = $this->packageDiscoveryService->discoverEntryDirectories('subdomain');
-        $matches = [];
-        foreach (array_keys($packages) as $pkgId) {
-            $parts = explode('/', $pkgId);
-            if (end($parts) === $id) {
-                $matches[] = $pkgId;
-            }
-        }
-
-        if (count($matches) === 1) {
-            return 'subdomain/'.$matches[0];
-        }
-
         return $entryName;
     }
 
@@ -182,23 +166,6 @@ final class EncoreEntryTagsExtension extends AbstractExtension
         $entryName = 'endpoint/'.$id;
         if ($this->entryFilesTwigExtension->entryExists($entryName)) {
             return $entryName;
-        }
-
-        if (strpos($id, '/') !== false) {
-            return $entryName;
-        }
-
-        $packages = $this->packageDiscoveryService->discoverEntryDirectories('endpoint');
-        $matches = [];
-        foreach (array_keys($packages) as $pkgId) {
-            $parts = explode('/', $pkgId);
-            if (end($parts) === $id) {
-                $matches[] = $pkgId;
-            }
-        }
-
-        if (count($matches) === 1) {
-            return 'endpoint/'.$matches[0];
         }
 
         return $entryName;

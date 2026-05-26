@@ -12,7 +12,7 @@ final class MiddlewareClassProvider
      * @param iterable<MiddlewareInterface> $middlewares
      */
     public function __construct(
-        #[AutowireIterator('kafkiansky.symfony.middleware')]
+        #[AutowireIterator('symfonicat.middleware')]
         private readonly iterable $middlewares,
         private readonly PackageDiscoveryService $packageDiscoveryService,
     ) {

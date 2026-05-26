@@ -119,17 +119,6 @@ final class SchemaUpdateCommandTest extends SymfonicatKernelTestCase
         self::assertStringNotContainsString('Duplicate application ids detected', $tester->getDisplay());
     }
 
-    public function testFailsWhenDuplicateSubdomainIdsExist(): void
-    {
-        $this->createSubdomain('core/subdomain1');
-        $this->createSubdomain('superman/subdomain1');
-
-        $tester = $this->runCommand(interactive: false);
-
-        self::assertSame(1, $tester->getStatusCode());
-        self::assertStringContainsString('Duplicate subdomain ids detected', $tester->getDisplay());
-    }
-
     private function runCommand(bool $interactive = true): CommandTester
     {
         $application = new Application(self::$kernel);

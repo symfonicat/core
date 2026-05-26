@@ -4,10 +4,12 @@ namespace Symfonicat\Controller;
 
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
+use Symfonicat\Entity\Endpoint;
 use Symfonicat\Service\DomainService;
 use Symfonicat\Service\ModuleService;
 use Symfonicat\Service\PathService;
 use Symfonicat\Service\SubdomainService;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 abstract class AbstractModuleController extends AbstractController
 {
@@ -20,12 +22,20 @@ abstract class AbstractModuleController extends AbstractController
         public readonly ModuleService $moduleService,
         public readonly SubdomainService $subdomainService,
         public readonly PathService $pathService,
+        public readonly ?RequestStack $requestStack = null,
 
     ) {
 
         $module = $this->moduleService->load();
 
         if (!$module) {
+            return;
+        }
+
+        $endpoint = $this->requestStack?->getCurrentRequest()?->attributes->get('endpoint');
+        if ($endpoint instanceof Endpoint && $endpoint->hasModule($module)) {
+            $this->shouldRun = TRUE;
+
             return;
         }
 

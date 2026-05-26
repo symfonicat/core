@@ -41,9 +41,11 @@
         "doctrine/orm": "^3.6.5",
         "intervention/image": "^4.1",
         "jeremykendall/php-domain-parser": "^6.4",
+        "nyholm/psr7": "^1.8",
+        "psr/http-server-handler": "^1.0",
+        "psr/http-server-middleware": "^1.0",
         "scheb/2fa-bundle": "^8.5",
         "scheb/2fa-totp": "^8.5",
-        "kafkiansky/symfony-middleware": "^1.0",
         "symfonicat/analytics": "^3.0.1",
         "symfony/asset": "8.0.*",
         "symfony/console": "8.0.*",
@@ -57,10 +59,10 @@
         "symfony/mercure-bundle": "^0.4.2",
         "symfony/messenger": "8.0.*",
         "symfony/polyfill-intl-idn": "^1.37",
-        "symfony/psr-http-message-bridge": "8.0.*",
         "symfony/process": "8.0.*",
         "symfony/property-access": "8.0.*",
         "symfony/property-info": "8.0.*",
+        "symfony/psr-http-message-bridge": "8.0.*",
         "symfony/rate-limiter": "8.0.*",
         "symfony/redis-messenger": "8.0.*",
         "symfony/runtime": "8.0.*",
@@ -86,15 +88,6 @@
             "App\\Tests\\": "tests/"
         }
     },
-    "repositories": [
-        {
-            "type": "path",
-            "url": "packages/kafkiansky-symfony-middleware",
-            "options": {
-                "symlink": true
-            }
-        }
-    ],
     "config": {
         "allow-plugins": {
             "php-http/discovery": true,

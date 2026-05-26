@@ -12,7 +12,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 #[AsCommand(
     name: 'symfonicat:data:webpack',
-    description: 'Output parcel, domain, subdomain, and module package entry data for webpack.',
+    description: 'Output parcel, domain, subdomain, endpoint, and module package entry data for webpack.',
 )]
 final class WebpackModulesDataCommand extends Command
 {
@@ -36,6 +36,10 @@ final class WebpackModulesDataCommand extends Command
             'modules' => $this->entriesFromRepositoryOrPackages(
                 fn (): array => $this->runtimeConfig->modules(),
                 'module',
+            ),
+            'endpoints' => $this->entriesFromRepositoryOrPackages(
+                fn (): array => $this->runtimeConfig->endpoints(),
+                'endpoint',
             ),
             'subdomains' => $this->entriesFromRepositoryOrPackages(
                 fn (): array => $this->runtimeConfig->subdomains(),

@@ -7,6 +7,7 @@ final class PackageDiscoveryService
     private const SUPPORTED_ENTRY_TYPES = [
         'parcel',
         'domain',
+        'endpoint',
         'module',
         'subdomain',
     ];
@@ -112,7 +113,7 @@ final class PackageDiscoveryService
                     continue;
                 }
 
-                if ($type === 'domain') {
+                if ($type === 'domain' || $type === 'endpoint' || $type === 'subdomain') {
                     $id = $name;
                 } else {
                     $idPrefix = $package['vendor'] === 'core' ? 'core' : $package['vendor'].'/'.$package['package'];

@@ -3,6 +3,7 @@
 namespace Symfonicat\Service;
 
 use Symfonicat\Entity\Domain;
+use Symfonicat\Entity\Endpoint;
 use Symfonicat\Entity\Application;
 use Symfonicat\Entity\Subdomain;
 use Symfonicat\Repository\ApplicationRepository;
@@ -23,24 +24,53 @@ class ApplicationService
     public function load(): ?Application
     {
         $request = $this->requestStack->getCurrentRequest();
+        $application = $request?->attributes->get('application');
+        if ($application instanceof Application) {
+            return $application;
+        }
+
         $applicationId = $this->applicationIdFromRequest($request);
         if ($applicationId !== null) {
-            return $this->runtimeConfig->applicationById($applicationId);
+            return $this->find($applicationId);
         }
 
         $subdomain = $request?->attributes->get('subdomain');
         $domain = $request?->attributes->get('domain');
+        $endpoint = $request?->attributes->get('endpoint');
 
         return $this->loadForContext(
             $domain instanceof Domain ? $domain : null,
             $subdomain instanceof Subdomain ? $subdomain : null,
+            $endpoint instanceof Endpoint ? $endpoint : null,
         );
     }
 
-    public function loadForContext(?Domain $domain, ?Subdomain $subdomain): ?Application
+    public function find(string $id): ?Application
+    {
+        $id = trim($id);
+        if ($id === '') {
+            return null;
+        }
+
+        if ($this->usesDatabaseRuntime()) {
+            return $this->applicationRepository->find($id);
+        }
+
+        return $this->runtimeConfig->applicationById($id);
+    }
+
+    public function loadForContext(?Domain $domain = null, ?Subdomain $subdomain = null, ?Endpoint $endpoint = null): ?Application
     {
         if (!$this->isApplicationRequest()) {
             return null;
+        }
+
+        if ($endpoint instanceof Endpoint) {
+            if ($this->usesDatabaseRuntime()) {
+                return $this->applicationRepository->findOneForEndpoint($endpoint);
+            }
+
+            return $this->runtimeConfig->applicationForEndpoint($endpoint);
         }
 
         if (!$subdomain instanceof Subdomain) {

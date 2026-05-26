@@ -36,7 +36,6 @@ symfonicat:
             -
                 id: core/subdomain1
                 catch: false
-                vendor: core
                 parcel_id: core/subdomainparcel
         symfonicat_application:
             -
