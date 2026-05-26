@@ -21,13 +21,13 @@ class Module
     private ?string $package = null;
 
     /**
-     * @var Collection<int, Project>
+     * @var Collection<int, Subdomain>
      */
-    #[ORM\ManyToMany(targetEntity: Project::class, inversedBy: 'modules')]
-    #[ORM\JoinTable(name: 'symfonicat_module_project')]
+    #[ORM\ManyToMany(targetEntity: Subdomain::class, inversedBy: 'modules')]
+    #[ORM\JoinTable(name: 'symfonicat_module_subdomain')]
     #[ORM\JoinColumn(name: 'module_id', referencedColumnName: 'id')]
-    #[ORM\InverseJoinColumn(name: 'project_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
-    private Collection $projects;
+    #[ORM\InverseJoinColumn(name: 'subdomain_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
+    private Collection $subdomains;
 
     /**
      * @var Collection<int, Domain>
@@ -39,19 +39,19 @@ class Module
     private Collection $domains;
 
     /**
-     * @var Collection<int, Application>
+     * @var Collection<int, Endpoint>
      */
-    #[ORM\ManyToMany(targetEntity: Application::class, inversedBy: 'modules')]
-    #[ORM\JoinTable(name: 'symfonicat_module_application')]
+    #[ORM\ManyToMany(targetEntity: Endpoint::class, inversedBy: 'modules')]
+    #[ORM\JoinTable(name: 'symfonicat_module_endpoint')]
     #[ORM\JoinColumn(name: 'module_id', referencedColumnName: 'id')]
-    #[ORM\InverseJoinColumn(name: 'application_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
-    private Collection $applications;
+    #[ORM\InverseJoinColumn(name: 'endpoint_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
+    private Collection $endpoints;
 
     public function __construct()
     {
-        $this->projects = new ArrayCollection();
+        $this->subdomains = new ArrayCollection();
         $this->domains = new ArrayCollection();
-        $this->applications = new ArrayCollection();
+        $this->endpoints = new ArrayCollection();
     }
 
 
@@ -69,30 +69,30 @@ class Module
     }
 
     /**
-     * @return Collection<int, Project>
+     * @return Collection<int, Subdomain>
      */
-    public function getProjects(): Collection
+    public function getSubdomains(): Collection
     {
-        return $this->projects;
+        return $this->subdomains;
     }
 
-    public function addProject(Project $project): static
+    public function addSubdomain(Subdomain $subdomain): static
     {
-        if (!$this->hasProject($project)) {
-            $this->projects->add($project);
+        if (!$this->hasSubdomain($subdomain)) {
+            $this->subdomains->add($subdomain);
 
-            if (!$project->hasModule($this)) {
-                $project->getModules()->add($this);
+            if (!$subdomain->hasModule($this)) {
+                $subdomain->getModules()->add($this);
             }
         }
 
         return $this;
     }
 
-    public function removeProject(Project $project): static
+    public function removeSubdomain(Subdomain $subdomain): static
     {
-        if ($this->projects->removeElement($project) && $project->hasModule($this)) {
-            $project->getModules()->removeElement($this);
+        if ($this->subdomains->removeElement($subdomain) && $subdomain->hasModule($this)) {
+            $subdomain->getModules()->removeElement($this);
         }
 
         return $this;
@@ -128,14 +128,44 @@ class Module
         return $this;
     }
 
-    public function hasProject(Project $project): bool
+    /**
+     * @return Collection<int, Endpoint>
+     */
+    public function getEndpoints(): Collection
     {
-        foreach ($this->projects as $existingProject) {
-            if ($existingProject === $project) {
+        return $this->endpoints;
+    }
+
+    public function addEndpoint(Endpoint $endpoint): static
+    {
+        if (!$this->hasEndpoint($endpoint)) {
+            $this->endpoints->add($endpoint);
+
+            if (!$endpoint->hasModule($this)) {
+                $endpoint->getModules()->add($this);
+            }
+        }
+
+        return $this;
+    }
+
+    public function removeEndpoint(Endpoint $endpoint): static
+    {
+        if ($this->endpoints->removeElement($endpoint) && $endpoint->hasModule($this)) {
+            $endpoint->getModules()->removeElement($this);
+        }
+
+        return $this;
+    }
+
+    public function hasSubdomain(Subdomain $subdomain): bool
+    {
+        foreach ($this->subdomains as $existingSubdomain) {
+            if ($existingSubdomain === $subdomain) {
                 return true;
             }
 
-            if ($existingProject->getId() !== null && $project->getId() !== null && $existingProject->getId() === $project->getId()) {
+            if ($existingSubdomain->getId() !== null && $subdomain->getId() !== null && $existingSubdomain->getId() === $subdomain->getId()) {
                 return true;
             }
         }
@@ -158,44 +188,14 @@ class Module
         return false;
     }
 
-    /**
-     * @return Collection<int, Application>
-     */
-    public function getApplications(): Collection
+    public function hasEndpoint(Endpoint $endpoint): bool
     {
-        return $this->applications;
-    }
-
-    public function addApplication(Application $application): static
-    {
-        if (!$this->hasApplication($application)) {
-            $this->applications->add($application);
-
-            if (!$application->hasModule($this)) {
-                $application->getModules()->add($this);
-            }
-        }
-
-        return $this;
-    }
-
-    public function removeApplication(Application $application): static
-    {
-        if ($this->applications->removeElement($application) && $application->hasModule($this)) {
-            $application->getModules()->removeElement($this);
-        }
-
-        return $this;
-    }
-
-    public function hasApplication(Application $application): bool
-    {
-        foreach ($this->applications as $existingApplication) {
-            if ($existingApplication === $application) {
+        foreach ($this->endpoints as $existingEndpoint) {
+            if ($existingEndpoint === $endpoint) {
                 return true;
             }
 
-            if ($existingApplication->getId() !== null && $application->getId() !== null && $existingApplication->getId() === $application->getId()) {
+            if ($existingEndpoint->getId() !== null && $endpoint->getId() !== null && $existingEndpoint->getId() === $endpoint->getId()) {
                 return true;
             }
         }

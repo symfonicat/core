@@ -1,8 +1,17 @@
 <tr id="domain_{{ domain.id(false) }}" class="btn-row">
-    <td class="fw-semibold"><a href="{{ app.request.scheme }}://{{ domain.id(false) }}">{{ domain.id(false) }}</a></td>
+    <td class="fw-semibold"><a href="{{ app.request.scheme }}://{{ domain.id(false) }}" class="text-white">{{ domain.id(false) }}</a></td>
     <td>
-        {% for project in domain.projects %}
-            <a href="{{ path('symfonicat_project_edit', {'id': project.id}) }}">{{ project.id }}</a>{% if not loop.last %}, {% endif %}
+        {% for subdomain in domain.subdomains %}
+            <a href="{{ path('symfonicat_subdomain_edit', {'id': subdomain.id}) }}" class="text-white">{{ subdomain.id }}</a>{% if not loop.last %}, {% endif %}
+        {% else %}
+            <i class="fa fa-fw fa-times"></i>
+        {% endfor %}
+    </td>
+    <td>{% if domain.catch %}<i class="fa fa-check"></i>{% else %}<i class="fa fa-fw fa-times"></i>{% endif %}</td>
+    <td>{% if domain.parcel %}<code>{{ domain.parcel.id }}</code>{% else %}<i class="fa fa-fw fa-times"></i>{% endif %}</td>
+    <td>
+        {% for middleware in domain.middlewares %}
+            <div><code>{{ middleware.id }}</code></div>
         {% else %}
             <i class="fa fa-fw fa-times"></i>
         {% endfor %}

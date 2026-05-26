@@ -14,6 +14,5 @@ import './scss/bootstrap.scss'
 // --------------------------
 
 import './app/module'
-import './app/application_redirect'
 import './app/stimulus'
 import './app/mercure'

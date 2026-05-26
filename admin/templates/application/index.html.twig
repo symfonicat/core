@@ -1,24 +1,32 @@
 {% extends '@symfonicat/base.html.twig' %}
-{% block title %}Applications{% endblock %}
+{% block title %}Application{% endblock %}
 {% block body %}
 
-    <table class="table" id="applications">
+    <div class="d-flex justify-content-end mb-1">
+        <a href="{{ path('symfonicat_application_create') }}" class="btn btn-sm btn-success">create application</a>
+    </div>
+
+    <table class="table table-sm align-middle">
         <thead>
             <tr>
-                <th>application</th>
-                <th>modules</th>
+                <th>name</th>
+                <th><i class="fa fa-hashtag"></i></th>
+                <th>type</th>
+                <th>domain</th>
+                <th>subdomain</th>
+                <th>endpoint</th>
                 {% for env_parent in env_parents %}
                     <th>{{ env_parent.id }}</th>
                 {% endfor %}
-                <th>&nbsp;</th>
+                <th class="text-end">&nbsp;</th>
             </tr>
         </thead>
-        <tbody id="applications-body">
+        <tbody>
         {% for application in applications %}
             {{ include('@symfonicat/application/_row.html.twig') }}
         {% else %}
-            <tr id="applications-empty">
-                <td colspan="{{ 3 + env_parents|length }}">no records found</td>
+            <tr>
+                <td colspan="{{ 7 + env_parents|length }}">no records found</td>
             </tr>
         {% endfor %}
         </tbody>

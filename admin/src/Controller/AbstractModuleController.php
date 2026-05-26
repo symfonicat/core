@@ -4,11 +4,12 @@ namespace Symfonicat\Controller;
 
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
-use Symfonicat\Service\ApplicationService;
+use Symfonicat\Entity\Endpoint;
 use Symfonicat\Service\DomainService;
 use Symfonicat\Service\ModuleService;
 use Symfonicat\Service\PathService;
-use Symfonicat\Service\ProjectService;
+use Symfonicat\Service\SubdomainService;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 abstract class AbstractModuleController extends AbstractController
 {
@@ -19,9 +20,9 @@ abstract class AbstractModuleController extends AbstractController
 
         public readonly DomainService $domainService,
         public readonly ModuleService $moduleService,
-        public readonly ProjectService $projectService,
+        public readonly SubdomainService $subdomainService,
         public readonly PathService $pathService,
-        public readonly ?ApplicationService $applicationService = null,
+        public readonly ?RequestStack $requestStack = null,
 
     ) {
 
@@ -31,33 +32,22 @@ abstract class AbstractModuleController extends AbstractController
             return;
         }
 
-        if ($this->applicationService?->isApplicationModuleRequest()) {
-            $application = $this->applicationService->loadFromModuleRequest();
-
-            if ($application && $application->hasModule($module)) {
-                $this->shouldRun = TRUE;
-            }
-
-            return;
-        }
-
-        $project = $this->projectService->load();
-
-        if ($project && $project->hasModule($module)) {
+        $endpoint = $this->requestStack?->getCurrentRequest()?->attributes->get('endpoint');
+        if ($endpoint instanceof Endpoint && $endpoint->hasModule($module)) {
             $this->shouldRun = TRUE;
 
             return;
         }
 
-        $application = $this->applicationService?->load();
+        $subdomain = $this->subdomainService->load();
 
-        if ($application && $application->hasModule($module)) {
+        if ($subdomain && $subdomain->hasModule($module)) {
             $this->shouldRun = TRUE;
 
             return;
         }
 
-        if (!$project && ($domain = $this->domainService->load()) && $domain->hasModule($module)) {
+        if (!$subdomain && ($domain = $this->domainService->load()) && $domain->hasModule($module)) {
             $this->shouldRun = TRUE;
         }
 

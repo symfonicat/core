@@ -3,7 +3,7 @@
 namespace Symfonicat\Service;
 
 use Symfonicat\Entity\Domain;
-use Symfonicat\Entity\Project;
+use Symfonicat\Entity\Subdomain;
 use Symfonicat\Form\FileUploadItemType;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 
@@ -14,12 +14,12 @@ final class PublicFileUploadService
     ) {
     }
 
-    public function upload(string $name, string $type, ?Domain $domain, ?Project $project, UploadedFile $file): string
+    public function upload(string $name, string $type, ?Domain $domain, ?Subdomain $subdomain, UploadedFile $file): string
     {
         $fileName = $this->normalizeFileName($name);
         $relativeDirectory = match ($type) {
             FileUploadItemType::FILE_TYPE_DOMAIN => $this->domainDirectory($domain),
-            FileUploadItemType::FILE_TYPE_PROJECT => $this->projectDirectory($project),
+            FileUploadItemType::FILE_TYPE_SUBDOMAIN => $this->subdomainDirectory($subdomain),
             default => throw new \InvalidArgumentException(sprintf('Unsupported file upload type "%s".', $type)),
         };
 
@@ -56,13 +56,13 @@ final class PublicFileUploadService
         return 'domains/'.$this->normalizeTargetId((string) $domain->getId(false));
     }
 
-    private function projectDirectory(?Project $project): string
+    private function subdomainDirectory(?Subdomain $subdomain): string
     {
-        if (!$project instanceof Project || trim((string) $project->getId(false)) === '') {
-            throw new \InvalidArgumentException('Select a project for each project file upload.');
+        if (!$subdomain instanceof Subdomain || trim((string) $subdomain->getId(false)) === '') {
+            throw new \InvalidArgumentException('Select a subdomain for each subdomain file upload.');
         }
 
-        return 'projects/'.$this->normalizeTargetId((string) $project->getId(false));
+        return 'subdomains/'.$this->normalizeTargetId((string) $subdomain->getId(false));
     }
 
     private function normalizeTargetId(string $id): string

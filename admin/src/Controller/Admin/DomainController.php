@@ -13,7 +13,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 final class DomainController extends AbstractController
 {
-    #[Route('/admin/d/list', name: 'symfonicat_domain_index', methods: ['GET'])]
+    #[Route('/admin/d', name: 'symfonicat_domain_index', methods: ['GET'])]
     public function index(DomainRepository $domainRepository, EnvParentRepository $envParentRepository): Response
     {
         return $this->render('@symfonicat/domain/index.html.twig', [

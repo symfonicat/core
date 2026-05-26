@@ -1,0 +1,39 @@
+{% extends 'base.html.twig' %}
+{% block title %}Main Subdomain Router{% endblock %}
+
+{% block stylesheets -%}
+
+    {{- parent() -}}
+    {% for module in subdomain.modules -%}
+        {{- encore_entry_link_tags_module(module) | indent_links(8) -}}
+    {%- endfor %}
+
+    {{- encore_entry_link_tags_parcel(subdomain.parcel) | indent_links(8) -}}
+    {{- encore_entry_link_tags_subdomain(subdomain) | indent_links(8) -}}
+
+{%- endblock %}
+
+{% block javascripts -%}
+
+    {{- parent() -}}
+    {% for module in subdomain.modules -%}
+        {{- encore_entry_script_tags_module(module) | indent_scripts(8) -}}
+    {%- endfor %}
+
+    {{- encore_entry_script_tags_parcel(subdomain.parcel) | indent_scripts(8) -}}
+    {{- encore_entry_script_tags_subdomain(subdomain) | indent_scripts(8) -}}
+
+{%- endblock %}
+
+{% block body %}
+
+    <main id="root">
+    </main>
+    
+    {{ subdomain.id }}
+
+    <br />
+
+    color: {{ env('colors.primary')|default('') }}
+
+{% endblock %}

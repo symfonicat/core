@@ -2,26 +2,30 @@
 
 namespace Symfonicat\Service;
 
+use Symfonicat\Entity\Parcel;
+use Symfonicat\Entity\ParcelEnv;
+use Symfonicat\Entity\Domain;
+use Symfonicat\Entity\Subdomain;
+use Symfonicat\Entity\Endpoint;
+use Symfonicat\Entity\DomainEnv;
 use Symfonicat\Entity\Application;
 use Symfonicat\Entity\ApplicationEnv;
-use Symfonicat\Entity\Domain;
-use Symfonicat\Entity\Project;
-use Symfonicat\Entity\DomainEnv;
-use Symfonicat\Entity\Electron;
-use Symfonicat\Entity\ElectronEnv;
-use Symfonicat\Entity\ProjectEnv;
+use Symfonicat\Entity\SubdomainEnv;
+use Symfonicat\Entity\EndpointEnv;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 final class EnvService
 {
     public function __construct(
-        private readonly ApplicationService $applicationService,
         private readonly DomainService $domainService,
-        private readonly ElectronService $electronService,
-        private readonly ProjectService $projectService,
+        private readonly ApplicationService $applicationService,
+        private readonly SubdomainService $subdomainService,
+        private readonly RequestStack $requestStack,
     ) {
     }
 
-    public function get(string $id, Application|Domain|Project|null $entity = null): ?string
+    public function get(string $id, Domain|Subdomain|Endpoint|null $entity = null): ?string
     {
         $id = trim($id);
         if ($id === '') {
@@ -49,46 +53,62 @@ final class EnvService
     /**
      * @return array<string, array<string, string>>
      */
-    public function all(Application|Domain|Project|null $entity = null): array
+    public function all(Domain|Subdomain|Endpoint|null $entity = null): array
     {
-        if ($entity instanceof Application) {
-            return $this->collectApplicationValues($entity);
-        }
-
         if ($entity instanceof Domain) {
             return $this->mergeValues(
-                $this->collectApplicationValues($this->applicationService->load()),
-                $this->collectDomainValues($entity),
+                $this->flattenParcelValues($entity->getParcel()),
+                $this->flattenDomainValues($entity),
+                $this->flattenApplicationValues($this->applicationService->load()),
             );
         }
 
-        if ($entity instanceof Project) {
+        if ($entity instanceof Subdomain) {
+            $domain = $this->resolveDomainForSubdomain($entity);
+            $application = $this->applicationService->loadForContext($domain, $entity);
+
             return $this->mergeValues(
-                $this->collectApplicationValues($this->applicationService->load()),
-                $this->collectDomainValues($this->resolveDomainForProject($entity)),
-                $this->collectProjectValues($entity),
-                $this->collectElectronValues($this->electronService->loadForContext(null, $this->resolveDomainForProject($entity), $entity)),
+                $this->flattenParcelValues($domain?->getParcel()),
+                $this->flattenDomainValues($domain),
+                $this->flattenParcelValues($entity->getParcel()),
+                $this->flattenSubdomainValues($entity),
+                $this->flattenApplicationValues($application),
             );
         }
 
-        $application = $this->applicationService->load();
+        if ($entity instanceof Endpoint) {
+            $application = $this->applicationService->load();
+
+            return $this->mergeValues(
+                $this->flattenParcelValues($entity->getParcel()),
+                $this->flattenEndpointValues($entity),
+                $this->flattenApplicationValues($application),
+            );
+        }
+
         $domain = $this->domainService->load();
-        $project = $this->projectService->load();
-        $electron = $this->electronService->load();
+        $subdomain = $this->subdomainService->load();
+        $endpoint = $this->endpointFromRequest();
+        $application = $this->applicationService->load();
 
-        if ($project instanceof Project) {
+        if ($subdomain instanceof Subdomain) {
             return $this->mergeValues(
-                $this->collectApplicationValues($application),
-                $this->collectDomainValues($domain),
-                $this->collectProjectValues($project),
-                $this->collectElectronValues($electron),
+                $this->flattenParcelValues($domain?->getParcel()),
+                $this->flattenDomainValues($domain),
+                $this->flattenParcelValues($subdomain->getParcel()),
+                $this->flattenSubdomainValues($subdomain),
+                $this->flattenEndpointValues($endpoint),
+                $this->flattenApplicationValues($application),
             );
         }
 
         return $this->mergeValues(
-            $this->collectApplicationValues($application),
-            $this->collectDomainValues($domain),
-            $this->collectElectronValues($electron),
+            $this->flattenParcelValues($domain?->getParcel()),
+            $this->flattenDomainValues($domain),
+            $this->flattenParcelValues($subdomain?->getParcel()),
+            $this->flattenSubdomainValues($subdomain),
+            $this->flattenEndpointValues($endpoint),
+            $this->flattenApplicationValues($application),
         );
     }
 
@@ -106,11 +126,11 @@ final class EnvService
         return array_replace_recursive(...$valueSets);
     }
 
-    private function resolveDomainForProject(Project $project): ?Domain
+    private function resolveDomainForSubdomain(Subdomain $subdomain): ?Domain
     {
         $domain = $this->domainService->load();
 
-        if ($domain instanceof Domain && $project->hasDomain($domain)) {
+        if ($domain instanceof Domain && $subdomain->hasDomain($domain)) {
             return $domain;
         }
 
@@ -120,16 +140,16 @@ final class EnvService
     /**
      * @return array<string, array<string, string>>
      */
-    private function collectApplicationValues(?Application $application): array
+    public function flattenParcelValues(?Parcel $parcel): array
     {
-        if (!$application instanceof Application) {
+        if (!$parcel instanceof Parcel) {
             return [];
         }
 
         $values = [];
 
-        foreach ($application->getEnv() as $item) {
-            if (!$item instanceof ApplicationEnv) {
+        foreach ($parcel->getEnv() as $item) {
+            if (!$item instanceof ParcelEnv) {
                 continue;
             }
 
@@ -148,7 +168,7 @@ final class EnvService
     /**
      * @return array<string, array<string, string>>
      */
-    private function collectDomainValues(?Domain $domain): array
+    public function flattenDomainValues(?Domain $domain): array
     {
         if (!$domain instanceof Domain) {
             return [];
@@ -176,16 +196,16 @@ final class EnvService
     /**
      * @return array<string, array<string, string>>
      */
-    private function collectProjectValues(?Project $project): array
+    public function flattenSubdomainValues(?Subdomain $subdomain): array
     {
-        if (!$project instanceof Project) {
+        if (!$subdomain instanceof Subdomain) {
             return [];
         }
 
         $values = [];
 
-        foreach ($project->getEnv() as $item) {
-            if (!$item instanceof ProjectEnv) {
+        foreach ($subdomain->getEnv() as $item) {
+            if (!$item instanceof SubdomainEnv) {
                 continue;
             }
 
@@ -204,16 +224,16 @@ final class EnvService
     /**
      * @return array<string, array<string, string>>
      */
-    private function collectElectronValues(?Electron $electron): array
+    public function flattenEndpointValues(?Endpoint $endpoint): array
     {
-        if (!$electron instanceof Electron) {
+        if (!$endpoint instanceof Endpoint) {
             return [];
         }
 
         $values = [];
 
-        foreach ($electron->getEnv() as $item) {
-            if (!$item instanceof ElectronEnv) {
+        foreach ($endpoint->getEnv() as $item) {
+            if (!$item instanceof EndpointEnv) {
                 continue;
             }
 
@@ -227,5 +247,45 @@ final class EnvService
         }
 
         return $values;
+    }
+
+    /**
+     * @return array<string, array<string, string>>
+     */
+    public function flattenApplicationValues(?Application $application): array
+    {
+        if (!$application instanceof Application) {
+            return [];
+        }
+
+        $values = [];
+
+        foreach ($application->getEnv() as $item) {
+            if (!$item instanceof ApplicationEnv) {
+                continue;
+            }
+
+            $envParentId = $item->getEnv()?->getEnvParent()?->getId();
+            $envId = $item->getEnv()?->getId();
+            if ($envParentId === null || $envParentId === '' || $envId === null || $envId === '') {
+                continue;
+            }
+
+            $values[$envParentId][$envId] = $item->getValue();
+        }
+
+        return $values;
+    }
+
+    private function endpointFromRequest(): ?Endpoint
+    {
+        $request = $this->requestStack->getCurrentRequest();
+        if (!$request instanceof Request) {
+            return null;
+        }
+
+        $endpoint = $request->attributes->get('endpoint');
+
+        return $endpoint instanceof Endpoint ? $endpoint : null;
     }
 }

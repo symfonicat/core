@@ -3,7 +3,7 @@
 namespace Symfonicat\Form\Model;
 
 use Symfonicat\Entity\Domain;
-use Symfonicat\Entity\Project;
+use Symfonicat\Entity\Subdomain;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 final class FileUploadItemData
@@ -12,7 +12,7 @@ final class FileUploadItemData
 
     public ?Domain $domain = null;
 
-    public ?Project $project = null;
+    public ?Subdomain $subdomain = null;
 
     public ?UploadedFile $file = null;
 }

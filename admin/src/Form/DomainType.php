@@ -3,26 +3,43 @@
 namespace Symfonicat\Form;
 
 use Symfonicat\Entity\Domain;
+use Symfonicat\Entity\Parcel;
 use Symfonicat\Entity\Module;
-use Symfonicat\Entity\Project;
+use Symfonicat\Entity\Subdomain;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
 class DomainType extends AbstractType
 {
+    use ParcelChoiceFormTrait;
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
             ->add('id', null, [
                 'label' => 'domain',
             ])
-            ->add('projects', EntityType::class, [
-                'class' => Project::class,
-                'choice_label' => static fn (Project $project): string => (string) $project->getId(),
-                'label' => 'projects',
+            ->add('parcel', EntityType::class, [
+                'class' => Parcel::class,
+                'choice_label' => self::parcelChoiceLabel(...),
+                'group_by' => self::parcelChoiceGroup(...),
+                'label' => 'parcel',
+                'placeholder' => 'select parcel',
+                'required' => false,
+            ])
+            ->add('catch', CheckboxType::class, [
+                'label' => 'catch',
+                'required' => false,
+                'false_values' => [null, ''],
+            ])
+            ->add('subdomains', EntityType::class, [
+                'class' => Subdomain::class,
+                'choice_label' => static fn (Subdomain $subdomain): string => (string) $subdomain->getId(),
+                'label' => 'subdomains',
                 'multiple' => true,
                 'required' => false,
             ])
@@ -48,6 +65,16 @@ class DomainType extends AbstractType
                 'multiple' => true,
                 'by_reference' => false,
                 'required' => false,
+            ])
+            ->add('middlewares', CollectionType::class, [
+                'label' => 'middlewares',
+                'entry_type' => MiddlewareReferenceType::class,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'delete_empty' => true,
+                'by_reference' => false,
+                'required' => false,
+                'prototype' => true,
             ])
             ->add('env', CollectionType::class, [
                 'label' => 'env',

@@ -1,28 +1,10 @@
 <tr id="application_{{ application.id(false) }}" class="btn-row">
-    <td class="fw-semibold"><a href="{{ path_application(application) }}">{{ application.id }}</a></td>
-    <td>
-        {% set groups = {} %}
-        {% for module in application.modules %}
-            {% set parts = (module.id | split('/')) %}
-            {% set tail = parts | last %}
-            {% set groupKey = module.package ? (module.vendor ~ '/' ~ module.package) : module.vendor %}
-            {% if groups[groupKey] is defined %}
-                {% set groups = groups | merge({ (groupKey): groups[groupKey] | merge([tail]) }) %}
-            {% else %}
-                {% set groups = groups | merge({ (groupKey): [tail] }) %}
-            {% endif %}
-        {% else %}
-            {% set groups = {} %}
-        {% endfor %}
-
-        {% if groups is empty %}
-            <i class="fa fa-fw fa-times"></i>
-        {% else %}
-            {% for g, tails in groups %}
-                <b>{{ g }}:</b>&nbsp;&nbsp;<code>{{ tails | join(', ') }}</code>{% if not loop.last %}<br />{% endif %}
-            {% endfor %}
-        {% endif %}
-    </td>
+    <td class="fw-semibold">{{ application.name }}</td>
+    <td><code>{{ application.id }}</code></td>
+    <td>{{ application.type }}</td>
+    <td><b>{% if application.domain %}{{ application.domain.id(false) }}{% else %}<i class="fa fa-fw fa-times"></i>{% endif %}</b></td>
+    <td><b>{% if application.subdomain %}{{ application.subdomain.id }}{% else %}<i class="fa fa-fw fa-times"></i>{% endif %}</b></td>
+    <td><b>{% if application.endpoint %}<code>{{ application.endpoint.id }}</code>{% else %}<i class="fa fa-fw fa-times"></i>{% endif %}</b></td>
     {% for env_parent in env_parents %}
         <td>
             {% set entries = env_parent_entries(application.env, env_parent) %}
@@ -35,9 +17,10 @@
     {% endfor %}
     <td class="text-end btn-cell">
         <div class="btn-group btn-group-sm">
-            <a href="{{ path('symfonicat_application_edit', {'id': application.id}) }}" class="btn btn-sm btn-warning">
+            <a href="{{ path('symfonicat_application_edit', { id: application.id }) }}" class="btn btn-sm btn-warning">
                 <i class="fa fa-pencil">&nbsp;</i>
             </a>
+            {{ include('@symfonicat/application/_delete_form.html.twig') }}
         </div>
     </td>
 </tr>

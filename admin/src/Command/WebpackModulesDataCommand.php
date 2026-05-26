@@ -8,16 +8,19 @@ use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 #[AsCommand(
     name: 'symfonicat:data:webpack',
-    description: 'Output application, domain, project, and module package entry data for webpack.',
+    description: 'Output parcel, domain, subdomain, endpoint, and module package entry data for webpack.',
 )]
 final class WebpackModulesDataCommand extends Command
 {
     public function __construct(
         private readonly PackageDiscoveryService $packageDiscoveryService,
         private readonly RuntimeConfig $runtimeConfig,
+        #[Autowire('%kernel.project_dir%')]
+        private readonly string $projectDir,
     ) {
         parent::__construct();
     }
@@ -25,21 +28,70 @@ final class WebpackModulesDataCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $output->writeln(json_encode([
-            'applications' => $this->entriesFromRepositoryOrPackages(
-                fn (): array => $this->runtimeConfig->applications(),
-                'applications',
+            'parcels' => $this->parcelEntriesFromRepositoryOrPackages(),
+            'domains' => $this->entriesFromRepositoryOrPackages(
+                fn (): array => $this->runtimeConfig->domains(),
+                'domain',
             ),
             'modules' => $this->entriesFromRepositoryOrPackages(
                 fn (): array => $this->runtimeConfig->modules(),
-                'modules',
+                'module',
             ),
-            'projects' => $this->entriesFromRepositoryOrPackages(
-                fn (): array => $this->runtimeConfig->projects(),
-                'projects',
+            'endpoints' => $this->entriesFromRepositoryOrPackages(
+                fn (): array => $this->runtimeConfig->endpoints(),
+                'endpoint',
+            ),
+            'subdomains' => $this->entriesFromRepositoryOrPackages(
+                fn (): array => $this->runtimeConfig->subdomains(),
+                'subdomain',
             ),
         ], JSON_THROW_ON_ERROR));
 
         return Command::SUCCESS;
+    }
+
+    /**
+     * @return list<array{
+     *     entry: string,
+     *     id: string,
+     *     package: string,
+     *     packageName: string
+     * }>
+     */
+    private function parcelEntriesFromRepositoryOrPackages(): array
+    {
+        $packageEntries = $this->packageDiscoveryService->discoverParcels();
+
+        try {
+            $resolvedEntries = [];
+
+            foreach ($this->runtimeConfig->parcels() as $parcel) {
+                $id = trim((string) $parcel->getId());
+                $path = trim((string) $parcel->getPath());
+                if ($id === '' || $path === '') {
+                    continue;
+                }
+
+                $entry = $this->resolveEntryPath($path);
+                if ($entry === null) {
+                    continue;
+                }
+
+                $packageEntry = $packageEntries[$id] ?? null;
+                $resolvedEntries[] = [
+                    'entry' => $entry,
+                    'id' => $id,
+                    'package' => $packageEntry['package'] ?? $this->packageFromId($id),
+                    'packageName' => $packageEntry['packageName'] ?? 'manual',
+                ];
+            }
+
+            usort($resolvedEntries, static fn (array $a, array $b): int => $a['id'] <=> $b['id']);
+
+            return $resolvedEntries;
+        } catch (\Throwable) {
+            return $this->entriesFromPackages($packageEntries);
+        }
     }
 
     /**
@@ -129,5 +181,27 @@ final class WebpackModulesDataCommand extends Command
         }
 
         return $resolvedEntries;
+    }
+
+    private function resolveEntryPath(string $path): ?string
+    {
+        $path = trim($path);
+        if ($path === '') {
+            return null;
+        }
+
+        $absolutePath = str_starts_with($path, '/') ? $path : rtrim($this->projectDir, '/').'/'.$path;
+        if (is_dir($absolutePath)) {
+            $absolutePath = rtrim($absolutePath, '/').'/index.js';
+        }
+
+        return is_file($absolutePath) ? $absolutePath : null;
+    }
+
+    private function packageFromId(string $id): string
+    {
+        $parts = explode('/', $id);
+
+        return $parts[1] ?? $parts[0] ?? 'core';
     }
 }

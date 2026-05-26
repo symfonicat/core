@@ -29,7 +29,7 @@ security:
                 cache_pool: cache.rate_limiter
             logout:
                 path: /admin/logout/clear
-                target: symfonicat_project_root
+                target: symfonicat_subdomain_root
         main:
             lazy: true
 

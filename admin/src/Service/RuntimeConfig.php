@@ -4,18 +4,20 @@ namespace Symfonicat\Service;
 
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Yaml\Yaml;
-use Symfonicat\Entity\Application;
-use Symfonicat\Entity\ApplicationEnv;
+use Symfonicat\Entity\Parcel;
+use Symfonicat\Entity\ParcelEnv;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\DomainEnv;
-use Symfonicat\Entity\Electron;
-use Symfonicat\Entity\ElectronEnv;
+use Symfonicat\Entity\Application;
+use Symfonicat\Entity\ApplicationEnv;
+use Symfonicat\Entity\Endpoint;
+use Symfonicat\Entity\EndpointEnv;
+use Symfonicat\Entity\Middleware;
 use Symfonicat\Entity\Env;
 use Symfonicat\Entity\EnvParent;
 use Symfonicat\Entity\Module;
-use Symfonicat\Entity\Project;
-use Symfonicat\Entity\ProjectEnv;
-use Symfonicat\Entity\RoutingRule;
+use Symfonicat\Entity\Subdomain;
+use Symfonicat\Entity\SubdomainEnv;
 
 final class RuntimeConfig
 {
@@ -26,7 +28,7 @@ final class RuntimeConfig
 
     public function __construct(
         #[Autowire('%kernel.project_dir%')]
-        private readonly string $projectDir,
+        private readonly string $subdomainDir,
     ) {
     }
 
@@ -44,11 +46,68 @@ final class RuntimeConfig
     }
 
     /**
-     * @return list<Project>
+     * @return list<Subdomain>
      */
-    public function projects(): array
+    public function subdomains(): array
     {
-        return array_values($this->catalog()['projects']);
+        return array_values($this->catalog()['subdomains']);
+    }
+
+    /**
+     * @return list<Module>
+     */
+    public function modules(): array
+    {
+        return array_values($this->catalog()['modules']);
+    }
+
+    /**
+     * @return list<Parcel>
+     */
+    public function parcels(): array
+    {
+        return array_values($this->catalog()['parcels']);
+    }
+
+    public function subdomainByIdForDomain(string $id, Domain $domain): ?Subdomain
+    {
+        $subdomain = $this->subdomainById($id);
+
+        return $subdomain instanceof Subdomain && $subdomain->hasDomain($domain) ? $subdomain : null;
+    }
+
+    public function subdomainById(string $id): ?Subdomain
+    {
+        $id = $this->normalizeSubdomainId($id);
+
+        return $id === '' ? null : ($this->catalog()['subdomains'][$id] ?? null);
+    }
+
+    public function moduleByFullOrCleanId(string $id): ?Module
+    {
+        $module = $this->singleByFullOrCleanId($this->catalog()['modules'], $id, 'Module');
+
+        return $module instanceof Module ? $module : null;
+    }
+
+    /**
+     * @return list<Endpoint>
+     */
+    public function endpoints(): array
+    {
+        return array_values($this->catalog()['endpoints']);
+    }
+
+    public function endpointById(string $id): ?Endpoint
+    {
+        $id = trim($id);
+
+        return $id === '' ? null : ($this->catalog()['endpoints'][$id] ?? null);
+    }
+
+    public function applicationById(string $id): ?Application
+    {
+        return $this->catalog()['applications'][trim($id)] ?? null;
     }
 
     /**
@@ -60,180 +119,30 @@ final class RuntimeConfig
     }
 
     /**
-     * @return list<Module>
+     * @return list<Middleware>
      */
-    public function modules(): array
+    public function middlewares(): array
     {
-        return array_values($this->catalog()['modules']);
+        return array_values($this->catalog()['middlewares']);
     }
 
-    public function projectByIdForDomain(string $id, Domain $domain): ?Project
+    public function applicationForDomain(Domain $domain): ?Application
     {
-        $project = $this->projectByFullOrCleanId($id);
-
-        return $project instanceof Project && $project->hasDomain($domain) ? $project : null;
+        return $this->firstApplication(static fn (Application $application): bool => $application->isDomainType()
+            && $application->getDomain()?->getId() === $domain->getId());
     }
 
-    public function projectByFullOrCleanId(string $id): ?Project
+    public function applicationForSubdomain(Subdomain $subdomain, ?Domain $domain = null): ?Application
     {
-        $project = $this->singleByFullOrCleanId($this->catalog()['projects'], $id, 'Project');
-
-        return $project instanceof Project ? $project : null;
+        return $this->firstApplication(static fn (Application $application): bool => $application->isSubdomainType()
+            && $application->getSubdomain()?->getId() === $subdomain->getId()
+            && (!$domain instanceof Domain || $application->getDomain()?->getId() === $domain->getId()));
     }
 
-    public function applicationByFullOrCleanId(string $id): ?Application
+    public function applicationForEndpoint(Endpoint $endpoint): ?Application
     {
-        $application = $this->singleByFullOrCleanId($this->catalog()['applications'], $id, 'Application');
-
-        return $application instanceof Application ? $application : null;
-    }
-
-    public function moduleByFullOrCleanId(string $id): ?Module
-    {
-        $module = $this->singleByFullOrCleanId($this->catalog()['modules'], $id, 'Module');
-
-        return $module instanceof Module ? $module : null;
-    }
-
-    /**
-     * @return list<RoutingRule>
-     */
-    public function domainRules(Domain $domain): array
-    {
-        return array_values(array_filter(
-            $this->catalog()['rules'],
-            static fn (RoutingRule $rule): bool => $rule->isDomainType() && $rule->getDomain()?->getId() === $domain->getId(),
-        ));
-    }
-
-    /**
-     * @return list<RoutingRule>
-     */
-    public function projectRules(Project $project): array
-    {
-        return array_values(array_filter(
-            $this->catalog()['rules'],
-            static fn (RoutingRule $rule): bool => $rule->isProjectType() && $rule->getProject()?->getId() === $project->getId(),
-        ));
-    }
-
-    public function redirectRuleForDomain(Domain $domain): ?RoutingRule
-    {
-        return $this->firstRule(static fn (RoutingRule $rule): bool => $rule->isRedirectRule()
-            && $rule->isDomainRedirectType()
-            && $rule->getDomain()?->getId() === $domain->getId());
-    }
-
-    public function redirectRuleForProject(Project $project): ?RoutingRule
-    {
-        return $this->firstRule(static fn (RoutingRule $rule): bool => $rule->isRedirectRule()
-            && $rule->isProjectRedirectType()
-            && $rule->getProject()?->getId() === $project->getId());
-    }
-
-    public function routeRuleForDomain(Domain $domain): ?RoutingRule
-    {
-        return $this->firstRule(static fn (RoutingRule $rule): bool => $rule->isRouteRule()
-            && $rule->isDomainRouteType()
-            && $rule->getDomain()?->getId() === $domain->getId());
-    }
-
-    public function routeRuleForProject(Project $project): ?RoutingRule
-    {
-        return $this->firstRule(static fn (RoutingRule $rule): bool => $rule->isRouteRule()
-            && $rule->isProjectRouteType()
-            && $rule->getProject()?->getId() === $project->getId());
-    }
-
-    public function applicationRuleByRoute(string $route): ?RoutingRule
-    {
-        $route = trim($route);
-
-        return $this->firstRule(static fn (RoutingRule $rule): bool => $rule->isApplicationType()
-            && $rule->isApplicationRouteType()
-            && $rule->getRoute() === $route);
-    }
-
-    public function applicationRuleByApplicationId(string $applicationId, ?string $applicationType = null): ?RoutingRule
-    {
-        $application = $this->applicationByFullOrCleanId($applicationId);
-        if (!$application instanceof Application) {
-            return null;
-        }
-
-        return $this->firstRule(static fn (RoutingRule $rule): bool => $rule->isApplicationType()
-            && ($applicationType === null || $rule->getApplicationType() === $applicationType)
-            && $rule->getApplication()?->getId() === $application->getId());
-    }
-
-    public function applicationRuleForDomain(Domain $domain): ?RoutingRule
-    {
-        return $this->firstRule(static fn (RoutingRule $rule): bool => $rule->isApplicationType()
-            && $rule->isApplicationDomainType()
-            && $rule->getApplication() instanceof Application
-            && $rule->getDomain()?->getId() === $domain->getId());
-    }
-
-    public function applicationRuleForProject(Project $project): ?RoutingRule
-    {
-        return $this->firstRule(static fn (RoutingRule $rule): bool => $rule->isApplicationType()
-            && $rule->isApplicationProjectType()
-            && $rule->getApplication() instanceof Application
-            && $rule->getProject()?->getId() === $project->getId());
-    }
-
-    public function applicationRuleForDomainAndProject(Domain $domain, Project $project): ?RoutingRule
-    {
-        return $this->firstRule(static fn (RoutingRule $rule): bool => $rule->isApplicationType()
-            && $rule->isApplicationDomainProjectType()
-            && $rule->getApplication() instanceof Application
-            && $rule->getDomain()?->getId() === $domain->getId()
-            && $rule->getProject()?->getId() === $project->getId());
-    }
-
-    /**
-     * @return list<RoutingRule>
-     */
-    public function applicationArgumentRules(): array
-    {
-        return array_values(array_filter(
-            $this->catalog()['rules'],
-            static fn (RoutingRule $rule): bool => $rule->isApplicationType()
-                && $rule->isApplicationArgumentsType()
-                && $rule->getApplication() instanceof Application,
-        ));
-    }
-
-    public function electronById(string $id): ?Electron
-    {
-        return $this->catalog()['electrons'][trim($id)] ?? null;
-    }
-
-    /**
-     * @return list<Electron>
-     */
-    public function electrons(): array
-    {
-        return array_values($this->catalog()['electrons']);
-    }
-
-    public function electronForDomain(Domain $domain): ?Electron
-    {
-        return $this->firstElectron(static fn (Electron $electron): bool => $electron->isDomainType()
-            && $electron->getDomain()?->getId() === $domain->getId());
-    }
-
-    public function electronForProject(Project $project, ?Domain $domain = null): ?Electron
-    {
-        return $this->firstElectron(static fn (Electron $electron): bool => $electron->isProjectType()
-            && $electron->getProject()?->getId() === $project->getId()
-            && (!$domain instanceof Domain || $electron->getDomain()?->getId() === $domain->getId()));
-    }
-
-    public function electronForApplication(Application $application): ?Electron
-    {
-        return $this->firstElectron(static fn (Electron $electron): bool => $electron->isApplicationType()
-            && $electron->getApplication()?->getId() === $application->getId());
+        return $this->firstApplication(static fn (Application $application): bool => $application->isEndpointType()
+            && $application->getEndpoint()?->getId() === $endpoint->getId());
     }
 
     /**
@@ -247,27 +156,33 @@ final class RuntimeConfig
 
         $rows = $this->readAdminRows();
 
+        $parcels = [];
+        foreach ($this->rows($rows, 'symfonicat_parcel') as $row) {
+            $id = trim((string) ($row['id'] ?? ''));
+            if ($id !== '') {
+                $parcels[$id] = (new Parcel())
+                    ->setId($id)
+                    ->setPath((string) ($row['path'] ?? ''));
+            }
+        }
+
         $domains = [];
         foreach ($this->rows($rows, 'symfonicat_domain') as $row) {
             $id = trim((string) ($row['id'] ?? ''));
             if ($id !== '') {
-                $domains[$id] = (new Domain())->setId($id);
+                $domains[$id] = (new Domain())
+                    ->setId($id)
+                    ->setParcel($parcels[(string) ($row['parcel_id'] ?? '')] ?? null);
             }
         }
 
-        $projects = [];
-        foreach ($this->rows($rows, 'symfonicat_project') as $row) {
-            $id = trim((string) ($row['id'] ?? ''));
+        $subdomains = [];
+        foreach ($this->rows($rows, 'symfonicat_subdomain') as $row) {
+            $id = $this->normalizeSubdomainId($row['id'] ?? '');
             if ($id !== '') {
-                $projects[$id] = (new Project())->setId($id);
-            }
-        }
-
-        $applications = [];
-        foreach ($this->rows($rows, 'symfonicat_application') as $row) {
-            $id = trim((string) ($row['id'] ?? ''));
-            if ($id !== '') {
-                $applications[$id] = (new Application())->setId($id);
+                $subdomains[$id] = (new Subdomain())
+                    ->setId($id)
+                    ->setParcel($parcels[(string) ($row['parcel_id'] ?? '')] ?? null);
             }
         }
 
@@ -281,11 +196,11 @@ final class RuntimeConfig
             }
         }
 
-        foreach ($this->rows($rows, 'symfonicat_domain_project') as $row) {
+        foreach ($this->rows($rows, 'symfonicat_domain_subdomain') as $row) {
             $domain = $domains[(string) ($row['domain_id'] ?? '')] ?? null;
-            $project = $projects[(string) ($row['project_id'] ?? '')] ?? null;
-            if ($domain instanceof Domain && $project instanceof Project) {
-                $domain->addProject($project);
+            $subdomain = $subdomains[$this->normalizeSubdomainId($row['subdomain_id'] ?? '')] ?? null;
+            if ($domain instanceof Domain && $subdomain instanceof Subdomain) {
+                $domain->addSubdomain($subdomain);
             }
         }
 
@@ -297,19 +212,11 @@ final class RuntimeConfig
             }
         }
 
-        foreach ($this->rows($rows, 'symfonicat_module_project') as $row) {
+        foreach ($this->rows($rows, 'symfonicat_module_subdomain') as $row) {
             $module = $modules[(string) ($row['module_id'] ?? '')] ?? null;
-            $project = $projects[(string) ($row['project_id'] ?? '')] ?? null;
-            if ($module instanceof Module && $project instanceof Project) {
-                $module->addProject($project);
-            }
-        }
-
-        foreach ($this->rows($rows, 'symfonicat_module_application') as $row) {
-            $module = $modules[(string) ($row['module_id'] ?? '')] ?? null;
-            $application = $applications[(string) ($row['application_id'] ?? '')] ?? null;
-            if ($module instanceof Module && $application instanceof Application) {
-                $module->addApplication($application);
+            $subdomain = $subdomains[$this->normalizeSubdomainId($row['subdomain_id'] ?? '')] ?? null;
+            if ($module instanceof Module && $subdomain instanceof Subdomain) {
+                $module->addSubdomain($subdomain);
             }
         }
 
@@ -338,12 +245,105 @@ final class RuntimeConfig
             }
         }
 
-        foreach ($this->rows($rows, 'symfonicat_project_env') as $row) {
-            $project = $projects[(string) ($row['project_id'] ?? '')] ?? null;
+        foreach ($this->rows($rows, 'symfonicat_subdomain_env') as $row) {
+            $subdomain = $subdomains[$this->normalizeSubdomainId($row['subdomain_id'] ?? '')] ?? null;
             $env = $envs[(string) ($row['env_id'] ?? '')] ?? null;
-            if ($project instanceof Project && $env instanceof Env) {
-                $project->addEnv((new ProjectEnv())->setEnv($env)->setValue((string) ($row['value'] ?? '')));
+            if ($subdomain instanceof Subdomain && $env instanceof Env) {
+                $subdomain->addEnv((new SubdomainEnv())->setEnv($env)->setValue((string) ($row['value'] ?? '')));
             }
+        }
+
+        foreach ($this->rows($rows, 'symfonicat_parcel_env') as $row) {
+            $parcel = $parcels[(string) ($row['parcel_id'] ?? '')] ?? null;
+            $env = $envs[(string) ($row['env_id'] ?? '')] ?? null;
+            if ($parcel instanceof Parcel && $env instanceof Env) {
+                $parcel->addEnv((new ParcelEnv())->setEnv($env)->setValue((string) ($row['value'] ?? '')));
+            }
+        }
+
+        $middlewares = [];
+        foreach ($this->rows($rows, 'symfonicat_middleware') as $row) {
+            $id = trim((string) ($row['id'] ?? ''));
+            $class = trim((string) ($row['class'] ?? ''));
+            if ($id !== '' && $class !== '') {
+                $middlewares[$id] = (new Middleware())
+                    ->setId($id)
+                    ->setClass($class);
+            }
+        }
+
+        foreach ($this->rows($rows, 'symfonicat_domain_middleware') as $row) {
+            $domain = $domains[(string) ($row['domain_id'] ?? '')] ?? null;
+            $middleware = $middlewares[trim((string) ($row['middleware_id'] ?? ''))] ?? null;
+            if ($domain instanceof Domain && $middleware instanceof Middleware) {
+                $domain->addMiddleware($middleware);
+            }
+        }
+
+        foreach ($this->rows($rows, 'symfonicat_subdomain_middleware') as $row) {
+            $subdomain = $subdomains[$this->normalizeSubdomainId($row['subdomain_id'] ?? '')] ?? null;
+            $middleware = $middlewares[trim((string) ($row['middleware_id'] ?? ''))] ?? null;
+            if ($subdomain instanceof Subdomain && $middleware instanceof Middleware) {
+                $subdomain->addMiddleware($middleware);
+            }
+        }
+
+        $endpoints = [];
+        foreach ($this->rows($rows, 'symfonicat_endpoint') as $row) {
+            $id = trim((string) ($row['id'] ?? ''));
+            if ($id === '') {
+                continue;
+            }
+
+            $endpoint = (new Endpoint())
+                ->setId($id)
+                ->setParcel($parcels[(string) ($row['parcel_id'] ?? '')] ?? null)
+                ->setCatch((bool) ($row['catch'] ?? false))
+                ->setArguments(isset($row['arguments']) && is_array($row['arguments']) ? $row['arguments'] : []);
+
+            $endpoints[$id] = $endpoint;
+        }
+
+        foreach ($this->rows($rows, 'symfonicat_endpoint_env') as $row) {
+            $endpoint = $endpoints[(string) ($row['endpoint_id'] ?? '')] ?? null;
+            $env = $envs[(string) ($row['env_id'] ?? '')] ?? null;
+            if ($endpoint instanceof Endpoint && $env instanceof Env) {
+                $endpoint->addEnv((new EndpointEnv())->setEnv($env)->setValue((string) ($row['value'] ?? '')));
+            }
+        }
+
+        foreach ($this->rows($rows, 'symfonicat_endpoint_module') as $row) {
+            $endpoint = $endpoints[(string) ($row['endpoint_id'] ?? '')] ?? null;
+            $module = $modules[(string) ($row['module_id'] ?? '')] ?? null;
+            if ($endpoint instanceof Endpoint && $module instanceof Module) {
+                $endpoint->addModule($module);
+            }
+        }
+
+        foreach ($this->rows($rows, 'symfonicat_endpoint_middleware') as $row) {
+            $endpoint = $endpoints[(string) ($row['endpoint_id'] ?? '')] ?? null;
+            $middleware = $middlewares[trim((string) ($row['middleware_id'] ?? ''))] ?? null;
+            if ($endpoint instanceof Endpoint && $middleware instanceof Middleware) {
+                $endpoint->addMiddleware($middleware);
+            }
+        }
+
+        $applications = [];
+        foreach ($this->rows($rows, 'symfonicat_application') as $row) {
+            $id = trim((string) ($row['id'] ?? ''));
+            if ($id === '') {
+                continue;
+            }
+
+            $application = (new Application())
+                ->setId($id)
+                ->setName((string) ($row['name'] ?? $id))
+                ->setType((string) ($row['type'] ?? Application::TYPE_DOMAIN))
+                ->setDomain($domains[(string) ($row['domain_id'] ?? '')] ?? null)
+                ->setSubdomain($subdomains[$this->normalizeSubdomainId($row['subdomain_id'] ?? '')] ?? null)
+                ->setEndpoint($endpoints[(string) ($row['endpoint_id'] ?? '')] ?? null);
+
+            $applications[$id] = $application;
         }
 
         foreach ($this->rows($rows, 'symfonicat_application_env') as $row) {
@@ -354,58 +354,14 @@ final class RuntimeConfig
             }
         }
 
-        $electrons = [];
-        foreach ($this->rows($rows, 'symfonicat_electron') as $row) {
-            $id = trim((string) ($row['id'] ?? ''));
-            if ($id === '') {
-                continue;
-            }
-
-            $electron = (new Electron())
-                ->setId($id)
-                ->setName((string) ($row['name'] ?? $id))
-                ->setType((string) ($row['type'] ?? Electron::TYPE_DOMAIN))
-                ->setDomain($domains[(string) ($row['domain_id'] ?? '')] ?? null)
-                ->setProject($projects[(string) ($row['project_id'] ?? '')] ?? null)
-                ->setApplication($applications[(string) ($row['application_id'] ?? '')] ?? null);
-
-            $electrons[$id] = $electron;
-        }
-
-        foreach ($this->rows($rows, 'symfonicat_electron_env') as $row) {
-            $electron = $electrons[(string) ($row['electron_id'] ?? '')] ?? null;
-            $env = $envs[(string) ($row['env_id'] ?? '')] ?? null;
-            if ($electron instanceof Electron && $env instanceof Env) {
-                $electron->addEnv((new ElectronEnv())->setEnv($env)->setValue((string) ($row['value'] ?? '')));
-            }
-        }
-
-        $rules = [];
-        foreach ($this->rows($rows, 'symfonicat_routing_rule') as $row) {
-            $rule = (new RoutingRule())
-                ->setType((string) ($row['type'] ?? RoutingRule::TYPE_DOMAIN))
-                ->setArguments(is_array($row['arguments'] ?? null) ? $row['arguments'] : [])
-                ->setRedirectType(isset($row['redirect_type']) ? (string) $row['redirect_type'] : null)
-                ->setRedirectTarget(isset($row['redirect_target']) ? (string) $row['redirect_target'] : null)
-                ->setRouteType(isset($row['route_type']) ? (string) $row['route_type'] : null)
-                ->setApplicationType(isset($row['application_type']) ? (string) $row['application_type'] : null)
-                ->setRoute(isset($row['route']) ? (string) $row['route'] : null)
-                ->setDomain($domains[(string) ($row['domain_id'] ?? '')] ?? null)
-                ->setProject($projects[(string) ($row['project_id'] ?? '')] ?? null)
-                ->setApplication($applications[(string) ($row['application_id'] ?? '')] ?? null)
-                ->setRedirectDomain($domains[(string) ($row['redirect_domain_id'] ?? '')] ?? null)
-                ->setRedirectProject($projects[(string) ($row['redirect_project_id'] ?? '')] ?? null);
-
-            $rules[] = $rule;
-        }
-
         return $this->catalog = [
+            'parcels' => $parcels,
             'domains' => $domains,
-            'projects' => $projects,
-            'applications' => $applications,
+            'subdomains' => $subdomains,
             'modules' => $modules,
-            'electrons' => $electrons,
-            'rules' => $rules,
+            'applications' => $applications,
+            'endpoints' => $endpoints,
+            'middlewares' => $middlewares,
         ];
     }
 
@@ -414,7 +370,7 @@ final class RuntimeConfig
      */
     private function readAdminRows(): array
     {
-        $path = rtrim($this->projectDir, '/').'/config/packages/symfonicat.yaml';
+        $path = rtrim($this->subdomainDir, '/').'/config/packages/symfonicat.yaml';
         if (!is_file($path)) {
             return [];
         }
@@ -473,22 +429,21 @@ final class RuntimeConfig
         return reset($matches) ?: null;
     }
 
-    private function firstRule(callable $predicate): ?RoutingRule
+    private function normalizeSubdomainId(mixed $id): string
     {
-        foreach ($this->catalog()['rules'] as $rule) {
-            if ($predicate($rule)) {
-                return $rule;
-            }
+        $id = trim((string) $id, " \t\n\r\0\x0B/");
+        if ($id === '') {
+            return '';
         }
 
-        return null;
+        return str_contains($id, '/') ? substr($id, strrpos($id, '/') + 1) : $id;
     }
 
-    private function firstElectron(callable $predicate): ?Electron
+    private function firstApplication(callable $predicate): ?Application
     {
-        foreach ($this->catalog()['electrons'] as $electron) {
-            if ($predicate($electron)) {
-                return $electron;
+        foreach ($this->catalog()['applications'] as $application) {
+            if ($predicate($application)) {
+                return $application;
             }
         }
 

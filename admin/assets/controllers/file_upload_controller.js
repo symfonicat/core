@@ -40,14 +40,14 @@ export default class extends Controller {
     syncItem(item) {
         const type = item.querySelector('[data-file-upload-target~="type"]')
         const domainRow = item.querySelector('[data-file-upload-target~="domainRow"]')
-        const projectRow = item.querySelector('[data-file-upload-target~="projectRow"]')
+        const subdomainRow = item.querySelector('[data-file-upload-target~="subdomainRow"]')
 
-        if (!(type instanceof HTMLSelectElement) || !(domainRow instanceof HTMLElement) || !(projectRow instanceof HTMLElement)) {
+        if (!(type instanceof HTMLSelectElement) || !(domainRow instanceof HTMLElement) || !(subdomainRow instanceof HTMLElement)) {
             return
         }
 
         this.toggleRow(domainRow, type.value === 'domain')
-        this.toggleRow(projectRow, type.value === 'project')
+        this.toggleRow(subdomainRow, type.value === 'subdomain')
     }
 
     toggleRow(row, visible) {

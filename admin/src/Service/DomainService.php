@@ -11,7 +11,7 @@ use Symfony\Component\HttpFoundation\RequestStack;
 class DomainService
 {
     public function __construct(
-        private readonly string $projectDir,
+        private readonly string $subdomainDir,
         private readonly RequestStack $requestStack,
         private readonly DomainRepository $domainRepository,
         private readonly EntityManagerInterface $entityManager,
@@ -61,7 +61,7 @@ class DomainService
     {
         static $list = null;
         if ($list === null) {
-            $list = Rules::fromPath($this->projectDir . '/public_suffix_list.dat');
+            $list = Rules::fromPath($this->subdomainDir . '/public_suffix_list.dat');
         }
 
         return $list;
@@ -107,9 +107,7 @@ class DomainService
      */
     private function discoverPackageDomains(): array
     {
-        // Domain rows are intentionally *not* discovered from installed packages here.
-        // Domains are intentionally not auto-created during runtime.
-        return [];
+        return array_keys($this->packageDiscoveryService->discoverEntryDirectories('domain'));
     }
 
     /**

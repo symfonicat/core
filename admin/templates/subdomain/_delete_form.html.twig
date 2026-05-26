@@ -1,0 +1,6 @@
+<form method="post" action="{{ path('symfonicat_subdomain_delete', {'id': subdomain.id}) }}" onsubmit="return confirm('Are you sure you want to delete this item?');" class="d-inline-block">
+    <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ subdomain.id) }}">
+    <button class="btn btn-sm btn-danger">
+        <i class="fa fa-times">&nbsp;</i>
+    </button>
+</form>

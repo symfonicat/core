@@ -2,10 +2,11 @@
 
 namespace Symfonicat\Twig;
 
-use Symfonicat\Entity\Application;
+use Symfonicat\Entity\Parcel;
 use Symfonicat\Entity\Domain;
+use Symfonicat\Entity\Endpoint;
 use Symfonicat\Entity\Module;
-use Symfonicat\Entity\Project;
+use Symfonicat\Entity\Subdomain;
 use Symfony\WebpackEncoreBundle\Exception\EntrypointNotFoundException;
 use Symfony\WebpackEncoreBundle\Twig\EntryFilesTwigExtension;
 use Twig\Extension\AbstractExtension;
@@ -23,25 +24,17 @@ final class EncoreEntryTagsExtension extends AbstractExtension
     public function getFunctions(): array
     {
         return [
-            new TwigFunction('encore_entry_script_tags_application', $this->renderApplicationScriptTags(...), ['is_safe' => ['html']]),
-            new TwigFunction('encore_entry_link_tags_application', $this->renderApplicationLinkTags(...), ['is_safe' => ['html']]),
             new TwigFunction('encore_entry_script_tags_domain', $this->renderDomainScriptTags(...), ['is_safe' => ['html']]),
             new TwigFunction('encore_entry_link_tags_domain', $this->renderDomainLinkTags(...), ['is_safe' => ['html']]),
-            new TwigFunction('encore_entry_script_tags_project', $this->renderProjectScriptTags(...), ['is_safe' => ['html']]),
-            new TwigFunction('encore_entry_link_tags_project', $this->renderProjectLinkTags(...), ['is_safe' => ['html']]),
+            new TwigFunction('encore_entry_script_tags_subdomain', $this->renderSubdomainScriptTags(...), ['is_safe' => ['html']]),
+            new TwigFunction('encore_entry_link_tags_subdomain', $this->renderSubdomainLinkTags(...), ['is_safe' => ['html']]),
+            new TwigFunction('encore_entry_script_tags_endpoint', $this->renderEndpointScriptTags(...), ['is_safe' => ['html']]),
+            new TwigFunction('encore_entry_link_tags_endpoint', $this->renderEndpointLinkTags(...), ['is_safe' => ['html']]),
             new TwigFunction('encore_entry_script_tags_module', $this->renderModuleScriptTags(...), ['is_safe' => ['html']]),
             new TwigFunction('encore_entry_link_tags_module', $this->renderModuleLinkTags(...), ['is_safe' => ['html']]),
+            new TwigFunction('encore_entry_script_tags_parcel', $this->renderParcelScriptTags(...), ['is_safe' => ['html']]),
+            new TwigFunction('encore_entry_link_tags_parcel', $this->renderParcelLinkTags(...), ['is_safe' => ['html']]),
         ];
-    }
-
-    public function renderApplicationScriptTags(?Application $application): string
-    {
-        return $this->renderScriptTags($this->applicationEntryName($application));
-    }
-
-    public function renderApplicationLinkTags(?Application $application): string
-    {
-        return $this->renderLinkTags($this->applicationEntryName($application));
     }
 
     public function renderDomainScriptTags(?Domain $domain): string
@@ -54,14 +47,24 @@ final class EncoreEntryTagsExtension extends AbstractExtension
         return $this->renderLinkTags($this->domainEntryName($domain));
     }
 
-    public function renderProjectScriptTags(?Project $project): string
+    public function renderSubdomainScriptTags(?Subdomain $subdomain): string
     {
-        return $this->renderScriptTags($this->projectEntryName($project));
+        return $this->renderScriptTags($this->subdomainEntryName($subdomain));
     }
 
-    public function renderProjectLinkTags(?Project $project): string
+    public function renderSubdomainLinkTags(?Subdomain $subdomain): string
     {
-        return $this->renderLinkTags($this->projectEntryName($project));
+        return $this->renderLinkTags($this->subdomainEntryName($subdomain));
+    }
+
+    public function renderEndpointScriptTags(?Endpoint $endpoint): string
+    {
+        return $this->renderScriptTags($this->endpointEntryName($endpoint));
+    }
+
+    public function renderEndpointLinkTags(?Endpoint $endpoint): string
+    {
+        return $this->renderLinkTags($this->endpointEntryName($endpoint));
     }
 
     public function renderModuleScriptTags(?Module $module): string
@@ -72,6 +75,16 @@ final class EncoreEntryTagsExtension extends AbstractExtension
     public function renderModuleLinkTags(?Module $module): string
     {
         return $this->renderLinkTags($this->moduleEntryName($module));
+    }
+
+    public function renderParcelScriptTags(?Parcel $parcel): string
+    {
+        return $this->renderScriptTags($this->parcelEntryName($parcel));
+    }
+
+    public function renderParcelLinkTags(?Parcel $parcel): string
+    {
+        return $this->renderLinkTags($this->parcelEntryName($parcel));
     }
 
     private function renderScriptTags(?string $entryName): string
@@ -115,7 +128,7 @@ final class EncoreEntryTagsExtension extends AbstractExtension
             return null;
         }
 
-        $entryName = 'domains/'.$id;
+        $entryName = 'domain/'.$id;
         if ($this->entryFilesTwigExtension->entryExists($entryName)) {
             return $entryName;
         }
@@ -128,65 +141,31 @@ final class EncoreEntryTagsExtension extends AbstractExtension
         return $entryName;
     }
 
-    private function applicationEntryName(?Application $application): ?string
+    private function subdomainEntryName(?Subdomain $subdomain): ?string
     {
-        $id = trim((string) $application?->getId());
+        $id = trim((string) $subdomain?->getId());
         if ($id === '') {
             return null;
         }
 
-        $entryName = 'applications/'.$id;
+        $entryName = 'subdomain/'.$id;
         if ($this->entryFilesTwigExtension->entryExists($entryName)) {
             return $entryName;
-        }
-
-        if (strpos($id, '/') !== false) {
-            return $entryName;
-        }
-
-        $packages = $this->packageDiscoveryService->discoverEntryDirectories('applications');
-        $matches = [];
-        foreach (array_keys($packages) as $pkgId) {
-            $parts = explode('/', $pkgId);
-            if (end($parts) === $id) {
-                $matches[] = $pkgId;
-            }
-        }
-
-        if (count($matches) === 1) {
-            return 'applications/'.$matches[0];
         }
 
         return $entryName;
     }
 
-    private function projectEntryName(?Project $project): ?string
+    private function endpointEntryName(?Endpoint $endpoint): ?string
     {
-        $id = trim((string) $project?->getId());
+        $id = trim((string) $endpoint?->getId());
         if ($id === '') {
             return null;
         }
 
-        $entryName = 'projects/'.$id;
+        $entryName = 'endpoint/'.$id;
         if ($this->entryFilesTwigExtension->entryExists($entryName)) {
             return $entryName;
-        }
-
-        if (strpos($id, '/') !== false) {
-            return $entryName;
-        }
-
-        $packages = $this->packageDiscoveryService->discoverEntryDirectories('projects');
-        $matches = [];
-        foreach (array_keys($packages) as $pkgId) {
-            $parts = explode('/', $pkgId);
-            if (end($parts) === $id) {
-                $matches[] = $pkgId;
-            }
-        }
-
-        if (count($matches) === 1) {
-            return 'projects/'.$matches[0];
         }
 
         return $entryName;
@@ -199,7 +178,7 @@ final class EncoreEntryTagsExtension extends AbstractExtension
             return null;
         }
 
-        $entryName = 'modules/'.$id;
+        $entryName = 'module/'.$id;
         if ($this->entryFilesTwigExtension->entryExists($entryName)) {
             return $entryName;
         }
@@ -208,7 +187,7 @@ final class EncoreEntryTagsExtension extends AbstractExtension
             return $entryName;
         }
 
-        $packages = $this->packageDiscoveryService->discoverEntryDirectories('modules');
+        $packages = $this->packageDiscoveryService->discoverEntryDirectories('module');
         $matches = [];
         foreach (array_keys($packages) as $pkgId) {
             $parts = explode('/', $pkgId);
@@ -218,7 +197,39 @@ final class EncoreEntryTagsExtension extends AbstractExtension
         }
 
         if (count($matches) === 1) {
-            return 'modules/'.$matches[0];
+            return 'module/'.$matches[0];
+        }
+
+        return $entryName;
+    }
+
+    private function parcelEntryName(?Parcel $parcel): ?string
+    {
+        $id = trim((string) $parcel?->getId());
+        if ($id === '') {
+            return null;
+        }
+
+        $entryName = 'parcel/'.$id;
+        if ($this->entryFilesTwigExtension->entryExists($entryName)) {
+            return $entryName;
+        }
+
+        if (strpos($id, '/') !== false) {
+            return $entryName;
+        }
+
+        $packages = $this->packageDiscoveryService->discoverEntryDirectories('parcel');
+        $matches = [];
+        foreach (array_keys($packages) as $pkgId) {
+            $parts = explode('/', $pkgId);
+            if (end($parts) === $id) {
+                $matches[] = $pkgId;
+            }
+        }
+
+        if (count($matches) === 1) {
+            return 'parcel/'.$matches[0];
         }
 
         return $entryName;

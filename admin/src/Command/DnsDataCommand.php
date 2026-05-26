@@ -10,7 +10,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 #[AsCommand(
     name: 'symfonicat:data:dns',
-    description: 'Output project IDs and domain IDs for DNS sync.',
+    description: 'Output subdomain IDs and domain IDs for DNS sync.',
 )]
 final class DnsDataCommand extends Command
 {
@@ -22,11 +22,11 @@ final class DnsDataCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $projects = [];
-        foreach ($this->runtimeConfig->projects() as $project) {
-            $id = $project->getId(false);
+        $subdomains = [];
+        foreach ($this->runtimeConfig->subdomains() as $subdomain) {
+            $id = $subdomain->getId(false);
             if ($id !== null && $id !== '') {
-                $projects[] = $id;
+                $subdomains[] = $id;
             }
         }
 
@@ -38,13 +38,13 @@ final class DnsDataCommand extends Command
             }
         }
 
-        $projects = array_values(array_unique($projects));
-        sort($projects);
+        $subdomains = array_values(array_unique($subdomains));
+        sort($subdomains);
         $domains = array_values(array_unique($domains));
         sort($domains);
 
         $output->writeln(json_encode([
-            'projects' => $projects,
+            'subdomains' => $subdomains,
             'domains' => $domains,
         ], JSON_THROW_ON_ERROR));
 

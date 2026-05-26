@@ -1,0 +1,29 @@
+{% extends '@symfonicat/base.html.twig' %}
+{% block title %}Middleware{% endblock %}
+{% block body %}
+
+    <div class="d-flex justify-content-end mb-3">
+        <a href="{{ path('symfonicat_admin_schema_update') }}" class="btn btn-sm btn-success">update schema</a>
+    </div>
+
+    <table class="table table-sm">
+        <thead>
+            <tr>
+                <th class="text-end"><i class="fa fa-hashtag"></i></th>
+                <th class="text-center">&nbsp;</th>
+                <th>class</th>
+                <th>&nbsp;</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for middleware in middlewares %}
+            {{ include('@symfonicat/middleware/_row.html.twig') }}
+        {% else %}
+            <tr>
+                <td colspan="3">no records found</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+{% endblock %}

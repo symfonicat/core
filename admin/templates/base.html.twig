@@ -43,11 +43,12 @@
                 <a href="{{ path('symfonicat_admin_dashboard') }}" class="text-white text-decoration-none fw-bold">Symfonicat Admin</a>
                 <nav class="d-flex gap-2 ms-auto">
                     <a href="{{ path('symfonicat_domain_index') }}" class="btn btn-sm btn-outline-light {{ active('symfonicat_domain_*', 'btn-light active') }}">domains</a>
-                    <a href="{{ path('symfonicat_project_index') }}" class="btn btn-sm btn-outline-light {{ active('symfonicat_project_*', 'btn-light active') }}">projects</a>
+                    <a href="{{ path('symfonicat_subdomain_index') }}" class="btn btn-sm btn-outline-light {{ active('symfonicat_subdomain_*', 'btn-light active') }}">subdomains</a>
+                    <a href="{{ path('symfonicat_endpoint_index') }}" class="btn btn-sm btn-outline-light {{ active('symfonicat_endpoint_*', 'btn-light active') }}">endpoints</a>
+                    <a href="{{ path('symfonicat_parcel_index') }}" class="btn btn-sm btn-outline-light {{ active('symfonicat_parcel_*', 'btn-light active') }}">parcels</a>
+                    <a href="{{ path('symfonicat_middleware_index') }}" class="btn btn-sm btn-outline-light {{ active('symfonicat_middleware_*', 'btn-light active') }}">middleware</a>
                     <a href="{{ path('symfonicat_application_index') }}" class="btn btn-sm btn-outline-light {{ active('symfonicat_application_*', 'btn-light active') }}">applications</a>
-                    <a href="{{ path('symfonicat_electron_index') }}" class="btn btn-sm btn-outline-light {{ active('symfonicat_electron_*', 'btn-light active') }}">electron</a>
                     <a href="{{ path('symfonicat_env_index') }}" class="btn btn-sm btn-outline-light {{ active('symfonicat_env_*', 'btn-light active') }}">env</a>
-                    <a href="{{ path('symfonicat_routing_rule_index') }}" class="btn btn-sm btn-outline-light {{ active('symfonicat_routing_rule*', 'btn-light active') }}">routing rules</a>
                     <a href="{{ path('symfonicat_file_upload') }}" class="btn btn-sm btn-outline-light {{ active('symfonicat_file_upload', 'btn-light active') }}">files</a>
                     <div class="btn-group">
                         <button

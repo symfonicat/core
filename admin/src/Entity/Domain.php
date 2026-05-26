@@ -15,14 +15,30 @@ class Domain
     #[ORM\Column(length: 255)]
     private ?string $id = null;
 
+    #[ORM\ManyToOne(targetEntity: Parcel::class)]
+    #[ORM\JoinColumn(name: 'parcel_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
+    private ?Parcel $parcel = null;
+
+    #[ORM\Column(options: ['default' => false])]
+    private bool $catch = false;
+
     /**
-     * @var Collection<int, Project>
+     * @var Collection<int, Middleware>
      */
-    #[ORM\ManyToMany(targetEntity: Project::class, inversedBy: 'domains')]
-    #[ORM\JoinTable(name: 'symfonicat_domain_project')]
+    #[ORM\ManyToMany(targetEntity: Middleware::class)]
+    #[ORM\JoinTable(name: 'symfonicat_domain_middleware')]
     #[ORM\JoinColumn(name: 'domain_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
-    #[ORM\InverseJoinColumn(name: 'project_id', referencedColumnName: 'id')]
-    private Collection $projects;
+    #[ORM\InverseJoinColumn(name: 'middleware_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
+    private Collection $middlewares;
+
+    /**
+     * @var Collection<int, Subdomain>
+     */
+    #[ORM\ManyToMany(targetEntity: Subdomain::class, inversedBy: 'domains')]
+    #[ORM\JoinTable(name: 'symfonicat_domain_subdomain')]
+    #[ORM\JoinColumn(name: 'domain_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
+    #[ORM\InverseJoinColumn(name: 'subdomain_id', referencedColumnName: 'id')]
+    private Collection $subdomains;
 
     /**
      * @var Collection<int, Module>
@@ -38,9 +54,10 @@ class Domain
 
     public function __construct()
     {
-        $this->projects = new ArrayCollection();
+        $this->subdomains = new ArrayCollection();
         $this->modules = new ArrayCollection();
         $this->env = new ArrayCollection();
+        $this->middlewares = new ArrayCollection();
     }
 
     public function getId(bool $includeVendor = true): ?string
@@ -60,31 +77,94 @@ class Domain
         return $this;
     }
 
-    /**
-     * @return Collection<int, Project>
-     */
-    public function getProjects(): Collection
+    public function getParcel(): ?Parcel
     {
-        return $this->projects;
+        return $this->parcel;
     }
 
-    public function addProject(Project $project): static
+    public function setParcel(?Parcel $parcel): static
     {
-        if (!$this->hasProject($project)) {
-            $this->projects->add($project);
+        $this->parcel = $parcel;
 
-            if (!$project->hasDomain($this)) {
-                $project->getDomains()->add($this);
+        return $this;
+    }
+
+    public function isCatch(): bool
+    {
+        return $this->catch;
+    }
+
+    public function setCatch(bool $catch): static
+    {
+        $this->catch = $catch;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Middleware>
+     */
+    public function getMiddlewares(): Collection
+    {
+        return $this->middlewares;
+    }
+
+    public function addMiddleware(Middleware $middleware): static
+    {
+        if (!$this->hasMiddleware($middleware)) {
+            $this->middlewares->add($middleware);
+        }
+
+        return $this;
+    }
+
+    public function removeMiddleware(Middleware $middleware): static
+    {
+        $this->middlewares->removeElement($middleware);
+
+        return $this;
+    }
+
+    public function hasMiddleware(Middleware $middleware): bool
+    {
+        foreach ($this->middlewares as $existingMiddleware) {
+            if ($existingMiddleware === $middleware) {
+                return true;
+            }
+
+            if ($existingMiddleware->getId() !== null && $middleware->getId() !== null && $existingMiddleware->getId() === $middleware->getId()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @return Collection<int, Subdomain>
+     */
+    public function getSubdomains(): Collection
+    {
+        return $this->subdomains;
+    }
+
+    public function addSubdomain(Subdomain $subdomain): static
+    {
+        if (!$this->hasSubdomain($subdomain)) {
+            $this->subdomains->add($subdomain);
+
+            if (!$subdomain->hasDomain($this)) {
+                $subdomain->getDomains()->add($this);
             }
         }
 
         return $this;
     }
 
-    public function removeProject(Project $project): static
+    public function removeSubdomain(Subdomain $subdomain): static
     {
-        if ($this->projects->removeElement($project) && $project->hasDomain($this)) {
-            $project->getDomains()->removeElement($this);
+        if ($this->subdomains->removeElement($subdomain) && $subdomain->hasDomain($this)) {
+            $subdomain->getDomains()->removeElement($this);
         }
 
         return $this;
@@ -120,14 +200,14 @@ class Domain
         return $this;
     }
 
-    public function hasProject(Project $project): bool
+    public function hasSubdomain(Subdomain $subdomain): bool
     {
-        foreach ($this->projects as $existingProject) {
-            if ($existingProject === $project) {
+        foreach ($this->subdomains as $existingSubdomain) {
+            if ($existingSubdomain === $subdomain) {
                 return true;
             }
 
-            if ($existingProject->getId() !== null && $project->getId() !== null && $existingProject->getId() === $project->getId()) {
+            if ($existingSubdomain->getId() !== null && $subdomain->getId() !== null && $existingSubdomain->getId() === $subdomain->getId()) {
                 return true;
             }
         }

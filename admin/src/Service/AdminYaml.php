@@ -9,7 +9,9 @@ use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Doctrine\DBAL\Schema\AbstractSchemaManager;
 use Doctrine\DBAL\Schema\Column;
 use Doctrine\DBAL\Schema\Table;
+use Doctrine\DBAL\Types\BooleanType;
 use Doctrine\DBAL\Types\JsonType;
+use Doctrine\DBAL\Types\Types;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Yaml\Yaml;
 
@@ -21,7 +23,7 @@ final class AdminYaml
     public function __construct(
         private readonly Connection $connection,
         #[Autowire('%kernel.project_dir%')]
-        private readonly string $projectDir,
+        private readonly string $subdomainDir,
     ) {
     }
 
@@ -128,7 +130,12 @@ final class AdminYaml
                             throw new \RuntimeException(sprintf('Expected every "%s" row to be a YAML map.', $table));
                         }
 
-                        $this->connection->insert($table, $this->normalizeLoadRow($table, $row, $this->columnsByName($schemas[$table]->getColumns())));
+                        $columns = $this->columnsByName($schemas[$table]->getColumns());
+                        $this->connection->insert(
+                            $table,
+                            $this->normalizeLoadRow($table, $row, $columns),
+                            $this->typesForLoadRow($table, $row, $columns),
+                        );
                         ++$counts[$table];
                     }
                 }
@@ -146,7 +153,7 @@ final class AdminYaml
 
     private function configPath(): string
     {
-        return rtrim($this->projectDir, '/').self::CONFIG_PATH;
+        return rtrim($this->subdomainDir, '/').self::CONFIG_PATH;
     }
 
     /**
@@ -287,8 +294,16 @@ final class AdminYaml
         $normalized = [];
 
         foreach ($row as $column => $value) {
+            if ($table === 'symfonicat_subdomain' && $column === 'vendor') {
+                continue;
+            }
+
             if (!is_string($column) || !isset($columns[$column])) {
                 throw new \RuntimeException(sprintf('Unknown column "%s" for Symfonicat admin table "%s".', (string) $column, $table));
+            }
+
+            if (($column === 'subdomain_id' || ($table === 'symfonicat_subdomain' && $column === 'id')) && is_string($value)) {
+                $value = $this->normalizeSubdomainId($value);
             }
 
             if ($value !== null && (is_array($value) || is_object($value))) {
@@ -299,6 +314,36 @@ final class AdminYaml
         }
 
         return $normalized;
+    }
+
+    private function normalizeSubdomainId(string $id): string
+    {
+        $id = trim($id, " \t\n\r\0\x0B/");
+
+        return str_contains($id, '/') ? substr($id, strrpos($id, '/') + 1) : $id;
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @param array<string, Column> $columns
+     *
+     * @return array<string, string>
+     */
+    private function typesForLoadRow(string $table, array $row, array $columns): array
+    {
+        $types = [];
+
+        foreach ($row as $column => $value) {
+            if (!is_string($column) || !isset($columns[$column])) {
+                continue;
+            }
+
+            if ($columns[$column]->getType() instanceof BooleanType) {
+                $types[$column] = Types::BOOLEAN;
+            }
+        }
+
+        return $types;
     }
 
     /**

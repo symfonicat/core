@@ -2,11 +2,11 @@
 
 namespace Symfonicat\Command;
 
-use Symfonicat\Service\ApplicationService;
 use Symfonicat\Entity\Module;
+use Symfonicat\Service\ParcelService;
 use Symfonicat\Service\DomainService;
 use Symfonicat\Service\ModuleService;
-use Symfonicat\Service\ProjectService;
+use Symfonicat\Service\SubdomainService;
 use Symfonicat\Service\SchemaSynchronizer;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -21,10 +21,10 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 final class SchemaUpdateCommand extends Command
 {
     public function __construct(
-        private readonly ApplicationService $applicationService,
+        private readonly ParcelService $parcelService,
         private readonly DomainService $domainService,
         private readonly ModuleService $moduleService,
-        private readonly ProjectService $projectService,
+        private readonly SubdomainService $subdomainService,
         private readonly SchemaSynchronizer $schemaSynchronizer,
     ) {
         parent::__construct();
@@ -37,6 +37,8 @@ final class SchemaUpdateCommand extends Command
         try {
             $this->schemaSynchronizer->synchronize();
             $shouldAskForConfirmation = $this->shouldAskForConfirmation($input);
+
+            $parcelResult = $this->parcelService->sync();
 
             $moduleResult = $this->moduleService->sync($shouldAskForConfirmation ? function (Module $module, array $references) use ($input, $io): bool {
                 $io->warning(sprintf(
@@ -75,29 +77,50 @@ final class SchemaUpdateCommand extends Command
                 return $this->confirmRequired($input, $io, 'Create these domain rows?', false);
             } : null);
 
-            $applicationResult = $this->applicationService->sync($shouldAskForConfirmation ? function (array $applicationIds) use ($input, $io): bool {
-                $io->section('Missing applications');
+            $subdomainResult = $this->subdomainService->sync($shouldAskForConfirmation ? function (array $subdomainIds) use ($input, $io): bool {
+                $io->section('Missing subdomains');
                 $io->listing(array_map(
-                    static fn (string $applicationId): string => sprintf('%s from installed package assets', $applicationId),
-                    $applicationIds,
+                    static fn (string $subdomainId): string => sprintf('%s from installed package assets', $subdomainId),
+                    $subdomainIds,
                 ));
 
-                return $this->confirmRequired($input, $io, 'Create these application rows?', false);
-            } : null);
-
-            $projectResult = $this->projectService->sync($shouldAskForConfirmation ? function (array $projectIds) use ($input, $io): bool {
-                $io->section('Missing projects');
-                $io->listing(array_map(
-                    static fn (string $projectId): string => sprintf('%s from installed package assets', $projectId),
-                    $projectIds,
-                ));
-
-                return $this->confirmRequired($input, $io, 'Create these project rows?', false);
+                return $this->confirmRequired($input, $io, 'Create these subdomain rows?', false);
             } : null);
         } catch (\Throwable $exception) {
             $io->error($exception->getMessage());
 
             return Command::FAILURE;
+        }
+
+        if ($parcelResult['created'] !== []) {
+            $io->section('Created parcels');
+            $io->listing(array_map(
+                static fn (array $parcel): string => sprintf('%s (%s)', $parcel['id'], $parcel['path']),
+                $parcelResult['created'],
+            ));
+        }
+
+        if ($parcelResult['updated'] !== []) {
+            $io->section('Updated parcels');
+            $io->listing(array_map(
+                static fn (array $parcel): string => sprintf('%s path: "%s" -> "%s"', $parcel['id'], $parcel['from'], $parcel['to']),
+                $parcelResult['updated'],
+            ));
+        }
+
+        if ($parcelResult['deleted'] !== []) {
+            $io->section('Deleted parcels');
+            $io->listing(array_map(
+                static function (array $parcel): string {
+                    $references = array_sum($parcel['references']);
+                    if ($references === 0) {
+                        return sprintf('%s (%s)', $parcel['id'], $parcel['path']);
+                    }
+
+                    return sprintf('%s (%s) after clearing %d references', $parcel['id'], $parcel['path'], $references);
+                },
+                $parcelResult['deleted'],
+            ));
         }
 
         if ($moduleResult['created'] !== []) {
@@ -136,14 +159,6 @@ final class SchemaUpdateCommand extends Command
             ));
         }
 
-        if ($applicationResult['created'] !== []) {
-            $io->section('Created applications');
-            $io->listing(array_map(
-                static fn (array $application): string => $application['id'],
-                $applicationResult['created'],
-            ));
-        }
-
         if ($domainResult['created'] !== []) {
             $io->section('Created domains');
             $io->listing(array_map(
@@ -152,11 +167,11 @@ final class SchemaUpdateCommand extends Command
             ));
         }
 
-        if ($projectResult['created'] !== []) {
-            $io->section('Created projects');
+        if ($subdomainResult['created'] !== []) {
+            $io->section('Created subdomains');
             $io->listing(array_map(
-                static fn (array $project): string => $project['id'],
-                $projectResult['created'],
+                static fn (array $subdomain): string => $subdomain['id'],
+                $subdomainResult['created'],
             ));
         }
 
@@ -164,16 +179,18 @@ final class SchemaUpdateCommand extends Command
             $moduleResult['created'] === []
             && $moduleResult['updated'] === []
             && $moduleResult['deleted'] === []
-            && $applicationResult['created'] === []
+            && $parcelResult['created'] === []
+            && $parcelResult['updated'] === []
+            && $parcelResult['deleted'] === []
             && $domainResult['created'] === []
-            && $projectResult['created'] === []
+            && $subdomainResult['created'] === []
         ) {
-            $io->success('Module, application, domain, and project rows already match installed configured-vendor packages.');
+            $io->success('Parcel, module, domain, and subdomain rows already match installed configured-vendor packages.');
 
             return Command::SUCCESS;
         }
 
-        $io->success('Module, application, domain, and project rows synchronized from installed configured-vendor packages.');
+        $io->success('Parcel, module, domain, and subdomain rows synchronized from installed configured-vendor packages.');
 
         return Command::SUCCESS;
     }

@@ -11,9 +11,9 @@ final class AdminLockSubscriber implements EventSubscriberInterface
 {
     private readonly string $lockPath;
 
-    public function __construct(string $projectDir)
+    public function __construct(string $subdomainDir)
     {
-        $this->lockPath = rtrim($projectDir, '/\\').\DIRECTORY_SEPARATOR.'symfonicat.lock';
+        $this->lockPath = rtrim($subdomainDir, '/\\').\DIRECTORY_SEPARATOR.'symfonicat.lock';
     }
 
     public function onKernelRequest(RequestEvent $event): void

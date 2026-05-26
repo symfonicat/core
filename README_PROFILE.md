@@ -1,41 +1,75 @@
-# Symfonicat
+# Symfonicat Profile
 
-`symfonicat/core` is the full Symfonicat Symfony application: public routing, admin CRUD, package module runtime, Electron packaging, webpack wiring, and Docker/FrankenPHP live in this repository.
+`symfonicat/core` is the full Symfony 8 application for the Symfonicat runtime: public routing, admin CRUD, parcel rendering, package module runtime, application Electron templates, webpack wiring, and Docker/FrankenPHP live in this repository.
 
-First boot can take several minutes.
+Redis backs cache, sessions, locks, admin throttling, and Messenger's `async` transport.
 
-The `php` container:
+## Runtime Shape
 
-- installs Composer dependencies
-- runs `npm install`
-- builds assets
+Public routes:
 
-Redis is used for application cache, sessions, locks, admin login throttling, and Symfony Messenger; Messenger routes messages to the Redis-backed `async` transport by default and Compose starts workers for them.
+- `/`
+- `/{path}`
+- `/application/{vendor}/{id}/{path}`
 
-## Runtime
+Core runtime services:
 
-`DomainService`, `ProjectService`, routing rules, and `ApplicationService` resolve the active domain, project, and application shell. Public routes are `/`, `/{path}`, and the internal `/application/{vendor}/{id}/{path}` application entry route.
+- `DomainService`
+- `SubdomainService`
+- `ApplicationService`
+- `EnvService`
+- `ParcelService`
+- `ModuleService`
+- `RuntimeRenderer`
 
-Routing rules can render domain and project shells, redirect hosts, hand a root request to a named Symfony route, or render application shells. Application rules can match regex arguments, bind an application to a bare domain, bind one to a project subdomain, bind one to a specific domain/project pair, or attach application context to a Symfony route without replacing that route's response.
+`PublicRuntimeSubscriber` resolves domain, subdomain, and endpoint context before routing. The public catch-all routes are low priority, so Symfony routes that match directly still handle the request.
 
-The `symfonicat_asset(path)` Twig helper resolves shell-specific public files. Without a second argument, it checks the current project folder first, then the current domain folder, then `public/default/`. Passing an `Application`, `Project`, `Domain`, or `Electron` object pins the asset base directly to that object; Electron assets resolve under `public/electron/{electron.id}/`.
-The public JavaScript entry is `assets/app.js`; its runtime helpers live under `assets/app/`.
-`path_application()` is simple:
+Runtime route behavior:
 
-- one argument can be the extra path
-- one argument can be the wildcard replacement array
-- wildcard replacements are applied in array order
+- domain root and domain catch render `templates/domain/*`
+- subdomain root and subdomain catch render `templates/subdomain/*`
+- endpoint arguments and endpoint catch render `templates/endpoint/*`
+- endpoint argument `*` matches one segment
+- endpoint catch permits trailing path after the argument match
+- admin, application, and module paths are reserved from catch-all rendering
 
-`Project`, `Application`, and `Module` ids are package-scoped. `Domain` ids are bare hostnames, and `Electron` ids are plain row ids:
+Template overrides:
 
-```twig
-{{ domain.id }}        {# example.com #}
-{{ electron.id }}      {# example-test #}
-{{ project.id(false) }} {# project1 #}
-{{ project.id }}        {# core/project1 #}
-```
+- `domain/overrides/{domain-id}.html.twig`
+- `subdomain/overrides/{subdomain-id}.html.twig`
+- `endpoint/overrides/{endpoint-id-basename}.html.twig`
 
-Manual project/application rows use the special `core` vendor. Package rows use their Composer vendor.
+Subdomains use plain ids everywhere. They do not have vendors.
+
+## Applications
+
+`Application` is the app-packaging target for this branch. It carries the role that the old separate Electron type carried: select a URL/runtime context, then generate an Electron app from that selected target.
+
+Application target types:
+
+- `domain`
+- `subdomain`
+- `endpoint`
+
+The internal application entry loads the application row, sets the `application` request attribute, then renders the selected target through `RuntimeRenderer`.
+
+Endpoint-backed applications use endpoint ids in admin forms and runtime resolution. `path_application()` builds paths from endpoint arguments, substitutes `*` from wildcard arrays, and appends an optional extra path.
+
+Electron main-process templates are under:
+
+- `templates/application/domain/main.twig.js`
+- `templates/application/subdomain/main.twig.js`
+- `templates/application/endpoint/main.twig.js`
+
+## Entity Ids
+
+- `Domain`: bare host, for example `example.com`
+- `Subdomain`: plain label, for example `subdomain1`
+- `Endpoint`: string id, commonly package-scoped, for example `core/test`
+- `Application`: string id
+- `Module`, `Middleware`, `Parcel`: package-scoped ids where package ownership matters
+
+Legacy subdomain inputs with a slash are normalized to the final segment on load and form submission.
 
 ## Package Discovery
 
@@ -47,72 +81,84 @@ symfonicat:
         - symfonicat
 ```
 
-Webpack and schema sync discover package entries under configured Composer vendors. The root package is emitted as `core/...`; installed package entries use ids such as `symfonicat/analytics/main`. The same vendor list is used for package service imports and package controller route imports.
+Webpack and schema sync discover entries in the root package and installed Composer packages from `vendor/composer/installed.json`.
 
-## Admin YAML
+Entry families:
 
-Runtime reads `config/packages/symfonicat.yaml` under `symfonicat.admin`. The database tables are for unlocked admin editing and dumping YAML; production runtime should not need those tables. For local admin work:
+- `assets/domain/`
+- `assets/subdomain/`
+- `assets/application/`
+- `assets/module/`
+- `assets/parcel/`
+- `assets/bundle/`
 
-```bash
-docker exec -it php bin/console symfonicat:schema:update
-docker exec php bin/console symfonicat:dump
-docker exec php bin/console symfonicat:load
-docker exec php bin/console symfonicat:purge
+The local `./packages` tree is not part of runtime discovery.
+
+## Env
+
+Env is layered in runtime order:
+
+1. parcel
+2. domain
+3. subdomain
+4. endpoint when active
+5. application
+
+Application env is the final override layer, including endpoint-backed application renders.
+
+Twig uses dotted lookups:
+
+```twig
+{{ env('colors.primary') }}
 ```
 
-`symfonicat:dump` writes Symfonicat admin rows to YAML (excluding `symfonicat_admin`) and preserves `symfonicat.vendors`. Composer and Docker startup do not run schema update or YAML load automatically. Without a `symfonicat.admin` section, load exits without changing the database. The admin header has a Bootstrap-backed `yaml` dropdown linking to `/admin/y/dump` and `/admin/y/load`.
+The grouped env structure is also emitted as `window.env`.
+
+## Middleware And Modules
+
+PSR-15 middleware services are auto-tagged as `symfonicat.middleware`. Runtime rendering selects middleware attached to the active domain, subdomain, or endpoint and runs it directly through the PSR HTTP bridge.
+
+The old `kafkiansky/symfony-middleware` bundle and vendored package copy are removed.
+
+Module controllers extend `AbstractModuleController` and only run when their module is attached to the active domain, subdomain, endpoint, or application. Endpoint module requests preserve endpoint context through `X-Symfonicat-Endpoint`.
 
 ## Admin
 
-Create an admin with:
+Admin is guarded by the repo-root `symfonicat.lock`.
+
+Main admin areas:
+
+- `/admin/a` applications
+- `/admin/b` bundles/parcels
+- `/admin/d/list` domains
+- `/admin/end` endpoints
+- `/admin/env` env
+- `/admin/m` middleware
+- `/admin/s` subdomains and schema sync
+- `/admin/y/*` YAML dump/load
+
+Forms support parcel attachments, repeatable middleware, modules, scoped env values, and catch flags. Subdomain forms expose only the plain id.
+
+## YAML And Commands
+
+Runtime reads `symfonicat.admin` from `config/packages/symfonicat.yaml`. The database tables are for unlocked admin editing and dumping YAML.
+
+Commands:
+
+- `symfonicat:schema:update`
+- `symfonicat:load`
+- `symfonicat:dump`
+- `symfonicat:purge`
+- `symfonicat:admin:create`
+- `symfonicat:admin:delete`
+- `symfonicat:data:webpack`
+- `symfonicat:data:dns`
+- `symfonicat:public-suffix:refresh`
+
+`symfonicat:schema:update` synchronizes the Doctrine schema and configured-vendor rows for parcels, middleware, endpoints, modules, domains, applications, and subdomains.
+
+Local PHPUnit can bypass a root-owned container cache with:
 
 ```bash
-docker exec -it php bin/console symfonicat:admin:create <username>
-touch symfonicat.lock # enables /admin
+SYMFONICAT_CACHE_DIR=/tmp/symfonicat_dev_cache php bin/phpunit
 ```
-
-and then visit `/admin`. Every path beginning with `/admin` returns a Symfony-rendered 404 until the root `symfonicat.lock` file exists; Caddy catches those requests before public static files can be served, marks them, and routes them into Symfony. Symfony keeps the same guard for non-Caddy runtimes. Remove the ignored lock file to close the admin area again.
-
-The admin header includes the YAML tools and `/admin/f`, which uploads named files into `public/domains/{domain-id}/` or `public/projects/{project-id}/` for domain and project asset scopes. Project and application lookups by clean id are strict; if multiple rows share the same clean id, runtime resolution throws, the matching admin list flashes a duplicate-id warning, and `symfonicat:schema:update` fails fast before syncing those rows.
-
-## Modules
-
-Module controllers are package-owned and run only when the active domain, project, or application has the module attached. Runtime module requests use full-qualified URLs such as `/m/symfonicat/analytics/main`, matching frontend module code like this:
-
-```javascript
-const mod = 'symfonicat/analytics/main'
-
-mod.log('module active!')
-
-// posts { test: true } to /m/symfonicat/analytics/main
-const result = await mod.json({ test: true })
-mod.log('/m/symfonicat/analytics/main result:', result)
-```
-
-## Electron
-
-Electron rows are managed under `/admin/e` and build with:
-
-```bash
-docker exec php bin/console symfonicat:electron:build
-docker exec php bin/console symfonicat:electron:build <name>
-```
-
-Electron rows use plain ids. Generated start URLs include `?electron={electron.id}` so the `electron` Twig variable resolves to the active Electron entity row.
-
-## Sync
-
-`symfonicat:schema:update` synchronizes the Doctrine schema and then synchronizes package-provided modules, domains, applications, and projects. Non-interactive runs create missing package rows automatically; stale modules with referencing rows still require an interactive confirmation before deletion.
-
-```bash
-docker exec -it php bin/console symfonicat:schema:update
-```
-
-## Picture of @dunglas at the Zoo
-
-This repository includes an AI-generated picture of Kévin Dunglas at the zoo:
-
-[dunglas_at_zoo.png](https://github.com/symfonicat/core/blob/main/dunglas_at_zoo.png)
-
-
-For full install, routing, env, Electron, and command details, see [symfonicat/core](https://github.com/symfonicat/core).

@@ -41,7 +41,6 @@ final class SymfonicatExtension extends Extension implements PrependExtensionInt
         $configuration = new Configuration();
         $config = $this->processConfiguration($configuration, $configs);
 
-        $container->setParameter('symfonicat.asset_base_url', $config['asset_base_url']);
         $vendors = array_values(array_unique(array_filter(array_map(
             static fn (mixed $vendor): string => trim((string) $vendor),
             $config['vendors'],

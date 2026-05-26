@@ -2,55 +2,56 @@
 
 namespace Symfonicat\Form;
 
+use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\Application;
-use Symfonicat\Entity\Module;
+use Symfonicat\Entity\Endpoint;
+use Symfonicat\Entity\Subdomain;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
 final class ApplicationType extends AbstractType
 {
-    use VendorScopedIdFormTrait;
-
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $application = $builder->getData();
-        $applicationId = $application instanceof Application ? trim((string) $application->getId(false)) : '';
-
-        $this->addDisabledVendorField($builder);
-
-        if ($applicationId === '') {
-            $builder->add('id', null, [
-                'label' => 'id',
-                'disabled' => !$options['id_editable'],
-            ]);
-        }
+        $applicationId = $application instanceof Application ? trim((string) $application->getId()) : '';
 
         $builder
-            ->add('modules', EntityType::class, [
-                'class' => Module::class,
-                'choice_label' => static fn (Module $module): string => (function (Module $m): string {
-                    $id = (string) $m->getId();
-                    $parts = explode('/', $id);
-                    return (string) end($parts);
-                })($module),
-                'group_by' => static fn (Module $m): string => (function (Module $mod): string {
-                    $vendor = trim($mod->getVendor());
-                    $package = trim((string) ($mod->getPackage() ?? ''));
-                    if ($package === '') {
-                        $id = (string) $mod->getId();
-                        $parts = explode('/', $id);
-                        $package = $parts[1] ?? '';
-                    }
-                    return $package === '' ? $vendor : sprintf('%s/%s', $vendor, $package);
-                })($m),
-                'choice_value' => static fn (?Module $m): string => $m ? (string) $m->getId() : '',
-                'label' => 'modules',
-                'multiple' => true,
-                'by_reference' => false,
+            ->add('id', null, [
+                'label' => 'id',
+                'disabled' => $applicationId !== '' || !$options['id_editable'],
+            ])
+            ->add('name', null, [
+                'label' => 'name',
+            ])
+            ->add('type', ChoiceType::class, [
+                'label' => 'type',
+                'choices' => Application::typeChoices(),
+            ])
+            ->add('domain', EntityType::class, [
+                'class' => Domain::class,
+                'choice_label' => 'id',
+                'label' => 'domain',
                 'required' => false,
+                'placeholder' => 'select domain',
+            ])
+            ->add('subdomain', EntityType::class, [
+                'class' => Subdomain::class,
+                'choice_label' => static fn (Subdomain $subdomain): string => (string) $subdomain->getId(),
+                'label' => 'subdomain',
+                'required' => false,
+                'placeholder' => 'select subdomain',
+            ])
+            ->add('endpoint', EntityType::class, [
+                'class' => Endpoint::class,
+                'choice_label' => static fn (Endpoint $endpoint): string => (string) $endpoint->getId(),
+                'label' => 'endpoint',
+                'required' => false,
+                'placeholder' => 'select endpoint',
             ])
             ->add('env', CollectionType::class, [
                 'label' => 'env',
@@ -63,7 +64,6 @@ final class ApplicationType extends AbstractType
             ])
         ;
 
-        $this->addVendorPrefixSubmitListener($builder, $options);
     }
 
     public function configureOptions(OptionsResolver $resolver): void
@@ -71,10 +71,8 @@ final class ApplicationType extends AbstractType
         $resolver->setDefaults([
             'data_class' => Application::class,
             'id_editable' => true,
-            'default_vendor' => 'core',
         ]);
 
         $resolver->setAllowedTypes('id_editable', 'bool');
-        $resolver->setAllowedTypes('default_vendor', 'string');
     }
 }

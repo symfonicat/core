@@ -5,16 +5,18 @@ namespace Symfonicat\Service;
 final class PackageDiscoveryService
 {
     private const SUPPORTED_ENTRY_TYPES = [
-        'applications',
-        'modules',
-        'projects',
+        'parcel',
+        'domain',
+        'endpoint',
+        'module',
+        'subdomain',
     ];
 
     /**
      * @param list<string> $vendors
      */
     public function __construct(
-        private readonly string $projectDir,
+        private readonly string $subdomainDir,
         private readonly array $vendors = ['symfonicat'],
     ) {
     }
@@ -31,13 +33,13 @@ final class PackageDiscoveryService
     {
         $packages = [];
 
-        $rootComposerPath = $this->projectDir.'/composer.json';
+        $rootComposerPath = $this->subdomainDir.'/composer.json';
         if (is_file($rootComposerPath)) {
             $rootComposer = $this->decodeJsonFile($rootComposerPath);
             $packageName = trim((string) ($rootComposer['name'] ?? 'symfonicat/core'));
             if ($packageName !== '' && $this->isConfiguredVendorPackage($packageName)) {
                 $packages[$packageName] = [
-                    'installPath' => $this->projectDir,
+                    'installPath' => $this->subdomainDir,
                     'name' => $packageName,
                     'package' => $this->shortPackageName($packageName),
                     'vendor' => 'core',
@@ -45,7 +47,7 @@ final class PackageDiscoveryService
             }
         }
 
-        $installedPath = $this->projectDir.'/vendor/composer/installed.json';
+        $installedPath = $this->subdomainDir.'/vendor/composer/installed.json';
         if (!is_file($installedPath)) {
             return array_values($packages);
         }
@@ -64,7 +66,7 @@ final class PackageDiscoveryService
                 continue;
             }
 
-            $installPath = realpath($this->projectDir.'/vendor/composer/'.$relativeInstallPath);
+            $installPath = realpath($this->subdomainDir.'/vendor/composer/'.$relativeInstallPath);
             if ($installPath === false || !is_dir($installPath)) {
                 continue;
             }
@@ -111,8 +113,12 @@ final class PackageDiscoveryService
                     continue;
                 }
 
-                $idPrefix = $package['vendor'] === 'core' ? 'core' : $package['vendor'].'/'.$package['package'];
-                $id = $idPrefix.'/'.$name;
+                if ($type === 'domain' || $type === 'endpoint' || $type === 'subdomain') {
+                    $id = $name;
+                } else {
+                    $idPrefix = $package['vendor'] === 'core' ? 'core' : $package['vendor'].'/'.$package['package'];
+                    $id = $idPrefix.'/'.$name;
+                }
 
                 if (isset($entries[$id])) {
                     throw new \RuntimeException(sprintf(
@@ -141,6 +147,69 @@ final class PackageDiscoveryService
     }
 
     /**
+     * @return list<array{
+     *     absolute: string,
+     *     packageName: string,
+     *     relative: string,
+     *     type: string
+     * }>
+     */
+    public function packageEntryBaseDirectories(string $type): array
+    {
+        if (!in_array($type, self::SUPPORTED_ENTRY_TYPES, true)) {
+            throw new \InvalidArgumentException(sprintf('Unsupported package entry type "%s".', $type));
+        }
+
+        $directories = [];
+
+        foreach ($this->findSymfonicatPackages() as $package) {
+            $absolute = $package['installPath'].'/assets/'.$type;
+            $directories[] = [
+                'absolute' => $absolute,
+                'packageName' => $package['name'],
+                'relative' => $this->relativePath($absolute),
+                'type' => $type,
+            ];
+        }
+
+        return $directories;
+    }
+
+    /**
+     * @return array<string, array{
+     *     directory: string,
+     *     entry: string,
+     *     id: string,
+     *     package: string,
+     *     packageName: string,
+     *     path: string,
+     *     type: string,
+     *     vendor: string
+     * }>
+     */
+    public function discoverParcels(): array
+    {
+        $parcels = [];
+
+        foreach ($this->discoverEntryDirectories('parcel') as $parcelId => $entry) {
+            $parcels[$parcelId] = [
+                'directory' => $entry['directory'],
+                'entry' => $entry['entry'],
+                'id' => $parcelId,
+                'package' => $entry['package'],
+                'packageName' => $entry['packageName'],
+                'path' => $this->relativePath($entry['directory']),
+                'type' => 'parcel',
+                'vendor' => $entry['vendor'],
+            ];
+        }
+
+        ksort($parcels, SORT_STRING);
+
+        return $parcels;
+    }
+
+    /**
      * @return array<string, array{
      *     directory: string,
      *     entry: string,
@@ -155,7 +224,7 @@ final class PackageDiscoveryService
     {
         $modules = [];
 
-        foreach ($this->discoverEntryDirectories('modules') as $id => $module) {
+        foreach ($this->discoverEntryDirectories('module') as $id => $module) {
             $packagePath = $module['directory'].'/package.json';
             if (!is_file($packagePath)) {
                 throw new \RuntimeException(sprintf('Module "%s" is missing "%s".', $id, $packagePath));
@@ -185,6 +254,18 @@ final class PackageDiscoveryService
         $parts = explode('/', $packageName, 2);
 
         return trim($parts[0] ?? '');
+    }
+
+    private function relativePath(string $path): string
+    {
+        $root = rtrim(str_replace('\\', '/', $this->subdomainDir), '/').'/';
+        $path = str_replace('\\', '/', $path);
+
+        if (str_starts_with($path, $root)) {
+            return substr($path, strlen($root));
+        }
+
+        return $path;
     }
 
     private function isConfiguredVendorPackage(string $packageName): bool

@@ -12,29 +12,29 @@ use Symfony\Component\HttpKernel\HttpKernelInterface;
 
 final class AdminLockSubscriberTest extends TestCase
 {
-    private string $projectDir;
+    private string $subdomainDir;
 
     protected function setUp(): void
     {
-        $this->projectDir = sys_get_temp_dir().'/symfonicat_admin_lock_'.bin2hex(random_bytes(6));
-        mkdir($this->projectDir, 0755, true);
+        $this->subdomainDir = sys_get_temp_dir().'/symfonicat_admin_lock_'.bin2hex(random_bytes(6));
+        mkdir($this->subdomainDir, 0755, true);
     }
 
     protected function tearDown(): void
     {
-        $lockPath = $this->projectDir.'/symfonicat.lock';
+        $lockPath = $this->subdomainDir.'/symfonicat.lock';
         if (is_file($lockPath)) {
             unlink($lockPath);
         }
 
-        if (is_dir($this->projectDir)) {
-            rmdir($this->projectDir);
+        if (is_dir($this->subdomainDir)) {
+            rmdir($this->subdomainDir);
         }
     }
 
     public function testBlocksAdminPrefixedPathsWithoutLockFile(): void
     {
-        $subscriber = new AdminLockSubscriber($this->projectDir);
+        $subscriber = new AdminLockSubscriber($this->subdomainDir);
 
         foreach (['/admin', '/admin/login', '/administrator'] as $path) {
             $event = $this->requestEvent($path);
@@ -50,11 +50,11 @@ final class AdminLockSubscriberTest extends TestCase
 
     public function testAllowsAdminPrefixedPathsWithLockFile(): void
     {
-        file_put_contents($this->projectDir.'/symfonicat.lock', "enabled\n");
+        file_put_contents($this->subdomainDir.'/symfonicat.lock', "enabled\n");
 
         $event = $this->requestEvent('/admin/login');
 
-        (new AdminLockSubscriber($this->projectDir))->onKernelRequest($event);
+        (new AdminLockSubscriber($this->subdomainDir))->onKernelRequest($event);
 
         self::assertFalse($event->hasResponse());
     }
@@ -65,7 +65,7 @@ final class AdminLockSubscriberTest extends TestCase
 
         $this->expectException(NotFoundHttpException::class);
 
-        (new AdminLockSubscriber($this->projectDir))->onKernelRequest($event);
+        (new AdminLockSubscriber($this->subdomainDir))->onKernelRequest($event);
     }
 
     public function testAllowsSymfonyExceptionRenderingSubRequestWithoutLockFile(): void
@@ -74,7 +74,7 @@ final class AdminLockSubscriberTest extends TestCase
             'exception' => new NotFoundHttpException('Not Found'),
         ]);
 
-        (new AdminLockSubscriber($this->projectDir))->onKernelRequest($event);
+        (new AdminLockSubscriber($this->subdomainDir))->onKernelRequest($event);
 
         self::assertFalse($event->hasResponse());
     }
@@ -86,7 +86,7 @@ final class AdminLockSubscriberTest extends TestCase
         ]);
 
         try {
-            (new AdminLockSubscriber($this->projectDir))->onKernelRequest($event);
+            (new AdminLockSubscriber($this->subdomainDir))->onKernelRequest($event);
             self::fail('Caddy-routed locked admin requests must become Symfony 404s.');
         } catch (NotFoundHttpException $exception) {
             $this->assertLockedAdminException($exception);
@@ -95,7 +95,7 @@ final class AdminLockSubscriberTest extends TestCase
 
     public function testIgnoresPublicPathsWithoutLockFile(): void
     {
-        $subscriber = new AdminLockSubscriber($this->projectDir);
+        $subscriber = new AdminLockSubscriber($this->subdomainDir);
 
         foreach (['/', '/docs', '/application/core/test'] as $path) {
             $event = $this->requestEvent($path);

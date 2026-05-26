@@ -3,11 +3,10 @@
 namespace Symfonicat\Twig;
 
 use Symfonicat\Entity\Domain;
-use Symfonicat\Entity\Electron;
 use Symfonicat\Entity\Application;
-use Symfonicat\Entity\Project;
+use Symfonicat\Entity\Subdomain;
 use Symfonicat\Service\DomainService;
-use Symfonicat\Service\ProjectService;
+use Symfonicat\Service\SubdomainService;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFunction;
@@ -16,9 +15,9 @@ final class RuntimeAssetExtension extends AbstractExtension
 {
     public function __construct(
         private readonly DomainService $domainService,
-        private readonly ProjectService $projectService,
+        private readonly SubdomainService $subdomainService,
         private readonly RequestStack $requestStack,
-        private readonly string $projectDir,
+        private readonly string $subdomainDir,
     ) {
     }
 
@@ -29,30 +28,21 @@ final class RuntimeAssetExtension extends AbstractExtension
         ];
     }
 
-    private function base(Application|Domain|Electron|Project|null $context = null, string $path = ''): string
+    private function base(Domain|Application|Subdomain|null $context = null, string $path = ''): string
     {
-        if ($context instanceof Electron) {
-            $electronId = trim((string) $context->getId());
-            if ($electronId !== '') {
-                return sprintf('/electron/%s/', $this->encodePath($electronId));
-            }
-
-            return '/default/';
-        }
-
         if ($context instanceof Application) {
             $applicationId = trim((string) $context->getId());
             if ($applicationId !== '') {
-                return sprintf('/%s/', $this->encodePath($applicationId));
+                return sprintf('/application/%s/', $this->encodePath($applicationId));
             }
 
             return '/default/';
         }
 
-        if ($context instanceof Project) {
-            $projectId = trim((string) $context->getId(false));
-            if ($projectId !== '') {
-                return sprintf('/projects/%s/', $this->encodePath($projectId));
+        if ($context instanceof Subdomain) {
+            $subdomainId = trim((string) $context->getId(false));
+            if ($subdomainId !== '') {
+                return sprintf('/subdomain/%s/', $this->encodePath($subdomainId));
             }
 
             return '/default/';
@@ -76,9 +66,9 @@ final class RuntimeAssetExtension extends AbstractExtension
             return $this->defaultAssetBase($path);
         }
 
-        $project = $this->projectService->load();
-        if ($project instanceof Project && $this->assetFileExists('projects', (string) $project->getId(false), $path)) {
-            return sprintf('/projects/%s/', $this->encodePath((string) $project->getId(false)));
+        $subdomain = $this->subdomainService->load();
+        if ($subdomain instanceof Subdomain && $this->assetFileExists('subdomain', (string) $subdomain->getId(false), $path)) {
+            return sprintf('/subdomain/%s/', $this->encodePath((string) $subdomain->getId(false)));
         }
 
         $domain = $this->domainService->load();
@@ -89,7 +79,7 @@ final class RuntimeAssetExtension extends AbstractExtension
         return $this->defaultAssetBase($path);
     }
 
-    public function asset(string $path = '', Application|Domain|Electron|Project|null $context = null): string
+    public function asset(string $path = '', Domain|Application|Subdomain|null $context = null): string
     {
         $path = trim($path, " \t\n\r\0\x0B/");
 
@@ -111,7 +101,7 @@ final class RuntimeAssetExtension extends AbstractExtension
     private function assetFileExists(string $type, string $id, string $path): bool
     {
         $path = trim($path, " \t\n\r\0\x0B/");
-        $directory = rtrim($this->projectDir, '/').'/public/'.trim($type, '/');
+        $directory = rtrim($this->subdomainDir, '/').'/public/'.trim($type, '/');
 
         if (trim($id, " \t\n\r\0\x0B/") !== '') {
             $directory .= '/'.trim($id, " \t\n\r\0\x0B/");
@@ -125,7 +115,7 @@ final class RuntimeAssetExtension extends AbstractExtension
     private function defaultAssetBase(string $path): string
     {
         if ($path !== '' && !$this->assetFileExists('default', '', $path)) {
-            throw new \RuntimeException(sprintf('Asset "%s" was not found in the project, domain, or default public folders.', $path));
+            throw new \RuntimeException(sprintf('Asset "%s" was not found in the subdomain, domain, or default public folders.', $path));
         }
 
         return '/default/';

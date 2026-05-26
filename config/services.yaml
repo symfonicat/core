@@ -5,6 +5,10 @@ services:
         autowire: true
         autoconfigure: true
 
+    _instanceof:
+        Psr\Http\Server\MiddlewareInterface:
+            tags: ['symfonicat.middleware']
+
     App\:
         resource: '../src/'
         exclude:
@@ -21,30 +25,20 @@ services:
 
     Symfonicat\Service\DomainService:
         arguments:
-            $projectDir: '%kernel.project_dir%'
+            $subdomainDir: '%kernel.project_dir%'
 
     Symfonicat\EventSubscriber\AdminLockSubscriber:
         arguments:
-            $projectDir: '%kernel.project_dir%'
+            $subdomainDir: '%kernel.project_dir%'
 
     Symfonicat\Service\PackageDiscoveryService:
         arguments:
-            $projectDir: '%kernel.project_dir%'
+            $subdomainDir: '%kernel.project_dir%'
             $vendors: '%symfonicat.vendors%'
 
-    Symfonicat\Service\ApplicationService:
+    Symfonicat\Service\AffixService:
         arguments:
-            $appSecret: '%kernel.secret%'
-            $frameworkRouter: '@Symfonicat\Routing\ApplicationRouter.inner'
-
-    Symfonicat\Routing\ApplicationRouter:
-        decorates: 'router.default'
-        arguments:
-            $inner: '@Symfonicat\Routing\ApplicationRouter.inner'
-
-    Symfonicat\Service\SubdomainService:
-        arguments:
-            $projectDir: '%kernel.project_dir%'
+            $subdomainDir: '%kernel.project_dir%'
 
     Symfonicat\Service\FileUploadService:
         arguments:
@@ -62,6 +56,19 @@ services:
 
     Intervention\Image\Interfaces\ImageManagerInterface: '@Intervention\Image\ImageManager'
 
+    Nyholm\Psr7\Factory\Psr17Factory: ~
+
+    Symfony\Bridge\PsrHttpMessage\HttpFoundationFactoryInterface:
+        class: Symfony\Bridge\PsrHttpMessage\Factory\HttpFoundationFactory
+
+    Symfony\Bridge\PsrHttpMessage\HttpMessageFactoryInterface:
+        class: Symfony\Bridge\PsrHttpMessage\Factory\PsrHttpFactory
+        arguments:
+            $serverRequestFactory: '@Nyholm\Psr7\Factory\Psr17Factory'
+            $streamFactory: '@Nyholm\Psr7\Factory\Psr17Factory'
+            $uploadedFileFactory: '@Nyholm\Psr7\Factory\Psr17Factory'
+            $responseFactory: '@Nyholm\Psr7\Factory\Psr17Factory'
+
     Symfonicat\Security\AdminUserProvider:
         arguments:
             $cache: '@cache.app'
@@ -72,7 +79,7 @@ services:
 
     Symfonicat\Twig\RuntimeAssetExtension:
         arguments:
-            $projectDir: '%kernel.project_dir%'
+            $subdomainDir: '%kernel.project_dir%'
 
     symfonicat.redis_connection:
         class: Redis

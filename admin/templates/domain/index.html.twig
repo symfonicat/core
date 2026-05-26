@@ -2,15 +2,18 @@
 {% block title %}Domains{% endblock %}
 {% block body %}
 
-    <div class="d-flex justify-content-end">
+    <div class="d-flex justify-content-end mb-1">
         <a href="{{ path('symfonicat_domain_create') }}" class="btn btn-sm btn-success">create domain</a>
     </div>
 
-    <table class="table" id="domains">
+    <table class="table table-sm" id="domains">
         <thead>
             <tr>
                 <th>domain</th>
-                <th>projects</th>
+                <th>subdomains</th>
+                <th>catch</th>
+                <th>parcel</th>
+                <th>middlewares</th>
                 <th>modules</th>
                 {% for env_parent in env_parents %}
                     <th>{{ env_parent.id }}</th>
@@ -23,7 +26,7 @@
             {{ include('@symfonicat/domain/_row.html.twig') }}
         {% else %}
             <tr id="domains-empty">
-                <td colspan="{{ 4 + env_parents|length }}">no records found</td>
+                <td colspan="{{ 7 + env_parents|length }}">no records found</td>
             </tr>
         {% endfor %}
         </tbody>

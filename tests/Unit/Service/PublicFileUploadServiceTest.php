@@ -4,7 +4,7 @@ namespace App\Tests\Unit\Service;
 
 use PHPUnit\Framework\TestCase;
 use Symfonicat\Entity\Domain;
-use Symfonicat\Entity\Project;
+use Symfonicat\Entity\Subdomain;
 use Symfonicat\Form\FileUploadItemType;
 use Symfonicat\Service\PublicFileUploadService;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
@@ -41,21 +41,21 @@ final class PublicFileUploadServiceTest extends TestCase
         self::assertSame('domain content', file_get_contents($this->publicDir.'/'.$path));
     }
 
-    public function testUploadsProjectFileIntoCleanProjectPublicFolder(): void
+    public function testUploadsSubdomainFileIntoCleanSubdomainPublicFolder(): void
     {
-        $project = (new Project())->setId('core/project1');
-        $file = $this->uploadedFile('project content');
+        $subdomain = (new Subdomain())->setId('core/subdomain1');
+        $file = $this->uploadedFile('subdomain content');
 
         $path = (new PublicFileUploadService($this->publicDir))->upload(
             'file.txt',
-            FileUploadItemType::FILE_TYPE_PROJECT,
+            FileUploadItemType::FILE_TYPE_SUBDOMAIN,
             null,
-            $project,
+            $subdomain,
             $file,
         );
 
-        self::assertSame('projects/project1/file.txt', $path);
-        self::assertSame('project content', file_get_contents($this->publicDir.'/'.$path));
+        self::assertSame('subdomains/subdomain1/file.txt', $path);
+        self::assertSame('subdomain content', file_get_contents($this->publicDir.'/'.$path));
     }
 
     public function testRejectsFileNamesWithPathSeparators(): void

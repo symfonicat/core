@@ -2,26 +2,42 @@
 
 namespace Symfonicat\Entity;
 
+use Doctrine\ORM\Mapping as ORM;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
-use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
 use Symfonicat\Repository\ApplicationRepository;
 
 #[ORM\Entity(repositoryClass: ApplicationRepository::class)]
 #[ORM\Table(name: 'symfonicat_application')]
 class Application
 {
-    use VendorScopedIdTrait;
+    public const TYPE_DOMAIN = 'domain';
+    public const TYPE_SUBDOMAIN = 'subdomain';
+    public const TYPE_ENDPOINT = 'endpoint';
 
     #[ORM\Id]
     #[ORM\Column(length: 255)]
     private ?string $id = null;
 
-    /**
-     * @var Collection<int, Module>
-     */
-    #[ORM\ManyToMany(targetEntity: Module::class, mappedBy: 'applications')]
-    private Collection $modules;
+    #[ORM\Column(length: 255)]
+    private ?string $name = null;
+
+    #[ORM\Column(length: 50)]
+    private string $type = self::TYPE_DOMAIN;
+
+    #[ORM\ManyToOne(targetEntity: Domain::class)]
+    #[ORM\JoinColumn(name: 'domain_id', referencedColumnName: 'id', nullable: true, onDelete: 'CASCADE')]
+    private ?Domain $domain = null;
+
+    #[ORM\ManyToOne(targetEntity: Subdomain::class)]
+    #[ORM\JoinColumn(name: 'subdomain_id', referencedColumnName: 'id', nullable: true, onDelete: 'CASCADE')]
+    private ?Subdomain $subdomain = null;
+
+    #[ORM\ManyToOne(targetEntity: Endpoint::class)]
+    #[ORM\JoinColumn(name: 'endpoint_id', referencedColumnName: 'id', nullable: true, onDelete: 'CASCADE')]
+    private ?Endpoint $endpoint = null;
 
     /**
      * @var Collection<int, ApplicationEnv>
@@ -31,53 +47,93 @@ class Application
 
     public function __construct()
     {
-        $this->modules = new ArrayCollection();
         $this->env = new ArrayCollection();
     }
 
-    /**
-     * @return Collection<int, Module>
-     */
-    public function getModules(): Collection
+    public function getId(bool $includeVendor = true): ?string
     {
-        return $this->modules;
+        return $this->id;
     }
 
-    public function addModule(Module $module): static
+    public function setId(string $id): static
     {
-        if (!$this->hasModule($module)) {
-            $this->modules->add($module);
-
-            if (!$module->hasApplication($this)) {
-                $module->getApplications()->add($this);
-            }
+        $id = trim($id, " \t\n\r\0\x0B/");
+        if ($id === '') {
+            throw new \InvalidArgumentException('Application id must be non-empty.');
         }
+
+        $this->id = $id;
 
         return $this;
     }
 
-    public function removeModule(Module $module): static
+    public static function typeChoices(): array
     {
-        if ($this->modules->removeElement($module) && $module->hasApplication($this)) {
-            $module->getApplications()->removeElement($this);
-        }
+        return [
+            'domain' => self::TYPE_DOMAIN,
+            'subdomain' => self::TYPE_SUBDOMAIN,
+            'endpoint' => self::TYPE_ENDPOINT,
+        ];
+    }
+
+    public function getName(): ?string
+    {
+        return $this->name;
+    }
+
+    public function setName(string $name): static
+    {
+        $this->name = $name;
 
         return $this;
     }
 
-    public function hasModule(Module $module): bool
+    public function getType(): string
     {
-        foreach ($this->modules as $existingModule) {
-            if ($existingModule === $module) {
-                return true;
-            }
+        return $this->type;
+    }
 
-            if ($existingModule->getId() !== null && $module->getId() !== null && $existingModule->getId() === $module->getId()) {
-                return true;
-            }
-        }
+    public function setType(string $type): static
+    {
+        $this->type = $type;
 
-        return false;
+        return $this;
+    }
+
+    public function getDomain(): ?Domain
+    {
+        return $this->domain;
+    }
+
+    public function setDomain(?Domain $domain): static
+    {
+        $this->domain = $domain;
+
+        return $this;
+    }
+
+    public function getSubdomain(): ?Subdomain
+    {
+        return $this->subdomain;
+    }
+
+    public function setSubdomain(?Subdomain $subdomain): static
+    {
+        $this->subdomain = $subdomain;
+
+        return $this;
+    }
+
+    public function getEndpoint(): ?Endpoint
+    {
+        return $this->endpoint;
+    }
+
+    public function setEndpoint(?Endpoint $endpoint): static
+    {
+        $this->endpoint = $endpoint;
+
+        return $this;
     }
 
     /**
@@ -105,5 +161,84 @@ class Application
         }
 
         return $this;
+    }
+
+    public function isDomainType(): bool
+    {
+        return $this->type === self::TYPE_DOMAIN;
+    }
+
+    public function isSubdomainType(): bool
+    {
+        return $this->type === self::TYPE_SUBDOMAIN;
+    }
+
+    public function isEndpointType(): bool
+    {
+        return $this->type === self::TYPE_ENDPOINT;
+    }
+
+    public function getTargetId(bool $includeVendor = false): ?string
+    {
+        return match ($this->type) {
+            self::TYPE_DOMAIN => $this->domain?->getId($includeVendor),
+            self::TYPE_SUBDOMAIN => $this->subdomainTargetId($includeVendor),
+            self::TYPE_ENDPOINT => $this->endpoint?->getId($includeVendor),
+            default => null,
+        };
+    }
+
+    public function subdomainTargetId(bool $includeVendor = false): ?string
+    {
+        $subdomainId = trim((string) $this->subdomain?->getId($includeVendor));
+        if ($subdomainId === '') {
+            return null;
+        }
+
+        $domainId = trim((string) $this->domain?->getId($includeVendor));
+        if ($domainId === '') {
+            return null;
+        }
+
+        return sprintf('%s.%s', $subdomainId, $domainId);
+    }
+
+    #[Assert\Callback]
+    public function validate(ExecutionContextInterface $context): void
+    {
+        $type = trim($this->type);
+
+        if (!in_array($type, self::typeChoices(), true)) {
+            $context->buildViolation('Choose a valid Application type.')
+                ->atPath('type')
+                ->addViolation();
+
+            return;
+        }
+
+        if ($type === self::TYPE_DOMAIN && !$this->domain instanceof Domain) {
+            $context->buildViolation('Select a domain.')
+                ->atPath('domain')
+                ->addViolation();
+        }
+
+        if ($type === self::TYPE_SUBDOMAIN && !$this->subdomain instanceof Subdomain) {
+            $context->buildViolation('Select a subdomain.')
+                ->atPath('subdomain')
+                ->addViolation();
+        }
+
+        if ($type === self::TYPE_SUBDOMAIN && !$this->domain instanceof Domain) {
+            $context->buildViolation('Select a domain.')
+                ->atPath('domain')
+                ->addViolation();
+        }
+
+        if ($type === self::TYPE_ENDPOINT && !$this->endpoint instanceof Endpoint) {
+            $context->buildViolation('Select an endpoint.')
+                ->atPath('endpoint')
+                ->addViolation();
+        }
+
     }
 }

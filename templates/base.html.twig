@@ -18,15 +18,19 @@
             console.log('[window.env]', window.env)
             console.log('----------------------')
 
-            window.electron = {{ electron ? {
-                id: electron.id,
-                name: electron.name,
-                type: electron.type,
-            } | json_encode : 'null' }}
-            console.log('[window.electron]', window.electron)
+            window.application = {{ application ? {
+                id: application.id,
+                name: application.name,
+                type: application.type,
+            } | json_encode | raw : 'null' }}
+            console.log('[window.application]', window.application)
             console.log('----------------------')
 
-            {{ application_helper() | raw | indent_json(12) }}
+            window.endpoint = {{ endpoint is defined and endpoint ? {
+                id: endpoint.id,
+            } | json_encode | raw : 'null' }}
+            console.log('[window.endpoint]', window.endpoint)
+            console.log('----------------------')
 
         </script>
         <!-- -->
@@ -59,7 +63,7 @@
 
         <header class="d-flex align-items-center gap-3 px-3 py-2 bg-dark text-white">
             
-            <a href="{{ path('symfonicat_project_root') }}" class="text-white text-decoration-none fw-bold">Symfonicat</a>
+            <a href="{{ path('symfonicat_runtime_root') }}" class="text-white text-decoration-none fw-bold">Symfonicat</a>
             <div class="ms-auto">
                 
                 <a

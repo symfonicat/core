@@ -12,7 +12,7 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 final class FileUploadType extends AbstractType
 {
     public const FILE_TYPE_DOMAIN = FileUploadItemType::FILE_TYPE_DOMAIN;
-    public const FILE_TYPE_PROJECT = FileUploadItemType::FILE_TYPE_PROJECT;
+    public const FILE_TYPE_SUBDOMAIN = FileUploadItemType::FILE_TYPE_SUBDOMAIN;
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {

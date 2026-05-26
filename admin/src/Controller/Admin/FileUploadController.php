@@ -37,7 +37,7 @@ final class FileUploadController extends AbstractController
                         $data->name,
                         $item->type,
                         $item->domain,
-                        $item->project,
+                        $item->subdomain,
                         $item->file,
                     );
                 } catch (\InvalidArgumentException | \RuntimeException $error) {

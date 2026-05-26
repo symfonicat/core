@@ -2,75 +2,126 @@
 
 namespace Symfonicat\Service;
 
+use Doctrine\ORM\EntityManagerInterface;
+use Symfonicat\Entity\Subdomain;
 use Symfonicat\Service\DomainService;
-use Pdp\Domain;
-use Pdp\Rules;
-use Psr\Log\LoggerInterface;
-use Symfony\Component\HttpFoundation\RequestStack;
+use Symfonicat\Service\AffixService;
+use Symfonicat\Repository\SubdomainRepository;
 
-final class SubdomainService
+class SubdomainService
 {
 
-    public function __construct(
+    public function __construct (
 
-        private readonly string $projectDir,
-        private readonly RequestStack $requestStack,
-        private readonly LoggerInterface $logger,
-        private readonly DomainService $domainService
+        private readonly DomainService $domainService,
+        private readonly AffixService $affixService,
+        private readonly SubdomainRepository $subdomainRepository,
+        private readonly EntityManagerInterface $entityManager,
+        private readonly PackageDiscoveryService $packageDiscoveryService,
+        private readonly RuntimeConfig $runtimeConfig,
 
     ) {
     }
 
-    /**
-     * @return list<string>
-     */
-    public function getSubdomainsRaw () : array
-    {
-        try {
-            $host = $this->requestStack->getCurrentRequest()?->getHost();
-            if ( $host === NULL) {
-                return [];
-            }
+    public function load () {
+        $subdomainId = $this->affixService->getAffixByIndex(0);
+        $domain = $this->domainService->load();
 
-            if ( str_ends_with($host, 'localhost')) {
-                $host = str_replace ('localhost', '', $host) . 'localhost.com';
-            }
-
-            $domain = Domain::fromIDNA2008($host);
-            $result = $this->domainService->getPublicSuffixList()->resolve($domain);
-
-            $subdomain = trim ( $result->subDomain()->toString(), '.');
-            if ( $subdomain === '') {
-                return [];
-            }
-
-            return array_values ( array_reverse ( explode ('.', $subdomain)));
-        } catch (\Throwable $exception) {
-            $this->logger->error($exception->getMessage());
-
-            return [];
+        if ($subdomainId === NULL || $subdomainId === '') {
+            return null;
         }
+
+        // First try the literal subdomain id (e.g. "subdomain1") so explicitly
+        // created DB rows win over any package-prefixed discovery.
+        if (($_SERVER['APP_ENV'] ?? null) === 'test') {
+            if ($domain) {
+                $found = $this->subdomainRepository->findOneByIdForDomain($subdomainId, (string) $domain->getId());
+                if ($found) {
+                    return $found;
+                }
+            } else {
+                $found = $this->subdomainRepository->findOneById($subdomainId);
+                if ($found) {
+                    return $found;
+                }
+            }
+        }
+
+        if ($domain) {
+            $found = $this->runtimeConfig->subdomainByIdForDomain($subdomainId, $domain);
+            if ($found) {
+                return $found;
+            }
+        } else {
+            $found = $this->runtimeConfig->subdomainById($subdomainId);
+            if ($found) {
+                return $found;
+            }
+        }
+
+        return null;
+
+    }
+
+    /**
+     * @param (callable(list<string>): bool)|null $confirmSubdomainCreation
+     *
+     * @return array{created: list<array{id: string}>}
+     */
+    public function sync(?callable $confirmSubdomainCreation = null): array
+    {
+        $packageSubdomains = $this->discoverPackageSubdomains();
+        $databaseSubdomains = $this->indexDatabaseSubdomains();
+
+        $missingSubdomainIds = array_values(array_diff($packageSubdomains, array_keys($databaseSubdomains)));
+        sort($missingSubdomainIds, SORT_STRING);
+
+        if ($missingSubdomainIds === []) {
+            return ['created' => []];
+        }
+
+        if ($confirmSubdomainCreation !== null && !(bool) $confirmSubdomainCreation($missingSubdomainIds)) {
+            throw new \RuntimeException('Aborted creating missing subdomain rows.');
+        }
+
+        $created = [];
+
+        foreach ($missingSubdomainIds as $subdomainId) {
+            $subdomain = (new Subdomain())->setId($subdomainId);
+
+            $this->entityManager->persist($subdomain);
+            $created[] = ['id' => $subdomainId];
+        }
+
+        $this->entityManager->flush();
+
+        return ['created' => $created];
     }
 
     /**
      * @return list<string>
      */
-    public function getSubdomains () : array
+    private function discoverPackageSubdomains(): array
     {
-        $raw = $this->getSubdomainsRaw();
-
-        if (
-            
-            isset($raw[0]) &&
-            $raw[0] === 'www'
-
-        ) array_shift($raw);
-
-        return array_values($raw);
+        return array_keys($this->packageDiscoveryService->discoverEntryDirectories('subdomain'));
     }
 
-    public function getSubdomainByIndex (int $index) : string | NULL
+    /**
+     * @return array<string, Subdomain>
+     */
+    private function indexDatabaseSubdomains(): array
     {
-        return $this->getSubdomains()[$index] ?? NULL;
+        $subdomains = [];
+
+        foreach ($this->subdomainRepository->findAllOrderedById() as $subdomain) {
+            $subdomainId = $subdomain->getId();
+            if ($subdomainId === null || $subdomainId === '') {
+                continue;
+            }
+
+            $subdomains[$subdomainId] = $subdomain;
+        }
+
+        return $subdomains;
     }
 }

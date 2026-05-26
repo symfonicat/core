@@ -2,108 +2,69 @@
 
 namespace Symfonicat\Twig;
 
-use Symfonicat\Entity\Application;
 use Symfonicat\Service\ApplicationService;
-use Symfony\Component\HttpFoundation\RequestStack;
 use Twig\Extension\AbstractExtension;
 use Twig\Extension\GlobalsInterface;
 use Twig\TwigFunction;
+use Symfonicat\Entity\Application;
 
 final class ApplicationExtension extends AbstractExtension implements GlobalsInterface
 {
     public function __construct(
         private readonly ApplicationService $applicationService,
-        private readonly RequestStack $requestStack,
     ) {
     }
 
     public function getFunctions(): array
     {
         return [
-            new TwigFunction('application_helper', $this->applicationHelper(...), ['is_safe' => ['html']]),
             new TwigFunction('path_application', $this->pathApplication(...)),
         ];
     }
 
     public function getGlobals(): array
     {
-        if (null === $this->requestStack->getCurrentRequest()) {
-            return [
-                'application' => null,
-            ];
-        }
-
-        $application = $this->applicationService->load();
-
         return [
-            'application' => $application,
+            'application' => $this->applicationService->load(),
         ];
     }
 
-    public function pathApplication(Application|string $application, string|array|null $pathOrParameters = null, string|array|null $pathOrParameters2 = null): string
+    public function pathApplication(Application|string|null $application = null, mixed ...$arguments): string
     {
-        [$path, $arguments] = $this->normalizePathApplicationInputs($pathOrParameters, $pathOrParameters2);
+        $application = $application instanceof Application
+            ? $application
+            : $this->applicationService->find((string) $application);
 
-        return $this->applicationService->path($application, $path, $arguments);
-    }
+        if (!$application instanceof Application) {
+            return '/';
+        }
 
-    /**
-     * @param string|array<int|string, mixed>|null $pathOrParameters
-     * @param string|array<int|string, mixed>|null $pathOrParameters2
-     *
-     * @return array{0: string, 1: array<int, mixed>}
-     */
-    private function normalizePathApplicationInputs(string|array|null $pathOrParameters, string|array|null $pathOrParameters2): array
-    {
-        $path = '';
-        $parameters = null;
+        $extraPath = '';
+        $wildcards = [];
 
-        foreach ([$pathOrParameters, $pathOrParameters2] as $argument) {
-            if ($argument === null) {
+        foreach ($arguments as $argument) {
+            if (is_string($argument)) {
+                $extraPath = trim($argument, " \t\n\r\0\x0B/");
+
                 continue;
             }
 
-            if (is_string($argument)) {
-                if ($path === '') {
-                    $path = $argument;
-
-                    continue;
-                }
-
-                throw new \InvalidArgumentException('path_application() accepts at most one string path argument.');
-            }
-
-            $normalized = array_values($argument);
-            $parameters = $parameters === null ? $normalized : array_values(array_merge($parameters, $normalized));
-        }
-
-        return [$path, $parameters ?? []];
-    }
-
-    private function applicationHelper(): string
-    {
-        $application = $this->applicationService->load();
-        $request = $this->requestStack->getCurrentRequest();
-        $data = null;
-
-        if ($application instanceof Application && $request !== null) {
-            $id = (string) $application->getId();
-            $data = [
-                'id' => $id,
-                'csrfToken' => $this->applicationService->moduleRequestToken($id),
-                'requestHeader' => 'X-Symfonicat-Application-Request',
-                'tokenHeader' => 'X-Symfonicat-Application-Token',
-            ];
-
-            $redirectTo = $request->attributes->get('symfonicat_application_redirect_target');
-            if (is_string($redirectTo) && $redirectTo !== '') {
-                $data['redirectTo'] = $redirectTo;
+            if (is_array($argument)) {
+                $wildcards = array_values(array_map(static fn (mixed $value): string => trim((string) $value, " \t\n\r\0\x0B/"), $argument));
             }
         }
 
-        return sprintf(
-            "window.application = %s\nconsole.log('[window.application]', window.application)\nconsole.log('----------------------')",
-            json_encode($data, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES),
-        );
+        $path = [];
+        if ($application->isEndpointType() && $application->getEndpoint() !== null) {
+            foreach ($application->getEndpoint()->getArguments() as $segment) {
+                $path[] = $segment === '*' ? (array_shift($wildcards) ?? '*') : $segment;
+            }
+        }
+
+        if ($extraPath !== '') {
+            array_push($path, ...array_values(array_filter(explode('/', $extraPath), static fn (string $part): bool => $part !== '')));
+        }
+
+        return '/'.implode('/', array_map(rawurlencode(...), $path));
     }
 }
