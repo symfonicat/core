@@ -3,7 +3,9 @@
 namespace App\Tests\Integration\Web;
 
 use App\Tests\Support\SymfonicatWebTestCase;
-use Symfonicat\Entity\Application;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
+use Twig\Environment;
 
 final class RuntimeRoutingTest extends SymfonicatWebTestCase
 {
@@ -65,24 +67,37 @@ final class RuntimeRoutingTest extends SymfonicatWebTestCase
         self::assertSame('test', (string) $this->client()->getResponse()->getContent());
     }
 
-    public function testEndpointApplicationRendersThroughInternalApplicationEntry(): void
+    public function testApplicationTwigVariableIsStillAvailableFromBuildContext(): void
     {
-        $endpoint = $this->createEndpoint('core/test')
-            ->setArguments(['symfonicat', '*', 'test'])
-            ->setCatch(true);
-        $env = $this->createEnv('primary');
-        $this->setEndpointEnv($endpoint, $env, 'endpoint');
-        $application = $this->createApplication('Example Application', Application::TYPE_ENDPOINT, endpoint: $endpoint);
-        $this->setApplicationEnv($application, $env, 'application');
+        $application = $this->createApplication('Example Application');
+        $requestStack = self::getTestContainer()->get(RequestStack::class);
+        $request = Request::create('/');
+        $request->attributes->set('application', $application);
+        $requestStack->push($request);
+
+        /** @var Environment $twig */
+        $twig = self::getTestContainer()->get(Environment::class);
+
+        try {
+            $html = $twig->createTemplate("{% extends 'base.html.twig' %}{% block body %}{% endblock %}")->render([
+                'domain' => null,
+                'subdomain' => null,
+                'endpoint' => null,
+            ]);
+
+            self::assertStringContainsString('window.application = {', $html);
+            self::assertStringContainsString('"name":"Example Application"', $html);
+        } finally {
+            $requestStack->pop();
+        }
+    }
+
+    public function testApplicationPathDoesNotResolveAsPublicRuntime(): void
+    {
         $this->setHost('example.com');
 
-        $this->client()->request('GET', sprintf('/application/core/%s/docs', $application->getId()));
+        $this->client()->request('GET', '/application/core/example/docs');
 
-        self::assertResponseIsSuccessful();
-        $content = (string) $this->client()->getResponse()->getContent();
-        self::assertStringContainsString('Main Endpoint Router', $content);
-        self::assertStringContainsString('core/test', $content);
-        self::assertStringContainsString('color: application', $content);
-        self::assertStringNotContainsString('color: endpoint', $content);
+        self::assertResponseStatusCodeSame(404);
     }
 }

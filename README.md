@@ -1,6 +1,6 @@
 ## Symfonicat
 
-Symfonicat is a Symfony 8 multi-tenant frontend runtime. It resolves public requests to domains, subdomains, endpoints, or application shells, renders the matching parcel-backed template, and exposes modules, middleware, and env data for the active context.
+Symfonicat is a Symfony 8 multi-tenant frontend runtime. It resolves public requests to domains, subdomains, and endpoints, renders the matching parcel-backed template, and exposes modules, middleware, env data, and build-application context where present.
 
 Edit `/etc/hosts` for local public routing:
 
@@ -27,7 +27,6 @@ Public entry routes:
 
 - `/`
 - `/{path}`
-- `/application/{vendor}/{id}/{path}` for internal application shell entry
 
 The runtime subscriber resolves the active `Domain`, `Subdomain`, and matching `Endpoint` before Symfony routing. Runtime catch-all routes have low priority, so normal Symfony routes still win when they match.
 
@@ -39,7 +38,7 @@ Resolution rules:
 - subdomain `catch` renders the subdomain shell for unmatched paths on that subdomain
 - endpoints match their repeatable `arguments`; `*` matches one path segment
 - endpoint `catch` allows extra path after the matched arguments
-- `/admin/*`, `/application/*`, and `/m/*` are reserved from the public catch-all
+- `/admin/*` and `/m/*` are reserved from the public catch-all
 
 Templates resolve in this order:
 
@@ -78,16 +77,7 @@ Application target types:
 - `subdomain`
 - `endpoint`
 
-`/application/{vendor}/{id}/{path}` loads the application row and renders the selected target through the same runtime renderer. Endpoint applications use the selected endpoint's `arguments` and `catch` behavior.
-
-`path_application()` generates application paths. For endpoint-backed applications it starts from the endpoint arguments, replaces `*` segments from the wildcard array, then appends any extra path:
-
-```twig
-{{ path_application(application) }}
-{{ path_application(application, ['pizza']) }}
-{{ path_application(application, 'docs/page', ['pizza']) }}
-{{ path_application('core/test', 'docs/page', ['pizza']) }}
-```
+There is no public `/application/...` runtime route in this branch, and the application path helper is not available yet. Build-application requests can still expose `application` through Twig and `window.application` when the request context provides it.
 
 Electron main-process templates for applications live under `templates/application/{domain,subdomain,endpoint}/`.
 
@@ -103,9 +93,9 @@ Middleware services implement PSR-15 `Psr\Http\Server\MiddlewareInterface` and a
 
 ## Modules
 
-Modules can be attached to domains, subdomains, applications, or endpoints.
+Modules can be attached to domains, subdomains, or endpoints.
 
-Backend module controllers should extend `Symfonicat\Controller\AbstractModuleController`. They only execute when the module is attached to the active domain, subdomain, endpoint, or application context.
+Backend module controllers should extend `Symfonicat\Controller\AbstractModuleController`. They only execute when the module is attached to the active domain, subdomain, or endpoint context.
 
 Frontend module code posts to full package routes:
 
@@ -130,7 +120,7 @@ Env resolution order:
 4. endpoint where present
 5. application
 
-Application values override endpoint values for application renders.
+Application values override endpoint values when the request is in application context.
 
 The same grouped structure is exposed through `window.env` and Twig:
 
@@ -162,7 +152,6 @@ It can also target an entity directly:
 ```twig
 <link rel="icon" href="{{ symfonicat_asset('favicon.svg', domain) }}" />
 <link rel="icon" href="{{ symfonicat_asset('favicon.svg', subdomain) }}" />
-<link rel="icon" href="{{ symfonicat_asset('favicon.svg', application) }}" />
 ```
 
 ## Configuration

@@ -97,7 +97,7 @@ final class AdminLockSubscriberTest extends TestCase
     {
         $subscriber = new AdminLockSubscriber($this->subdomainDir);
 
-        foreach (['/', '/docs', '/application/core/test'] as $path) {
+        foreach (['/', '/docs', '/about'] as $path) {
             $event = $this->requestEvent($path);
 
             $subscriber->onKernelRequest($event);

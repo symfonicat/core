@@ -10,7 +10,6 @@ Public routes:
 
 - `/`
 - `/{path}`
-- `/application/{vendor}/{id}/{path}`
 
 Core runtime services:
 
@@ -31,7 +30,7 @@ Runtime route behavior:
 - endpoint arguments and endpoint catch render `templates/endpoint/*`
 - endpoint argument `*` matches one segment
 - endpoint catch permits trailing path after the argument match
-- admin, application, and module paths are reserved from catch-all rendering
+- admin and module paths are reserved from catch-all rendering
 
 Template overrides:
 
@@ -51,9 +50,7 @@ Application target types:
 - `subdomain`
 - `endpoint`
 
-The internal application entry loads the application row, sets the `application` request attribute, then renders the selected target through `RuntimeRenderer`.
-
-Endpoint-backed applications use endpoint ids in admin forms and runtime resolution. `path_application()` builds paths from endpoint arguments, substitutes `*` from wildcard arrays, and appends an optional extra path.
+Build-application requests can still expose the `application` Twig variable and `window.application` when the request context provides it. There is no public `/application/...` runtime route in this branch, and the build-app path helper has not been implemented.
 
 Electron main-process templates are under:
 
@@ -120,7 +117,7 @@ PSR-15 middleware services are auto-tagged as `symfonicat.middleware`. Runtime r
 
 The old `kafkiansky/symfony-middleware` bundle and vendored package copy are removed.
 
-Module controllers extend `AbstractModuleController` and only run when their module is attached to the active domain, subdomain, endpoint, or application. Endpoint module requests preserve endpoint context through `X-Symfonicat-Endpoint`.
+Module controllers extend `AbstractModuleController` and only run when their module is attached to the active domain, subdomain, or endpoint. Endpoint module requests preserve endpoint context through `X-Symfonicat-Endpoint`.
 
 ## Admin
 
