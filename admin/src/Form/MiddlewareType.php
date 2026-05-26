@@ -26,6 +26,7 @@ final class MiddlewareType extends AbstractType
             ])
             ->add('class', ChoiceType::class, [
                 'label' => 'class',
+                'disabled' => true,
                 'choices' => $this->middlewareClassProvider->choices(),
             ])
         ;
