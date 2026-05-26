@@ -72,7 +72,7 @@ Middleware is selected from the active runtime scope:
 - subdomain middleware always runs when a subdomain is active
 - endpoint middleware runs for endpoint renders
 
-Middleware services implement PSR-15 `Psr\Http\Server\MiddlewareInterface` and are tagged automatically as `symfonicat.middleware`. The old vendored `kafkiansky/symfony-middleware` package and local `./packages` copy are no longer used.
+Middleware services implement PSR-15 `Psr\Http\Server\MiddlewareInterface` and are tagged automatically as `symfonicat.middleware`.
 
 ## Modules
 
@@ -159,7 +159,7 @@ Runtime reads the `symfonicat` block from YAML. Database tables are for unlocked
 
 Admin CRUD and schema sync actions automatically refresh `config/packages/symfonicat.yaml` after successful writes.
 
-`composer install` and `composer update` also run `symfonicat:purge` so deployments start by rebuilding `symfonicat_*` tables from `symfonicat.yaml`.
+`composer install` runs `symfonicat:purge` so deployments start with a clean `symfonicat_*` schema; runtime still reads `config/packages/symfonicat.yaml`.
 
 ## Admin
 

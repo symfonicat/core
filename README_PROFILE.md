@@ -138,7 +138,7 @@ Runtime reads the `symfonicat` block from `config/packages/symfonicat.yaml`. The
 
 Admin CRUD and schema sync actions automatically refresh `config/packages/symfonicat.yaml` after successful writes.
 
-`composer install` and `composer update` also run `symfonicat:purge` so deployments start by rebuilding `symfonicat_*` tables from `symfonicat.yaml`.
+`composer install` also runs `symfonicat:purge` so deployments start with a clean `symfonicat_*` schema; runtime still reads `config/packages/symfonicat.yaml`.
 
 Commands:
 
