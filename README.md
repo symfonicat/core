@@ -12,7 +12,7 @@ Edit `/etc/hosts` for local public routing:
 ```bash
 git clone https://github.com/symfonicat/core symfonicat
 cd symfonicat
-docker compose up -d
+docker compose up -d --build
 docker exec -it php bin/console symfonicat:schema:update
 docker exec php bin/console symfonicat:load
 docker exec -it php bin/console symfonicat:admin:create <email>
