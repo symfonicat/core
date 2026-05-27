@@ -2,6 +2,12 @@
 
 `symfonicat/core` is the full Symfony 8 application for the Symfonicat runtime: public routing, admin CRUD, parcel rendering, package module runtime, application Electron templates, webpack wiring, and Docker/FrankenPHP live in this repository.
 
+The Docker image runs `composer install` during image build, then uses `symfonicat:scriptling:copy` and `symfonicat:scriptling:bash` to gather FrankenPHP extensions, initialize them with `frankenphp extension-init`, and compile a custom FrankenPHP binary with `xcaddy`. The final runtime image is based on that builder output so PHP workers and FrankenPHP use the same compiled extension set.
+
+FrankenPHP serves the Mercure hub at `/.well-known/mercure`; there is no separate Mercure container. Messenger workers still run as separate Compose workers using the same image, but they only emit a startup line and then consume quietly.
+
+Installed Symfonicat packages can ship FrankenPHP Scriptling extensions under `extensions/{name}`. Docker keeps `vendor/{vendor}/{package}/extensions/**` in the build context, overlays those files after `composer install`, and then includes every discovered extension in the `xcaddy` build. The analytics package includes `extensions/lowercase`, which exports `scriptling_analytics_lowercase(string $value): string`.
+
 Redis backs cache, sessions, locks, admin throttling, and Messenger's `async` transport.
 
 ## Runtime Shape
@@ -143,6 +149,8 @@ Admin CRUD and schema sync actions automatically refresh `config/packages/symfon
 Commands:
 
 - `symfonicat:schema:update`
+- `symfonicat:scriptling:copy`
+- `symfonicat:scriptling:bash`
 - `symfonicat:load`
 - `symfonicat:dump`
 - `symfonicat:purge`
@@ -153,6 +161,12 @@ Commands:
 - `symfonicat:public-suffix:refresh`
 
 `symfonicat:schema:update` synchronizes the Doctrine schema and Symfonicat package rows for parcels, middleware, endpoints, modules, domains, applications, and subdomains.
+
+## Scriptling
+
+The Docker container  uses `symfonicat:scriptling:copy` and `symfonicat:scriptling:bash` to gather FrankenPHP extensions, initialize them with `frankenphp extension-init`, and compile a custom FrankenPHP binary with `xcaddy`. The final runtime image is based on that builder output so PHP workers and FrankenPHP use the same compiled extension set.
+
+Installed Symfonicat packages can ship FrankenPHP Scriptling extensions under `extensions/{name}`. Docker keeps `vendor/{vendor}/{package}/extensions/**` in the build context, overlays those files after `composer install`, and then includes every discovered extension in the `xcaddy` build. The analytics package includes `extensions/lowercase`, which exports `scriptling_analytics_lowercase(string $value): string`.
 
 Local PHPUnit can bypass a root-owned container cache with:
 

@@ -171,6 +171,128 @@ final class PackageDiscoveryService
 
     /**
      * @return array<string, array{
+     *     buildDirectory: string,
+     *     directory: string,
+     *     id: string,
+     *     module: string,
+     *     modulePath: string,
+     *     package: string,
+     *     packageName: string,
+     *     vendor: string
+     * }>
+     */
+    public function discoverExtensions(): array
+    {
+        $extensions = [];
+
+        foreach ($this->findSymfonicatPackages() as $package) {
+            $baseDirectory = $package['installPath'].'/extensions';
+            $directories = $this->extensionDirectories($baseDirectory);
+
+            foreach ($directories as $directory) {
+                $name = basename($directory);
+                if ($name === '') {
+                    continue;
+                }
+
+                $isRootPackage = realpath($package['installPath']) === realpath($this->subdomainDir);
+                $relativeExtension = $this->relativeExtensionPath($baseDirectory, $directory);
+                $idPrefix = $isRootPackage ? '' : $package['vendor'].'/'.$package['package'];
+                $id = $idPrefix === '' ? $relativeExtension : $idPrefix.'/'.$relativeExtension;
+                $modulePath = $this->modulePathFromDirectory($directory);
+                if (isset($extensions[$id])) {
+                    if ($extensions[$id]['modulePath'] === $modulePath && $isRootPackage) {
+                        $extensions[$id] = [
+                            'buildDirectory' => $directory,
+                            'directory' => $directory,
+                            'id' => $id,
+                            'module' => $name,
+                            'modulePath' => $modulePath,
+                            'package' => $package['package'],
+                            'packageName' => $package['name'],
+                            'vendor' => $package['vendor'],
+                        ];
+
+                        continue;
+                    }
+
+                    if ($extensions[$id]['modulePath'] === $modulePath) {
+                        continue;
+                    }
+
+                    throw new \RuntimeException(sprintf(
+                        'Duplicate Symfonicat extension "%s" found in both "%s" and "%s".',
+                        $id,
+                        $extensions[$id]['packageName'],
+                        $package['name'],
+                    ));
+                }
+
+                $extensions[$id] = [
+                    'buildDirectory' => $directory,
+                    'directory' => $directory,
+                    'id' => $id,
+                    'module' => $name,
+                    'modulePath' => $modulePath,
+                    'package' => $package['package'],
+                    'packageName' => $package['name'],
+                    'vendor' => $package['vendor'],
+                ];
+            }
+        }
+
+        ksort($extensions, SORT_STRING);
+
+        return array_values($extensions);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function extensionDirectories(string $baseDirectory): array
+    {
+        if (!is_dir($baseDirectory)) {
+            return [];
+        }
+
+        $directories = [];
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($baseDirectory, \FilesystemIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::SELF_FIRST,
+        );
+
+        foreach ($iterator as $file) {
+            if (!$file->isDir()) {
+                continue;
+            }
+
+            $directory = $file->getPathname();
+            if (!is_file($directory.'/go.mod')) {
+                continue;
+            }
+
+            $directories[] = $directory;
+        }
+
+        sort($directories, SORT_STRING);
+
+        return $directories;
+    }
+
+    private function relativeExtensionPath(string $baseDirectory, string $directory): string
+    {
+        $baseDirectory = rtrim(str_replace('\\', '/', $baseDirectory), '/').'/';
+        $directory = str_replace('\\', '/', $directory);
+
+        if (!str_starts_with($directory, $baseDirectory)) {
+            return basename($directory);
+        }
+
+        return trim(substr($directory, strlen($baseDirectory)), '/');
+    }
+
+    /**
+     * @return array<string, array{
      *     directory: string,
      *     entry: string,
      *     id: string,
@@ -277,6 +399,35 @@ final class PackageDiscoveryService
             'package' => $this->shortPackageName($packageName),
             'vendor' => $this->vendorName($packageName),
         ];
+    }
+
+    private function modulePathFromDirectory(string $directory): string
+    {
+        $composerPath = $directory.'/go.mod';
+        if (!is_file($composerPath)) {
+            throw new \RuntimeException(sprintf('Extension directory "%s" is missing go.mod.', $directory));
+        }
+
+        $contents = file_get_contents($composerPath);
+        if ($contents === false) {
+            throw new \RuntimeException(sprintf('Unable to read "%s".', $composerPath));
+        }
+
+        foreach (preg_split('~\R~', $contents) ?: [] as $line) {
+            $line = trim($line);
+            if (!str_starts_with($line, 'module ')) {
+                continue;
+            }
+
+            $modulePath = trim(substr($line, 7));
+            if ($modulePath === '') {
+                break;
+            }
+
+            return $modulePath;
+        }
+
+        throw new \RuntimeException(sprintf('Extension directory "%s" has a go.mod without a module path.', $directory));
     }
 
     private function relativePath(string $path): string

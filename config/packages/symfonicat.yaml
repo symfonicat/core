@@ -29,12 +29,12 @@ symfonicat:
     symfonicat_endpoint:
         -
             id: test
+            enforce: both
             catch: true
             arguments:
                 - symfonicat
                 - test
             parcel_id: core/endpointparcel
-            enforce: both
             domain_id: example.com
             subdomain_id: subdomain1
     symfonicat_application:

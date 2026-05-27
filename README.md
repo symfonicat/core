@@ -150,6 +150,8 @@ Admin YAML commands:
 
 ```bash
 docker exec php bin/console symfonicat:application:build
+docker exec php bin/console symfonicat:scriptling:copy
+docker exec php bin/console symfonicat:scriptling:bash
 docker exec php bin/console symfonicat:dump
 docker exec php bin/console symfonicat:load
 docker exec php bin/console symfonicat:purge
@@ -189,6 +191,13 @@ Forms support parcel attachments, repeatable middleware, modules, scoped env val
 - applications
 
 It removes stale package-backed parcels, clears affected parcel references, mirrors tagged middleware services into rows, and stores domain/subdomain/endpoint middleware in dedicated join tables.
+
+## Scriptling
+
+The Docker container  uses `symfonicat:scriptling:copy` and `symfonicat:scriptling:bash` to gather FrankenPHP extensions, initialize them with `frankenphp extension-init`, and compile a custom FrankenPHP binary with `xcaddy`. The final runtime image is based on that builder output so PHP workers and FrankenPHP use the same compiled extension set.
+
+Installed Symfonicat packages can ship FrankenPHP Scriptling extensions under `extensions/{name}`. Docker keeps `vendor/{vendor}/{package}/extensions/**` in the build context, overlays those files after `composer install`, and then includes every discovered extension in the `xcaddy` build. The analytics package includes `extensions/lowercase`, which exports `scriptling_analytics_lowercase(string $value): string`.
+
 
 For local tests, `var/cache/test` may be owned by the container. Use an alternate cache directory:
 

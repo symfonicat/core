@@ -17,7 +17,13 @@ final class DomainMiddleware implements MiddlewareInterface
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        $this->logger->info('DOMAIN MIDDLEWARE EXECUTED');
+        $this->logger->info('DOMAIN MIDDLEWARE EXECUTING');
+
+        // testing out /extensions/reverse Scriptling mod
+        $this->logger->info('reversed: ' . scriptling_reverse('DOMAIN MIDDLEWARE EXECUTING'));
+
+        // testing out /vendor/symfonicat/analytics/extensions/lowercase Scriptling Mod
+        $this->logger->info('lowercase: ' . scriptling_analytics_lowercase('DOMAIN MIDDLEWARE EXECUTING'));
 
         return $handler->handle($request);
     }

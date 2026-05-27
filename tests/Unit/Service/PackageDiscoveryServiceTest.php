@@ -17,8 +17,11 @@ final class PackageDiscoveryServiceTest extends TestCase
 
         mkdir($this->projectDir.'/vendor/composer', 0755, true);
         mkdir($this->projectDir.'/vendor/symfonicat/allowed/assets/module/allowed-module', 0755, true);
+        mkdir($this->projectDir.'/vendor/symfonicat/allowed/extensions/allowed-extension', 0755, true);
         mkdir($this->projectDir.'/vendor/acme/ignored/assets/module/ignored-module', 0755, true);
         mkdir($this->projectDir.'/assets/module/root-module', 0755, true);
+        mkdir($this->projectDir.'/extensions/symfonicat/allowed/allowed-extension', 0755, true);
+        mkdir($this->projectDir.'/extensions/test', 0755, true);
 
         file_put_contents($this->projectDir.'/composer.json', json_encode([
             'name' => 'symfonicat/core',
@@ -40,6 +43,24 @@ final class PackageDiscoveryServiceTest extends TestCase
                 'symfonicat' => false,
             ],
         ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+        file_put_contents($this->projectDir.'/extensions/test/go.mod', <<<'GO'
+module example.com/symfonicat/extensions/test
+
+go 1.22
+GO);
+
+        file_put_contents($this->projectDir.'/vendor/symfonicat/allowed/extensions/allowed-extension/go.mod', <<<'GO'
+module example.com/symfonicat/extensions/allowed-extension
+
+go 1.22
+GO);
+
+        file_put_contents($this->projectDir.'/extensions/symfonicat/allowed/allowed-extension/go.mod', <<<'GO'
+module example.com/symfonicat/extensions/allowed-extension
+
+go 1.22
+GO);
 
         file_put_contents($this->projectDir.'/vendor/composer/installed.json', json_encode([
             'packages' => [
@@ -80,6 +101,21 @@ final class PackageDiscoveryServiceTest extends TestCase
         self::assertArrayHasKey('symfonicat/core/root-module', $entries);
         self::assertArrayHasKey('symfonicat/allowed/allowed-module', $entries);
         self::assertArrayNotHasKey('acme/ignored/ignored-module', $entries);
+    }
+
+    public function testDiscoverExtensionsReturnsRootAndVendorExtensions(): void
+    {
+        $service = new PackageDiscoveryService($this->projectDir);
+        $extensions = $service->discoverExtensions();
+
+        self::assertSame([
+            'allowed-extension',
+            'test',
+        ], array_column($extensions, 'module'));
+
+        self::assertSame('example.com/symfonicat/extensions/allowed-extension', $extensions[0]['modulePath']);
+        self::assertSame($this->projectDir.'/extensions/symfonicat/allowed/allowed-extension', $extensions[0]['buildDirectory']);
+        self::assertSame($this->projectDir.'/extensions/test', $extensions[1]['buildDirectory']);
     }
 
     private function removeDirectory(string $directory): void

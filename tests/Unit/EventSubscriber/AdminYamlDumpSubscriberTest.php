@@ -24,14 +24,14 @@ final class AdminYamlDumpSubscriberTest extends TestCase
         $adminYaml->expects(self::once())->method('dump');
 
         $subscriber = new AdminYamlDumpSubscriber($requestStack, $adminYaml);
-        $unitOfWork = $this->createMock(UnitOfWork::class);
+        $unitOfWork = $this->createStub(UnitOfWork::class);
         $unitOfWork->method('getScheduledEntityInsertions')->willReturn([(new Application())->setId('example-test')]);
         $unitOfWork->method('getScheduledEntityUpdates')->willReturn([]);
         $unitOfWork->method('getScheduledEntityDeletions')->willReturn([]);
         $unitOfWork->method('getScheduledCollectionUpdates')->willReturn([]);
         $unitOfWork->method('getScheduledCollectionDeletions')->willReturn([]);
 
-        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager = $this->createStub(EntityManagerInterface::class);
         $entityManager->method('getUnitOfWork')->willReturn($unitOfWork);
 
         $subscriber->onFlush(new OnFlushEventArgs($entityManager));
@@ -47,14 +47,14 @@ final class AdminYamlDumpSubscriberTest extends TestCase
         $adminYaml->expects(self::never())->method('dump');
 
         $subscriber = new AdminYamlDumpSubscriber($requestStack, $adminYaml);
-        $unitOfWork = $this->createMock(UnitOfWork::class);
+        $unitOfWork = $this->createStub(UnitOfWork::class);
         $unitOfWork->method('getScheduledEntityInsertions')->willReturn([(new Application())->setId('example-test')]);
         $unitOfWork->method('getScheduledEntityUpdates')->willReturn([]);
         $unitOfWork->method('getScheduledEntityDeletions')->willReturn([]);
         $unitOfWork->method('getScheduledCollectionUpdates')->willReturn([]);
         $unitOfWork->method('getScheduledCollectionDeletions')->willReturn([]);
 
-        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager = $this->createStub(EntityManagerInterface::class);
         $entityManager->method('getUnitOfWork')->willReturn($unitOfWork);
 
         $subscriber->onFlush(new OnFlushEventArgs($entityManager));
