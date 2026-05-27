@@ -27,7 +27,7 @@ final class DomainAdminRowTest extends SymfonicatKernelTestCase
     private function renderRow(Domain $domain): string
     {
         $requestStack = self::getTestContainer()->get(RequestStack::class);
-        $request = Request::create('/admin/d/list');
+        $request = Request::create('/admin/d');
 
         /** @var SessionFactoryInterface $sessionFactory */
         $sessionFactory = self::getTestContainer()->get('session.factory');

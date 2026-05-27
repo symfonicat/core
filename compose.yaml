@@ -1,4 +1,37 @@
 services:
+  npm:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: npm
+    image: symfonicat-core-assets:local
+    restart: "no"
+    entrypoint:
+      - docker-php-entrypoint
+    command:
+      - /bin/sh
+      - -lc
+      - npm ci --no-audit --no-fund && npm run build
+    environment:
+      APP_ENV: ${APP_ENV:-dev}
+      APP_DEBUG: ${APP_DEBUG:-1}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-app}?serverVersion=16&charset=utf8
+      REDIS_URL: redis://redis:6379
+      LOCK_DSN: redis://redis:6379
+      MERCURE_URL: http://php/.well-known/mercure
+      MERCURE_PUBLIC_URL: ${MERCURE_PUBLIC_URL:-/.well-known/mercure}
+      MERCURE_JWT_SECRET: ${MERCURE_JWT_SECRET:-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
+    volumes:
+      - ./:/symfonicat
+      - node_modules:/symfonicat/node_modules
+    depends_on:
+      php:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
   php:
     container_name: php
     build:
@@ -20,7 +53,7 @@ services:
       MESSENGER_FAILED_TRANSPORT_DSN: redis://redis:6379/symfonicat_failed_messages
       MESSENGER_CONSUMER_NAME: php
       MERCURE_URL: http://php/.well-known/mercure
-      MERCURE_PUBLIC_URL: ${MERCURE_PUBLIC_URL:-http://localhost/.well-known/mercure}
+      MERCURE_PUBLIC_URL: ${MERCURE_PUBLIC_URL:-/.well-known/mercure}
       MERCURE_JWT_SECRET: ${MERCURE_JWT_SECRET:-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
     volumes:
       - ./:/symfonicat
@@ -51,7 +84,7 @@ services:
     command:
       - /bin/sh
       - -lc
-      - export MESSENGER_CONSUMER_NAME="$$HOSTNAME" && echo "messenger-worker $$MESSENGER_CONSUMER_NAME up" && exec php bin/console messenger:consume async --no-interaction --quiet --time-limit=3600 --memory-limit=256M --failure-limit=10 >/dev/null 2>&1
+      - export MESSENGER_CONSUMER_NAME="$$HOSTNAME" && exec php bin/console messenger:consume async --no-interaction --quiet --time-limit=3600 --memory-limit=256M --failure-limit=10 >/dev/null 2>&1
     environment:
       APP_ENV: ${APP_ENV:-dev}
       APP_DEBUG: ${APP_DEBUG:-1}
@@ -61,7 +94,7 @@ services:
       MESSENGER_TRANSPORT_DSN: redis://redis:6379/symfonicat_messages
       MESSENGER_FAILED_TRANSPORT_DSN: redis://redis:6379/symfonicat_failed_messages
       MERCURE_URL: http://php/.well-known/mercure
-      MERCURE_PUBLIC_URL: ${MERCURE_PUBLIC_URL:-http://localhost/.well-known/mercure}
+      MERCURE_PUBLIC_URL: ${MERCURE_PUBLIC_URL:-/.well-known/mercure}
       MERCURE_JWT_SECRET: ${MERCURE_JWT_SECRET:-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
     volumes:
       - ./:/symfonicat
@@ -113,3 +146,4 @@ volumes:
   caddy_config:
   postgres_data:
   redis_data:
+  node_modules:

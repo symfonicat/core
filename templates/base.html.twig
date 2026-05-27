@@ -54,9 +54,11 @@
         <aside
             id="mercure-debug"
             data-mercure-debug-listener
+            data-controller="symfony--ux-turbo--mercure-turbo-stream"
+            data-symfony--ux-turbo--mercure-turbo-stream-hub-value="{{ absolute_url('/.well-known/mercure') }}"
+            data-symfony--ux-turbo--mercure-turbo-stream-topic-value="mercure-debug"
             hidden
             aria-hidden="true"
-            {{ turbo_stream_listen('mercure-debug') }}
         ><!-- -->
         </aside>
 

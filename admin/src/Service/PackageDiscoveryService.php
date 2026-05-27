@@ -452,12 +452,23 @@ final class PackageDiscoveryService
             throw new \RuntimeException(sprintf('Unable to read JSON file "%s".', $path));
         }
 
-        try {
-            $decoded = json_decode($contents, true, 512, JSON_THROW_ON_ERROR);
-        } catch (\JsonException $exception) {
-            throw new \RuntimeException(sprintf('JSON file "%s" does not contain valid JSON.', $path), 0, $exception);
+        $decoded = $this->decodeJsonValue($contents);
+        if (!is_array($decoded)) {
+            throw new \RuntimeException(sprintf('JSON file "%s" does not contain valid JSON.', $path));
         }
 
-        return is_array($decoded) ? $decoded : [];
+        return $decoded;
+    }
+
+    /**
+     * @return mixed
+     */
+    private function decodeJsonValue(string $contents)
+    {
+        try {
+            return json_decode($contents, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $exception) {
+            throw new \RuntimeException('JSON file does not contain valid JSON.', 0, $exception);
+        }
     }
 }

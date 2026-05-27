@@ -44,6 +44,10 @@ services:
         arguments:
             $subdomainDir: '%kernel.project_dir%'
 
+    Symfonicat\Service\ModuleRequestContextStore:
+        arguments:
+            $secret: '%kernel.secret%'
+
     Symfonicat\Service\FileUploadService:
         arguments:
             $publicDir: '%kernel.project_dir%/public'

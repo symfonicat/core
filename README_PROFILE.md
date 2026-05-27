@@ -2,9 +2,9 @@
 
 `symfonicat/core` is the full Symfony 8 application for the Symfonicat runtime: public routing, admin CRUD, parcel rendering, package module runtime, application Electron templates, webpack wiring, and Docker/FrankenPHP live in this repository.
 
-The Docker image runs `composer install` during image build, then uses `symfonicat:scriptling:copy` and `symfonicat:scriptling:bash` to gather FrankenPHP extensions, initialize them with `frankenphp extension-init`, and compile a custom FrankenPHP binary with `xcaddy`. The final runtime image is based on that builder output so PHP workers and FrankenPHP use the same compiled extension set.
+The Docker image runs `composer install` during image build, then uses `symfonicat:scriptling:copy` and `symfonicat:scriptling:bash` to gather FrankenPHP extensions, initialize them with `frankenphp extension-init`, and compile a custom FrankenPHP binary with `xcaddy`. The separate `npm` Compose service runs `npm ci` and `npm run build` after `php` is healthy so `public/build` is generated with PHP available for webpack discovery. The final runtime image is based on that builder output so PHP workers and FrankenPHP use the same compiled extension set.
 
-FrankenPHP serves the Mercure hub at `/.well-known/mercure`; there is no separate Mercure container. Messenger workers still run as separate Compose workers using the same image, but they only emit a startup line and then consume quietly.
+FrankenPHP serves the Mercure hub at the current request origin, so the browser Mercure controller gets an absolute same-origin hub URL instead of a relative localhost path. There is no separate Mercure container. Messenger workers still run as separate Compose workers using the same image, but they consume quietly without wrapper logging.
 
 Installed Symfonicat packages can ship FrankenPHP Scriptling extensions under `extensions/{name}`. Docker keeps `vendor/{vendor}/{package}/extensions/**` in the build context, overlays those files after `composer install`, and then includes every discovered extension in the `xcaddy` build. The analytics package includes `extensions/lowercase`, which exports `scriptling_analytics_lowercase(string $value): string`.
 
@@ -69,8 +69,6 @@ The build command is `symfonicat:application:build` (alias `symfonicat:electron:
 - `Application`: string id
 - `Module`, `Middleware`, `Parcel`: package-scoped ids where package ownership matters
 
-Legacy subdomain inputs with a slash are normalized to the final segment on load and form submission.
-
 ## Package Discovery
 
 Packages participate in discovery when their `composer.json` sets `extra.symfonicat: true`:
@@ -90,8 +88,6 @@ Entry families:
 - `assets/module/`
 - `assets/parcel/`
 - `assets/bundle/`
-
-The local `./packages` tree is not part of runtime discovery.
 
 ## Env
 
@@ -119,7 +115,7 @@ PSR-15 middleware services are auto-tagged as `symfonicat.middleware`. Runtime r
 
 The old `kafkiansky/symfony-middleware` bundle and vendored package copy are removed.
 
-Module controllers extend `AbstractModuleController` and only run when their module is attached to the active domain, subdomain, or endpoint. Runtime pages expose `application_helper()`, `endpoint_helper()`, and `request_helper()` for `window.application`, `window.endpoint`, and `window.request`. Module requests replay the server-issued request context through `X-Symfonicat-Module-Context` and `X-CSRF-Token` so endpoint scope is restored server-side before module checks run.
+Module controllers extend `AbstractModuleController` and only run when their module is attached to the active domain, subdomain, or endpoint. Runtime pages expose `application_helper()`, `endpoint_helper()`, and `request_helper()` for `window.application`, `window.endpoint`, and `window.request`. `window.request` carries `contextId` and `token` when the runtime issued a module context. Module requests Brotli-compress their JSON body in `assets/app/module.js` with a vendored browser Brotli codec, replay the server-issued request context through `X-Symfonicat-Module-Context` and `X-CSRF-Token` when request context is available, and the server validates the signed token before restoring endpoint scope for backend module checks. The `symfonicat_json_decode()`, `symfonicat_json_encode()`, `symfonicat_module_request_token_sign()`, `symfonicat_module_request_token_verify()`, and `symfonicat_hash_sha256()` exports are required at runtime. On `/m` requests with Brotli JSON bodies, `SymfonicatModuleSubscriber` sets `module_json` from `symfonicat_json_decode()`.
 
 ## Admin
 
@@ -129,8 +125,8 @@ Main admin areas:
 
 - `/admin/a` applications
 - `/admin/b` bundles/parcels
-- `/admin/d/list` domains
-- `/admin/end` endpoints
+- `/admin/d` domains
+- `/admin/e` endpoints
 - `/admin/env` env
 - `/admin/m` middleware
 - `/admin/s` subdomains and schema sync
@@ -164,12 +160,14 @@ Commands:
 
 ## Scriptling
 
-The Docker container  uses `symfonicat:scriptling:copy` and `symfonicat:scriptling:bash` to gather FrankenPHP extensions, initialize them with `frankenphp extension-init`, and compile a custom FrankenPHP binary with `xcaddy`. The final runtime image is based on that builder output so PHP workers and FrankenPHP use the same compiled extension set.
+The Docker container uses `symfonicat:scriptling:copy` and `symfonicat:scriptling:bash` to gather FrankenPHP extensions, initialize them with `frankenphp extension-init`, and compile a custom FrankenPHP binary with `xcaddy`. The final runtime image is based on that builder output so PHP workers and FrankenPHP use the same compiled extension set.
 
 Installed Symfonicat packages can ship FrankenPHP Scriptling extensions under `extensions/{name}`. Docker keeps `vendor/{vendor}/{package}/extensions/**` in the build context, overlays those files after `composer install`, and then includes every discovered extension in the `xcaddy` build. The analytics package includes `extensions/lowercase`, which exports `scriptling_analytics_lowercase(string $value): string`.
+
+The root `extensions/brotli_precompress` module precompresses `public/build/*.js`, `public/build/*.json`, and `public/build/*.css` files at startup and serves Brotli responses directly for matching build assets.
 
 Local PHPUnit can bypass a root-owned container cache with:
 
 ```bash
-SYMFONICAT_CACHE_DIR=/tmp/symfonicat_dev_cache php bin/phpunit
+SYMFONICAT_CACHE_DIR=/tmp/symfonicat_dev_cache ./bin/phpunit
 ```

@@ -24,9 +24,13 @@ final class RequestExtension extends AbstractExtension
     {
         $request = $this->requestStack->getCurrentRequest();
         $requestContext = $request?->attributes->get('request');
+        $requestContext = is_array($requestContext) ? [
+            'contextId' => $requestContext['context_id'] ?? $requestContext['contextId'] ?? null,
+            'token' => $requestContext['token'] ?? null,
+        ] : null;
 
         return json_encode(
-            is_array($requestContext) ? $requestContext : null,
+            $requestContext,
             JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR,
         );
     }

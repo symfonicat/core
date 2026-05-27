@@ -2,6 +2,7 @@
 
 namespace Symfonicat\Controller;
 
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfonicat\Entity\Endpoint;
@@ -17,15 +18,13 @@ abstract class AbstractModuleController extends AbstractController
     private bool $shouldRun = FALSE;
 
     public function __construct(
-
         public readonly DomainService $domainService,
         public readonly ModuleService $moduleService,
         public readonly SubdomainService $subdomainService,
         public readonly PathService $pathService,
+        public readonly LoggerInterface $logger,
         public readonly ?RequestStack $requestStack = null,
-
     ) {
-
         $module = $this->moduleService->load();
 
         if (!$module) {
@@ -50,14 +49,11 @@ abstract class AbstractModuleController extends AbstractController
         if (!$subdomain && ($domain = $this->domainService->load()) && $domain->hasModule($module)) {
             $this->shouldRun = TRUE;
         }
-
     }
 
     protected function module (
-        
         Response $shouldRunResponse,
         $shouldNotRunResponse = FALSE
-
     ) : Response {
 
         $moduleRequestValid = $this->requestStack?->getCurrentRequest()?->attributes->getBoolean('symfonicat_module_request_valid');

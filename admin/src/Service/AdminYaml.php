@@ -256,8 +256,8 @@ final class AdminYaml implements AdminYamlDumper
                     || str_starts_with(ltrim($value), '{')
                 )
             ) {
-                $decoded = json_decode($value, true);
-                if (json_last_error() === JSON_ERROR_NONE) {
+                $decoded = $this->decodeJsonValue($value);
+                if ($decoded !== null || trim($value) === 'null') {
                     $row[$column] = $decoded;
                 }
             }
@@ -306,7 +306,10 @@ final class AdminYaml implements AdminYamlDumper
             }
 
             if ($value !== null && (is_array($value) || is_object($value))) {
-                $value = json_encode($value, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                $encoded = $this->encodeJsonValue($value);
+                if ($encoded !== null) {
+                    $value = $encoded;
+                }
             }
 
             $normalized[$column] = $value;
@@ -393,5 +396,18 @@ final class AdminYaml implements AdminYamlDumper
                 }
             }
         }
+    }
+
+    /**
+     * @return mixed
+     */
+    private function decodeJsonValue(string $value)
+    {
+        return symfonicat_json_decode($value);
+    }
+
+    private function encodeJsonValue(mixed $value): ?string
+    {
+        return symfonicat_json_encode($value);
     }
 }

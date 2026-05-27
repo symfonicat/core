@@ -20,10 +20,13 @@ touch symfonicat.lock
 ```
 
 The admin area is disabled until `symfonicat.lock` exists in the repo root.
+The `npm` Compose service runs after `php` is healthy and generates `public/build` with PHP available for webpack data discovery.
 
 ## Runtime
 
 The runtime subscriber resolves the active `Domain`, `Subdomain`, and matching `Endpoint` before Symfony routing. Runtime catch-all routes have low priority, so normal Symfony routes still win when they match.
+
+FrankenPHP serves Mercure at the current request origin, so the browser Mercure controller gets an absolute same-origin hub URL instead of a relative localhost path.
 
 Resolution rules:
 
@@ -91,7 +94,7 @@ const result = await mod.json({ test: true })
       mod.log('/m/symfonicat/analytics/main result:', result)
 ```
 
-Runtime pages expose `application_helper()`, `endpoint_helper()`, and `request_helper()` to populate `window.application`, `window.endpoint`, and `window.request`. Module requests send the request token back in `X-Symfonicat-Module-Context` plus `X-CSRF-Token`, and the server uses the stored context to restore endpoint scope before backend module checks run.
+Runtime pages expose `application_helper()`, `endpoint_helper()`, and `request_helper()` to populate `window.application`, `window.endpoint`, and `window.request`. `window.request` carries `contextId` and `token` when the runtime issued a module context. Module requests Brotli-compress their JSON body in `assets/app/module.js` with a vendored browser Brotli codec, send the request token back in `X-Symfonicat-Module-Context` plus `X-CSRF-Token` when request context is available, and the server validates that signed token before restoring endpoint scope for backend module checks. The `symfonicat_json_decode()`, `symfonicat_json_encode()`, `symfonicat_module_request_token_sign()`, `symfonicat_module_request_token_verify()`, and `symfonicat_hash_sha256()` exports are required at runtime. On `/m` requests with Brotli JSON bodies, `SymfonicatModuleSubscriber` sets `module_json` from `symfonicat_json_decode()`.
 
 ## Env
 
@@ -121,8 +124,6 @@ Private webpack data comes from `symfonicat:data:webpack`. It scans the root pac
 - `assets/module/`
 - `assets/parcel/`
 - `assets/bundle/`
-
-Package discovery uses `vendor/composer/installed.json`; the old local `./packages` tree is not a runtime source.
 
 The public `symfonicat_asset(path)` helper resolves shell-specific assets by checking:
 
@@ -169,8 +170,8 @@ Admin routes:
 
 - `/admin/a` applications
 - `/admin/b` bundles/parcels
-- `/admin/d/list` domains
-- `/admin/end` endpoints
+- `/admin/d` domains
+- `/admin/e` endpoints
 - `/admin/env` env
 - `/admin/m` middleware
 - `/admin/s` subdomains and schema sync action
@@ -194,13 +195,15 @@ It removes stale package-backed parcels, clears affected parcel references, mirr
 
 ## Scriptling
 
-The Docker container  uses `symfonicat:scriptling:copy` and `symfonicat:scriptling:bash` to gather FrankenPHP extensions, initialize them with `frankenphp extension-init`, and compile a custom FrankenPHP binary with `xcaddy`. The final runtime image is based on that builder output so PHP workers and FrankenPHP use the same compiled extension set.
+The Docker container uses `symfonicat:scriptling:copy` and `symfonicat:scriptling:bash` to gather FrankenPHP extensions, initialize them with `frankenphp extension-init`, and compile a custom FrankenPHP binary with `xcaddy`. The separate `npm` Compose service runs `npm ci` and `npm run build` after `php` is healthy so `public/build` is generated with PHP available for webpack discovery. The final runtime image is based on the builder output so PHP workers and FrankenPHP use the same compiled extension set.
 
 Installed Symfonicat packages can ship FrankenPHP Scriptling extensions under `extensions/{name}`. Docker keeps `vendor/{vendor}/{package}/extensions/**` in the build context, overlays those files after `composer install`, and then includes every discovered extension in the `xcaddy` build. The analytics package includes `extensions/lowercase`, which exports `scriptling_analytics_lowercase(string $value): string`.
+
+The root `extensions/brotli_precompress` module precompresses `public/build/*.js`, `public/build/*.json`, and `public/build/*.css` files at startup and serves Brotli responses directly for matching build assets.
 
 
 For local tests, `var/cache/test` may be owned by the container. Use an alternate cache directory:
 
 ```bash
-SYMFONICAT_CACHE_DIR=/tmp/symfonicat_dev_cache php bin/phpunit
+SYMFONICAT_CACHE_DIR=/tmp/symfonicat_dev_cache ./bin/phpunit
 ```

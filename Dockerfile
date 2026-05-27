@@ -1,4 +1,4 @@
-FROM dunglas/frankenphp:builder-php8.4 AS builder
+FROM dunglas/frankenphp:builder-php8.4 AS php-base
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl git unzip \
@@ -40,10 +40,21 @@ RUN composer install --no-interaction --prefer-dist --no-progress --no-scripts
 
 COPY . /symfonicat
 
+FROM php-base AS npm
+
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+FROM php-base AS builder
+
 RUN php bin/console symfonicat:scriptling:copy | bash
 RUN set -e; \
     find /symfonicat/extensions -type f -name '*.go' -exec dirname {} \; | sort -u | while read -r directory; do \
-        GEN_STUB_SCRIPT="$GEN_STUB_SCRIPT" frankenphp extension-init "$directory"/*.go; \
+        if grep -Rqs 'export_php:function' "$directory"/*.go; then \
+            GEN_STUB_SCRIPT="$GEN_STUB_SCRIPT" frankenphp extension-init "$directory"/*.go; \
+        fi; \
         (cd "$directory" && go mod tidy); \
     done
 

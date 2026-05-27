@@ -17,4 +17,10 @@ configureSymfonicat(Encore, {
     packageDir: path.join(__dirname),
 });
 
-module.exports = Encore.getWebpackConfig();
+const webpackConfig = Encore.getWebpackConfig();
+webpackConfig.experiments = {
+    ...(webpackConfig.experiments || {}),
+    asyncWebAssembly: true,
+};
+
+module.exports = webpackConfig;

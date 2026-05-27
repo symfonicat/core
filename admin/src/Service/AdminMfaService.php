@@ -124,7 +124,6 @@ final class AdminMfaService
     private function getAuthorizationFingerprint(Request $request): string
     {
         $header = trim((string) $request->headers->get('Authorization', ''));
-
-        return hash('sha256', $header);
+        return symfonicat_hash_sha256($header);
     }
 }

@@ -64,7 +64,12 @@ final class RuntimeMiddlewareRunner
             static fn (ServerRequestInterface $request): ResponseInterface => $handler->handle($request),
         );
 
-        return $this->httpFoundationFactory->createResponse($processor($this->httpMessageFactory->createRequest($request)));
+        $psrRequest = $this->httpMessageFactory->createRequest($request);
+        foreach ($this->passthroughAttributes($request) as $attribute => $value) {
+            $psrRequest = $psrRequest->withAttribute($attribute, $value);
+        }
+
+        return $this->httpFoundationFactory->createResponse($processor($psrRequest));
     }
 
     /**
@@ -112,5 +117,30 @@ final class RuntimeMiddlewareRunner
         }
 
         return $middlewares;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function passthroughAttributes(Request $request): array
+    {
+        $attributes = [];
+        foreach ([
+            'application',
+            'domain',
+            'endpoint',
+            'module_json',
+            'request',
+            'subdomain',
+            'symfonicat_module_request_valid',
+            'symfonicat_runtime_route_allowed',
+            'symfonicat_runtime_target',
+        ] as $attribute) {
+            if ($request->attributes->has($attribute)) {
+                $attributes[$attribute] = $request->attributes->get($attribute);
+            }
+        }
+
+        return $attributes;
     }
 }

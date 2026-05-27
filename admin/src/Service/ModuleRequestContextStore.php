@@ -6,30 +6,30 @@ use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\Endpoint;
 use Symfonicat\Entity\Subdomain;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Session\SessionInterface;
 
 final class ModuleRequestContextStore
 {
-    private const SESSION_KEY = 'symfonicat.module_request_contexts';
+    private const TOKEN_SEPARATOR = '.';
+
+    public function __construct(
+        private readonly string $secret,
+    ) {
+    }
 
     public function issue(Request $request, Domain|Subdomain|Endpoint $entity): array
     {
-        $session = $this->session($request);
         $contextId = bin2hex(random_bytes(16));
-        $token = bin2hex(random_bytes(32));
-
-        if ($session instanceof SessionInterface) {
-            $session->set($this->contextKey($contextId), [
-                'token' => $token,
-                'domain_id' => $entity instanceof Domain ? $this->entityId($entity) : null,
-                'subdomain_id' => $entity instanceof Subdomain ? $this->entityId($entity) : null,
-                'endpoint_id' => $entity instanceof Endpoint ? $this->entityId($entity) : null,
-            ]);
-        }
+        $payload = [
+            'context_id' => $contextId,
+            'domain_id' => $entity instanceof Domain ? $this->entityId($entity) : null,
+            'subdomain_id' => $entity instanceof Subdomain ? $this->entityId($entity) : null,
+            'endpoint_id' => $entity instanceof Endpoint ? $this->entityId($entity) : null,
+            'issued_at' => time(),
+        ];
 
         return [
             'context_id' => $contextId,
-            'token' => $token,
+            'token' => $this->signPayload($payload),
         ];
     }
 
@@ -44,47 +44,23 @@ final class ModuleRequestContextStore
             return null;
         }
 
-        $session = $this->session($request);
-        if (!$session instanceof SessionInterface) {
+        $payload = $this->verifyPayload($token);
+        if (!is_array($payload)) {
             return null;
         }
 
-        $context = $session->get($this->contextKey($contextId));
-        if (!is_array($context)) {
-            return null;
-        }
-
-        $storedToken = trim((string) ($context['token'] ?? ''));
-        if ($storedToken === '' || !hash_equals($storedToken, $token)) {
+        $storedContextId = trim((string) ($payload['context_id'] ?? ''));
+        if ($storedContextId === '' || !hash_equals($storedContextId, $contextId)) {
             return null;
         }
 
         return [
             'context_id' => $contextId,
-            'token' => $storedToken,
-            'domain_id' => isset($context['domain_id']) ? trim((string) $context['domain_id']) : null,
-            'subdomain_id' => isset($context['subdomain_id']) ? trim((string) $context['subdomain_id']) : null,
-            'endpoint_id' => isset($context['endpoint_id']) ? trim((string) $context['endpoint_id']) : null,
+            'token' => $token,
+            'domain_id' => isset($payload['domain_id']) ? trim((string) $payload['domain_id']) : null,
+            'subdomain_id' => isset($payload['subdomain_id']) ? trim((string) $payload['subdomain_id']) : null,
+            'endpoint_id' => isset($payload['endpoint_id']) ? trim((string) $payload['endpoint_id']) : null,
         ];
-    }
-
-    private function session(Request $request): ?SessionInterface
-    {
-        if (!$request->hasSession()) {
-            return null;
-        }
-
-        $session = $request->getSession();
-        if ($session instanceof SessionInterface) {
-            return $session;
-        }
-
-        return null;
-    }
-
-    private function contextKey(string $contextId): string
-    {
-        return self::SESSION_KEY.'.'.$contextId;
     }
 
     private function entityId(Domain|Subdomain|Endpoint $entity): ?string
@@ -92,5 +68,23 @@ final class ModuleRequestContextStore
         $id = trim((string) $entity->getId(false));
 
         return $id === '' ? null : $id;
+    }
+
+    /**
+     * @param array{context_id: string, domain_id: ?string, subdomain_id: ?string, endpoint_id: ?string, issued_at: int} $payload
+     */
+    private function signPayload(array $payload): string
+    {
+        return symfonicat_module_request_token_sign($payload, $this->secret);
+    }
+
+    /**
+     * @return array{context_id?: mixed, domain_id?: mixed, subdomain_id?: mixed, endpoint_id?: mixed, issued_at?: mixed}|null
+     */
+    private function verifyPayload(string $token): ?array
+    {
+        $payload = symfonicat_module_request_token_verify($token, $this->secret);
+
+        return is_array($payload) ? $payload : null;
     }
 }

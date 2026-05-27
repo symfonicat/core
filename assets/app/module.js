@@ -1,3 +1,5 @@
+const brotliPromise = require('../vendor/brotli-wasm/index.browser.js');
+
 function trimSlashes(value = '') {
     return String(value).trim().replace(/^\/+|\/+$/g, '');
 }
@@ -28,15 +30,15 @@ function normalizeRequestArguments(pathOrPayload, payload) {
 
 function getRequestHeaders() {
     if (typeof window === 'undefined') {
-        throw new Error('Missing request context.');
+        return {};
     }
 
     const requestContext = window.request ?? {};
-    const contextId = String(requestContext.contextId ?? '').trim();
+    const contextId = String(requestContext.contextId ?? requestContext.context_id ?? '').trim();
     const token = String(requestContext.token ?? '').trim();
 
     if (contextId === '' || token === '') {
-        throw new Error('Missing request context.');
+        return {};
     }
 
     return {
@@ -45,17 +47,33 @@ function getRequestHeaders() {
     };
 }
 
+async function brotliEncodeJson(payload) {
+    const json = JSON.stringify(payload ?? {});
+    const input = new TextEncoder().encode(json);
+    const brotli = await brotliPromise;
+    const body = brotli.compress(input, { quality: 6 });
+
+    if (!(body instanceof Uint8Array)) {
+        throw new Error('Brotli compression failed.');
+    }
+
+    return body;
+}
+
 async function requestModule(moduleName, responseType, path = '', payload = {}) {
+    const body = await brotliEncodeJson(payload);
+
     const response = await fetch(buildModulePath(moduleName, path), {
         method: 'POST',
         credentials: 'same-origin',
         headers: {
             Accept: responseType === 'html' ? 'text/html' : 'application/json',
+            'Content-Encoding': 'br',
             'Content-Type': 'application/json',
             'X-Requested-With': 'XMLHttpRequest',
             ...getRequestHeaders(),
         },
-        body: JSON.stringify(payload ?? {}),
+        body,
     });
 
     if (!response.ok) {

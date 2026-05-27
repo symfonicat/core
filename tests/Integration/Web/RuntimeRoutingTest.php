@@ -5,6 +5,7 @@ namespace App\Tests\Integration\Web;
 use App\Tests\Support\SymfonicatWebTestCase;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Twig\Environment;
 
 final class RuntimeRoutingTest extends SymfonicatWebTestCase
@@ -108,9 +109,10 @@ final class RuntimeRoutingTest extends SymfonicatWebTestCase
     public function testApplicationPathDoesNotResolveAsPublicRuntime(): void
     {
         $this->setHost('example.com');
+        $client = $this->client();
+        $client->catchExceptions(false);
 
-        $this->client()->request('GET', '/application/core/example/docs');
-
-        self::assertResponseStatusCodeSame(404);
+        $this->expectException(NotFoundHttpException::class);
+        $client->request('GET', '/application/core/example/docs');
     }
 }

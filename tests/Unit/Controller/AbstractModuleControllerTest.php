@@ -194,7 +194,7 @@ final class AbstractModuleControllerTest extends TestCase
             $runtimeConfig,
         );
 
-        return new class($domainService, $moduleService, $subdomainService, $pathService, $requestStack) extends AbstractModuleController {
+        return new class($domainService, $moduleService, $subdomainService, $pathService, new NullLogger(), $requestStack) extends AbstractModuleController {
             public function runModule(Response $shouldRun, Response|false $fallback = false): Response
             {
                 return $this->module($shouldRun, $fallback);
