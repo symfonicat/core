@@ -71,3 +71,4 @@ Canonical runtime uses Docker/FrankenPHP. Redis backs cache, sessions, locks, ad
 ## Documentation
 
 Every change must update both `README.md` and `README_PROFILE.md` as clean current-state snapshots.
+When one readme changes, mirror the same factual edits into the other in the same turn. Use `README.md` as the source of truth for runtime behavior, keep section names and ordering aligned where practical, and write terse notes that name the exact commands, paths, or boot/runtime effects that changed. Avoid speculative prose and avoid leaving one readme with a stale command, path, or startup note.
