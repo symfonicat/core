@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/andybalholm/brotli"
 	"github.com/caddyserver/caddy/v2"
@@ -27,6 +28,10 @@ type BrotliPrecompress struct {
 	Quality    int      `json:"quality,omitempty"`
 	MinSize    int64    `json:"min_size,omitempty"`
 	Extensions []string `json:"extensions,omitempty"`
+
+	precompressMu      sync.Mutex
+	precompressed      bool
+	precompressionPath string
 }
 
 func (BrotliPrecompress) CaddyModule() caddy.ModuleInfo {
@@ -65,19 +70,19 @@ func (b *BrotliPrecompress) Provision(_ caddy.Context) error {
 		}
 	}
 
-	if err := b.precompressTree(filepath.Join(b.Root, b.DiskDir)); err != nil {
-		return err
-	}
-
-	return nil
+	return b.ensurePrecompressed()
 }
 
-func (b BrotliPrecompress) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
+func (b *BrotliPrecompress) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp.Handler) error {
 	if !strings.Contains(r.Header.Get("Accept-Encoding"), "br") {
 		return next.ServeHTTP(w, r)
 	}
 
 	if b.Root == "" {
+		return next.ServeHTTP(w, r)
+	}
+
+	if err := b.ensurePrecompressed(); err != nil {
 		return next.ServeHTTP(w, r)
 	}
 
@@ -97,6 +102,34 @@ func (b BrotliPrecompress) ServeHTTP(w http.ResponseWriter, r *http.Request, nex
 	}
 
 	return next.ServeHTTP(w, r)
+}
+
+func (b *BrotliPrecompress) ensurePrecompressed() error {
+	buildDir := filepath.Join(b.Root, b.DiskDir)
+
+	b.precompressMu.Lock()
+	defer b.precompressMu.Unlock()
+
+	if b.precompressed && b.precompressionPath == buildDir {
+		return nil
+	}
+
+	if _, err := os.Stat(buildDir); err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+
+		return err
+	}
+
+	if err := b.precompressTree(buildDir); err != nil {
+		return err
+	}
+
+	b.precompressed = true
+	b.precompressionPath = buildDir
+
+	return nil
 }
 
 func (b BrotliPrecompress) serveBrotliFile(w http.ResponseWriter, r *http.Request, sourcePath string, brotliPath string) error {
