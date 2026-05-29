@@ -20,7 +20,6 @@ touch symfonicat.lock
 ```
 
 The admin area is disabled until `symfonicat.lock` exists in the repo root.
-The `npm` Compose service runs after `php` is healthy and generates `public/build` with PHP available for webpack data discovery.
 
 ## Runtime
 
@@ -78,6 +77,10 @@ Middleware services implement PSR-15 `Psr\Http\Server\MiddlewareInterface` and a
 Modules can be attached to domains, subdomains, or endpoints.
 
 Backend module controllers should extend `Symfonicat\Controller\AbstractModuleController`. They only execute when the module is attached to the active domain, subdomain, or endpoint context.
+
+Module routes are declared with `#[ModuleRoute]` on the controller class and `#[Module]` on the action method. The module loader reads the root `composer.json` package name, turns `symfonicat/core` into `symfonicat_core`, and generates `POST /m/symfonicat/core/{method}` with the route name `symfonicat_module_symfonicat_core_{method}`.
+
+The root Composer autoload maps `App\\Module\\` to `src/Module/`, so controllers under `src/Module/` are discovered as module routes when they use the `App\Module\` namespace. Installed Symfonicat packages can expose their own `Module` subtree through PSR-4 autoloading, and those classes continue to use the `Symfonicat\Module\` namespace.
 
 Frontend module code posts to full package routes:
 

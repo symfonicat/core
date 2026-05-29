@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "56f171fdf3a8e1ab7ad94a46ee90c61e",
+    "content-hash": "e15cfcce94958e6a5c5e1f80eecc199b",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -2208,16 +2208,16 @@
         },
         {
             "name": "symfonicat/analytics",
-            "version": "v3.2.0",
+            "version": "v3.3.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfonicat/analytics.git",
-                "reference": "1af1d8c52dc0d88177a3b53a65226af6d05aac86"
+                "reference": "e532b497f42384c6d46199d77e1fd037b6d85397"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfonicat/analytics/zipball/1af1d8c52dc0d88177a3b53a65226af6d05aac86",
-                "reference": "1af1d8c52dc0d88177a3b53a65226af6d05aac86",
+                "url": "https://api.github.com/repos/symfonicat/analytics/zipball/e532b497f42384c6d46199d77e1fd037b6d85397",
+                "reference": "e532b497f42384c6d46199d77e1fd037b6d85397",
                 "shasum": ""
             },
             "require": {
@@ -2241,9 +2241,9 @@
             "description": "Analytics package for Symfonicat.",
             "support": {
                 "issues": "https://github.com/symfonicat/analytics/issues",
-                "source": "https://github.com/symfonicat/analytics/tree/v3.2.0"
+                "source": "https://github.com/symfonicat/analytics/tree/v3.3.0"
             },
-            "time": "2026-05-27T20:26:32+00:00"
+            "time": "2026-05-29T14:16:09+00:00"
         },
         {
             "name": "symfony/asset",
@@ -6501,16 +6501,16 @@
         },
         {
             "name": "symfony/stimulus-bundle",
-            "version": "v3.0.0",
+            "version": "v3.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/stimulus-bundle.git",
-                "reference": "2236755f4f99c876da4935911b9edcd75c5bfab2"
+                "reference": "9dc58d7cbb77356642c63434033e64d00b6c6946"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/stimulus-bundle/zipball/2236755f4f99c876da4935911b9edcd75c5bfab2",
-                "reference": "2236755f4f99c876da4935911b9edcd75c5bfab2",
+                "url": "https://api.github.com/repos/symfony/stimulus-bundle/zipball/9dc58d7cbb77356642c63434033e64d00b6c6946",
+                "reference": "9dc58d7cbb77356642c63434033e64d00b6c6946",
                 "shasum": ""
             },
             "require": {
@@ -6553,7 +6553,7 @@
                 "symfony-ux"
             ],
             "support": {
-                "source": "https://github.com/symfony/stimulus-bundle/tree/v3.0.0"
+                "source": "https://github.com/symfony/stimulus-bundle/tree/v3.1.0"
             },
             "funding": [
                 {
@@ -6573,7 +6573,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-04-09T22:56:44+00:00"
+            "time": "2026-05-22T05:04:55+00:00"
         },
         {
             "name": "symfony/string",
@@ -7023,16 +7023,16 @@
         },
         {
             "name": "symfony/ux-turbo",
-            "version": "v2.35.0",
+            "version": "v2.36.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/ux-turbo.git",
-                "reference": "4309a4299f5f1b9b7ce4c13ed6d1b77a5472c216"
+                "reference": "c16f0fdcc8eb22d80a02949447e561c145fa1bc8"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/ux-turbo/zipball/4309a4299f5f1b9b7ce4c13ed6d1b77a5472c216",
-                "reference": "4309a4299f5f1b9b7ce4c13ed6d1b77a5472c216",
+                "url": "https://api.github.com/repos/symfony/ux-turbo/zipball/c16f0fdcc8eb22d80a02949447e561c145fa1bc8",
+                "reference": "c16f0fdcc8eb22d80a02949447e561c145fa1bc8",
                 "shasum": ""
             },
             "require": {
@@ -7102,7 +7102,7 @@
                 "turbo-stream"
             ],
             "support": {
-                "source": "https://github.com/symfony/ux-turbo/tree/v2.35.0"
+                "source": "https://github.com/symfony/ux-turbo/tree/v2.36.0"
             },
             "funding": [
                 {
@@ -7122,7 +7122,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-04-03T05:13:59+00:00"
+            "time": "2026-05-06T04:31:36+00:00"
         },
         {
             "name": "symfony/validator",

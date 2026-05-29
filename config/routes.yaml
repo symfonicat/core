@@ -1,6 +1,8 @@
-# yaml-language-server: $schema=../vendor/symfony/routing/Loader/schema/routing.schema.json
+symfonicat_module:
+    resource: ../config/module_routes.php
 
-# Route files in config/routes/ are imported by the kernel.
-# Symfonicat keeps its public/admin imports in:
-# - config/routes/public.yaml
-# - config/routes/admin.yaml
+symfonicat_public:
+    resource: routes/public.yaml
+
+symfonicat_admin:
+    resource: routes/admin.yaml
