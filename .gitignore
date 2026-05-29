@@ -21,5 +21,7 @@ yarn-error.log
 /phpunit.xml
 ###< phpunit/phpunit ###
 
-/electron/**/build/
+/application/**/build/
 /symfonicat.lock
+
+/.env

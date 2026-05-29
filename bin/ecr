@@ -1,0 +1,96 @@
+#!/bin/sh
+
+set -eu
+
+load_env_file() {
+    file="$1"
+
+    [ -f "$file" ] || return 0
+
+    while IFS= read -r line || [ -n "$line" ]; do
+        case "$line" in
+            ''|\#*)
+                continue
+                ;;
+            export\ *)
+                line=${line#export }
+                ;;
+        esac
+
+        case "$line" in
+            *=*)
+                key=${line%%=*}
+                case "$key" in
+                    ''|*[!A-Za-z0-9_]*)
+                        continue
+                        ;;
+                esac
+
+                eval "current=\${$key+x}"
+                if [ -z "$current" ]; then
+                    eval "export $line"
+                fi
+                ;;
+        esac
+    done < "$file"
+}
+
+require_var() {
+    name="$1"
+
+    eval "value=\${$name:-}"
+    if [ -z "$value" ]; then
+        printf >&2 'Missing required environment variable: %s\n' "$name"
+        exit 1
+    fi
+}
+
+require_aws_credentials() {
+    if [ -n "${AWS_PROFILE:-}" ] || [ -n "${AWS_DEFAULT_PROFILE:-}" ]; then
+        return 0
+    fi
+
+    if [ -n "${AWS_ACCESS_KEY_ID:-}" ] && [ -n "${AWS_SECRET_ACCESS_KEY:-}" ]; then
+        return 0
+    fi
+
+    printf >&2 '%s\n' \
+        'Missing AWS credentials for ECR.' \
+        'Set AWS_PROFILE, or export AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY (plus AWS_SESSION_TOKEN if using temporary credentials).' \
+        'The script only loads local dotenv files; it does not create AWS credentials.'
+    exit 1
+}
+
+script_dir=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
+project_dir=$(CDPATH= cd -- "$script_dir/.." && pwd)
+
+load_env_file "$project_dir/.env"
+load_env_file "$project_dir/.env.local"
+if [ -n "${APP_ENV:-}" ]; then
+    load_env_file "$project_dir/.env.${APP_ENV}"
+    load_env_file "$project_dir/.env.${APP_ENV}.local"
+fi
+
+require_var AWS_ECR_REGION
+require_var AWS_ECR_ACCOUNT_ID
+require_var AWS_ECR_REPOSITORY
+require_aws_credentials
+
+context="${AWS_ECR_CONTEXT:-$project_dir}"
+dockerfile="${AWS_ECR_DOCKERFILE:-Dockerfile}"
+target="${AWS_ECR_BUILD_TARGET:-runtime}"
+local_image="${AWS_ECR_LOCAL_IMAGE:-symfonicat-core-php:local}"
+tag="${AWS_ECR_TAG:-latest}"
+registry="${AWS_ECR_ACCOUNT_ID}.dkr.ecr.${AWS_ECR_REGION}.amazonaws.com"
+remote_image="${registry}/${AWS_ECR_REPOSITORY}:${tag}"
+
+docker build \
+    --file "$dockerfile" \
+    --target "$target" \
+    --tag "$local_image" \
+    "$context"
+
+docker tag "$local_image" "$remote_image"
+
+aws ecr get-login-password --region "$AWS_ECR_REGION" | docker login --username AWS --password-stdin "$registry"
+docker push "$remote_image"

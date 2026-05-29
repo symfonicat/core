@@ -1,0 +1,236 @@
+#!/bin/sh
+
+set -eu
+
+load_env_file() {
+    file="$1"
+
+    [ -f "$file" ] || return 0
+
+    while IFS= read -r line || [ -n "$line" ]; do
+        case "$line" in
+            ''|\#*)
+                continue
+                ;;
+            export\ *)
+                line=${line#export }
+                ;;
+        esac
+
+        case "$line" in
+            *=*)
+                key=${line%%=*}
+                case "$key" in
+                    ''|*[!A-Za-z0-9_]*)
+                        continue
+                        ;;
+                esac
+
+                eval "current=\${$key+x}"
+                if [ -z "$current" ]; then
+                    eval "export $line"
+                fi
+                ;;
+        esac
+    done < "$file"
+}
+
+require_var() {
+    name="$1"
+
+    eval "value=\${$name:-}"
+    if [ -z "$value" ]; then
+        printf >&2 'Missing required environment variable: %s\n' "$name"
+        exit 1
+    fi
+}
+
+require_aws_credentials() {
+    if [ -n "${AWS_PROFILE:-}" ] || [ -n "${AWS_DEFAULT_PROFILE:-}" ]; then
+        return 0
+    fi
+
+    if [ -n "${AWS_ACCESS_KEY_ID:-}" ] && [ -n "${AWS_SECRET_ACCESS_KEY:-}" ]; then
+        return 0
+    fi
+
+    printf >&2 '%s\n' \
+        'Missing AWS credentials for Route53.' \
+        'Set AWS_PROFILE, or export AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY (plus AWS_SESSION_TOKEN if using temporary credentials).' \
+        'The script only loads local dotenv files; it does not create AWS credentials.'
+    exit 1
+}
+
+service_public_ip() {
+    region="$1"
+    cluster_name="$2"
+    service_name="$3"
+
+    task_arn=$(
+        aws ecs list-tasks \
+            --region "$region" \
+            --cluster "$cluster_name" \
+            --service-name "$service_name" \
+            --desired-status RUNNING \
+            --query 'taskArns[0]' \
+            --output text 2>/dev/null || true
+    )
+
+    if [ -z "$task_arn" ] || [ "$task_arn" = "None" ]; then
+        printf >&2 'No running ECS task found for service %s in cluster %s\n' "$service_name" "$cluster_name"
+        exit 1
+    fi
+
+    task_json=$(
+        aws ecs describe-tasks \
+            --region "$region" \
+            --cluster "$cluster_name" \
+            --tasks "$task_arn" \
+            --output json
+    )
+
+    eni_id=$(printf '%s\n' "$task_json" | jq -r '.tasks[0].attachments[]? | select(.type == "ElasticNetworkInterface") | .details[]? | select(.name == "networkInterfaceId") | .value' | head -n1)
+
+    if [ -z "$eni_id" ] || [ "$eni_id" = "null" ]; then
+        printf >&2 'Could not determine ENI for task %s\n' "$task_arn"
+        exit 1
+    fi
+
+    network_interface_json=$(
+        aws ec2 describe-network-interfaces \
+            --region "$region" \
+            --network-interface-ids "$eni_id" \
+            --output json
+    )
+
+    public_ip=$(printf '%s\n' "$network_interface_json" | jq -r '.NetworkInterfaces[0].Association.PublicIp // empty')
+
+    if [ -z "$public_ip" ]; then
+        printf >&2 'Could not determine public IP for ENI %s\n' "$eni_id"
+        exit 1
+    fi
+
+    printf '%s\n' "$public_ip"
+}
+
+script_dir=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
+project_dir=$(CDPATH= cd -- "$script_dir/.." && pwd)
+
+if [ "$#" -ne 1 ]; then
+    printf >&2 'Usage: %s <domain>\n' "$(basename "$0")"
+    exit 1
+fi
+
+domain=${1%.}
+zone_name="$domain."
+
+load_env_file "$project_dir/.env"
+load_env_file "$project_dir/.env.local"
+if [ -n "${APP_ENV:-}" ]; then
+    load_env_file "$project_dir/.env.${APP_ENV}"
+    load_env_file "$project_dir/.env.${APP_ENV}.local"
+fi
+
+require_var AWS_ECS_REGION
+require_var AWS_ECS_CLUSTER_NAME
+require_var AWS_ECS_SERVICE_NAME
+require_var AWS_ECS_CONTAINER_NAME
+require_aws_credentials
+
+route53_region="${AWS_ROUTE53_REGION:-$AWS_ECS_REGION}"
+
+default_records_json='[
+  {"name":"@","type":"A"},
+  {"name":"*","type":"A"}
+]'
+
+extra_records_json="${AWS_ROUTE53_RECORDS_JSON:-[]}"
+all_records_json=$(
+    jq -cn \
+        --argjson defaults "$default_records_json" \
+        --argjson extras "$extra_records_json" \
+        '$defaults + $extras'
+)
+
+zone_lookup_json=$(aws route53 list-hosted-zones-by-name \
+    --region "$route53_region" \
+    --dns-name "$zone_name" \
+    --output json)
+
+zone_id=$(printf '%s\n' "$zone_lookup_json" | jq -r --arg zone "$zone_name" '.HostedZones[]? | select(.Name == $zone) | .Id' | head -n1)
+created_zone=0
+
+if [ -z "$zone_id" ] || [ "$zone_id" = "null" ]; then
+    caller_reference=$(printf '%s-%s-%s' "$domain" "$$" "$(date -u +%s)")
+    zone_json=$(aws route53 create-hosted-zone \
+        --region "$route53_region" \
+        --name "$zone_name" \
+        --caller-reference "$caller_reference" \
+        --hosted-zone-config "Comment=Managed by symfonicat route53 helper,PrivateZone=false" \
+        --output json)
+
+    zone_id=$(printf '%s\n' "$zone_json" | jq -r '.HostedZone.Id')
+    created_zone=1
+else
+    zone_json=$(aws route53 get-hosted-zone \
+        --region "$route53_region" \
+        --id "$zone_id" \
+        --output json)
+fi
+
+zone_name=$(printf '%s\n' "$zone_json" | jq -r '.HostedZone.Name')
+name_servers=$(printf '%s\n' "$zone_json" | jq -r '.DelegationSet.NameServers[]')
+
+printf 'Hosted zone: %s\n' "$zone_id"
+printf 'Domain: %s\n' "$zone_name"
+printf 'Nameservers:\n'
+printf '%s\n' "$name_servers"
+
+public_ip=$(service_public_ip "$AWS_ECS_REGION" "$AWS_ECS_CLUSTER_NAME" "$AWS_ECS_SERVICE_NAME")
+
+change_batch_json=$(mktemp)
+trap 'rm -f "$change_batch_json"' EXIT HUP INT TERM
+
+jq -n \
+    --arg zone "$zone_name" \
+    --arg public_ip "$public_ip" \
+    --argjson records "$all_records_json" '
+        def fqdn($name):
+            if $name == null or $name == "" or $name == "@" then
+                $zone
+            elif ($name | endswith(".")) then
+                $name
+            else
+                $name + "." + $zone
+            end;
+
+        def plain_rr($record):
+            ($record.values // (if $record.value != null then [$record.value] else [$public_ip] end)) as $vals
+            | if ($vals | length) == 0 then
+                error("Record requires value or values")
+              else
+                {
+                    Name: fqdn($record.name),
+                    Type: $record.type,
+                    TTL: ($record.ttl // 300),
+                    ResourceRecords: ($vals | map({Value: .}))
+                }
+              end;
+
+        {
+            Changes: (
+                $records
+                | map({Action: "UPSERT", ResourceRecordSet: plain_rr(.)})
+            )
+        }
+    ' > "$change_batch_json"
+
+aws route53 change-resource-record-sets \
+    --region "$route53_region" \
+    --hosted-zone-id "$zone_id" \
+    --change-batch "file://$change_batch_json" \
+    --output json | jq -r '.ChangeInfo | "ChangeId: \(.Id)\nStatus: \(.Status)"'
+
+if [ "$created_zone" -eq 1 ]; then
+    printf 'Created hosted zone for %s\n' "$domain"
+fi

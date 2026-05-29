@@ -32,6 +32,11 @@ final class AffixService
                 return [];
             }
 
+            $host = strtolower(trim($host));
+            if ($host === '' || filter_var($host, FILTER_VALIDATE_IP) !== false) {
+                return [];
+            }
+
             if ( str_ends_with($host, 'localhost')) {
                 $host = str_replace ('localhost', '', $host) . 'localhost.com';
             }

@@ -1,0 +1,557 @@
+#!/bin/sh
+
+set -eu
+
+dotenv_keys_file=
+
+load_env_file() {
+    file="$1"
+
+    [ -f "$file" ] || return 0
+
+    while IFS= read -r line || [ -n "$line" ]; do
+        case "$line" in
+            ''|\#*)
+                continue
+                ;;
+            export\ *)
+                line=${line#export }
+                ;;
+        esac
+
+        case "$line" in
+            *=*)
+                key=${line%%=*}
+                case "$key" in
+                    ''|*[!A-Za-z0-9_]*)
+                        continue
+                        ;;
+                esac
+
+                case "$key" in
+                    AWS_ECS_TLS_*)
+                        is_runtime_env=1
+                        ;;
+                    AWS_*|DOCKERHUB_*|LIGHTSAIL_*)
+                        is_runtime_env=0
+                        ;;
+                    *)
+                        is_runtime_env=1
+                        ;;
+                esac
+
+                eval "current=\${$key+x}"
+                eval "loaded=\${DOTENV_LOADED_$key+x}"
+                if [ -z "$current" ] || [ -n "$loaded" ]; then
+                    eval "export $line"
+                    eval "DOTENV_LOADED_$key=1"
+
+                    if [ "$is_runtime_env" -eq 1 ] && [ -n "$dotenv_keys_file" ]; then
+                        printf '%s\n' "$key" >> "$dotenv_keys_file"
+                    fi
+                fi
+                ;;
+        esac
+    done < "$file"
+}
+
+require_var() {
+    name="$1"
+
+    eval "value=\${$name:-}"
+    if [ -z "$value" ]; then
+        printf >&2 'Missing required environment variable: %s\n' "$name"
+        exit 1
+    fi
+}
+
+require_aws_credentials() {
+    if [ -n "${AWS_PROFILE:-}" ] || [ -n "${AWS_DEFAULT_PROFILE:-}" ]; then
+        return 0
+    fi
+
+    if [ -n "${AWS_ACCESS_KEY_ID:-}" ] && [ -n "${AWS_SECRET_ACCESS_KEY:-}" ]; then
+        return 0
+    fi
+
+    printf >&2 '%s\n' \
+        'Missing AWS credentials for ECS.' \
+        'Set AWS_PROFILE, or export AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY (plus AWS_SESSION_TOKEN if using temporary credentials).' \
+        'The script only loads local dotenv files; it does not create AWS credentials.'
+    exit 1
+}
+
+ensure_cluster_exists() {
+    cluster_name="$1"
+    region="$2"
+
+    cluster_status=$(
+        aws ecs describe-clusters \
+            --region "$region" \
+            --clusters "$cluster_name" \
+            --query 'clusters[0].status' \
+            --output text 2>/dev/null || true
+    )
+
+    if [ "$cluster_status" = "ACTIVE" ]; then
+        return 0
+    fi
+
+    printf 'Creating ECS cluster %s\n' "$cluster_name"
+    aws ecs create-cluster \
+        --region "$region" \
+        --cluster-name "$cluster_name" \
+        --output json >/dev/null
+}
+
+sanitize_aws_name() {
+    printf '%s' "$1" \
+        | tr '[:upper:]_/.' '[:lower:]-' \
+        | tr -cs 'a-z0-9-' '-' \
+        | cut -c1-32 \
+        | sed 's/^-//; s/-$//'
+}
+
+json_array_or_empty() {
+    value="${1:-[]}"
+
+    printf '%s' "$value" | jq -ec '
+        if type == "array" then
+            .
+        else
+            error("expected JSON array")
+        end
+    '
+}
+
+ensure_default_vpc_id() {
+    region="$1"
+
+    vpc_id=$(
+        aws ec2 describe-vpcs \
+            --region "$region" \
+            --filters 'Name=isDefault,Values=true' \
+            --query 'Vpcs[0].VpcId' \
+            --output text 2>/dev/null || true
+    )
+
+    if [ -z "$vpc_id" ] || [ "$vpc_id" = "None" ]; then
+        aws ec2 create-default-vpc \
+            --region "$region" \
+            --output json >/dev/null
+
+        vpc_id=$(
+            aws ec2 describe-vpcs \
+                --region "$region" \
+                --filters 'Name=isDefault,Values=true' \
+                --query 'Vpcs[0].VpcId' \
+                --output text
+        )
+    fi
+
+    printf '%s\n' "$vpc_id"
+}
+
+ensure_default_subnets_json() {
+    region="$1"
+    vpc_id="$2"
+
+    aws ec2 describe-subnets \
+        --region "$region" \
+        --filters "Name=vpc-id,Values=$vpc_id" \
+        --query 'Subnets[].SubnetId' \
+        --output json
+}
+
+ensure_service_security_group_id() {
+    region="$1"
+    vpc_id="$2"
+    group_name="$3"
+
+    sg_id=$(
+        aws ec2 describe-security-groups \
+            --region "$region" \
+            --filters "Name=vpc-id,Values=$vpc_id" "Name=group-name,Values=$group_name" \
+            --query 'SecurityGroups[0].GroupId' \
+            --output text 2>/dev/null || true
+    )
+
+    if [ -z "$sg_id" ] || [ "$sg_id" = "None" ]; then
+        sg_id=$(
+            aws ec2 create-security-group \
+                --region "$region" \
+                --group-name "$group_name" \
+                --description "symfonicat ecs service security group" \
+                --vpc-id "$vpc_id" \
+                --query 'GroupId' \
+                --output text
+        )
+    fi
+
+    ingress_rules_json=$(
+        aws ec2 describe-security-group-rules \
+            --region "$region" \
+            --filters "Name=group-id,Values=$sg_id" \
+            --query 'SecurityGroupRules[?IpProtocol==`tcp` && FromPort==`443` && ToPort==`443` && (CidrIpv4==`0.0.0.0/0` || CidrIpv6==`::/0`)]' \
+            --output json 2>/dev/null || printf '[]'
+    )
+
+    if [ "$(printf '%s\n' "$ingress_rules_json" | jq 'length')" -eq 0 ]; then
+        ingress_err=$(mktemp)
+        if ! aws ec2 authorize-security-group-ingress \
+            --region "$region" \
+            --group-id "$sg_id" \
+            --ip-permissions 'IpProtocol=tcp,FromPort=443,ToPort=443,IpRanges=[{CidrIp=0.0.0.0/0}]' \
+            >/dev/null 2>"$ingress_err"; then
+            if ! grep -q 'InvalidPermission.Duplicate' "$ingress_err"; then
+                cat "$ingress_err" >&2
+                rm -f "$ingress_err"
+                exit 1
+            fi
+        fi
+        rm -f "$ingress_err"
+    fi
+
+    printf '%s\n' "$sg_id"
+}
+
+ensure_execution_role_arn() {
+    region="$1"
+    role_name="${2:-ecsTaskExecutionRole}"
+
+    role_arn=$(
+        aws iam get-role \
+            --role-name "$role_name" \
+            --query 'Role.Arn' \
+            --output text 2>/dev/null || true
+    )
+
+    if [ -z "$role_arn" ] || [ "$role_arn" = "None" ]; then
+        trust_policy=$(mktemp)
+        cat > "$trust_policy" <<'JSON'
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": { "Service": "ecs-tasks.amazonaws.com" },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+JSON
+        role_arn=$(
+            aws iam create-role \
+                --role-name "$role_name" \
+                --assume-role-policy-document "file://$trust_policy" \
+                --query 'Role.Arn' \
+                --output text
+        )
+        aws iam attach-role-policy \
+            --role-name "$role_name" \
+            --policy-arn arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy >/dev/null
+        rm -f "$trust_policy"
+    fi
+
+    printf '%s\n' "$role_arn"
+}
+
+build_task_definition_json() {
+    task_family="$1"
+    container_name="$2"
+    image_uri="$3"
+    container_port="$4"
+    cpu="$5"
+    memory="$6"
+    execution_role_arn="$7"
+    task_role_arn="$8"
+    dotenv_env_json="$9"
+
+    jq -n \
+        --arg family "$task_family" \
+        --arg name "$container_name" \
+        --arg image "$image_uri" \
+        --argjson container_port "$container_port" \
+        --arg cpu "$cpu" \
+        --arg memory "$memory" \
+        --arg execution_role_arn "$execution_role_arn" \
+        --arg task_role_arn "$task_role_arn" \
+        --argjson envs "$dotenv_env_json" '
+            {
+                family: $family,
+                networkMode: "awsvpc",
+                requiresCompatibilities: ["FARGATE"],
+                cpu: $cpu,
+                memory: $memory,
+                containerDefinitions: [
+                    {
+                        name: $name,
+                        image: $image,
+                        essential: true,
+                        portMappings: [
+                            {
+                                containerPort: $container_port,
+                                protocol: "tcp"
+                            }
+                        ],
+                        environment: $envs
+                    }
+                ]
+            }
+            | if $execution_role_arn != "" then .executionRoleArn = $execution_role_arn else . end
+            | if $task_role_arn != "" then .taskRoleArn = $task_role_arn else . end
+        '
+}
+
+build_service_create_json() {
+    cluster_name="$1"
+    service_name="$2"
+    task_definition_arn="$3"
+    desired_count="$4"
+    launch_type="$5"
+    target_group_arn="$6"
+    container_name="$7"
+    container_port="$8"
+    subnets_json="$9"
+    security_groups_json="${10}"
+    assign_public_ip="${11}"
+
+    jq -n \
+        --arg cluster "$cluster_name" \
+        --arg service "$service_name" \
+        --arg task_definition "$task_definition_arn" \
+        --arg desired_count "$desired_count" \
+        --arg launch_type "$launch_type" \
+        --arg target_group_arn "$target_group_arn" \
+        --arg container_name "$container_name" \
+        --argjson container_port "$container_port" \
+        --argjson subnets "$(json_array_or_empty "$subnets_json")" \
+        --argjson security_groups "$(json_array_or_empty "$security_groups_json")" \
+        --arg assign_public_ip "$assign_public_ip" '
+            if ($subnets | length) == 0 then
+                error("AWS_ECS_SUBNETS_JSON must contain at least one subnet ID")
+            else
+                {
+                    cluster: $cluster,
+                    serviceName: $service,
+                    taskDefinition: $task_definition,
+                    desiredCount: ($desired_count | tonumber),
+                    launchType: $launch_type,
+                    networkConfiguration: {
+                        awsvpcConfiguration: {
+                            subnets: $subnets,
+                            assignPublicIp: $assign_public_ip
+                        }
+                    }
+                }
+                | if ($security_groups | length) > 0 then
+                    .networkConfiguration.awsvpcConfiguration.securityGroups = $security_groups
+                  else
+                    .
+                  end
+                | if $target_group_arn != "" then
+                    .loadBalancers = [
+                        {
+                            targetGroupArn: $target_group_arn,
+                            containerName: $container_name,
+                            containerPort: $container_port
+                        }
+                    ]
+                  else
+                    .
+                  end
+            end
+        '
+}
+
+script_dir=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
+project_dir=$(CDPATH= cd -- "$script_dir/.." && pwd)
+dotenv_keys_file=$(mktemp)
+
+load_env_file "$project_dir/.env"
+load_env_file "$project_dir/.env.local"
+load_env_file "$project_dir/.env.certificate.local"
+if [ -n "${APP_ENV:-}" ]; then
+    load_env_file "$project_dir/.env.${APP_ENV}"
+    load_env_file "$project_dir/.env.${APP_ENV}.local"
+fi
+
+require_var AWS_ECS_REGION
+require_var AWS_ECS_CLUSTER_NAME
+require_var AWS_ECS_SERVICE_NAME
+require_var AWS_ECS_CONTAINER_NAME
+require_var AWS_ECS_IMAGE_URI
+require_aws_credentials
+
+cluster_name="${AWS_ECS_CLUSTER_NAME}"
+service_name="${AWS_ECS_SERVICE_NAME}"
+container_name="${AWS_ECS_CONTAINER_NAME}"
+image_uri="${AWS_ECS_IMAGE_URI}"
+region="${AWS_ECS_REGION}"
+wait_for_stable="${AWS_ECS_WAIT_FOR_STABLE:-1}"
+
+ensure_cluster_exists "$cluster_name" "$region"
+
+if [ -s "$dotenv_keys_file" ]; then
+    dotenv_env_json=$(
+        jq -Rn '
+            [inputs | select(length > 0)]
+            | unique
+            | map({name: ., value: (env[.] // "")})
+        ' < "$dotenv_keys_file"
+    )
+else
+    dotenv_env_json='[]'
+fi
+
+task_definition_json=$(mktemp)
+updated_task_definition_json=$(mktemp)
+service_create_json=$(mktemp)
+trap 'rm -f "$task_definition_json" "$updated_task_definition_json" "$service_create_json" "$dotenv_keys_file"' EXIT HUP INT TERM
+
+current_task_definition_arn=$(
+    aws ecs describe-services \
+        --region "$region" \
+        --cluster "$cluster_name" \
+        --services "$service_name" \
+        --query 'services[0].taskDefinition' \
+        --output text 2>/dev/null || true
+)
+
+if [ -z "$current_task_definition_arn" ] || [ "$current_task_definition_arn" = "None" ]; then
+    task_family="${AWS_ECS_TASK_FAMILY:-$service_name}"
+    launch_type="${AWS_ECS_LAUNCH_TYPE:-FARGATE}"
+    cpu="${AWS_ECS_CPU:-512}"
+    memory="${AWS_ECS_MEMORY:-1024}"
+    container_port="${AWS_ECS_CONTAINER_PORT:-443}"
+    desired_count="${AWS_ECS_DESIRED_COUNT:-1}"
+    assign_public_ip="${AWS_ECS_ASSIGN_PUBLIC_IP:-ENABLED}"
+    target_group_arn="${AWS_ECS_TARGET_GROUP_ARN:-}"
+    execution_role_arn="${AWS_ECS_EXECUTION_ROLE_ARN:-}"
+    task_role_arn="${AWS_ECS_TASK_ROLE_ARN:-}"
+    subnets_json="${AWS_ECS_SUBNETS_JSON:-}"
+    security_groups_json="${AWS_ECS_SECURITY_GROUPS_JSON:-}"
+
+    default_vpc_id=$(ensure_default_vpc_id "$region")
+
+    if [ -z "$subnets_json" ]; then
+        subnets_json=$(ensure_default_subnets_json "$region" "$default_vpc_id")
+    fi
+
+    if [ -z "$security_groups_json" ]; then
+        service_sg_name="$(sanitize_aws_name "${AWS_ECS_SECURITY_GROUP_NAME:-$service_name-ecs}")"
+        service_sg_id=$(ensure_service_security_group_id "$region" "$default_vpc_id" "$service_sg_name")
+        security_groups_json=$(jq -cn --arg id "$service_sg_id" '[$id]')
+    fi
+
+    if [ -z "$execution_role_arn" ]; then
+        execution_role_arn=$(ensure_execution_role_arn "$region" "${AWS_ECS_EXECUTION_ROLE_NAME:-ecsTaskExecutionRole}")
+    fi
+
+    build_task_definition_json \
+        "$task_family" \
+        "$container_name" \
+        "$image_uri" \
+        "$container_port" \
+        "$cpu" \
+        "$memory" \
+        "$execution_role_arn" \
+        "$task_role_arn" \
+        "$dotenv_env_json" > "$task_definition_json"
+
+    new_task_definition_arn=$(
+        aws ecs register-task-definition \
+            --region "$region" \
+            --cli-input-json "file://$task_definition_json" \
+            --query 'taskDefinition.taskDefinitionArn' \
+            --output text
+    )
+
+    build_service_create_json \
+        "$cluster_name" \
+        "$service_name" \
+        "$new_task_definition_arn" \
+        "$desired_count" \
+        "$launch_type" \
+        "$target_group_arn" \
+        "$container_name" \
+        "$container_port" \
+        "$subnets_json" \
+        "$security_groups_json" \
+        "$assign_public_ip" > "$service_create_json"
+
+    aws ecs create-service \
+        --region "$region" \
+        --cli-input-json "file://$service_create_json" \
+        >/dev/null
+
+    printf '%s\n' "$new_task_definition_arn"
+
+    if [ "$wait_for_stable" != "0" ]; then
+        aws ecs wait services-stable \
+            --region "$region" \
+            --cluster "$cluster_name" \
+            --services "$service_name"
+    fi
+
+    exit 0
+fi
+
+aws ecs describe-task-definition \
+    --region "$region" \
+    --task-definition "$current_task_definition_arn" \
+    --query 'taskDefinition' \
+    --output json > "$task_definition_json"
+
+jq --arg container "$container_name" --arg image "$image_uri" --argjson envs "$dotenv_env_json" '
+    def merge_env($existing; $incoming):
+        reduce $existing[]? as $item ({}; .[$item.name] = $item.value)
+        | reduce $incoming[]? as $item (. ; .[$item.name] = $item.value)
+        | to_entries
+        | map({name: .key, value: .value});
+
+    .containerDefinitions |= map(
+        if .name == $container then
+            .image = $image
+            | .environment = merge_env((.environment // []); $envs)
+        else
+            .
+        end
+    )
+    | if any(.containerDefinitions[]; .name == $container) then . else error("Container not found: \($container)") end
+    | del(
+        .taskDefinitionArn,
+        .revision,
+        .status,
+        .requiresAttributes,
+        .compatibilities,
+        .deregisteredAt,
+        .deregisteredBy,
+        .registeredAt,
+        .registeredBy
+      )
+' "$task_definition_json" > "$updated_task_definition_json"
+
+new_task_definition_arn=$(
+    aws ecs register-task-definition \
+        --region "$region" \
+        --cli-input-json "file://$updated_task_definition_json" \
+        --query 'taskDefinition.taskDefinitionArn' \
+        --output text
+)
+
+aws ecs update-service \
+    --region "$region" \
+    --cluster "$cluster_name" \
+    --service "$service_name" \
+    --task-definition "$new_task_definition_arn" \
+    --force-new-deployment >/dev/null
+
+printf '%s\n' "$new_task_definition_arn"
+
+if [ "$wait_for_stable" != "0" ]; then
+    aws ecs wait services-stable \
+        --region "$region" \
+        --cluster "$cluster_name" \
+        --services "$service_name"
+fi

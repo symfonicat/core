@@ -1,8 +1,24 @@
 {
-	auto_https off
+	auto_https disable_redirects
+	servers {
+		protocols h1 h2 h3
+	}
+	frankenphp {
+		worker {
+			file /symfonicat/public/index.php
+			watch /symfonicat/public/index.php
+			watch /symfonicat/src/**/*.php
+			watch /symfonicat/admin/src/**/*.php
+			watch /symfonicat/templates/**/*.twig
+			watch /symfonicat/config/**/*.yaml
+			watch /symfonicat/config/**/*.yml
+		}
+	}
 }
 
-:80 {
+{$SERVER_NAME}:443, *.{$SERVER_NAME}:443 {
+	import /run/symfonicat/caddy/tls.caddy
+
 	mercure {
 		publisher_jwt {$MERCURE_JWT_SECRET}
 		subscriber_jwt {$MERCURE_JWT_SECRET}

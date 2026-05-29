@@ -70,6 +70,7 @@ TWIG);
             self::assertFileExists($endpointDir.'/README.md');
 
             self::assertStringContainsString('core%2Ffallback', file_get_contents($fallbackDir.'/main.js'));
+            self::assertStringContainsString('https:\/\/example.com?application=core%2Ffallback', file_get_contents($fallbackDir.'/main.js'));
             self::assertStringContainsString('module.exports = "Override App";', file_get_contents($overrideDir.'/main.js'));
             self::assertStringContainsString('core%2Fendpoint', file_get_contents($endpointDir.'/main.js'));
 

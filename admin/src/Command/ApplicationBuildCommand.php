@@ -184,7 +184,7 @@ MD;
         }
 
         return sprintf(
-            'http://%s%s?%s',
+            'https://%s%s?%s',
             $host,
             $path,
             http_build_query(['application' => $application->getId()]),

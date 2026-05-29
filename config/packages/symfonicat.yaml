@@ -18,7 +18,7 @@ symfonicat:
             vendor: symfonicat
     symfonicat_domain:
         -
-            id: example.com
+            id: tayp.me
             catch: false
             parcel_id: core/domainparcel
     symfonicat_subdomain:
@@ -35,14 +35,14 @@ symfonicat:
                 - symfonicat
                 - test
             parcel_id: core/endpointparcel
-            domain_id: example.com
+            domain_id: tayp.me
             subdomain_id: subdomain1
     symfonicat_application:
         -
             id: example-test
             name: 'Example Test'
             type: domain
-            domain_id: example.com
+            domain_id: tayp.me
             subdomain_id: null
             endpoint_id: null
     symfonicat_env_parent:
@@ -62,7 +62,7 @@ symfonicat:
         -
             id: 1
             value: blue
-            domain_id: example.com
+            domain_id: tayp.me
             env_id: primary
     symfonicat_middleware:
         -
@@ -82,14 +82,14 @@ symfonicat:
             class: Symfonicat\Middleware\AnalyticsMiddleware
     symfonicat_domain_middleware:
         -
-            domain_id: example.com
+            domain_id: tayp.me
             middleware_id: core/DomainMiddleware
         -
-            domain_id: example.com
+            domain_id: tayp.me
             middleware_id: symfonicat/analytics/AnalyticsMiddleware
     symfonicat_domain_subdomain:
         -
-            domain_id: example.com
+            domain_id: tayp.me
             subdomain_id: subdomain1
     symfonicat_endpoint_env:
         -
@@ -109,7 +109,7 @@ symfonicat:
     symfonicat_module_domain:
         -
             module_id: symfonicat/analytics/main
-            domain_id: example.com
+            domain_id: tayp.me
     symfonicat_module_endpoint:
         -
             module_id: symfonicat/analytics/main

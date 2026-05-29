@@ -42,6 +42,10 @@ class DomainService
         }
 
         $host = strtolower(trim($host));
+        if ($host === '' || filter_var($host, FILTER_VALIDATE_IP) !== false) {
+            return null;
+        }
+
         if ($host === 'localhost' || str_ends_with($host, '.localhost')) {
             return 'localhost';
         }
