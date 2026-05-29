@@ -6,6 +6,15 @@ log() {
     printf '[symfonicat-init] %s\n' "$*"
 }
 
+ensure_vendor() {
+    if [ -f /symfonicat/vendor/autoload_runtime.php ]; then
+        return 0
+    fi
+
+    log "vendor/autoload_runtime.php is missing, running composer install"
+    composer install --no-interaction --prefer-dist --no-progress --no-scripts
+}
+
 tls_dir=/run/symfonicat/tls
 caddy_dir=/run/symfonicat/caddy
 tls_snippet="$caddy_dir/tls.caddy"
@@ -13,6 +22,8 @@ fullchain_file="$tls_dir/fullchain.pem"
 privkey_file="$tls_dir/privkey.pem"
 
 mkdir -p "$tls_dir" "$caddy_dir"
+
+ensure_vendor
 
 if [ -n "${AWS_ECS_TLS_FULLCHAIN_B64:-}" ] && [ -n "${AWS_ECS_TLS_PRIVATE_KEY_B64:-}" ]; then
     log "writing ACM TLS material from ECS env"

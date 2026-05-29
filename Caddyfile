@@ -16,6 +16,52 @@
 	}
 }
 
+{$SERVER_NAME}:80, *.{$SERVER_NAME}:80 {
+
+	mercure {
+		publisher_jwt {$MERCURE_JWT_SECRET}
+		subscriber_jwt {$MERCURE_JWT_SECRET}
+		anonymous
+	}
+
+	root * /symfonicat/public
+
+	route /build/* {
+		brotli_precompress {
+			root /symfonicat/public
+			disk_dir build
+			quality 6
+			min_size 1024
+			extensions .js .json .css .wasm .woff2
+		}
+
+		file_server {
+			precompressed br gzip zstd
+		}
+	}
+
+	encode zstd gzip
+
+	@adminLockedOut {
+		path /admin*
+		not file {
+			root /symfonicat
+			try_files /symfonicat.lock
+		}
+	}
+
+	handle @adminLockedOut {
+		request_header X-Symfonicat-Admin-Locked "1"
+		rewrite * /index.php
+		php_server
+	}
+
+	handle {
+		php_server
+	}
+}
+
+
 {$SERVER_NAME}:443, *.{$SERVER_NAME}:443 {
 	import /run/symfonicat/caddy/tls.caddy
 

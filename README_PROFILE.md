@@ -105,9 +105,16 @@ PSR-15 middleware services are auto-tagged as `symfonicat.middleware`. Runtime r
 
 Module controllers extend `AbstractModuleController` and only run when their module is attached to the active domain, subdomain, or endpoint. Module requests Brotli-compress their JSON body in `assets/app/module.js` with a vendored browser Brotli codec, send the request token back in `X-Symfonicat-Module-Context` plus `X-CSRF-Token` when request context is available, and the server validates that signed token before restoring endpoint scope for backend module checks. On `/m` requests with Brotli JSON bodies, `SymfonicatModuleSubscriber` sets `module_json` from `symfonicat_json_decode()`.
 
+Module routes use `#[ModuleRoute]` on the controller class and `#[Module]` on the action method. The module loader scans the root package and installed `extra.symfonicat: true` vendor packages, reads the package name from each `composer.json`, and generates `POST /m/{package}/{method}` with route names in the `symfonicat_module_{packageSlug}_{method}` pattern.
+
+The root Composer autoload maps `App\\Module\\` to `src/Module/`, so controllers under `src/Module/` are discovered as module routes when they use the `App\Module\` namespace. Installed Symfonicat packages can expose their own `Module` subtree through PSR-4 autoloading and will be scanned too, using their own `Symfonicat\Module\` classes.
+
 ## Admin
 
 Admin is guarded by the repo-root `symfonicat.lock`.
+`config/routes.yaml` keeps the public/admin route resources and imports `config/module_routes.php` once. That PHP route file scans the root package and installed `extra.symfonicat: true` vendor packages, uses `symfonicat_json_decode()` to read their `composer.json` metadata, reads `#[ModuleRoute]` for the base `/m/{package}` path, and generates POST-only route names like `symfonicat_module_symfonicat_core_test` plus the controller target for `App\Module\TestModule::test`. `config/functions.php` provides a Composer autoloaded PHP fallback for `symfonicat_json_decode()` so console route warmup works even when the native extension is not present. `config/services.yaml` registers the local `App\Module\` namespace so everything under `src/Module/` gets a container service without a bulk `src/Module/` service scan.
+Compose bind-mounts `./vendor` into `/symfonicat/vendor`, so installed packages are visible on the host and inside the container at the same path.
+If `vendor/autoload_runtime.php` is missing at container startup, `docker-entrypoint.sh` runs `composer install --no-interaction --prefer-dist --no-progress --no-scripts` into the bind-mounted `./vendor` directory before FrankenPHP starts.
 
 Main admin areas:
 

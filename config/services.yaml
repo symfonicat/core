@@ -13,6 +13,10 @@ services:
         resource: '../src/'
         exclude:
             - '../src/Kernel.php'
+            - '../src/Module/'
+
+    App\Module\:
+        resource: '../src/Module/'
 
     Symfonicat\:
         resource: '../admin/src/'

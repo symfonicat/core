@@ -21,6 +21,9 @@ touch symfonicat.lock
 
 The admin area is disabled until `symfonicat.lock` exists in the repo root.
 The `npm` Compose service runs after `php` is healthy and generates `public/build` with PHP available for webpack data discovery.
+`config/routes.yaml` keeps the public/admin route resources and imports `config/module_routes.php` once. That PHP route file scans the root package and installed `extra.symfonicat: true` vendor packages, uses `symfonicat_json_decode()` to read their `composer.json` metadata, reads `#[ModuleRoute]` for the base `/m/{package}` path, and generates POST-only route names like `symfonicat_module_symfonicat_core_test` plus the controller target for `App\Module\TestModule::test`. `config/functions.php` provides a Composer autoloaded PHP fallback for `symfonicat_json_decode()` so console route warmup works even when the native extension is not present. `config/services.yaml` registers the local `App\Module\` namespace so everything under `src/Module/` gets a container service without a bulk `src/Module/` service scan.
+Compose bind-mounts `./vendor` into `/symfonicat/vendor`, so installed packages are visible on the host and inside the container at the same path.
+If `vendor/autoload_runtime.php` is missing at container startup, `docker-entrypoint.sh` runs `composer install --no-interaction --prefer-dist --no-progress --no-scripts` into the bind-mounted `./vendor` directory before FrankenPHP starts.
 
 ## Runtime
 
@@ -78,6 +81,10 @@ Middleware services implement PSR-15 `Psr\Http\Server\MiddlewareInterface` and a
 Modules can be attached to domains, subdomains, or endpoints.
 
 Backend module controllers should extend `Symfonicat\Controller\AbstractModuleController`. They only execute when the module is attached to the active domain, subdomain, or endpoint context.
+
+Module routes are declared with `#[ModuleRoute]` on the controller class and `#[Module]` on the action method. The module loader reads the root `composer.json` package name, turns `symfonicat/core` into `symfonicat_core`, and generates `POST /m/symfonicat/core/{method}` with the route name `symfonicat_module_symfonicat_core_{method}`.
+
+The root Composer autoload maps `App\\Module\\` to `src/Module/`, so controllers under `src/Module/` are discovered as module routes when they use the `App\Module\` namespace. Installed Symfonicat packages can expose their own `Module` subtree through PSR-4 autoloading, and those classes continue to use the `Symfonicat\Module\` namespace.
 
 Frontend module code posts to full package routes:
 
