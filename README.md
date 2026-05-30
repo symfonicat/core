@@ -2,6 +2,8 @@
 
 Symfonicat is a Symfony 8 multi-tenant frontend runtime. It resolves public requests to domains, subdomains, and endpoints, renders the matching parcel-backed template, and exposes modules, middleware, env data, and build-application context where present.
 
+Symfonicat supports the ability for Composer packages to ship with PHP extensions and Go modules. PHP extensions go in `<package root>/ext/**/*.c` and Go modules go in `<package root>/extensions/**/*.go`. When the Docker container builds, it compiles both the PHP extensions and the Go modules into the FrankenPHP/Caddy setup so that they are available in your application.
+
 Edit `/etc/hosts` for local public routing:
 
 ```text
@@ -16,7 +18,7 @@ docker compose up -d --build
 docker exec -it php bin/console symfonicat:schema:update
 docker exec php bin/console symfonicat:load
 docker exec -it php bin/console symfonicat:admin:create <email>
-touch symfonicat.lock
+touch symfonicat.lock # enables /admin
 ```
 
 The admin area is disabled until `symfonicat.lock` exists in the repo root.
@@ -145,35 +147,9 @@ extra:
     symfonicat: true
 ```
 
-Admin YAML commands:
-
-```bash
-docker exec php bin/console symfonicat:application:build
-docker exec php bin/console symfonicat:scriptling:copy
-docker exec php bin/console symfonicat:scriptling:bash
-docker exec php bin/console symfonicat:dump
-docker exec php bin/console symfonicat:load
-docker exec php bin/console symfonicat:purge
-```
-
 Admin CRUD and schema sync actions automatically refresh `config/packages/symfonicat.yaml` after successful writes.
 
 `composer install` runs `symfonicat:purge` so deployments start with a clean `symfonicat_*` schema; runtime still reads `config/packages/symfonicat.yaml`.
-
-## Admin
-
-Admin routes:
-
-- `/admin/a` applications
-- `/admin/p` parcels
-- `/admin/d` domains
-- `/admin/e` endpoints
-- `/admin/env` env
-- `/admin/m` middleware
-- `/admin/s` subdomains and schema sync action
-- `/admin/y/*` YAML tools
-
-Forms support parcel attachments, repeatable middleware, modules, scoped env values, and catch flags where the entity supports them.
 
 ## Sync
 
@@ -271,9 +247,7 @@ Optional cert settings:
 
 ## Scriptling
 
-The Docker container uses `symfonicat:scriptling:copy` and `symfonicat:scriptling:bash` to gather FrankenPHP extensions, initialize them with `frankenphp extension-init`, and compile a custom FrankenPHP binary with `xcaddy`. The separate `npm` Compose service runs `npm ci` and `npm run build` after `php` is healthy so `public/build` is generated with PHP available for webpack discovery. The final runtime image is based on the builder output so PHP workers and FrankenPHP use the same compiled extension set.
-
-Installed Symfonicat packages can ship FrankenPHP Scriptling extensions under `extensions/{name}`. Docker keeps `vendor/{vendor}/{package}/extensions/**` in the build context, overlays those files after `composer install`, and then includes every discovered extension in the `xcaddy` build. The analytics package includes `extensions/lowercase`, an example, which exports `scriptling_analytics_lowercase(string $value): string`.
+The Docker build compiles FrankenPHP extensions and the custom FrankenPHP binary, and the final runtime image reuses that builder output.
 
 The root `extensions/brotli_precompress` module precompresses `public/build/*.{js,json,css,wasm,woff2}` files at startup and serves Brotli responses directly for matching build assets.
 

@@ -3,3 +3,7 @@ symfonicat_public_controllers:
     type: attribute
     exclude:
         - ../../admin/src/Controller/Admin/
+
+symfonicat_app_controllers:
+    resource: ../../src/Controller/
+    type: attribute

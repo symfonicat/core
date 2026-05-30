@@ -2,8 +2,8 @@ framework:
     messenger:
         failure_transport: failed
         stop_worker_on_signals:
-            - SIGTERM
-            - SIGINT
+            - 15
+            - 2
 
         transports:
             async:

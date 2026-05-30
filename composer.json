@@ -41,17 +41,18 @@
         "doctrine/orm": "^3.6.7",
         "intervention/image": "^4.1.2",
         "jeremykendall/php-domain-parser": "^6.4",
+        "nikic/php-parser": "^5.7",
         "nyholm/psr7": "^1.8.2",
         "psr/http-server-handler": "^1.0.2",
         "psr/http-server-middleware": "^1.0.2",
         "scheb/2fa-bundle": "^8.5",
         "scheb/2fa-totp": "^8.5",
-        "symfonicat/analytics": "^3.3.0",
+        "symfonicat/analytics": "^3.4.0",
         "symfony/asset": "8.0.*",
         "symfony/console": "8.0.*",
         "symfony/dotenv": "8.0.*",
         "symfony/expression-language": "8.0.*",
-        "symfony/flex": "^2.10",
+        "symfony/flex": "^2.11",
         "symfony/form": "8.0.*",
         "symfony/framework-bundle": "8.0.*",
         "symfony/http-client": "8.0.*",
@@ -84,7 +85,8 @@
         "psr-4": {
             "App\\": "src/",
             "App\\Module\\": "src/Module/",
-            "Symfonicat\\": "admin/src/"
+            "Symfonicat\\": "admin/src/",
+            "Native\\": "native/src/"
         }
     },
     "autoload-dev": {

@@ -2,20 +2,21 @@
 
 namespace App;
 
+use Native\DependencyInjection\Compiler\NativeProxyCompilerPass;
 use Symfony\Bundle\FrameworkBundle\Kernel\MicroKernelTrait;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\HttpKernel\Kernel as BaseKernel;
 
 class Kernel extends BaseKernel
 {
     use MicroKernelTrait;
 
-    public function getCacheDir(): string
+    protected function build(ContainerBuilder $container): void
     {
-        $cacheDir = $_SERVER['SYMFONICAT_CACHE_DIR'] ?? $_ENV['SYMFONICAT_CACHE_DIR'] ?? null;
-        if (is_string($cacheDir) && trim($cacheDir) !== '') {
-            return rtrim($cacheDir, '/').'/'.$this->environment;
-        }
+        parent::build($container);
 
-        return parent::getCacheDir();
+        $container->addCompilerPass(
+            new NativeProxyCompilerPass()
+        );
     }
 }

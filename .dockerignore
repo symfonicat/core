@@ -6,6 +6,8 @@ vendor/*
 vendor/*/*
 !vendor/*/*/
 vendor/*/*/*
+!vendor/*/*/ext/
+!vendor/*/*/ext/**
 !vendor/*/*/extensions/
 !vendor/*/*/extensions/**
 node_modules/
