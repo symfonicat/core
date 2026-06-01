@@ -7,7 +7,6 @@ RUN apt-get update \
     ca-certificates \
     curl \
     git \
-    redis-server \
     unzip \
     \
     autoconf \
@@ -17,6 +16,7 @@ RUN apt-get update \
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 COPY --from=caddy:builder /usr/bin/xcaddy /usr/bin/xcaddy
+RUN docker-php-source extract
 
 WORKDIR /symfonicat
 
@@ -25,9 +25,6 @@ ARG GEN_STUB_SCRIPT=/usr/local/lib/php/build/gen_stub.php
 ARG FRANKENPHP_REF=main
 
 ARG EXT=/usr/src/php/ext
-ARG EXT_TMP=/tmp/native/ext
-
-RUN docker-php-source extract
 RUN EXT_CORE="\
         apcu \
         bcmath \
@@ -61,21 +58,31 @@ RUN composer dump-autoload --no-interaction
 
 COPY . /symfonicat
 
-COPY native/ext $EXT_TMP
 RUN set -eu; \
-    EXT_PATHS="$(find vendor -path 'vendor/*/*/ext/*/config.m4' -printf '%h ' 2>/dev/null || true)"; \
-    if [ -n "$EXT_PATHS" ]; then \
-        for ext in $EXT_PATHS; do \
-            cp -R "$ext" "$EXT_TMP"/; \
-        done; \
-    fi; \
+    ext_paths="$({ \
+        php bin/console symfonicat:discover:ext:paths './'; \
+        php bin/console symfonicat:discover:ext:paths 'core/'; \
+        php bin/console symfonicat:discover:ext:paths 'vendor/**/**/'; \
+    } | sort -u)"; \
+    ext_names="$({ \
+        php bin/console symfonicat:discover:ext:names './'; \
+        php bin/console symfonicat:discover:ext:names 'core/'; \
+        php bin/console symfonicat:discover:ext:names 'vendor/**/**/'; \
+    } | sort -u)"; \
     mkdir -p "$EXT"; \
-    ls -ld "$EXT_TMP" "$EXT"; \
-    cp -R "$EXT_TMP"/. "$EXT"/; \
-    EXTS="$(find "$EXT_TMP" -mindepth 1 -maxdepth 1 -type d -printf '%f ')"; \
-    find "$EXT" -mindepth 1 -maxdepth 1 -type d -printf ' - %f\n' | sort; \
-    if [ -n "$EXTS" ]; then \
-        docker-php-ext-install $EXTS; \
+    printf '%s\n' "$ext_paths" | while IFS= read -r directory; do \
+        [ -n "$directory" ] || continue; \
+        ext_name="$(basename "$directory")"; \
+        rm -rf "$EXT/$ext_name"; \
+        cp -R "$directory" "$EXT/$ext_name"; \
+        if grep -q '^PHP_ARG_ENABLE(' "$EXT/$ext_name/config.m4"; then \
+            docker-php-ext-configure "$ext_name" --enable-"${ext_name//_/-}"; \
+        elif grep -q '^PHP_ARG_WITH(' "$EXT/$ext_name/config.m4"; then \
+            docker-php-ext-configure "$ext_name" --with-"${ext_name//_/-}"; \
+        fi; \
+    done; \
+    if [ -n "$ext_names" ]; then \
+        docker-php-ext-install $ext_names; \
     fi;
 
 FROM php-base AS npm
@@ -87,15 +94,6 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
 
 FROM php-base AS builder
 
-RUN php bin/console symfonicat:scriptling:copy | bash
-RUN set -e; \
-    find /symfonicat/extensions -type f -name '*.go' -exec dirname {} \; | sort -u | while read -r directory; do \
-        if grep -Rqs 'export_php:function' "$directory"/*.go; then \
-            GEN_STUB_SCRIPT="$GEN_STUB_SCRIPT" frankenphp extension-init "$directory"/*.go; \
-        fi; \
-        (cd "$directory" && go mod tidy); \
-    done
-
 RUN cd $SRC \
     && curl -fsSL "https://github.com/dunglas/frankenphp/archive/refs/heads/${FRANKENPHP_REF}.tar.gz" | tar -xzf - \
     && mv "$SRC/frankenphp-${FRANKENPHP_REF}" $SRC/frankenphp-src
@@ -103,7 +101,26 @@ RUN cd $SRC \
 RUN --mount=type=tmpfs,target=/tmp \
     --mount=type=tmpfs,target=/root/.cache/go-build \
     set -e; \
-    scriptling_flags="$(cd /symfonicat && php bin/console symfonicat:scriptling:bash)"; \
+    go_paths="$({ \
+        cd /symfonicat && php bin/console symfonicat:discover:go:paths './'; \
+        cd /symfonicat && php bin/console symfonicat:discover:go:paths 'core/'; \
+        cd /symfonicat && php bin/console symfonicat:discover:go:paths 'vendor/**/**/'; \
+    } | sort -u)"; \
+    go_flags_file="$(mktemp)"; \
+    : > "$go_flags_file"; \
+    printf '%s\n' "$go_paths" | while IFS= read -r directory; do \
+        [ -n "$directory" ] || continue; \
+        if grep -Rqs 'export_php:function' "/symfonicat/$directory"/*.go; then \
+            GEN_STUB_SCRIPT="$GEN_STUB_SCRIPT" frankenphp extension-init "/symfonicat/$directory"/*.go; \
+        fi; \
+        (cd "/symfonicat/$directory" && go mod tidy); \
+        module_path="$(sed -n 's/^module //p' "/symfonicat/$directory/go.mod" | head -n 1)"; \
+        if [ -n "$module_path" ]; then \
+            printf '%s\n' "$(cat "$go_flags_file") --with $module_path=/symfonicat/$directory" > "$go_flags_file"; \
+        fi; \
+    done; \
+    go_flags="$(cat "$go_flags_file")"; \
+    rm -f "$go_flags_file"; \
     cd $SRC/frankenphp-src \
     && CGO_ENABLED=1 \
        XCADDY_GO_BUILD_FLAGS="-ldflags='-w -s' -tags=nobadger,nomysql,nopgx" \
@@ -116,10 +133,9 @@ RUN --mount=type=tmpfs,target=/tmp \
          --with github.com/dunglas/mercure/caddy \
          --with github.com/dunglas/vulcain/caddy \
          --with github.com/dunglas/caddy-cbrotli \
-         $scriptling_flags
+         $go_flags
 
 RUN rm -rf \
-        $EXT_TMP \
         $SRC/frankenphp-src \
         /root/.cache/go-build \
         /root/.composer/cache \

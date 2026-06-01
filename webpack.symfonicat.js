@@ -127,9 +127,7 @@ const discoverPackageEntries = (projectDir, type) => {
         const baseDir = path.join(pkg.installPath, 'assets', type);
 
         listDirEntries(baseDir).forEach((entry) => {
-            const id = type === 'domain'
-                ? entry.name
-                : `${pkg.vendor === 'core' ? 'core' : `${pkg.vendor}/${pkg.package}`}/${entry.name}`;
+            const id = `${pkg.vendor === 'core' ? 'core' : `${pkg.vendor}/${pkg.package}`}/${entry.name}`;
 
             if (entries.has(id)) {
                 const existing = entries.get(id);
@@ -168,8 +166,6 @@ const loadModuleData = (projectDir) => {
 
         return {
             parcels: discoverPackageEntries(projectDir, 'parcel'),
-            domains: discoverPackageEntries(projectDir, 'domain'),
-            subdomains: discoverPackageEntries(projectDir, 'subdomain'),
             modules: discoverPackageEntries(projectDir, 'module'),
         };
     }
@@ -194,22 +190,6 @@ module.exports = function configureSymfonicat(Encore, options = __dirname) {
     const { projectDir, packageDir } = config;
     const moduleData = loadModuleData(projectDir);
 
-    (moduleData.subdomains || []).forEach((subdomain) => {
-        if (!subdomain?.id || !subdomain?.entry || !fs.existsSync(subdomain.entry)) {
-            return;
-        }
-
-        Encore.addEntry(`subdomain/${subdomain.id}`, toEntryPath(projectDir, subdomain.entry));
-    });
-
-    (moduleData.domains || []).forEach((domain) => {
-        if (!domain?.id || !domain?.entry || !fs.existsSync(domain.entry)) {
-            return;
-        }
-
-        Encore.addEntry(`domain/${domain.id}`, toEntryPath(projectDir, domain.entry));
-    });
-
     (moduleData.modules || []).forEach((mod) => {
         if (!mod?.id || !mod?.entry || !fs.existsSync(mod.entry)) {
             return;
@@ -229,7 +209,7 @@ module.exports = function configureSymfonicat(Encore, options = __dirname) {
     Encore
         .enableStimulusBridge('./assets/controller.json')
         .addEntry('app', toEntryPath(projectDir, path.join(packageDir, 'assets', 'app.js')))
-        .addEntry('admin', toEntryPath(projectDir, path.join(packageDir, 'admin', 'assets', 'admin.js')))
+        .addEntry('core', toEntryPath(projectDir, path.join(packageDir, 'core', 'assets', 'core.js')))
         .splitEntryChunks()
         .enableSingleRuntimeChunk()
         .cleanupOutputBeforeBuild()

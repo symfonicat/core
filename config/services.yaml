@@ -19,13 +19,13 @@ services:
         resource: '../src/Module/'
 
     Symfonicat\:
-        resource: '../admin/src/'
+        resource: '../core/src/'
         exclude:
-            - '../admin/src/Composer/'
-            - '../admin/src/DependencyInjection/'
-            - '../admin/src/Entity/'
-            - '../admin/src/Maker/'
-            - '../admin/src/SymfonicatBundle.php'
+            - '../core/src/Composer/'
+            - '../core/src/DependencyInjection/'
+            - '../core/src/Entity/'
+            - '../core/src/Maker/'
+            - '../core/src/SymfonicatBundle.php'
 
     Symfonicat\Service\DomainService:
         arguments:

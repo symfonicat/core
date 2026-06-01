@@ -10,7 +10,7 @@ framework:
         - x-forwarded-prefix
 
     rate_limiter:
-        admin_login:
+        core_login:
             policy: sliding_window
             limit: 10
             interval: '5 minutes'

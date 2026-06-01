@@ -11,7 +11,7 @@ final class SubdomainRouteTest extends SymfonicatKernelTestCase
         $router = self::getContainer()->get('router');
         $router->getContext()->setMethod('POST');
 
-        $matched = $router->match('/admin/s/subdomain1/delete');
+        $matched = $router->match('/core/s/subdomain1/delete');
 
         self::assertSame('symfonicat_subdomain_delete', $matched['_route']);
         self::assertSame('subdomain1', $matched['id']);

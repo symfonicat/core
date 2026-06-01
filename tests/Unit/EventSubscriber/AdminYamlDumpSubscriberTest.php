@@ -10,6 +10,7 @@ use PHPUnit\Framework\TestCase;
 use Symfonicat\Entity\Application;
 use Symfonicat\Contract\AdminYamlDumper;
 use Symfonicat\EventSubscriber\AdminYamlDumpSubscriber;
+use Symfonicat\Form\EventSubscriber\CoreYamlDumpSubscriber;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 
@@ -18,7 +19,7 @@ final class AdminYamlDumpSubscriberTest extends TestCase
     public function testDumpsYamlAfterAdminFlushWithTrackedEntityChanges(): void
     {
         $requestStack = new RequestStack();
-        $requestStack->push(Request::create('/admin/a/create'));
+        $requestStack->push(Request::create('/core/a/create'));
 
         $adminYaml = $this->createMock(AdminYamlDumper::class);
         $adminYaml->expects(self::once())->method('dump');
@@ -49,6 +50,32 @@ final class AdminYamlDumpSubscriberTest extends TestCase
         $subscriber = new AdminYamlDumpSubscriber($requestStack, $adminYaml);
         $unitOfWork = $this->createStub(UnitOfWork::class);
         $unitOfWork->method('getScheduledEntityInsertions')->willReturn([(new Application())->setId('example-test')]);
+        $unitOfWork->method('getScheduledEntityUpdates')->willReturn([]);
+        $unitOfWork->method('getScheduledEntityDeletions')->willReturn([]);
+        $unitOfWork->method('getScheduledCollectionUpdates')->willReturn([]);
+        $unitOfWork->method('getScheduledCollectionDeletions')->willReturn([]);
+
+        $entityManager = $this->createStub(EntityManagerInterface::class);
+        $entityManager->method('getUnitOfWork')->willReturn($unitOfWork);
+
+        $subscriber->onFlush(new OnFlushEventArgs($entityManager));
+        $subscriber->postFlush(new PostFlushEventArgs($entityManager));
+    }
+
+    public function testDumpsYamlAfterCoreFormSubmissionEvenWithoutTrackedChanges(): void
+    {
+        $request = Request::create('/core/a/create', 'POST');
+        $request->attributes->set(CoreYamlDumpSubscriber::REQUEST_ATTRIBUTE, true);
+
+        $requestStack = new RequestStack();
+        $requestStack->push($request);
+
+        $adminYaml = $this->createMock(AdminYamlDumper::class);
+        $adminYaml->expects(self::once())->method('dump');
+
+        $subscriber = new AdminYamlDumpSubscriber($requestStack, $adminYaml);
+        $unitOfWork = $this->createStub(UnitOfWork::class);
+        $unitOfWork->method('getScheduledEntityInsertions')->willReturn([]);
         $unitOfWork->method('getScheduledEntityUpdates')->willReturn([]);
         $unitOfWork->method('getScheduledEntityDeletions')->willReturn([]);
         $unitOfWork->method('getScheduledCollectionUpdates')->willReturn([]);

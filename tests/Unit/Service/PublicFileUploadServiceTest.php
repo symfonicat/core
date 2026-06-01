@@ -43,7 +43,7 @@ final class PublicFileUploadServiceTest extends TestCase
 
     public function testUploadsSubdomainFileIntoCleanSubdomainPublicFolder(): void
     {
-        $subdomain = (new Subdomain())->setId('core/subdomain1');
+        $subdomain = (new Subdomain())->setAffix('subdomain1');
         $file = $this->uploadedFile('subdomain content');
 
         $path = (new PublicFileUploadService($this->publicDir))->upload(

@@ -22,7 +22,6 @@ services:
       MERCURE_JWT_SECRET: ${MERCURE_JWT_SECRET:-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
     volumes:
       - ./:/symfonicat
-      - ./vendor:/symfonicat/vendor
       - node_modules:/symfonicat/node_modules
     depends_on:
       php:
@@ -57,7 +56,6 @@ services:
       MERCURE_JWT_SECRET: ${MERCURE_JWT_SECRET:-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
     volumes:
       - ./:/symfonicat
-      - ./vendor:/symfonicat/vendor
       - ./Caddyfile:/etc/frankenphp/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
@@ -99,7 +97,6 @@ services:
       MERCURE_JWT_SECRET: ${MERCURE_JWT_SECRET:-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
     volumes:
       - ./:/symfonicat
-      - ./vendor:/symfonicat/vendor
     depends_on:
       php:
         condition: service_healthy

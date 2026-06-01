@@ -63,7 +63,6 @@ trait DatabaseFixtureTrait
             'symfonicat_module_domain',
             'symfonicat_subdomain_middleware',
             'symfonicat_domain_middleware',
-            'symfonicat_domain_subdomain',
             'symfonicat_endpoint',
             'symfonicat_middleware',
             'symfonicat_application',
@@ -113,10 +112,10 @@ trait DatabaseFixtureTrait
     protected function createSubdomain(string $id, ?Domain $domain = null): Subdomain
     {
         $subdomain = (new Subdomain())
-            ->setId($this->vendorScopedId($id));
+            ->setAffix($this->vendorScopedId($id));
 
         if ($domain instanceof Domain) {
-            $domain->addSubdomain($subdomain);
+            $subdomain->setDomain($domain);
         }
 
         $this->entityManager()->persist($subdomain);

@@ -53,9 +53,9 @@ TWIG);
 
             self::assertSame(0, $tester->getStatusCode());
 
-            $fallbackDir = $this->projectDir().'/application/core/fallback';
-            $overrideDir = $this->projectDir().'/application/core/override';
-            $endpointDir = $this->projectDir().'/application/core/endpoint';
+            $fallbackDir = $this->projectDir().'/applications/core/fallback';
+            $overrideDir = $this->projectDir().'/applications/core/override';
+            $endpointDir = $this->projectDir().'/applications/core/endpoint';
 
             self::assertFileExists($fallbackDir.'/main.js');
             self::assertFileExists($fallbackDir.'/package.json');
@@ -86,7 +86,7 @@ TWIG);
             self::assertFileDoesNotExist($fallbackDir.'/resources');
             self::assertFileDoesNotExist($fallbackDir.'/chrome_100_percent.pak');
         } finally {
-            $this->removePath($this->projectDir().'/application/core');
+            $this->removePath($this->projectDir().'/applications/core');
             $this->removePath($this->projectDir().'/templates/application/overrides/core');
         }
     }

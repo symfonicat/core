@@ -45,7 +45,7 @@ final class ParcelIndexTest extends SymfonicatKernelTestCase
     private function renderIndex(array $parcels): string
     {
         $requestStack = self::getTestContainer()->get(RequestStack::class);
-        $request = Request::create('/admin/p');
+        $request = Request::create('/core/p');
 
         /** @var SessionFactoryInterface $sessionFactory */
         $sessionFactory = self::getTestContainer()->get('session.factory');

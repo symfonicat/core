@@ -20,7 +20,7 @@ final class ApplicationTest extends TestCase
     public function testSubdomainTargetIdRequiresBothSubdomainAndDomain(): void
     {
         $subdomain = (new Subdomain())
-            ->setId('core/subdomain1');
+            ->setAffix('subdomain1');
 
         $application = (new Application())
             ->setType(Application::TYPE_SUBDOMAIN)
@@ -33,7 +33,7 @@ final class ApplicationTest extends TestCase
     public function testSubdomainTargetIdUsesSubdomainAndDomainIds(): void
     {
         $subdomain = (new Subdomain())
-            ->setId('core/subdomain1');
+            ->setAffix('subdomain1');
         $domain = (new Domain())
             ->setId('example.com');
 

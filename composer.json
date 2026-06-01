@@ -85,8 +85,8 @@
         "psr-4": {
             "App\\": "src/",
             "App\\Module\\": "src/Module/",
-            "Symfonicat\\": "admin/src/",
-            "Native\\": "native/src/"
+            "Symfonicat\\": "core/src/",
+            "Symfonicat\\NativeProxy\\": "native/src/"
         }
     },
     "autoload-dev": {

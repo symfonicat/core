@@ -19,15 +19,15 @@ final class DomainAdminRowTest extends SymfonicatKernelTestCase
 
         self::assertStringContainsString('href="https://example.com"', $html);
         self::assertStringContainsString('>example.com</a>', $html);
-        self::assertStringContainsString('href="/admin/d/example.com/edit"', $html);
-        self::assertStringContainsString('action="/admin/d/example.com"', $html);
+        self::assertStringContainsString('href="/core/d/example.com/edit"', $html);
+        self::assertStringContainsString('action="/core/d/example.com"', $html);
         self::assertStringNotContainsString('core/example.com', $html);
     }
 
     private function renderRow(Domain $domain): string
     {
         $requestStack = self::getTestContainer()->get(RequestStack::class);
-        $request = Request::create('/admin/d');
+        $request = Request::create('/core/d');
 
         /** @var SessionFactoryInterface $sessionFactory */
         $sessionFactory = self::getTestContainer()->get('session.factory');

@@ -13,7 +13,6 @@ use Symfonicat\Repository\ModuleRepository;
 use Symfonicat\Repository\SubdomainRepository;
 use Symfonicat\Service\DomainService;
 use Symfonicat\Service\ModuleService;
-use Symfonicat\Service\PackageDiscoveryService;
 use Symfonicat\Service\PathService;
 use Symfonicat\Service\SubdomainService;
 use Symfonicat\Service\RuntimeConfig;
@@ -36,7 +35,7 @@ final class AbstractModuleControllerTest extends TestCase
     public function testSubdomainWithInstalledModuleAllowsExecution(): void
     {
         $module = $this->makeModule('analytics');
-        $subdomain = (new Subdomain())->setId('core/subdomain1');
+        $subdomain = (new Subdomain())->setAffix('subdomain1');
         $subdomain->addModule($module);
 
         $controller = $this->makeController(
@@ -52,7 +51,7 @@ final class AbstractModuleControllerTest extends TestCase
     public function testSubdomainWithoutModuleThrowsNotFound(): void
     {
         $module = $this->makeModule('analytics');
-        $subdomain = (new Subdomain())->setId('core/subdomain1');
+        $subdomain = (new Subdomain())->setAffix('subdomain1');
 
         $controller = $this->makeController(
             domain: $this->makeDomain('example.com'),
@@ -106,7 +105,7 @@ final class AbstractModuleControllerTest extends TestCase
         $module = $this->makeModule('analytics');
         $domain = $this->makeDomain('example.com');
         $domain->addModule($module);
-        $subdomain = (new Subdomain())->setId('core/subdomain1');
+        $subdomain = (new Subdomain())->setAffix('subdomain1');
 
         $controller = $this->makeController(
             domain: $domain,
@@ -163,21 +162,19 @@ final class AbstractModuleControllerTest extends TestCase
         $domainRepository = $this->createStub(DomainRepository::class);
         $domainRepository->method('find')->willReturn($domain);
         $domainRepository->method('findOneByHost')->willReturn($domain);
-        $packageDiscoveryService = new PackageDiscoveryService($subdomainDir);
         $runtimeConfig = new RuntimeConfig($subdomainDir);
         $entityManager = $this->createStub(EntityManagerInterface::class);
-        $domainService = new DomainService($subdomainDir, $requestStack, $domainRepository, $entityManager, $packageDiscoveryService, $runtimeConfig);
+        $domainService = new DomainService($subdomainDir, $requestStack, $domainRepository, $entityManager, $runtimeConfig);
 
         $subdomainRepository = $this->createStub(SubdomainRepository::class);
         $subdomainRepository->method('find')->willReturn($subdomain);
-        $subdomainRepository->method('findOneByIdForDomain')->willReturn($subdomain);
+        $subdomainRepository->method('findOneByAffixForDomain')->willReturn($subdomain);
         $affixService = new AffixService($subdomainDir, $requestStack, new NullLogger(), $domainService);
         $subdomainService = new SubdomainService(
             $domainService,
             $affixService,
             $subdomainRepository,
             $entityManager,
-            $packageDiscoveryService,
             $runtimeConfig,
         );
 
@@ -190,7 +187,6 @@ final class AbstractModuleControllerTest extends TestCase
             $pathService,
             $moduleRepository,
             $entityManager,
-            $packageDiscoveryService,
             $runtimeConfig,
         );
 
@@ -216,8 +212,8 @@ final class AbstractModuleControllerTest extends TestCase
     {
         $domainId = $domain?->getId(false) ?? 'example.com';
 
-        if ($subdomain instanceof Subdomain && $subdomain->getId(false) !== null) {
-            return $subdomain->getId(false).'.'.$domainId;
+        if ($subdomain instanceof Subdomain && trim((string) $subdomain->getAffix()) !== '') {
+            return $subdomain->getAffix().'.'.$domainId;
         }
 
         return $domainId;

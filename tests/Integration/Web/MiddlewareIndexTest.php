@@ -47,7 +47,7 @@ final class MiddlewareIndexTest extends SymfonicatKernelTestCase
     private function renderIndex(array $middlewares): string
     {
         $requestStack = self::getTestContainer()->get(RequestStack::class);
-        $request = Request::create('/admin/m');
+        $request = Request::create('/core/m');
 
         /** @var SessionFactoryInterface $sessionFactory */
         $sessionFactory = self::getTestContainer()->get('session.factory');

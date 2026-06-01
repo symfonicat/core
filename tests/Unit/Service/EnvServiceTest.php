@@ -231,7 +231,7 @@ final class EnvServiceTest extends TestCase
      */
     private function makeSubdomain(string $id, array $values): Subdomain
     {
-        $subdomain = (new Subdomain())->setId(str_contains($id, '/') ? $id : 'core/'.$id);
+        $subdomain = (new Subdomain())->setAffix(str_contains($id, '/') ? basename($id) : $id);
 
         foreach ($values as $envId => $value) {
             $env = $this->makeEnv($envId);

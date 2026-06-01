@@ -16,7 +16,7 @@ final class AdminLockSubscriberTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->subdomainDir = sys_get_temp_dir().'/symfonicat_admin_lock_'.bin2hex(random_bytes(6));
+        $this->subdomainDir = sys_get_temp_dir().'/symfonicat_core_lock_'.bin2hex(random_bytes(6));
         mkdir($this->subdomainDir, 0755, true);
     }
 
@@ -36,7 +36,7 @@ final class AdminLockSubscriberTest extends TestCase
     {
         $subscriber = new AdminLockSubscriber($this->subdomainDir);
 
-        foreach (['/admin', '/admin/login', '/administrator'] as $path) {
+        foreach (['/core', '/core/login', '/operator'] as $path) {
             $event = $this->requestEvent($path);
 
             try {
@@ -52,7 +52,7 @@ final class AdminLockSubscriberTest extends TestCase
     {
         file_put_contents($this->subdomainDir.'/symfonicat.lock', "enabled\n");
 
-        $event = $this->requestEvent('/admin/login');
+        $event = $this->requestEvent('/core/login');
 
         (new AdminLockSubscriber($this->subdomainDir))->onKernelRequest($event);
 
@@ -61,7 +61,7 @@ final class AdminLockSubscriberTest extends TestCase
 
     public function testBlocksAdminSubRequestsWithoutLockFile(): void
     {
-        $event = $this->requestEvent('/admin/login', HttpKernelInterface::SUB_REQUEST);
+        $event = $this->requestEvent('/core/login', HttpKernelInterface::SUB_REQUEST);
 
         $this->expectException(NotFoundHttpException::class);
 
@@ -70,7 +70,7 @@ final class AdminLockSubscriberTest extends TestCase
 
     public function testAllowsSymfonyExceptionRenderingSubRequestWithoutLockFile(): void
     {
-        $event = $this->requestEvent('/admin/login', HttpKernelInterface::SUB_REQUEST, [], [
+        $event = $this->requestEvent('/core/login', HttpKernelInterface::SUB_REQUEST, [], [
             'exception' => new NotFoundHttpException('Not Found'),
         ]);
 

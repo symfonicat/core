@@ -29,11 +29,11 @@ final class ScopedEnvFormTypeTest extends SymfonicatKernelTestCase
         $subdomain = $this->createSubdomain('subdomain1');
         $this->setSubdomainEnv($subdomain, $env, 'green');
 
-        $subdomain = $this->entityManager()->getRepository(Subdomain::class)->find('subdomain1');
+        $subdomain = $this->entityManager()->getRepository(Subdomain::class)->findOneBy(['affix' => 'subdomain1']);
         self::assertInstanceOf(Subdomain::class, $subdomain);
 
         $view = $this->formFactory()
-            ->create(SubdomainType::class, $subdomain, ['id_editable' => false])
+            ->create(SubdomainType::class, $subdomain)
             ->createView();
 
         self::assertSame('colors', $view['env'][0]['envParent']->vars['value']);
@@ -73,7 +73,7 @@ final class ScopedEnvFormTypeTest extends SymfonicatKernelTestCase
         $this->entityManager()->flush();
 
         $requestStack = self::getTestContainer()->get(RequestStack::class);
-        $request = Request::create('/admin/d/example.com');
+        $request = Request::create('/core/d/example.com');
 
         /** @var SessionFactoryInterface $sessionFactory */
         $sessionFactory = self::getTestContainer()->get('session.factory');

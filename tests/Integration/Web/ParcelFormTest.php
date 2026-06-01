@@ -27,7 +27,7 @@ final class ParcelFormTest extends SymfonicatKernelTestCase
         self::assertInstanceOf(Parcel::class, $parcel);
 
         $requestStack = self::getTestContainer()->get(RequestStack::class);
-        $request = Request::create('/admin/b/core/shared');
+        $request = Request::create('/core/b/core/shared');
 
         /** @var SessionFactoryInterface $sessionFactory */
         $sessionFactory = self::getTestContainer()->get('session.factory');

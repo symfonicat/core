@@ -8,7 +8,7 @@
 			file /symfonicat/public/index.php
 			watch /symfonicat/public/index.php
 			watch /symfonicat/src/**/*.php
-			watch /symfonicat/admin/src/**/*.php
+			watch /symfonicat/core/src/**/*.php
 			watch /symfonicat/templates/**/*.twig
 			watch /symfonicat/config/**/*.yaml
 			watch /symfonicat/config/**/*.yml
@@ -42,16 +42,16 @@
 
 	encode zstd gzip
 
-	@adminLockedOut {
-		path /admin*
+	@coreLockedOut {
+		path /core*
 		not file {
 			root /symfonicat
 			try_files /symfonicat.lock
 		}
 	}
 
-	handle @adminLockedOut {
-		request_header X-Symfonicat-Admin-Locked "1"
+	handle @coreLockedOut {
+		request_header X-Symfonicat-Core-Locked "1"
 		rewrite * /index.php
 		php_server
 	}
@@ -89,16 +89,16 @@
 
 	encode zstd gzip
 
-	@adminLockedOut {
-		path /admin*
+	@coreLockedOut {
+		path /core*
 		not file {
 			root /symfonicat
 			try_files /symfonicat.lock
 		}
 	}
 
-	handle @adminLockedOut {
-		request_header X-Symfonicat-Admin-Locked "1"
+	handle @coreLockedOut {
+		request_header X-Symfonicat-Core-Locked "1"
 		rewrite * /index.php
 		php_server
 	}

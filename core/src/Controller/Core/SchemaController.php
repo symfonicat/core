@@ -1,0 +1,84 @@
+<?php
+
+namespace Symfonicat\Controller\Core;
+
+use Symfonicat\Contract\AdminYamlDumper;
+use Symfonicat\Service\ParcelService;
+use Symfonicat\Service\DomainService;
+use Symfonicat\Service\ModuleService;
+use Symfonicat\Service\SchemaSynchronizer;
+use Symfonicat\Service\SubdomainService;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\RedirectResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Attribute\Route;
+
+final class SchemaController extends AbstractController
+{
+    public function __construct(
+        private readonly ParcelService $parcelService,
+        private readonly DomainService $domainService,
+        private readonly ModuleService $moduleService,
+        private readonly SubdomainService $subdomainService,
+        private readonly SchemaSynchronizer $schemaSynchronizer,
+        private readonly AdminYamlDumper $adminYaml,
+    ) {
+    }
+
+    #[Route('/core/u', name: 'symfonicat_core_schema_update', methods: ['GET'])]
+    public function update(Request $request): RedirectResponse
+    {
+        try {
+            $this->schemaSynchronizer->synchronize();
+
+            $parcelResult = $this->parcelService->sync();
+            $moduleResult = $this->moduleService->sync();
+            $domainResult = $this->domainService->sync();
+            $subdomainResult = $this->subdomainService->sync();
+            if (!$request->attributes->getBoolean('symfonicat_core_yaml_dumped')) {
+                $this->adminYaml->dump();
+            }
+
+            $this->addFlash('success', sprintf(
+                'schema synchronized: %s',
+                implode(', ', array_filter([
+                    $this->countSummary('parcels created', $parcelResult['created']),
+                    $this->countSummary('parcels updated', $parcelResult['updated']),
+                    $this->countSummary('parcels deleted', $parcelResult['deleted']),
+                    $this->countSummary('modules created', $moduleResult['created']),
+                    $this->countSummary('modules updated', $moduleResult['updated']),
+                    $this->countSummary('modules deleted', $moduleResult['deleted']),
+                    $this->countSummary('domains created', $domainResult['created']),
+                    $this->countSummary('subdomains created', $subdomainResult['created']),
+                ])) ?: 'no package row changes',
+            ));
+        } catch (\Throwable $exception) {
+            $this->addFlash('error', sprintf('schema sync failed: %s', $exception->getMessage()));
+        }
+
+        return $this->redirectAfterAction($request);
+    }
+
+    /**
+     * @param array<int, mixed> $items
+     */
+    private function countSummary(string $label, array $items): ?string
+    {
+        $count = count($items);
+
+        return $count > 0 ? sprintf('%d %s', $count, $label) : null;
+    }
+
+    private function redirectAfterAction(Request $request): RedirectResponse
+    {
+        $referer = $request->headers->get('referer');
+        $refererPath = is_string($referer) ? parse_url($referer, PHP_URL_PATH) : null;
+
+        if (is_string($referer) && $referer !== '' && $refererPath !== '/core/s') {
+            return $this->redirect($referer, Response::HTTP_SEE_OTHER);
+        }
+
+        return $this->redirectToRoute('symfonicat_core_dashboard', [], Response::HTTP_SEE_OTHER);
+    }
+}

@@ -22,7 +22,7 @@ final class AdminLoginTemplateTest extends SymfonicatKernelTestCase
         self::assertStringNotContainsString('<base ', $html);
         self::assertStringContainsString('<link rel="icon" href="/default/favicon.svg"', $html);
         self::assertMatchesRegularExpression(
-            '/<form[^>]+action="\/admin\/login\/check"[^>]+data-turbo="false"/',
+            '/<form[^>]+action="\/core\/login\/check"[^>]+data-turbo="false"/',
             $html,
         );
     }
@@ -38,7 +38,7 @@ final class AdminLoginTemplateTest extends SymfonicatKernelTestCase
         ]);
 
         self::assertMatchesRegularExpression(
-            '/<form[^>]+action="\/admin\/login"[^>]+data-turbo="false"/',
+            '/<form[^>]+action="\/core\/login"[^>]+data-turbo="false"/',
             $html,
         );
     }
@@ -46,7 +46,7 @@ final class AdminLoginTemplateTest extends SymfonicatKernelTestCase
     public function testAdminEntrypointLoadsBootstrapJavascript(): void
     {
         $subdomainDir = self::getContainer()->getParameter('kernel.project_dir');
-        $entrypoint = file_get_contents($subdomainDir.'/admin/assets/admin.js');
+        $entrypoint = file_get_contents($subdomainDir.'/core/assets/core.js');
 
         self::assertStringContainsString('../../assets/bootstrap/js/index.esm.js', (string) $entrypoint);
     }
@@ -57,7 +57,7 @@ final class AdminLoginTemplateTest extends SymfonicatKernelTestCase
     private function renderLoginTemplate(array $context): string
     {
         $requestStack = self::getTestContainer()->get(RequestStack::class);
-        $request = Request::create('/admin/login');
+        $request = Request::create('/core/login');
 
         /** @var SessionFactoryInterface $sessionFactory */
         $sessionFactory = self::getTestContainer()->get('session.factory');

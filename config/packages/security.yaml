@@ -3,42 +3,42 @@ security:
         Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface: 'auto'
 
     providers:
-        symfonicat_admin_provider:
+        symfonicat_core_provider:
             id: Symfonicat\Security\AdminUserProvider
 
     firewalls:
         dev:
             pattern: ^/(_profiler|_wdt|assets|build)/
             security: false
-        admin:
-            pattern: ^/admin
-            provider: symfonicat_admin_provider
+        core:
+            pattern: ^/core
+            provider: symfonicat_core_provider
             form_login:
-                login_path: symfonicat_admin_login
-                check_path: symfonicat_admin_login_check
-                default_target_path: symfonicat_admin_login
+                login_path: symfonicat_core_login
+                check_path: symfonicat_core_login_check
+                default_target_path: symfonicat_core_login
                 always_use_default_target_path: true
                 username_parameter: email
                 password_parameter: password
                 enable_csrf: true
-                csrf_token_id: symfonicat_admin_login
+                csrf_token_id: symfonicat_core_login
             login_throttling:
                 max_attempts: 10
                 interval: '5 minutes'
                 lock_factory: lock.factory
                 cache_pool: cache.rate_limiter
             logout:
-                path: /admin/logout/clear
+                path: /core/logout/clear
                 target: symfonicat_subdomain_root
         main:
             lazy: true
 
     access_control:
-        - { path: ^/admin/login/check, roles: PUBLIC_ACCESS }
-        - { path: ^/admin/login, roles: PUBLIC_ACCESS }
-        - { path: ^/admin/logout, roles: PUBLIC_ACCESS }
-        - { path: ^/admin/logout/clear, roles: PUBLIC_ACCESS }
-        - { path: ^/admin, roles: ROLE_ADMIN }
+        - { path: ^/core/login/check, roles: PUBLIC_ACCESS }
+        - { path: ^/core/login, roles: PUBLIC_ACCESS }
+        - { path: ^/core/logout, roles: PUBLIC_ACCESS }
+        - { path: ^/core/logout/clear, roles: PUBLIC_ACCESS }
+        - { path: ^/core, roles: ROLE_ADMIN }
 
 when@test:
     security:

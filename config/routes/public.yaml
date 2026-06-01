@@ -1,8 +1,8 @@
 symfonicat_public_controllers:
-    resource: ../../admin/src/Controller/
+    resource: ../../core/src/Controller/
     type: attribute
     exclude:
-        - ../../admin/src/Controller/Admin/
+        - ../../core/src/Controller/Core/
 
 symfonicat_app_controllers:
     resource: ../../src/Controller/

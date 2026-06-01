@@ -7,7 +7,6 @@ use Psr\Log\NullLogger;
 use Symfonicat\Repository\DomainRepository;
 use Symfonicat\Service\AffixService;
 use Symfonicat\Service\DomainService;
-use Symfonicat\Service\PackageDiscoveryService;
 use Symfonicat\Service\RuntimeConfig;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -34,14 +33,12 @@ final class AffixServiceTest extends TestCase
 
         $domainRepository = $this->createStub(DomainRepository::class);
         $entityManager = $this->createStub(EntityManagerInterface::class);
-        $packageDiscoveryService = new PackageDiscoveryService($subdomainDir);
         $runtimeConfig = new RuntimeConfig($subdomainDir);
         $domainService = new DomainService(
             $subdomainDir,
             $requestStack,
             $domainRepository,
             $entityManager,
-            $packageDiscoveryService,
             $runtimeConfig,
         );
 

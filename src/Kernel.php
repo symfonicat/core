@@ -2,7 +2,7 @@
 
 namespace App;
 
-use Native\DependencyInjection\Compiler\NativeProxyCompilerPass;
+use Symfonicat\DependencyInjection\Compiler\NativeProxyCompilerPass;
 use Symfony\Bundle\FrameworkBundle\Kernel\MicroKernelTrait;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\HttpKernel\Kernel as BaseKernel;

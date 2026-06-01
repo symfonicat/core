@@ -1,3 +1,0 @@
-symfonicat_admin:
-    resource: ../../admin/src/Controller/Admin/
-    type: attribute

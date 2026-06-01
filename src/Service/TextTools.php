@@ -2,7 +2,7 @@
 
 namespace App\Service;
 
-use Native\Attribute\CompileNative;
+use Symfonicat\Attribute\CompileNative;
 
 final class TextTools implements TextToolsInterface
 {

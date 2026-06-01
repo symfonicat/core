@@ -4,5 +4,5 @@ symfonicat_module:
 symfonicat_public:
     resource: routes/public.yaml
 
-symfonicat_admin:
-    resource: routes/admin.yaml
+symfonicat_core:
+    resource: routes/core.yaml

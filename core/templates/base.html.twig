@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+        <link rel="icon" href="{{ symfonicat_asset('favicon.svg') }}">
+        <title>{% block title %}Symfonicat Core{% endblock %}</title>
+
+{% block stylesheets -%}
+{{- encore_entry_link_tags('app') | indent_links(8) -}}
+{%- endblock %}
+
+{% block javascripts -%}
+{{- encore_entry_script_tags('core') | indent_scripts(8) -}}
+{%- endblock %}
+
+    </head>
+    <body data-controller="symfony--ux-turbo--turbo-core" data-turbo-suppress-warning>
+        {% block flashes %}
+            {% for message in app.flashes('error') %}
+            <aside class="alert alert-danger">{{ message }}</aside>
+            {% endfor %}
+            {% for message in app.flashes('success') %}
+            <aside class="alert alert-success">{{ message }}</aside>
+            {% endfor %}
+            {% for message in app.flashes('debug') %}
+            <aside class="alert alert-warning">{{ message }}</aside>
+            {% endfor %}
+        {% endblock %}
+
+        <aside
+            id="mercure-debug"
+            data-mercure-debug-listener
+            data-controller="symfony--ux-turbo--mercure-turbo-stream"
+            data-symfony--ux-turbo--mercure-turbo-stream-hub-value="{{ absolute_url('/.well-known/mercure') }}"
+            data-symfony--ux-turbo--mercure-turbo-stream-topic-value="mercure-debug"
+            hidden
+            aria-hidden="true"
+        ><!-- -->
+        </aside>
+
+        {% if app.request.attributes.get('symfonicat_core_mfa_verified') -%}
+            <header class="d-flex align-items-center gap-3 px-3 py-2 bg-dark text-white">
+                <a href="{{ path('symfonicat_core_dashboard') }}" class="text-white text-decoration-none fw-bold">Symfonicat Core</a>
+                <nav class="d-flex gap-2 ms-auto">
+                    <a href="{{ path('symfonicat_domain_index') }}" class="btn btn-sm btn-outline-light {{ active('symfonicat_domain_*', 'btn-light active') }}">domains</a>
+                    <a href="{{ path('symfonicat_subdomain_index') }}" class="btn btn-sm btn-outline-light {{ active('symfonicat_subdomain_*', 'btn-light active') }}">subdomains</a>
+                    <a href="{{ path('symfonicat_endpoint_index') }}" class="btn btn-sm btn-outline-light {{ active('symfonicat_endpoint_*', 'btn-light active') }}">endpoints</a>
+                    <a href="{{ path('symfonicat_parcel_index') }}" class="btn btn-sm btn-outline-light {{ active('symfonicat_parcel_*', 'btn-light active') }}">parcels</a>
+                    <a href="{{ path('symfonicat_middleware_index') }}" class="btn btn-sm btn-outline-light {{ active('symfonicat_middleware_*', 'btn-light active') }}">middleware</a>
+                    <a href="{{ path('symfonicat_application_index') }}" class="btn btn-sm btn-outline-light {{ active('symfonicat_application_*', 'btn-light active') }}">applications</a>
+                    <a href="{{ path('symfonicat_env_index') }}" class="btn btn-sm btn-outline-light {{ active('symfonicat_env_*', 'btn-light active') }}">env</a>
+                    <a href="{{ path('symfonicat_file_upload') }}" class="btn btn-sm btn-outline-light {{ active('symfonicat_file_upload', 'btn-light active') }}">files</a>
+                    <div class="btn-group">
+                        <button
+                            type="button"
+                            class="btn btn-sm btn-outline-light dropdown-toggle {{ active('symfonicat_core_yaml_*', 'btn-light active') }}"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false"
+                        >yaml</button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{{ path('symfonicat_core_yaml_dump') }}">dump</a></li>
+                            <li><a class="dropdown-item" href="{{ path('symfonicat_core_yaml_load') }}">load</a></li>
+                        </ul>
+                    </div>
+                    <a
+                        class="btn btn-sm btn-secondary"
+                        href="{{ path('symfonicat_core_logout') }}"
+                        data-turbo="false"
+                    >logout</a>
+                </nav>
+            </header>
+        {%- endif %}
+
+        <main class="container-fluid py-3">
+            {{ block('flashes') | indent_body(12) }}
+            {{ block('body') | indent_body(12) }}
+        </main>
+
+        <!-- unfortunately not powered by Drupal -->
+        <!-- but fueled by NPM -->
+        <!-- meet Symfonicat -->
+
+    </body>
+</html>

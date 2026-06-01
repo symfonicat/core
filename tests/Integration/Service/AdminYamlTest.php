@@ -47,23 +47,21 @@ YAML);
             'id' => 'example.com',
         ]);
         $connection->insert('symfonicat_subdomain', [
-            'id' => 'subdomain1',
+            'id' => 1,
+            'affix' => 'subdomain1',
             'parcel_id' => 'core/subdomainparcel',
+            'domain_id' => 'example.com',
         ]);
         $connection->insert('symfonicat_middleware', [
             'id' => 'core/DomainAndSubdomainMiddleware',
             'class' => 'App\\Middleware\\DomainAndSubdomainMiddleware',
-        ]);
-        $connection->insert('symfonicat_domain_subdomain', [
-            'domain_id' => 'example.com',
-            'subdomain_id' => 'subdomain1',
         ]);
         $connection->insert('symfonicat_domain_middleware', [
             'domain_id' => 'example.com',
             'middleware_id' => 'core/DomainAndSubdomainMiddleware',
         ]);
         $connection->insert('symfonicat_subdomain_middleware', [
-            'subdomain_id' => 'subdomain1',
+            'subdomain_id' => 1,
             'middleware_id' => 'core/DomainAndSubdomainMiddleware',
         ]);
 
@@ -74,15 +72,13 @@ YAML);
         self::assertSame(1, $dumpCounts['symfonicat_parcel']);
         self::assertSame(1, $dumpCounts['symfonicat_domain']);
         self::assertSame(1, $dumpCounts['symfonicat_subdomain']);
-        self::assertSame(1, $dumpCounts['symfonicat_domain_subdomain']);
         self::assertSame(1, $dumpCounts['symfonicat_domain_middleware']);
         self::assertSame(1, $dumpCounts['symfonicat_subdomain_middleware']);
 
         $config = Yaml::parseFile($this->subdomainDir.'/config/packages/symfonicat.yaml');
         self::assertArrayNotHasKey('vendors', $config['symfonicat']);
-        self::assertArrayNotHasKey('admin', $config['symfonicat']);
+        self::assertArrayNotHasKey('core', $config['symfonicat']);
 
-        $connection->executeStatement('DELETE FROM symfonicat_domain_subdomain');
         $connection->executeStatement('DELETE FROM symfonicat_admin');
         $connection->executeStatement('DELETE FROM symfonicat_subdomain');
         $connection->executeStatement('DELETE FROM symfonicat_domain');
@@ -97,17 +93,16 @@ YAML);
         self::assertSame(1, $loadCounts['symfonicat_parcel']);
         self::assertSame(1, $loadCounts['symfonicat_domain']);
         self::assertSame(1, $loadCounts['symfonicat_subdomain']);
-        self::assertSame(1, $loadCounts['symfonicat_domain_subdomain']);
         self::assertSame(1, $loadCounts['symfonicat_domain_middleware']);
         self::assertSame(1, $loadCounts['symfonicat_subdomain_middleware']);
-        self::assertSame('core/subdomainparcel', (string) $connection->fetchOne('SELECT parcel_id FROM symfonicat_subdomain WHERE id = \'subdomain1\''));
+        self::assertSame('core/subdomainparcel', (string) $connection->fetchOne('SELECT parcel_id FROM symfonicat_subdomain WHERE id = 1'));
+        self::assertSame('example.com', (string) $connection->fetchOne('SELECT domain_id FROM symfonicat_subdomain WHERE id = 1'));
         self::assertSame('example.com', (string) $connection->fetchOne('SELECT id FROM symfonicat_domain WHERE id = \'example.com\''));
-        self::assertSame('subdomain1', (string) $connection->fetchOne('SELECT id FROM symfonicat_subdomain WHERE id = \'subdomain1\''));
+        self::assertSame('subdomain1', (string) $connection->fetchOne('SELECT affix FROM symfonicat_subdomain WHERE id = 1'));
         self::assertFalse($connection->fetchOne('SELECT email FROM symfonicat_admin WHERE id = 7'));
         self::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM symfonicat_parcel'));
         self::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM symfonicat_domain'));
         self::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM symfonicat_subdomain'));
-        self::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM symfonicat_domain_subdomain'));
         self::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM symfonicat_domain_middleware'));
         self::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM symfonicat_subdomain_middleware'));
     }
@@ -117,6 +112,10 @@ YAML);
         file_put_contents($this->subdomainDir.'/config/packages/symfonicat.yaml', <<<'YAML'
 # keep this comment if load does not rewrite the file
 symfonicat:
+    symfonicat_admin:
+        -
+            id: 1
+            email: admin@example.com
     symfonicat_domain:
         -
             id: example.com
@@ -131,6 +130,7 @@ YAML);
         $rewritten = file_get_contents($this->subdomainDir.'/config/packages/symfonicat.yaml');
         self::assertIsString($rewritten);
         self::assertStringNotContainsString('keep this comment', $rewritten);
+        self::assertStringNotContainsString('symfonicat_admin', $rewritten);
     }
 
     private function removeDirectory(string $directory): void

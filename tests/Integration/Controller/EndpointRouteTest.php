@@ -11,7 +11,7 @@ final class EndpointRouteTest extends SymfonicatKernelTestCase
         $router = self::getContainer()->get('router');
         $router->getContext()->setMethod('POST');
 
-        $matched = $router->match('/admin/e/test/delete');
+        $matched = $router->match('/core/e/test/delete');
 
         self::assertSame('symfonicat_endpoint_delete', $matched['_route']);
         self::assertSame('test', $matched['id']);

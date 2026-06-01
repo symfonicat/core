@@ -2,7 +2,7 @@
 
 Symfonicat is a Symfony 8 multi-tenant frontend runtime. It resolves public requests to domains, subdomains, and endpoints, renders the matching parcel-backed template, and exposes modules, middleware, env data, and build-application context where present.
 
-Symfonicat supports the ability for Composer packages to ship with PHP extensions and Go modules. PHP extensions go in `<package root>/ext/**/*.c` and Go modules go in `<package root>/extensions/**/*.go`. When the Docker container builds, it compiles both the PHP extensions and the Go modules into the FrankenPHP/Caddy setup so that they are available in your application.
+Symfonicat supports the ability for Composer packages to ship with PHP extensions and Go modules. PHP extensions go in `native/ext/**` or `core/native/ext/**`, and Go modules go in `native/go/**` or `core/native/go/**`. Composer packages under `vendor/**/**/` use `vendor/**/**/native/ext/**` and `vendor/**/**/native/go/**`. When the Docker container builds, it discovers those directories and compiles the PHP extensions and Go modules into the FrankenPHP/Caddy setup so that they are available in your application.
 
 Edit `/etc/hosts` for local public routing:
 
@@ -18,10 +18,10 @@ docker compose up -d --build
 docker exec -it php bin/console symfonicat:schema:update
 docker exec php bin/console symfonicat:load
 docker exec -it php bin/console symfonicat:admin:create <email>
-touch symfonicat.lock # enables /admin
+touch symfonicat.lock # enables /core
 ```
 
-The admin area is disabled until `symfonicat.lock` exists in the repo root.
+The core area is disabled until `symfonicat.lock` exists in the repo root.
 
 ## Runtime
 
@@ -30,8 +30,8 @@ The runtime subscriber resolves the active `Domain`, `Subdomain`, and matching `
 - a matched domain renders the domain shell on any public path for that host
 - a matched subdomain renders the subdomain shell on any public path for that host
 - endpoints match their repeatable `arguments`; `*` matches one path segment
-- endpoint `catch` allows extra path after the matched arguments
-- `/admin/*` and `/m/*` are reserved from the public catch-all
+- endpoint `catch` allows extra path after the matched arguments; with no arguments configured it acts as a wildcard for the current path
+- `/core/*` and `/m/*` are reserved from the public catch-all
 
 Templates resolve in this order:
 
@@ -43,13 +43,13 @@ Templates resolve in this order:
 Id rules:
 
 - `Domain` ids are bare hostnames, for example `example.com`
-- `Subdomain` ids are plain labels, for example `subdomain1`
+- `Subdomain` ids are internal auto-increment integers; the public label is `subdomain.affix`, for example `subdomain1`
 - `Application`, `Module`, `Middleware`, and `Parcel` ids remain package-scoped where applicable, for example `core/test`
 - `Endpoint` ids are string ids and may be package-scoped, for example `core/test`
 
 ```twig
 {{ domain.id }}      {# example.com #}
-{{ subdomain.id }}   {# subdomain1 #}
+{{ subdomain.affix }} {# subdomain1 #}
 {{ endpoint.id }}    {# core/test #}
 {{ application.id }} {# example-test #}
 ```
@@ -58,11 +58,11 @@ Id rules:
 
 `Application` is the application-scaffold target in this branch. It replaces the old separate Electron row concept: an application selects a URL context, and that selected target is what the generated Electron skeleton will launch once it is built later.
 
-The application target is inferred from the populated relation fields: `endpoint` wins when present, otherwise `subdomain`, otherwise `domain`. `domain` is always required.
+The application target is inferred from the populated relation fields: `endpoint` wins when present, otherwise `subdomain`, otherwise `domain`. `Subdomain` lookup is domain-scoped and uses `affix` plus `domain` when a domain is attached; standalone subdomain rows can still exist without a domain relation.
 
 Build-application requests expose `application` through Twig and `window.application` when the request context provides it.
 
-Application build templates live under `templates/application/main.js.twig`, with optional per-application overrides at `templates/application/overrides/{application-id}.js.twig`. The build command generates a buildable Electron skeleton in `application/{application.id}/` with `main.js`, `package.json`, `README.md`.
+Application build templates live under `templates/application/main.js.twig`, with optional per-application overrides at `templates/application/overrides/{application-id}.js.twig`. The build command generates a buildable Electron skeleton in `applications/{application.id}/` with `main.js`, `package.json`, `README.md`.
 
 ## Middleware
 
@@ -119,8 +119,6 @@ The same grouped structure is exposed through `window.env` and Twig:
 
 Private webpack data comes from `symfonicat:data:webpack`. It scans the root package and installed Composer packages from configured vendors under:
 
-- `assets/domain/`
-- `assets/subdomain/`
 - `assets/application/`
 - `assets/module/`
 - `assets/parcel/`
@@ -140,14 +138,14 @@ It can also target an entity directly:
 
 ## Configuration
 
+`symfonicat_subdomain` rows store an internal integer `id`, a public `affix`, and an optional `domain_id`; the UI and runtime use `affix`, not the internal id. Multiple rows may share the same affix when they belong to different domains.
+
 Packages opt into Symfonicat discovery by setting `extra.symfonicat: true` in their `composer.json`:
 
 ```yaml
 extra:
     symfonicat: true
 ```
-
-Admin CRUD and schema sync actions automatically refresh `config/packages/symfonicat.yaml` after successful writes.
 
 `composer install` runs `symfonicat:purge` so deployments start with a clean `symfonicat_*` schema; runtime still reads `config/packages/symfonicat.yaml`.
 
@@ -245,15 +243,9 @@ Optional cert settings:
 
 `bin/cert` writes `/.env.certificate.local` with `AWS_ECS_TLS_FULLCHAIN_B64` and `AWS_ECS_TLS_PRIVATE_KEY_B64`, then runs `bin/ecs` and `bin/route53` so the new cert is applied and DNS is refreshed.
 
-## Scriptling
-
-The Docker build compiles FrankenPHP extensions and the custom FrankenPHP binary, and the final runtime image reuses that builder output.
-
-The root `extensions/brotli_precompress` module precompresses `public/build/*.{js,json,css,wasm,woff2}` files at startup and serves Brotli responses directly for matching build assets.
-
 ## PHPUnit
 
-`docker exec php ./bin/phpunit`
+`docker exec -it php ./bin/phpunit`
 
 ## Picture of @dunglas at the zoo
 

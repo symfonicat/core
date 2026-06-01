@@ -69,6 +69,50 @@ final class RuntimeRoutingTest extends SymfonicatWebTestCase
         self::assertStringContainsString('color: purple', $content);
     }
 
+    public function testEndpointMatchesExactSymfonicatTestPathWithCatchEnabled(): void
+    {
+        $domain = $this->createDomain('example.com');
+        $endpoint = $this->createEndpoint('core/test')
+            ->setDomain($domain)
+            ->setEnforce('domain')
+            ->setArguments(['symfonicat', 'test'])
+            ->setCatch(true);
+        $env = $this->createEnv('primary');
+        $this->setEndpointEnv($endpoint, $env, 'purple');
+        $this->setHost('example.com');
+
+        $this->client()->request('GET', '/symfonicat/test');
+
+        self::assertResponseIsSuccessful();
+        $content = (string) $this->client()->getResponse()->getContent();
+        self::assertStringContainsString('Main Endpoint Router', $content);
+        self::assertStringContainsString('core/test', $content);
+        self::assertStringContainsString('color: purple', $content);
+    }
+
+    public function testSubdomainEndpointWithDomainMatchesAsCombinedScope(): void
+    {
+        $domain = $this->createDomain('example.com');
+        $subdomain = $this->createSubdomain('subdomain1', $domain);
+        $endpoint = $this->createEndpoint('core/launch')
+            ->setDomain($domain)
+            ->setSubdomain($subdomain)
+            ->setEnforce('subdomain')
+            ->setArguments(['docs'])
+            ->setCatch(true);
+        $env = $this->createEnv('primary');
+        $this->setEndpointEnv($endpoint, $env, 'purple');
+        $this->setHost('subdomain1.example.com');
+
+        $this->client()->request('GET', '/docs');
+
+        self::assertResponseIsSuccessful();
+        $content = (string) $this->client()->getResponse()->getContent();
+        self::assertStringContainsString('Main Endpoint Router', $content);
+        self::assertStringContainsString('core/launch', $content);
+        self::assertStringContainsString('color: purple', $content);
+    }
+
     public function testSymfonyRoutesStillWinOverRuntimeCatchRoutes(): void
     {
         $this->createDomain('example.com')->setCatch(true);
