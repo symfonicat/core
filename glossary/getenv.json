@@ -1,0 +1,170 @@
+{
+    "php_function": "getenv",
+    "zend_function": "getenv",
+    "source_file": "sic_functions.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "str",
+            "macro": "Z_PARAM_STRING_OR_NULL",
+            "arguments": [
+                "str",
+                "str_len"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING_OR_NULL(str, str_len)"
+        },
+        {
+            "name": "local_only",
+            "macro": "Z_PARAM_BOOL",
+            "arguments": [
+                "local_only"
+            ],
+            "type": "bool",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_BOOL(local_only)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "php_assert.h",
+        "php_crypt.h",
+        "php_streams.h",
+        "php_main.h",
+        "php_globals.h",
+        "php_variables.h",
+        "php_ini.h",
+        "php_image.h",
+        "php_standard.h",
+        "php_math.h",
+        "php_http.h",
+        "php_incomplete_class.h",
+        "php_getopt.h",
+        "php_ext_syslog.h",
+        "ext/standard/info.h",
+        "ext/session/php_session.h",
+        "zend_exceptions.h",
+        "zend_attributes.h",
+        "zend_enum.h",
+        "zend_ini.h",
+        "zend_operators.h",
+        "ext/standard/php_dns.h",
+        "ext/standard/php_uuencode.h",
+        "ext/standard/crc32_x86.h",
+        "win32/php_win32_globals.h",
+        "win32/time.h",
+        "win32/ioutil.h",
+        "zend.h",
+        "zend_ini_scanner.h",
+        "zend_language_scanner.h",
+        "zend_language_parser.h",
+        "zend_portability.h",
+        "stdarg.h",
+        "stdlib.h",
+        "math.h",
+        "time.h",
+        "stdio.h",
+        "sys/types.h",
+        "sys/stat.h",
+        "string.h",
+        "locale.h",
+        "zend_globals.h",
+        "SAPI.h",
+        "php_ticks.h",
+        "php_fopen_wrappers.h",
+        "streamsfuncs.h",
+        "zend_frameless_function.h",
+        "basic_functions_arginfo.h"
+    ],
+    "body": "char *str = NULL;\n\tsize_t str_len;\n\tbool local_only = 0;\n\n\tZEND_PARSE_PARAMETERS_START(0, 2)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_STRING_OR_NULL(str, str_len)\n\t\tZ_PARAM_BOOL(local_only)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (!str) {\n\t\tarray_init(return_value);\n\t\tphp_load_environment_variables(return_value);\n\t\treturn;\n\t}\n\n\tif (!local_only) {\n\t\t/* SAPI method returns an emalloc()'d string */\n\t\tchar *ptr = sapi_getenv(str, str_len);\n\t\tif (ptr) {\n\t\t\t// TODO: avoid reallocation ???\n\t\t\tRETVAL_STRING(ptr);\n\t\t\tefree(ptr);\n\t\t\treturn;\n\t\t}\n\t}\n\n\tzend_string *res = php_getenv(str, str_len);\n\tif (res) {\n\t\tRETURN_STR(res);\n\t}\n\tRETURN_FALSE;",
+    "semantic": "SAPI method returns an emalloc()'d string",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_STRING_OR_NULL",
+            "Z_PARAM_BOOL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_STR",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "php_load_environment_variables",
+            "sapi_getenv",
+            "php_getenv"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common getenv inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "SAPI method returns an emalloc()'d string",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "constant",
+        "inet_ntop",
+        "inet_pton",
+        "ip2long",
+        "long2ip",
+        "getopt",
+        "flush",
+        "sleep",
+        "usleep",
+        "time_nanosleep",
+        "time_sleep_until",
+        "get_current_user"
+    ]
+}

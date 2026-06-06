@@ -22,6 +22,25 @@ final class AffixServiceTest extends TestCase
         self::assertSame([], $service->getAffixes());
     }
 
+    public function testGetAffixesParsesConfiguredSubdomainManually(): void
+    {
+        $service = $this->makeService('foo.www.example.com');
+
+        self::assertSame(['www', 'foo'], $service->getAffixesRaw());
+        self::assertSame(['foo'], $service->getAffixes());
+        self::assertSame('foo', $service->getAffixByIndex(0));
+        self::assertNull($service->getAffixByIndex(1));
+    }
+
+    public function testGetAffixesReturnsEmptyArrayWhenHostHasNoConfiguredDomainMatch(): void
+    {
+        $service = $this->makeService('foo.example.org');
+
+        self::assertSame([], $service->getAffixesRaw());
+        self::assertSame([], $service->getAffixes());
+        self::assertNull($service->getAffixByIndex(0));
+    }
+
     private function makeService(string $host): AffixService
     {
         $subdomainDir = dirname(__DIR__, 3);
@@ -35,13 +54,12 @@ final class AffixServiceTest extends TestCase
         $entityManager = $this->createStub(EntityManagerInterface::class);
         $runtimeConfig = new RuntimeConfig($subdomainDir);
         $domainService = new DomainService(
-            $subdomainDir,
             $requestStack,
             $domainRepository,
             $entityManager,
             $runtimeConfig,
         );
 
-        return new AffixService($subdomainDir, $requestStack, new NullLogger(), $domainService);
+        return new AffixService($requestStack, new NullLogger(), $domainService);
     }
 }

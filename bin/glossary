@@ -1,0 +1,695 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+$binDir = __DIR__;
+$rootDir = dirname($binDir);
+$sourceDir = $argv[1] ?? ($rootDir.'/php-src');
+$outputDir = $argv[2] ?? ($rootDir.'/glossary');
+$phpVersion = extractPhpVersion($rootDir.'/php-src/main/php_version.h');
+
+if (!is_dir($sourceDir)) {
+    fwrite(STDERR, sprintf("Source directory not found: %s\n", $sourceDir));
+    exit(1);
+}
+
+if (!is_dir($outputDir) && !mkdir($outputDir, 0775, true) && !is_dir($outputDir)) {
+    fwrite(STDERR, sprintf("Unable to create output directory: %s\n", $outputDir));
+    exit(1);
+}
+
+$files = iterator_to_array(new RecursiveIteratorIterator(
+    new RecursiveDirectoryIterator($sourceDir, FilesystemIterator::SKIP_DOTS),
+));
+usort($files, static fn (SplFileInfo $left, SplFileInfo $right): int => strcmp($left->getPathname(), $right->getPathname()));
+
+$allFunctionsByFile = [];
+$total = 0;
+
+foreach ($files as $fileInfo) {
+    if (!$fileInfo->isFile() || $fileInfo->getExtension() !== 'c') {
+        continue;
+    }
+
+    $relativeFile = normalizePath(substr($fileInfo->getPathname(), strlen($rootDir) + 1));
+    $content = file_get_contents($fileInfo->getPathname());
+    if ($content === false) {
+        continue;
+    }
+
+    $includes = extractIncludes($content);
+    $extension = detectExtension($relativeFile);
+    $functions = extractFunctions($content, $relativeFile, $includes, $extension);
+
+    $allFunctionsByFile[$relativeFile] = array_map(static fn (array $function): string => $function['php_function'], $functions);
+
+    foreach ($functions as $function) {
+        $entry = buildGlossaryEntry($function, $phpVersion, $allFunctionsByFile[$relativeFile], $content);
+        $path = $outputDir.'/'.$function['php_function'].'.json';
+        $json = json_encode($entry, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        if ($json === false) {
+            throw new RuntimeException(sprintf('Failed to encode %s', $function['php_function']));
+        }
+
+        file_put_contents($path, $json."\n");
+        ++$total;
+    }
+}
+
+fwrite(STDOUT, sprintf("Generated %d glossary files in %s\n", $total, $outputDir));
+
+function extractPhpVersion(string $versionHeader): string
+{
+    if (!is_file($versionHeader)) {
+        return 'unknown';
+    }
+
+    $content = file_get_contents($versionHeader);
+    if ($content === false) {
+        return 'unknown';
+    }
+
+    if (preg_match('/#define PHP_VERSION "([^"]+)"/', $content, $matches)) {
+        return $matches[1];
+    }
+
+    return 'unknown';
+}
+
+/**
+ * @return list<string>
+ */
+function extractIncludes(string $content): array
+{
+    preg_match_all('/^\s*#include\s+[<"]([^>"]+)[>"]/m', $content, $matches);
+
+    return array_values(array_unique($matches[1] ?? []));
+}
+
+function detectExtension(string $relativeFile): ?string
+{
+    if (!str_starts_with($relativeFile, 'php-src/ext/')) {
+        return null;
+    }
+
+    $parts = explode('/', substr($relativeFile, strlen('php-src/ext/')));
+
+    return $parts[0] ?? null;
+}
+
+/**
+ * @return list<array{
+ *     php_function: string,
+ *     zend_function: string,
+ *     source_file: string,
+ *     extension: ?string,
+ *     parameters: list<array<string, mixed>>,
+ *     includes: list<string>,
+ *     body: string,
+ *     semantic: string,
+ *     control_flow: list<string>,
+ *     dependencies: array{
+ *         zend_macros: list<string>,
+ *         zend_types: list<string>,
+ *         internal_helpers: list<string>
+ *     },
+ *     specialization_candidates: list<string>,
+ *     strategies: list<string>,
+ *     memory_model: array<string, mixed>,
+ *     avoid: list<string>,
+ *     complexity: int,
+ *     purpose: string,
+ *     php_version: string,
+ *     related: list<string>
+ * }>
+ */
+function extractFunctions(string $content, string $relativeFile, array $includes, ?string $extension): array
+{
+    preg_match_all('/^\s*(?:static\s+)?(?:PHP|ZEND|PHP_NAMED|ZEND_NAMED)_FUNCTION\(\s*([A-Za-z0-9_]+)\s*\)/m', $content, $matches, PREG_OFFSET_CAPTURE);
+
+    $functions = [];
+    $count = count($matches[1] ?? []);
+
+    for ($i = 0; $i < $count; ++$i) {
+        $name = $matches[1][$i][0];
+        $matchOffset = $matches[0][$i][1];
+        $matchLength = strlen($matches[0][$i][0]);
+        $openBrace = findNextOpenBrace($content, $matchOffset + $matchLength);
+        if ($openBrace === null) {
+            continue;
+        }
+
+        $closeBrace = findMatchingBrace($content, $openBrace);
+        if ($closeBrace === null || $closeBrace <= $openBrace) {
+            continue;
+        }
+
+        $body = substr($content, $openBrace + 1, $closeBrace - $openBrace - 1);
+        $functions[] = [
+            'php_function' => $name,
+            'zend_function' => $name,
+            'source_file' => $relativeFile,
+            'extension' => $extension,
+            'parameters' => parseParameters($body),
+            'includes' => $includes,
+            'body' => trim($body),
+        ];
+    }
+
+    return $functions;
+}
+
+function findNextOpenBrace(string $content, int $offset): ?int
+{
+    $len = strlen($content);
+    $state = 'default';
+    $escape = false;
+
+    for ($i = $offset; $i < $len; ++$i) {
+        $ch = $content[$i];
+        $next = $i + 1 < $len ? $content[$i + 1] : '';
+
+        switch ($state) {
+            case 'default':
+                if ($ch === '/' && $next === '/') {
+                    $state = 'line_comment';
+                    ++$i;
+                    break;
+                }
+                if ($ch === '/' && $next === '*') {
+                    $state = 'block_comment';
+                    ++$i;
+                    break;
+                }
+                if ($ch === '"') {
+                    $state = 'double_quote';
+                    break;
+                }
+                if ($ch === "'") {
+                    $state = 'single_quote';
+                    break;
+                }
+                if ($ch === '{') {
+                    return $i;
+                }
+                break;
+
+            case 'line_comment':
+                if ($ch === "\n") {
+                    $state = 'default';
+                }
+                break;
+
+            case 'block_comment':
+                if ($ch === '*' && $next === '/') {
+                    $state = 'default';
+                    ++$i;
+                }
+                break;
+
+            case 'double_quote':
+                if ($escape) {
+                    $escape = false;
+                    break;
+                }
+                if ($ch === '\\') {
+                    $escape = true;
+                    break;
+                }
+                if ($ch === '"') {
+                    $state = 'default';
+                }
+                break;
+
+            case 'single_quote':
+                if ($escape) {
+                    $escape = false;
+                    break;
+                }
+                if ($ch === '\\') {
+                    $escape = true;
+                    break;
+                }
+                if ($ch === "'") {
+                    $state = 'default';
+                }
+                break;
+        }
+    }
+
+    return null;
+}
+
+function findMatchingBrace(string $content, int $openBrace): ?int
+{
+    $len = strlen($content);
+    $depth = 0;
+    $state = 'default';
+    $escape = false;
+
+    for ($i = $openBrace; $i < $len; ++$i) {
+        $ch = $content[$i];
+        $next = $i + 1 < $len ? $content[$i + 1] : '';
+
+        switch ($state) {
+            case 'default':
+                if ($ch === '/' && $next === '/') {
+                    $state = 'line_comment';
+                    ++$i;
+                    continue 2;
+                }
+                if ($ch === '/' && $next === '*') {
+                    $state = 'block_comment';
+                    ++$i;
+                    continue 2;
+                }
+                if ($ch === '"') {
+                    $state = 'double_quote';
+                    continue 2;
+                }
+                if ($ch === "'") {
+                    $state = 'single_quote';
+                    continue 2;
+                }
+                if ($ch === '{') {
+                    ++$depth;
+                    continue 2;
+                }
+                if ($ch === '}') {
+                    --$depth;
+                    if ($depth === 0) {
+                        return $i;
+                    }
+                }
+                break;
+
+            case 'line_comment':
+                if ($ch === "\n") {
+                    $state = 'default';
+                }
+                break;
+
+            case 'block_comment':
+                if ($ch === '*' && $next === '/') {
+                    $state = 'default';
+                    ++$i;
+                }
+                break;
+
+            case 'double_quote':
+                if ($escape) {
+                    $escape = false;
+                    break;
+                }
+                if ($ch === '\\') {
+                    $escape = true;
+                    break;
+                }
+                if ($ch === '"') {
+                    $state = 'default';
+                }
+                break;
+
+            case 'single_quote':
+                if ($escape) {
+                    $escape = false;
+                    break;
+                }
+                if ($ch === '\\') {
+                    $escape = true;
+                    break;
+                }
+                if ($ch === "'") {
+                    $state = 'default';
+                }
+                break;
+        }
+    }
+
+    return null;
+}
+
+/**
+ * @return list<array<string, mixed>>
+ */
+function parseParameters(string $body): array
+{
+    if (str_contains($body, 'ZEND_PARSE_PARAMETERS_NONE')) {
+        return [];
+    }
+
+    if (!preg_match('/ZEND_PARSE_PARAMETERS_START(?:_EX)?\s*\(.*?\)\s*(.*?)ZEND_PARSE_PARAMETERS_END/s', $body, $matches)) {
+        return [];
+    }
+
+    $parameterBlock = $matches[1];
+    $parameters = [];
+    $optional = false;
+
+    foreach (preg_split('/\R/', $parameterBlock) ?: [] as $line) {
+        $line = trim(preg_replace('/\/\/.*$/', '', $line) ?? '');
+        if ($line === '') {
+            continue;
+        }
+
+        if (str_contains($line, 'Z_PARAM_OPTIONAL')) {
+            $optional = true;
+            continue;
+        }
+
+        if (!preg_match('/Z_PARAM_([A-Z0-9_]+)\s*\((.*)\)\s*;?$/', $line, $paramMatch)) {
+            continue;
+        }
+
+        $macro = 'Z_PARAM_'.$paramMatch[1];
+        $arguments = splitArguments($paramMatch[2]);
+        $name = $arguments[0] ?? null;
+
+        $parameters[] = [
+            'name' => $name !== null ? trim($name) : null,
+            'macro' => $macro,
+            'arguments' => array_map('trim', $arguments),
+            'type' => mapParameterMacroToType($macro),
+            'required' => !$optional,
+            'optional' => $optional || str_contains($macro, '_OR_NULL') || str_contains($macro, '_NULL'),
+            'nullable' => str_contains($macro, '_OR_NULL') || str_contains($macro, '_NULL'),
+            'variadic' => str_contains($macro, 'VARIADIC'),
+            'by_reference' => str_contains($macro, 'REF') || str_contains($macro, 'ZVAL'),
+            'raw' => $line,
+        ];
+    }
+
+    return $parameters;
+}
+
+/**
+ * @return list<string>
+ */
+function splitArguments(string $argumentString): array
+{
+    $argumentString = trim($argumentString);
+    if ($argumentString === '') {
+        return [];
+    }
+
+    $arguments = [];
+    $current = '';
+    $depth = 0;
+    $length = strlen($argumentString);
+    for ($i = 0; $i < $length; ++$i) {
+        $ch = $argumentString[$i];
+        if ($ch === '(') {
+            ++$depth;
+        } elseif ($ch === ')') {
+            --$depth;
+        } elseif ($ch === ',' && $depth === 0) {
+            $arguments[] = trim($current);
+            $current = '';
+            continue;
+        }
+        $current .= $ch;
+    }
+
+    if (trim($current) !== '') {
+        $arguments[] = trim($current);
+    }
+
+    return $arguments;
+}
+
+function mapParameterMacroToType(string $macro): string
+{
+    return match (true) {
+        str_contains($macro, 'PATH_STR') => 'zend_string',
+        str_contains($macro, 'STR') => 'zend_string',
+        str_contains($macro, 'STRING') => 'string',
+        str_contains($macro, 'LONG') => 'zend_long',
+        str_contains($macro, 'DOUBLE') => 'double',
+        str_contains($macro, 'BOOL') => 'bool',
+        str_contains($macro, 'ARRAY') => 'HashTable',
+        str_contains($macro, 'OBJECT') || str_contains($macro, 'OBJ') => 'zend_object',
+        str_contains($macro, 'RESOURCE') => 'zend_resource',
+        str_contains($macro, 'CALLABLE') || str_contains($macro, 'FUNC') => 'zend_fcall_info',
+        str_contains($macro, 'ZVAL') => 'zval',
+        default => 'mixed',
+    };
+}
+
+function buildGlossaryEntry(array $function, string $phpVersion, array $sameFileFunctions, string $fullFileContent): array
+{
+    $body = $function['body'];
+    $semantic = inferSemantic($function['php_function'], $function['source_file'], $body, $function['extension']);
+    $controlFlow = inferControlFlow($body, $semantic);
+    $dependencies = inferDependencies($body);
+    $memoryModel = inferMemoryModel($body);
+    $complexity = inferComplexity($body, $dependencies, $function['parameters']);
+    $purpose = inferPurpose($function['php_function'], $semantic);
+    $related = inferRelated($function['php_function'], $sameFileFunctions);
+
+    return [
+        'php_function' => $function['php_function'],
+        'zend_function' => $function['zend_function'],
+        'source_file' => $function['source_file'],
+        'extension' => $function['extension'],
+        'parameters' => $function['parameters'],
+        'includes' => $function['includes'],
+        'body' => $body,
+        'semantic' => $semantic,
+        'control_flow' => $controlFlow,
+        'dependencies' => $dependencies,
+        'specialization_candidates' => specializationCandidates($function['php_function'], $body, $function['extension']),
+        'strategies' => specializationStrategies($function['php_function'], $body, $function['extension']),
+        'memory_model' => $memoryModel,
+        'avoid' => avoidList($body, $memoryModel),
+        'complexity' => $complexity,
+        'purpose' => $purpose,
+        'php_version' => $phpVersion,
+        'related' => $related,
+    ];
+}
+
+function inferSemantic(string $functionName, string $sourceFile, string $body, ?string $extension): string
+{
+    $comment = leadingCommentSummary($body);
+    if ($comment !== null) {
+        return $comment;
+    }
+
+    $scope = $extension !== null ? sprintf('%s extension', $extension) : 'Zend core';
+
+    return sprintf('Implements the PHP function %s in the %s runtime path.', $functionName, $scope);
+}
+
+function leadingCommentSummary(string $body): ?string
+{
+    if (!preg_match('/\/\*.*?\*\//s', $body, $matches, PREG_OFFSET_CAPTURE)) {
+        return null;
+    }
+
+    $comment = trim($matches[0][0]);
+    $comment = preg_replace('/^\/\*+\s*|\s*\*\/$/', '', $comment) ?? $comment;
+    $comment = preg_replace('/^\s*\*\s?/m', '', $comment) ?? $comment;
+    $comment = trim(preg_replace('/\s+/', ' ', $comment) ?? '');
+
+    if ($comment === '') {
+        return null;
+    }
+
+    $parts = preg_split('/(?<=[.!?])\s+/', $comment, 2);
+    $summary = trim((string) ($parts[0] ?? ''));
+
+    return $summary === '' ? null : $summary;
+}
+
+/**
+ * @return list<string>
+ */
+function inferControlFlow(string $body, string $semantic): array
+{
+    $steps = [];
+    $steps[] = 'Parse and validate the function arguments through Zend parameter handling.';
+
+    if (str_contains($body, 'if (')) {
+        $steps[] = 'Branch on the validated inputs and short-circuit invalid or empty cases.';
+    }
+
+    if (preg_match('/\b(for|foreach|while)\s*\(/', $body)) {
+        $steps[] = 'Iterate over request data, buffers, or container structures as needed.';
+    }
+
+    if (preg_match('/\b(call|php_|zend_|sapi_|odbc_|filter_|json_|mb_|openssl_|stream_|curl_)/i', $body)) {
+        $steps[] = 'Delegate work to internal helpers and extension-level primitives.';
+    }
+
+    $steps[] = 'Construct the return value or emit the correct failure path.';
+
+    return array_values(array_unique($steps));
+}
+
+/**
+ * @return array{
+ *     zend_macros: list<string>,
+ *     zend_types: list<string>,
+ *     internal_helpers: list<string>
+ * }
+ */
+function inferDependencies(string $body): array
+{
+    preg_match_all('/\b(ZEND_[A-Z0-9_]+|Z_PARAM_[A-Z0-9_]+|ZVAL_[A-Z0-9_]+|RETURN_[A-Z0-9_]+|ZSTR_[A-Z0-9_]+|ZEND_HASH_[A-Z0-9_]+|SEPARATE_[A-Z0-9_]+|GC_[A-Z0-9_]+)\b/', $body, $macroMatches);
+    preg_match_all('/\b(HashTable|HashPosition|Bucket|zval|zend_string|zend_long|zend_bool|zend_object|zend_resource|zend_class_entry|zend_function|zend_execute_data|zend_array|zend_fcall_info|zend_fcall_info_cache|zend_result|zend_type|zend_ast|zend_ast_list|zend_property_info|zend_object_handlers|zend_op_array)\b/', $body, $typeMatches);
+    preg_match_all('/\b([a-z_][a-z0-9_]{2,})\s*\(/i', $body, $callMatches);
+
+    $internalHelpers = array_values(array_unique(array_filter($callMatches[1] ?? [], static function (string $name): bool {
+        $blacklist = [
+            'if', 'for', 'while', 'switch', 'return', 'sizeof', 'empty', 'isset', 'unset',
+            'array', 'echo', 'print', 'new', 'clone', 'catch', 'function', 'require',
+        ];
+
+        if (in_array(strtolower($name), $blacklist, true)) {
+            return false;
+        }
+
+        return str_starts_with($name, 'php_')
+            || str_starts_with($name, 'zend_')
+            || str_starts_with($name, 'sapi_')
+            || str_starts_with($name, 'zval_')
+            || str_starts_with($name, 'smart_')
+            || str_starts_with($name, 'php_stream_')
+            || str_starts_with($name, 'xml')
+            || str_starts_with($name, 'mb_')
+            || str_starts_with($name, 'curl_')
+            || str_starts_with($name, 'odbc_')
+            || str_starts_with($name, 'openssl_')
+            || str_starts_with($name, 'filter_')
+            || str_starts_with($name, 'json_')
+            || str_starts_with($name, 'gc_')
+            || str_starts_with($name, 'ob_')
+            || str_starts_with($name, 'phpdbg_')
+            || str_starts_with($name, 'fpm_')
+            || str_starts_with($name, 'apache_')
+            || str_starts_with($name, 'sapi_')
+            || str_starts_with($name, 'zend_hash_');
+    })));
+
+    return [
+        'zend_macros' => array_values(array_unique($macroMatches[1] ?? [])),
+        'zend_types' => array_values(array_unique($typeMatches[1] ?? [])),
+        'internal_helpers' => array_slice($internalHelpers, 0, 30),
+    ];
+}
+
+/**
+ * @return list<string>
+ */
+function specializationCandidates(string $functionName, string $body, ?string $extension): array
+{
+    $scope = $extension !== null ? $extension : 'core';
+
+    return [
+        sprintf('Create a fast path for the most common %s inputs in %s.', $functionName, $scope),
+        'Specialize for empty, null, or zero-length inputs to skip general parsing.',
+        'Specialize for small scalar values so the engine can avoid temporary zval churn.',
+        'Specialize repeated lookup keys or symbols into precomputed tables.',
+        'Specialize the success path separately from validation and error construction.',
+        'Specialize short-string handling to avoid repeated heap allocation.',
+        'Specialize array-heavy inputs by caching size and direct bucket access.',
+        'Specialize immutable-return cases to reduce refcount traffic.',
+        'Specialize request-time hot paths to minimize helper dispatch overhead.',
+        'Specialize failure paths behind a cold branch so the common case stays linear.',
+    ];
+}
+
+/**
+ * @return list<string>
+ */
+function specializationStrategies(string $functionName, string $body, ?string $extension): array
+{
+    return [
+        'Split validation, hot-path execution, and error reporting into separate branches.',
+        'Keep common scalar and empty-input cases branch-predictable and allocation-free.',
+        'Precompute reusable lookup state outside the call path when the inputs are stable.',
+        'Prefer borrowed references or interned strings over repeated copies where safe.',
+        'Move expensive exception construction to the cold path only.',
+        'Avoid repeated helper dispatch when a direct primitive or cached pointer exists.',
+    ];
+}
+
+/**
+ * @return array<string, mixed>
+ */
+function inferMemoryModel(string $body): array
+{
+    return [
+        'allocates_return_value' => (bool) preg_match('/\b(RETURN_|RETVAL_|array_init|object_init|smart_str_)/', $body),
+        'uses_zend_string' => str_contains($body, 'zend_string') || str_contains($body, 'ZSTR_'),
+        'uses_reference_counting' => (bool) preg_match('/\b(Z_TRY_ADDREF|Z_ADDREF|ZVAL_COPY|ZVAL_DUP|zval_ptr_dtor|zend_string_release)\b/', $body),
+        'requires_zend_memory_manager' => (bool) preg_match('/\b(emalloc|efree|erealloc|ecalloc|zend_string_init|zend_string_alloc|safe_emalloc)\b/', $body),
+        'allocates_hash_tables' => (bool) preg_match('/\b(array_init|zend_hash_init|zend_hash_str_add|zend_hash_update|zend_hash_index_update)\b/', $body),
+        'uses_streams' => (bool) preg_match('/\b(php_stream_|php_stream_open_wrapper|php_stream_copy_to_mem)\b/', $body),
+        'uses_smart_strings' => (bool) preg_match('/\b(smart_str|smart_string)\b/', $body),
+        'frees_memory_explicitly' => (bool) preg_match('/\b(efree|zend_string_release|zval_ptr_dtor|php_stream_close)\b/', $body),
+    ];
+}
+
+/**
+ * @return list<string>
+ */
+function avoidList(string $body, array $memoryModel): array
+{
+    $avoid = [
+        'Avoid repeated zval copying on the success path.',
+        'Avoid allocating temporary Zend strings inside tight loops.',
+        'Avoid building detailed error messages until the cold failure path.',
+        'Avoid repeated hash-table scans when a direct lookup or cached handle exists.',
+        'Avoid mixing persistent and request-local allocations without a clear lifetime boundary.',
+        'Avoid leaking reference-counted values on early return.',
+    ];
+
+    if (!empty($memoryModel['uses_reference_counting'])) {
+        $avoid[] = 'Avoid forgetting to balance refcounts when handing values to helper APIs.';
+    }
+
+    if (!empty($memoryModel['uses_streams'])) {
+        $avoid[] = 'Avoid leaving streams open on any early-exit branch.';
+    }
+
+    return array_values(array_unique($avoid));
+}
+
+function inferComplexity(string $body, array $dependencies, array $parameters): int
+{
+    $score = 1;
+    $score += min(3, (int) floor(substr_count($body, "\n") / 50));
+    $score += min(2, substr_count($body, 'if ('));
+    $score += min(2, substr_count($body, 'switch ('));
+    $score += min(2, substr_count($body, 'for (') + substr_count($body, 'foreach (') + substr_count($body, 'while ('));
+    $score += min(2, count($dependencies['internal_helpers'] ?? []) / 5);
+    $score += min(1, count($parameters));
+
+    return max(1, min(10, (int) round($score)));
+}
+
+function inferPurpose(string $functionName, string $semantic): string
+{
+    if ($semantic !== '') {
+        return $semantic;
+    }
+
+    return sprintf('Provides the runtime implementation for %s.', $functionName);
+}
+
+/**
+ * @return list<string>
+ */
+function inferRelated(string $functionName, array $sameFileFunctions): array
+{
+    $related = array_values(array_filter($sameFileFunctions, static fn (string $candidate): bool => $candidate !== $functionName));
+
+    return array_slice($related, 0, 12);
+}
+
+function normalizePath(string $path): string
+{
+    return str_replace('\\', '/', $path);
+}

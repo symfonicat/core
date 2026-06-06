@@ -1,0 +1,124 @@
+{
+    "php_function": "transliterator_create_from_rules",
+    "zend_function": "transliterator_create_from_rules",
+    "source_file": "iterator/transliterator_methods.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "str_rules",
+            "macro": "Z_PARAM_STRING",
+            "arguments": [
+                "str_rules",
+                "str_rules_len"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING(str_rules, str_rules_len)"
+        },
+        {
+            "name": "direction",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "direction"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(direction)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php_intl.h",
+        "transliterator.h",
+        "transliterator_class.h",
+        "intl_data.h",
+        "intl_convert.h",
+        "zend_exceptions.h"
+    ],
+    "body": "char\t\t    *str_rules;\n\tsize_t          str_rules_len;\n\tUChar\t\t    *ustr_rules    = NULL;\n\tint32_t         ustr_rules_len = 0;\n\tzend_long       direction      = TRANSLITERATOR_FORWARD;\n\tUParseError     parse_error;\n\tUTransliterator *utrans;\n\tUChar           id[] = {0x52, 0x75, 0x6C, 0x65, 0x73, 0x54, 0x72,\n\t\t\t\t\t       0x61, 0x6E, 0x73, 0x50, 0x48, 0x50, 0}; /* RulesTransPHP */\n\tTRANSLITERATOR_METHOD_INIT_VARS;\n\n\tZEND_PARSE_PARAMETERS_START(1, 2)\n\t\tZ_PARAM_STRING(str_rules, str_rules_len)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_LONG(direction)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif( ( direction != TRANSLITERATOR_FORWARD ) && (direction != TRANSLITERATOR_REVERSE ) )\n\t{\n\t\tzend_argument_value_error(2, \"must be either Transliterator::FORWARD or Transliterator::REVERSE\");\n\t\tRETURN_THROWS();\n\t}\n\n\tobject = return_value;\n\tobject_init_ex( object, Transliterator_ce_ptr );\n\tTRANSLITERATOR_METHOD_FETCH_OBJECT_NO_CHECK;\n\n\tintl_convert_utf8_to_utf16( &ustr_rules, &ustr_rules_len,\n\t\tstr_rules, str_rules_len, TRANSLITERATOR_ERROR_CODE_P( to ) );\n\t/* (I'm not a big fan of non-obvious flow control macros ).\n\t * This one checks the error value, destroys object and returns false */\n\tINTL_METHOD_CHECK_STATUS_OR_NULL( to, \"String conversion of rules to UTF-16 failed\" );\n\n\t/* Open ICU Transliterator. */\n\tutrans = utrans_openU( id, ( sizeof( id ) - 1 ) / ( sizeof( *id ) ), (UTransDirection ) direction,\n\t\tustr_rules, ustr_rules_len, &parse_error, TRANSLITERATOR_ERROR_CODE_P( to ) );\n\tif (ustr_rules) {\n\t\tefree( ustr_rules );\n\t}\n\n\tintl_error_set_code( NULL, INTL_DATA_ERROR_CODE( to ) );\n\tif( U_FAILURE( INTL_DATA_ERROR_CODE( to ) ) )\n\t{\n\t\tchar *msg = NULL;\n\t\tsmart_str parse_error_str;\n\t\tparse_error_str = intl_parse_error_to_string( &parse_error );\n\t\tspprintf( &msg, 0, \"transliterator_create_from_rules: unable to \"\n\t\t\t\"create ICU transliterator from rules (%s)\", parse_error_str.s? ZSTR_VAL(parse_error_str.s) : \"\" );\n\t\tsmart_str_free( &parse_error_str );\n\t\tif( msg != NULL )\n\t\t{\n\t\t\tintl_errors_set_custom_msg( INTL_DATA_ERROR_P( to ), msg, 1 );\n\t\t\tefree( msg );\n\t\t}\n\t\tzval_ptr_dtor( return_value );\n\t\tRETURN_NULL();\n\t}\n\ttransliterator_object_construct( object, utrans, TRANSLITERATOR_ERROR_CODE_P( to ) );\n\t/* no need to close the transliterator manually on construction error */\n\tINTL_METHOD_CHECK_STATUS_OR_NULL( to, \"transliterator_create_from_rules: internal constructor call failed\" );",
+    "semantic": "RulesTransPHP",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STRING",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_LONG",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_THROWS",
+            "ZSTR_VAL",
+            "RETURN_NULL"
+        ],
+        "zend_types": [
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_argument_value_error",
+            "smart_str_free",
+            "zval_ptr_dtor"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common transliterator_create_from_rules inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": true,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 5,
+    "purpose": "RulesTransPHP",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "transliterator_create",
+        "transliterator_create_inverse",
+        "transliterator_list_ids",
+        "transliterator_transliterate",
+        "transliterator_get_error_code",
+        "transliterator_get_error_message"
+    ]
+}

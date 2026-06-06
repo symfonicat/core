@@ -20,10 +20,6 @@ final class SymfonicatModuleSubscriber implements EventSubscriberInterface
             return;
         }
 
-        if ($request->headers->get('Content-Encoding') !== 'br') {
-            return;
-        }
-
         $request->attributes->set('module_json', $this->decodePayload($request->getContent()));
     }
 
@@ -46,6 +42,6 @@ final class SymfonicatModuleSubscriber implements EventSubscriberInterface
      */
     private function decodePayload(string $payload)
     {
-        return symfonicat_json_decode($payload);
+        return json_decode($payload, true, 512, JSON_THROW_ON_ERROR);
     }
 }

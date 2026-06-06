@@ -1,0 +1,156 @@
+{
+    "php_function": "mb_parse_str",
+    "zend_function": "mb_parse_str",
+    "source_file": "string.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "encstr",
+            "macro": "Z_PARAM_STRING",
+            "arguments": [
+                "encstr",
+                "encstr_len"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING(encstr, encstr_len)"
+        },
+        {
+            "name": "track_vars_array",
+            "macro": "Z_PARAM_ZVAL",
+            "arguments": [
+                "track_vars_array"
+            ],
+            "type": "zval",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": true,
+            "raw": "Z_PARAM_ZVAL(track_vars_array)"
+        }
+    ],
+    "includes": [
+        "limits.h",
+        "libmbfl/config.h",
+        "php.h",
+        "php_ini.h",
+        "php_variables.h",
+        "mbstring.h",
+        "ext/standard/php_string.h",
+        "ext/standard/php_mail.h",
+        "ext/standard/exec.h",
+        "main/php_output.h",
+        "ext/standard/info.h",
+        "ext/pcre/php_pcre.h",
+        "libmbfl/mbfl/mbfilter_8bit.h",
+        "libmbfl/mbfl/mbfilter_pass.h",
+        "libmbfl/mbfl/eaw_table.h",
+        "libmbfl/filters/mbfilter_base64.h",
+        "libmbfl/filters/mbfilter_cjk.h",
+        "libmbfl/filters/mbfilter_qprint.h",
+        "libmbfl/filters/mbfilter_htmlent.h",
+        "libmbfl/filters/mbfilter_uuencode.h",
+        "libmbfl/filters/mbfilter_ucs4.h",
+        "libmbfl/filters/mbfilter_utf16.h",
+        "libmbfl/filters/mbfilter_singlebyte.h",
+        "libmbfl/filters/translit_kana_jisx0201_jisx0208.h",
+        "libmbfl/filters/unicode_prop.h",
+        "php_globals.h",
+        "rfc1867.h",
+        "php_content_types.h",
+        "SAPI.h",
+        "php_unicode.h",
+        "TSRM.h",
+        "mb_gpc.h",
+        "zend_smart_str.h",
+        "zend_multibyte.h",
+        "mbstring_arginfo.h",
+        "rare_cp_bitvec.h",
+        "emmintrin.h",
+        "immintrin.h",
+        "pmmintrin.h"
+    ],
+    "body": "zval *track_vars_array = NULL;\n\tchar *encstr;\n\tsize_t encstr_len;\n\tphp_mb_encoding_handler_info_t info;\n\tconst mbfl_encoding *detected;\n\n\tZEND_PARSE_PARAMETERS_START(2, 2)\n\t\tZ_PARAM_STRING(encstr, encstr_len)\n\t\tZ_PARAM_ZVAL(track_vars_array)\n\tZEND_PARSE_PARAMETERS_END();\n\n\ttrack_vars_array = zend_try_array_init(track_vars_array);\n\tif (!track_vars_array) {\n\t\tRETURN_THROWS();\n\t}\n\n\tencstr = estrndup(encstr, encstr_len);\n\n\tinfo.data_type              = PARSE_STRING;\n\tinfo.separator              = PG(arg_separator).input;\n\tinfo.report_errors          = true;\n\tinfo.to_encoding            = MBSTRG(current_internal_encoding);\n\tinfo.from_encodings         = MBSTRG(http_input_list);\n\tinfo.num_from_encodings     = MBSTRG(http_input_list_size);\n\n\tdetected = _php_mb_encoding_handler_ex(&info, track_vars_array, encstr);\n\n\tMBSTRG(http_input_identify) = detected;\n\n\tRETVAL_BOOL(detected);\n\n\tif (encstr != NULL) efree(encstr);",
+    "semantic": "Implements the PHP function mb_parse_str in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STRING",
+            "Z_PARAM_ZVAL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_THROWS"
+        ],
+        "zend_types": [
+            "zval"
+        ],
+        "internal_helpers": [
+            "zend_try_array_init"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common mb_parse_str inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 4,
+    "purpose": "Implements the PHP function mb_parse_str in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "mb_language",
+        "mb_internal_encoding",
+        "mb_http_input",
+        "mb_http_output",
+        "mb_detect_order",
+        "mb_substitute_character",
+        "mb_preferred_mime_name",
+        "mb_output_handler",
+        "mb_str_split",
+        "mb_strlen",
+        "mb_strpos",
+        "mb_strrpos"
+    ]
+}

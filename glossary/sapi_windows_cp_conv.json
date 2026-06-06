@@ -1,0 +1,139 @@
+{
+    "php_function": "sapi_windows_cp_conv",
+    "zend_function": "sapi_windows_cp_conv",
+    "source_file": "c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "string_in_codepage",
+            "macro": "Z_PARAM_STR_OR_LONG",
+            "arguments": [
+                "string_in_codepage",
+                "int_in_codepage"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR_OR_LONG(string_in_codepage, int_in_codepage)"
+        },
+        {
+            "name": "string_out_codepage",
+            "macro": "Z_PARAM_STR_OR_LONG",
+            "arguments": [
+                "string_out_codepage",
+                "int_out_codepage"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR_OR_LONG(string_out_codepage, int_out_codepage)"
+        },
+        {
+            "name": "subject",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "subject"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(subject)"
+        }
+    ],
+    "includes": [
+        "assert.h",
+        "php.h",
+        "SAPI.h",
+        "win32/console.h",
+        "cp_enc_map.c"
+    ],
+    "body": "char *ret;\n\tsize_t ret_len, tmpw_len;\n\twchar_t *tmpw;\n\tconst struct php_win32_cp *in_cp, *out_cp;\n\tzend_string *string_in_codepage = NULL;\n\tzend_long int_in_codepage = 0;\n\tzend_string *string_out_codepage = NULL;\n\tzend_long int_out_codepage = 0;\n\tzend_string *subject;\n\n\tZEND_PARSE_PARAMETERS_START(3, 3)\n\t\tZ_PARAM_STR_OR_LONG(string_in_codepage, int_in_codepage)\n\t\tZ_PARAM_STR_OR_LONG(string_out_codepage, int_out_codepage)\n\t\tZ_PARAM_STR(subject)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (ZEND_SIZE_T_INT_OVFL(ZSTR_LEN(subject))) {\n\t\tzend_argument_value_error(1, \"is too long\");\n\t\tRETURN_THROWS();\n\t}\n\n\tif (string_in_codepage != NULL) {\n\t\tin_cp = php_win32_cp_get_by_enc(ZSTR_VAL(string_in_codepage));\n\t\tif (!in_cp) {\n\t\t\tzend_argument_value_error(1, \"must be a valid charset\");\n\t\t\tRETURN_THROWS();\n\t\t}\n\t} else {\n\t\tif (ZEND_LONG_UINT_OVFL(int_in_codepage)) {\n\t\t\tzend_argument_value_error(1, \"must be between 0 and %u\", UINT_MAX);\n\t\t\tRETURN_THROWS();\n\t\t}\n\n\t\tin_cp = php_win32_cp_get_by_id((DWORD)int_in_codepage);\n\t\tif (!in_cp) {\n\t\t\tzend_argument_value_error(1, \"must be a valid codepage\");\n\t\t\tRETURN_THROWS();\n\t\t}\n\t}\n\n\tif (string_out_codepage != NULL) {\n\t\tout_cp = php_win32_cp_get_by_enc(ZSTR_VAL(string_out_codepage));\n\t\tif (!out_cp) {\n\t\t\tzend_argument_value_error(2, \"must be a valid charset\");\n\t\t\tRETURN_THROWS();\n\t\t}\n\t} else {\n\t\tif (ZEND_LONG_UINT_OVFL(int_out_codepage)) {\n\t\t\tzend_argument_value_error(2, \"must be between 0 and %u\", UINT_MAX);\n\t\t\tRETURN_THROWS();\n\t\t}\n\n\t\tout_cp = php_win32_cp_get_by_id((DWORD)int_out_codepage);\n\t\tif (!out_cp) {\n\t\t\tzend_argument_value_error(2, \"must be a valid codepage\");\n\t\t\tRETURN_THROWS();\n\t\t}\n\t}\n\n\ttmpw = php_win32_cp_conv_to_w(in_cp->id, in_cp->to_w_fl, ZSTR_VAL(subject), ZSTR_LEN(subject), &tmpw_len);\n\tif (!tmpw) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Wide char conversion failed\");\n\t\tRETURN_NULL();\n\t}\n\n\tret = php_win32_cp_conv_from_w(out_cp->id, out_cp->from_w_fl, tmpw, tmpw_len, &ret_len);\n\tif (!ret) {\n\t\tfree(tmpw);\n\t\tphp_error_docref(NULL, E_WARNING, \"Wide char conversion failed\");\n\t\tRETURN_NULL();\n\t}\n\n\tRETVAL_STRINGL(ret, ret_len);\n\n\tfree(tmpw);\n\tfree(ret);",
+    "semantic": "Implements the PHP function sapi_windows_cp_conv in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STR_OR_LONG",
+            "Z_PARAM_STR",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZEND_SIZE_T_INT_OVFL",
+            "ZSTR_LEN",
+            "RETURN_THROWS",
+            "ZSTR_VAL",
+            "ZEND_LONG_UINT_OVFL",
+            "RETURN_NULL"
+        ],
+        "zend_types": [
+            "zend_string",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_argument_value_error",
+            "php_win32_cp_get_by_enc",
+            "php_win32_cp_get_by_id",
+            "php_win32_cp_conv_to_w",
+            "php_error_docref",
+            "php_win32_cp_conv_from_w"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common sapi_windows_cp_conv inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 6,
+    "purpose": "Implements the PHP function sapi_windows_cp_conv in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "sapi_windows_cp_set",
+        "sapi_windows_cp_get",
+        "sapi_windows_cp_is_utf8"
+    ]
+}

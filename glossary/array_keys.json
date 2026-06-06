@@ -1,0 +1,165 @@
+{
+    "php_function": "array_keys",
+    "zend_function": "array_keys",
+    "source_file": "ray.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "input",
+            "macro": "Z_PARAM_ARRAY",
+            "arguments": [
+                "input"
+            ],
+            "type": "HashTable",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY(input)"
+        },
+        {
+            "name": "search_value",
+            "macro": "Z_PARAM_ZVAL",
+            "arguments": [
+                "search_value"
+            ],
+            "type": "zval",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": true,
+            "raw": "Z_PARAM_ZVAL(search_value)"
+        },
+        {
+            "name": "strict",
+            "macro": "Z_PARAM_BOOL",
+            "arguments": [
+                "strict"
+            ],
+            "type": "bool",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_BOOL(strict)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "php_ini.h",
+        "stdarg.h",
+        "stdlib.h",
+        "math.h",
+        "time.h",
+        "string.h",
+        "zend_globals.h",
+        "zend_interfaces.h",
+        "php_array.h",
+        "basic_functions.h",
+        "php_string.h",
+        "php_math.h",
+        "zend_smart_str.h",
+        "zend_bitset.h",
+        "zend_exceptions.h",
+        "ext/random/php_random.h",
+        "zend_frameless_function.h"
+    ],
+    "body": "zval *input,\t\t\t\t/* Input array */\n\t     *search_value = NULL,\t/* Value to search for */\n\t     *entry,\t\t\t\t/* An entry in the input array */\n\t       new_val;\t\t\t\t/* New value */\n\tbool strict = 0;\t\t/* do strict comparison */\n\tzend_ulong num_idx;\n\tzend_string *str_idx;\n\tzend_array *arrval;\n\tzend_ulong elem_count;\n\n\tZEND_PARSE_PARAMETERS_START(1, 3)\n\t\tZ_PARAM_ARRAY(input)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_ZVAL(search_value)\n\t\tZ_PARAM_BOOL(strict)\n\tZEND_PARSE_PARAMETERS_END();\n\tarrval = Z_ARRVAL_P(input);\n\telem_count = zend_hash_num_elements(arrval);\n\n\t/* Base case: empty input */\n\tif (!elem_count) {\n\t\tRETURN_COPY(input);\n\t}\n\n\t/* Initialize return array */\n\tif (search_value != NULL) {\n\t\tarray_init(return_value);\n\n\t\tif (strict) {\n\t\t\tZEND_HASH_FOREACH_KEY_VAL(arrval, num_idx, str_idx, entry) {\n\t\t\t\tZVAL_DEREF(entry);\n\t\t\t\tif (fast_is_identical_function(search_value, entry)) {\n\t\t\t\t\tif (str_idx) {\n\t\t\t\t\t\tZVAL_STR_COPY(&new_val, str_idx);\n\t\t\t\t\t} else {\n\t\t\t\t\t\tZVAL_LONG(&new_val, num_idx);\n\t\t\t\t\t}\n\t\t\t\t\tzend_hash_next_index_insert_new(Z_ARRVAL_P(return_value), &new_val);\n\t\t\t\t}\n\t\t\t} ZEND_HASH_FOREACH_END();\n\t\t} else {\n\t\t\tZEND_HASH_FOREACH_KEY_VAL(arrval, num_idx, str_idx, entry) {\n\t\t\t\tif (fast_equal_check_function(search_value, entry)) {\n\t\t\t\t\tif (str_idx) {\n\t\t\t\t\t\tZVAL_STR_COPY(&new_val, str_idx);\n\t\t\t\t\t} else {\n\t\t\t\t\t\tZVAL_LONG(&new_val, num_idx);\n\t\t\t\t\t}\n\t\t\t\t\tzend_hash_next_index_insert_new(Z_ARRVAL_P(return_value), &new_val);\n\t\t\t\t}\n\t\t\t} ZEND_HASH_FOREACH_END();\n\t\t}\n\t} else {\n\t\tarray_init_size(return_value, elem_count);\n\t\tzend_hash_real_init_packed(Z_ARRVAL_P(return_value));\n\t\tZEND_HASH_FILL_PACKED(Z_ARRVAL_P(return_value)) {\n\t\t\tif (HT_IS_PACKED(arrval) && HT_IS_WITHOUT_HOLES(arrval)) {\n\t\t\t\t/* Optimistic case: range(0..n-1) for vector-like packed array */\n\t\t\t\tzend_ulong lval = 0;\n\n\t\t\t\tfor (; lval < elem_count; ++lval) {\n\t\t\t\t\tZEND_HASH_FILL_SET_LONG(lval);\n\t\t\t\t\tZEND_HASH_FILL_NEXT();\n\t\t\t\t}\n\t\t\t} else {\n\t\t\t\t/* Go through input array and add keys to the return array */\n\t\t\t\tZEND_HASH_FOREACH_KEY_VAL(Z_ARRVAL_P(input), num_idx, str_idx, entry) {\n\t\t\t\t\tif (str_idx) {\n\t\t\t\t\t\tZEND_HASH_FILL_SET_STR_COPY(str_idx);\n\t\t\t\t\t} else {\n\t\t\t\t\t\tZEND_HASH_FILL_SET_LONG(num_idx);\n\t\t\t\t\t}\n\t\t\t\t\tZEND_HASH_FILL_NEXT();\n\t\t\t\t} ZEND_HASH_FOREACH_END();\n\t\t\t}\n\t\t} ZEND_HASH_FILL_END();\n\t}",
+    "semantic": "Input array",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_ARRAY",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_ZVAL",
+            "Z_PARAM_BOOL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_COPY",
+            "ZEND_HASH_FOREACH_KEY_VAL",
+            "ZVAL_DEREF",
+            "ZVAL_STR_COPY",
+            "ZVAL_LONG",
+            "ZEND_HASH_FOREACH_END",
+            "ZEND_HASH_FILL_PACKED",
+            "ZEND_HASH_FILL_SET_LONG",
+            "ZEND_HASH_FILL_NEXT",
+            "ZEND_HASH_FILL_SET_STR_COPY",
+            "ZEND_HASH_FILL_END"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_string",
+            "zend_array"
+        ],
+        "internal_helpers": [
+            "zend_hash_num_elements",
+            "zend_hash_next_index_insert_new",
+            "zend_hash_real_init_packed"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common array_keys inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 7,
+    "purpose": "Input array",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "krsort",
+        "ksort",
+        "count",
+        "natsort",
+        "natcasesort",
+        "asort",
+        "arsort",
+        "sort",
+        "rsort",
+        "usort",
+        "uasort",
+        "uksort"
+    ]
+}

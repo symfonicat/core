@@ -1,0 +1,104 @@
+{
+    "php_function": "gmp_export",
+    "zend_function": "gmp_export",
+    "source_file": "",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_gmp.h",
+        "php_gmp_int.h",
+        "ext/standard/info.h",
+        "ext/standard/php_var.h",
+        "zend_smart_str_public.h",
+        "zend_exceptions.h",
+        "gmp.h",
+        "ext/random/php_random.h",
+        "ext/random/php_random_csprng.h",
+        "gmp_arginfo.h"
+    ],
+    "body": "zval *gmpnumber_arg;\n\tzend_long size = 1;\n\tzend_long options = GMP_MSW_FIRST | GMP_NATIVE_ENDIAN;\n\tint order, endian;\n\tmpz_ptr gmpnumber;\n\tgmp_temp_t temp_a;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"z|ll\", &gmpnumber_arg, &size, &options) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tif (!gmp_import_export_validate(size, options, &order, &endian)) {\n\t\tRETURN_THROWS();\n\t}\n\n\tFETCH_GMP_ZVAL(gmpnumber, gmpnumber_arg, temp_a, 1);\n\n\tif (mpz_sgn(gmpnumber) == 0) {\n\t\tRETVAL_EMPTY_STRING();\n\t} else {\n\t\tZEND_ASSERT(size > 0);\n\t\tsize_t size_in_base_2 = mpz_sizeinbase(gmpnumber, 2);\n\t\tif (size > ZEND_LONG_MAX / 4 || size_in_base_2 > SIZE_MAX - (size_t) size * 8 + 1) {\n\t\t\tzend_argument_value_error(2, \"is too large for argument #1 ($num)\");\n\t\t\tRETURN_THROWS();\n\t\t}\n\t\tsize_t bits_per_word = (size_t) size * 8;\n\t\tsize_t count = (size_in_base_2 + bits_per_word - 1) / bits_per_word;\n\n\t\tzend_string *out_string = zend_string_safe_alloc(count, size, 0, 0);\n\t\tmpz_export(ZSTR_VAL(out_string), NULL, order, size, endian, 0, gmpnumber);\n\t\tZSTR_VAL(out_string)[ZSTR_LEN(out_string)] = '\\0';\n\n\t\tRETVAL_NEW_STR(out_string);\n\t}\n\n\tFREE_GMP_TEMP(temp_a);",
+    "semantic": "Implements the PHP function gmp_export in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "ZEND_ASSERT",
+            "ZEND_LONG_MAX",
+            "ZSTR_VAL",
+            "ZSTR_LEN"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_long",
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "zend_argument_value_error",
+            "zend_string_safe_alloc"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common gmp_export inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 4,
+    "purpose": "Implements the PHP function gmp_export in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "gmp_init",
+        "gmp_import",
+        "gmp_intval",
+        "gmp_strval",
+        "gmp_add",
+        "gmp_sub",
+        "gmp_mul",
+        "gmp_div_qr",
+        "gmp_div_r",
+        "gmp_div_q",
+        "gmp_mod",
+        "gmp_divexact"
+    ]
+}

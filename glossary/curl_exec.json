@@ -1,0 +1,126 @@
+{
+    "php_function": "curl_exec",
+    "zend_function": "curl_exec",
+    "source_file": "ace.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "zid",
+            "macro": "Z_PARAM_OBJECT_OF_CLASS",
+            "arguments": [
+                "zid",
+                "curl_ce"
+            ],
+            "type": "zend_object",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_OBJECT_OF_CLASS(zid, curl_ce)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "Zend/zend_exceptions.h",
+        "stdio.h",
+        "string.h",
+        "winsock2.h",
+        "sys/types.h",
+        "curl/curl.h",
+        "curl/easy.h",
+        "zend_smart_str.h",
+        "ext/standard/info.h",
+        "ext/standard/file.h",
+        "ext/standard/url.h",
+        "curl_private.h",
+        "curl_arginfo.h"
+    ],
+    "body": "CURLcode\terror;\n\tzval\t\t*zid;\n\tphp_curl\t*ch;\n\n\tZEND_PARSE_PARAMETERS_START(1, 1)\n\t\tZ_PARAM_OBJECT_OF_CLASS(zid, curl_ce)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tch = Z_CURL_P(zid);\n\n\t_php_curl_verify_handlers(ch, /* reporterror */ true);\n\n\t_php_curl_cleanup_handle(ch);\n\n\terror = curl_easy_perform(ch->cp);\n\tSAVE_CURL_ERROR(ch, error);\n\n\tif (error != CURLE_OK) {\n\t\tsmart_str_free(&ch->handlers.write->buf);\n\t\tRETURN_FALSE;\n\t}\n\n\tif (!Z_ISUNDEF(ch->handlers.std_err)) {\n\t\tphp_stream  *stream;\n\t\tstream = (php_stream*)zend_fetch_resource2_ex(&ch->handlers.std_err, NULL, php_file_le_stream(), php_file_le_pstream());\n\t\tif (stream) {\n\t\t\tphp_stream_flush(stream);\n\t\t}\n\t}\n\n\tif (ch->handlers.write->method == PHP_CURL_RETURN && ch->handlers.write->buf.s) {\n\t\tsmart_str_0(&ch->handlers.write->buf);\n\t\tRETURN_STR_COPY(ch->handlers.write->buf.s);\n\t}\n\n\t/* flush the file handle, so any remaining data is synched to disk */\n\tif (ch->handlers.write->method == PHP_CURL_FILE && ch->handlers.write->fp) {\n\t\tfflush(ch->handlers.write->fp);\n\t}\n\tif (ch->handlers.write_header->method == PHP_CURL_FILE && ch->handlers.write_header->fp) {\n\t\tfflush(ch->handlers.write_header->fp);\n\t}\n\n\tif (ch->handlers.write->method == PHP_CURL_RETURN) {\n\t\tRETURN_EMPTY_STRING();\n\t} else {\n\t\tRETURN_TRUE;\n\t}",
+    "semantic": "reporterror",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_OBJECT_OF_CLASS",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_FALSE",
+            "RETURN_STR_COPY",
+            "RETURN_EMPTY_STRING",
+            "RETURN_TRUE"
+        ],
+        "zend_types": [
+            "zval"
+        ],
+        "internal_helpers": [
+            "curl_easy_perform",
+            "smart_str_free",
+            "zend_fetch_resource2_ex",
+            "php_file_le_stream",
+            "php_file_le_pstream",
+            "php_stream_flush",
+            "smart_str_0"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common curl_exec inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "reporterror",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "curl_version",
+        "curl_init",
+        "curl_copy_handle",
+        "curl_setopt",
+        "curl_setopt_array",
+        "curl_getinfo",
+        "curl_error",
+        "curl_errno",
+        "curl_close",
+        "curl_strerror",
+        "curl_reset",
+        "curl_escape"
+    ]
+}

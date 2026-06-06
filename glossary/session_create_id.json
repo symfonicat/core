@@ -1,0 +1,118 @@
+{
+    "php_function": "session_create_id",
+    "zend_function": "session_create_id",
+    "source_file": "sion.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "sys/stat.h",
+        "fcntl.h",
+        "php_ini.h",
+        "rfc1867.h",
+        "php_variables.h",
+        "php_session.h",
+        "session_arginfo.h",
+        "ext/standard/php_var.h",
+        "ext/date/php_date.h",
+        "ext/standard/url_scanner_ex.h",
+        "ext/standard/info.h",
+        "zend_smart_str.h",
+        "ext/standard/url.h",
+        "ext/standard/basic_functions.h",
+        "ext/standard/head.h",
+        "ext/random/php_random.h",
+        "ext/random/php_random_csprng.h",
+        "mod_files.h",
+        "mod_user.h",
+        "mod_mm.h"
+    ],
+    "body": "zend_string *prefix = NULL, *new_id;\n\tsmart_str id = {0};\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"|P\", &prefix) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tif (prefix && ZSTR_LEN(prefix)) {\n        if (ZSTR_LEN(prefix) > PS_MAX_SID_LENGTH) {\n            zend_argument_value_error(1, \"cannot be longer than %d characters\", PS_MAX_SID_LENGTH);\n            RETURN_THROWS();\n        }\n\t\tif (php_session_valid_key(ZSTR_VAL(prefix)) == FAILURE) {\n\t\t\t/* E_ERROR raised for security reason. */\n\t\t\tphp_error_docref(NULL, E_WARNING, \"Prefix cannot contain special characters. Only the A-Z, a-z, 0-9, \\\"-\\\", and \\\",\\\" characters are allowed\");\n\t\t\tRETURN_FALSE;\n\t\t} else {\n\t\t\tsmart_str_append(&id, prefix);\n\t\t}\n\t}\n\n\tif (!PS(in_save_handler) && PS(session_status) == php_session_active) {\n\t\tint limit = 3;\n\t\twhile (limit--) {\n\t\t\tnew_id = PS(mod)->s_create_sid(&PS(mod_data));\n\t\t\tif (!PS(mod)->s_validate_sid || (PS(mod_user_implemented) && Z_ISUNDEF(PS(mod_user_names).ps_validate_sid))) {\n\t\t\t\tbreak;\n\t\t\t} else {\n\t\t\t\t/* Detect collision and retry */\n\t\t\t\tif (PS(mod)->s_validate_sid(&PS(mod_data), new_id) == SUCCESS) {\n\t\t\t\t\tzend_string_release_ex(new_id, 0);\n\t\t\t\t\tnew_id = NULL;\n\t\t\t\t\tcontinue;\n\t\t\t\t}\n\t\t\t\tbreak;\n\t\t\t}\n\t\t}\n\t} else {\n\t\tnew_id = php_session_create_id(NULL);\n\t}\n\n\tif (new_id) {\n\t\tsmart_str_append(&id, new_id);\n\t\tzend_string_release_ex(new_id, 0);\n\t} else {\n\t\tsmart_str_free(&id);\n\t\tphp_error_docref(NULL, E_WARNING, \"Failed to create new ID\");\n\t\tRETURN_FALSE;\n\t}\n\tRETVAL_STR(smart_str_extract(&id));",
+    "semantic": "E_ERROR raised for security reason.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "ZSTR_LEN",
+            "ZSTR_VAL",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "zend_argument_value_error",
+            "php_session_valid_key",
+            "php_error_docref",
+            "smart_str_append",
+            "zend_string_release_ex",
+            "php_session_create_id",
+            "smart_str_free",
+            "smart_str_extract"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common session_create_id inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": true,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 6,
+    "purpose": "E_ERROR raised for security reason.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "session_set_cookie_params",
+        "session_get_cookie_params",
+        "session_name",
+        "session_module_name",
+        "session_set_save_handler",
+        "session_save_path",
+        "session_id",
+        "session_regenerate_id",
+        "session_cache_limiter",
+        "session_cache_expire",
+        "session_encode",
+        "session_decode"
+    ]
+}

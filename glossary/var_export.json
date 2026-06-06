@@ -1,0 +1,131 @@
+{
+    "php_function": "var_export",
+    "zend_function": "var_export",
+    "source_file": "r.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "var",
+            "macro": "Z_PARAM_ZVAL",
+            "arguments": [
+                "var"
+            ],
+            "type": "zval",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": true,
+            "raw": "Z_PARAM_ZVAL(var)"
+        },
+        {
+            "name": "return_output",
+            "macro": "Z_PARAM_BOOL",
+            "arguments": [
+                "return_output"
+            ],
+            "type": "bool",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_BOOL(return_output)"
+        }
+    ],
+    "includes": [
+        "stdio.h",
+        "stdlib.h",
+        "errno.h",
+        "php.h",
+        "php_string.h",
+        "php_var.h",
+        "zend_lazy_objects.h",
+        "zend_smart_str.h",
+        "basic_functions.h",
+        "php_incomplete_class.h",
+        "zend_enum.h",
+        "zend_exceptions.h",
+        "zend_types.h"
+    ],
+    "body": "zval *var;\n\tbool return_output = 0;\n\tsmart_str buf = {0};\n\n\tZEND_PARSE_PARAMETERS_START(1, 2)\n\t\tZ_PARAM_ZVAL(var)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_BOOL(return_output)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tzend_result result = php_var_export_ex(var, 1, &buf);\n\tsmart_str_0 (&buf);\n\n\tif (result == FAILURE) {\n\t\tsmart_str_free(&buf);\n\t} else if (return_output) {\n\t\tRETURN_STR(smart_str_extract(&buf));\n\t} else {\n\t\tPHPWRITE(ZSTR_VAL(buf.s), ZSTR_LEN(buf.s));\n\t\tsmart_str_free(&buf);\n\t}",
+    "semantic": "Implements the PHP function var_export in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_ZVAL",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_BOOL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_STR",
+            "ZSTR_VAL",
+            "ZSTR_LEN"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_result"
+        ],
+        "internal_helpers": [
+            "php_var_export_ex",
+            "smart_str_0",
+            "smart_str_free",
+            "smart_str_extract"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common var_export inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": true,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "Implements the PHP function var_export in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "var_dump",
+        "debug_zval_dump",
+        "serialize",
+        "unserialize",
+        "memory_get_usage",
+        "memory_get_peak_usage",
+        "memory_reset_peak_usage"
+    ]
+}

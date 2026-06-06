@@ -1,0 +1,103 @@
+{
+    "php_function": "ldap_connect",
+    "zend_function": "ldap_connect",
+    "source_file": "",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "Zend/zend_attributes.h",
+        "stddef.h",
+        "ext/standard/dl.h",
+        "php_ldap.h",
+        "string.h",
+        "config.w32.h",
+        "ext/standard/info.h",
+        "sasl/sasl.h",
+        "ldap_arginfo.h"
+    ],
+    "body": "char *host = NULL;\n\tsize_t hostlen = 0;\n\tzend_long port = LDAP_PORT;\n#ifdef HAVE_ORALDAP\n\tchar *wallet = NULL, *walletpasswd = NULL;\n\tsize_t walletlen = 0, walletpasswdlen = 0;\n\tzend_long authmode = GSLC_SSL_NO_AUTH;\n\tint ssl=0;\n#endif\n\tldap_linkdata *ld;\n\tLDAP *ldap = NULL;\n\n\tif (ZEND_NUM_ARGS() > 2) {\n\t    zend_error(E_DEPRECATED, \"Calling ldap_connect() with Oracle-specific arguments is deprecated, \"\n\t\t\t\"use ldap_connect_wallet() instead\");\n\t} else if (ZEND_NUM_ARGS() == 2) {\n\t\tzend_error(E_DEPRECATED, \"Usage of ldap_connect with two arguments is deprecated\");\n\t}\n\n#ifdef HAVE_ORALDAP\n\tif (ZEND_NUM_ARGS() == 3 || ZEND_NUM_ARGS() == 4) {\n\t\tWRONG_PARAM_COUNT;\n\t}\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"|s!lssl\", &host, &hostlen, &port, &wallet, &walletlen, &walletpasswd, &walletpasswdlen, &authmode) != SUCCESS) {\n\t\tRETURN_THROWS();\n\t}\n\n\tif (ZEND_NUM_ARGS() == 5) {\n\t\tssl = 1;\n\t}\n#else\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"|s!l\", &host, &hostlen, &port) != SUCCESS) {\n\t\tRETURN_THROWS();\n\t}\n#endif\n\n\tif (LDAPG(max_links) != -1 && LDAPG(num_links) >= LDAPG(max_links)) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Too many open links (\" ZEND_LONG_FMT \")\", LDAPG(num_links));\n\t\tRETURN_FALSE;\n\t}\n\n\tobject_init_ex(return_value, ldap_link_ce);\n\tld = Z_LDAP_LINK_P(return_value);\n\n\t{\n\t\tint rc = LDAP_SUCCESS;\n\t\tchar\t*url = host;\n\t\tif (url && !ldap_is_ldap_url(url)) {\n\t\t\tsize_t urllen = hostlen + sizeof( \"ldap://:65535\" );\n\n\t\t\tif (port <= 0 || port > 65535) {\n\t\t\t\tzend_argument_value_error(2, \"must be between 1 and 65535\");\n\t\t\t\tRETURN_THROWS();\n\t\t\t}\n\n\t\t\turl = emalloc(urllen);\n\t\t\tsnprintf( url, urllen, \"ldap://%s:\" ZEND_LONG_FMT, host, port );\n\t\t}\n\n#ifdef LDAP_API_FEATURE_X_OPENLDAP\n\t\t/* ldap_init() is deprecated, use ldap_initialize() instead.\n\t\t */\n\t\trc = ldap_initialize(&ldap, url);\n#else /* ! LDAP_API_FEATURE_X_OPENLDAP */\n\t\t/* ldap_init does not support URLs.\n\t\t * We must try the original host and port information.\n\t\t */\n\t\tldap = ldap_init(host, port);\n\t\tif (ldap == NULL) {\n\t\t\tzval_ptr_dtor(return_value);\n\t\t\tphp_error_docref(NULL, E_WARNING, \"Could not create session handle\");\n\t\t\tRETURN_FALSE;\n\t\t}\n#endif /* ! LDAP_API_FEATURE_X_OPENLDAP */\n\t\tif (url != host) {\n\t\t\tefree(url);\n\t\t}\n\t\tif (rc != LDAP_SUCCESS) {\n\t\t\tzval_ptr_dtor(return_value);\n\t\t\tphp_error_docref(NULL, E_WARNING, \"Could not create session handle: %s\", ldap_err2string(rc));\n\t\t\tRETURN_FALSE;\n\t\t}\n\t}\n\n\tif (ldap == NULL) {\n\t\tzval_ptr_dtor(return_value);\n\t\tRETURN_FALSE;\n\t} else {\n#ifdef HAVE_ORALDAP\n\t\tif (ssl) {\n\t\t\tif (ldap_init_SSL(&ldap->ld_sb, wallet, walletpasswd, authmode)) {\n\t\t\t\tzval_ptr_dtor(return_value);\n\t\t\t\tphp_error_docref(NULL, E_WARNING, \"SSL init failed\");\n\t\t\t\tRETURN_FALSE;\n\t\t\t}\n\t\t}\n#endif\n\t\tLDAPG(num_links)++;\n\t\tld->link = ldap;\n\t}",
+    "semantic": "ldap_init() is deprecated, use ldap_initialize() instead.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "ZEND_LONG_FMT",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_error",
+            "zend_parse_parameters",
+            "php_error_docref",
+            "zend_argument_value_error",
+            "zval_ptr_dtor"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common ldap_connect inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 6,
+    "purpose": "ldap_init() is deprecated, use ldap_initialize() instead.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "ldap_connect_wallet",
+        "ldap_bind",
+        "ldap_bind_ext",
+        "ldap_sasl_bind",
+        "ldap_unbind",
+        "ldap_read",
+        "ldap_list",
+        "ldap_search",
+        "ldap_free_result",
+        "ldap_count_entries",
+        "ldap_first_entry",
+        "ldap_next_entry"
+    ]
+}

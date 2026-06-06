@@ -1,0 +1,88 @@
+{
+    "php_function": "sem_get",
+    "zend_function": "sem_get",
+    "source_file": "vsem.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "sys/types.h",
+        "sys/ipc.h",
+        "sys/sem.h",
+        "errno.h",
+        "sysvsem_arginfo.h",
+        "php_sysvsem.h",
+        "ext/standard/info.h"
+    ],
+    "body": "zend_long key, max_acquire = 1, perm = 0666;\n\tbool auto_release = 1;\n\tint semid;\n\tstruct sembuf sop[3];\n\tint count;\n\tsysvsem_sem *sem_ptr;\n\n\tif (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS(), \"l|llb\", &key, &max_acquire, &perm, &auto_release)) {\n\t\tRETURN_THROWS();\n\t}\n\n\t/* Get/create the semaphore.  Note that we rely on the semaphores\n\t * being zeroed when they are created.  Despite the fact that\n\t * the(?)  Linux semget() man page says they are not initialized,\n\t * the kernel versions 2.0.x and 2.1.z do in fact zero them.\n\t */\n\n\tsemid = semget(key, 3, perm|IPC_CREAT);\n\tif (semid == -1) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Failed for key 0x\" ZEND_XLONG_FMT \": %s\", key, strerror(errno));\n\t\tRETURN_FALSE;\n\t}\n\n\t/* Find out how many processes are using this semaphore.  Note\n\t * that on Linux (at least) there is a race condition here because\n\t * semaphore undo on process exit is not atomic, so we could\n\t * acquire SYSVSEM_SETVAL before a crashed process has decremented\n\t * SYSVSEM_USAGE in which case count will be greater than it\n\t * should be and we won't set max_acquire.  Fortunately this\n\t * doesn't actually matter in practice.\n\t */\n\n\t/* Wait for sem 1 to be zero . . . */\n\n\tsop[0].sem_num = SYSVSEM_SETVAL;\n\tsop[0].sem_op  = 0;\n\tsop[0].sem_flg = 0;\n\n\t/* . . . and increment it so it becomes non-zero . . . */\n\n\tsop[1].sem_num = SYSVSEM_SETVAL;\n\tsop[1].sem_op  = 1;\n\tsop[1].sem_flg = SEM_UNDO;\n\n\t/* . . . and increment the usage count. */\n\n\tsop[2].sem_num = SYSVSEM_USAGE;\n\tsop[2].sem_op  = 1;\n\tsop[2].sem_flg = SEM_UNDO;\n\twhile (semop(semid, sop, 3) == -1) {\n\t\tif (errno != EINTR) {\n\t\t\tphp_error_docref(NULL, E_WARNING, \"Failed acquiring SYSVSEM_SETVAL for key 0x\" ZEND_XLONG_FMT \": %s\", key, strerror(errno));\n\t\t\tbreak;\n\t\t}\n\t}\n\n\t/* Get the usage count. */\n\tcount = semctl(semid, SYSVSEM_USAGE, GETVAL, NULL);\n\tif (count == -1) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Failed for key 0x\" ZEND_XLONG_FMT \": %s\", key, strerror(errno));\n\t}\n\n\t/* If we are the only user, then take this opportunity to set the max. */\n\n\tif (count == 1) {\n\t\tunion semun semarg;\n\t\tsemarg.val = max_acquire;\n\t\tif (semctl(semid, SYSVSEM_SEM, SETVAL, semarg) == -1) {\n\t\t\tphp_error_docref(NULL, E_WARNING, \"Failed for key 0x\" ZEND_XLONG_FMT \": %s\", key, strerror(errno));\n\t\t}\n\t}\n\n\t/* Set semaphore 1 back to zero. */\n\n\tsop[0].sem_num = SYSVSEM_SETVAL;\n\tsop[0].sem_op  = -1;\n\tsop[0].sem_flg = SEM_UNDO;\n\twhile (semop(semid, sop, 1) == -1) {\n\t\tif (errno != EINTR) {\n\t\t\tphp_error_docref(NULL, E_WARNING, \"Failed releasing SYSVSEM_SETVAL for key 0x\" ZEND_XLONG_FMT \": %s\", key, strerror(errno));\n\t\t\tbreak;\n\t\t}\n\t}\n\n\tobject_init_ex(return_value, sysvsem_ce);\n\n\tsem_ptr = Z_SYSVSEM_P(return_value);\n\tsem_ptr->key   = key;\n\tsem_ptr->semid = semid;\n\tsem_ptr->count = 0;\n\tsem_ptr->auto_release = (int) auto_release;",
+    "semantic": "Get/create the semaphore.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "ZEND_XLONG_FMT",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "php_error_docref"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common sem_get inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 6,
+    "purpose": "Get/create the semaphore.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "sem_acquire",
+        "sem_release",
+        "sem_remove"
+    ]
+}

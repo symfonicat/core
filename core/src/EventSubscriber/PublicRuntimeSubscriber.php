@@ -5,7 +5,6 @@ namespace Symfonicat\EventSubscriber;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\Endpoint;
 use Symfonicat\Entity\Subdomain;
-use Symfonicat\Repository\EndpointRepository;
 use Symfonicat\Service\DomainService;
 use Symfonicat\Service\ModuleRequestContextStore;
 use Symfonicat\Service\PathService;
@@ -24,7 +23,6 @@ final class PublicRuntimeSubscriber implements EventSubscriberInterface
         private readonly SubdomainService $subdomainService,
         private readonly PathService $pathService,
         private readonly RuntimeConfig $runtimeConfig,
-        private readonly EndpointRepository $endpointRepository,
         private readonly ModuleRequestContextStore $moduleRequestContextStore,
     ) {
     }
@@ -98,9 +96,7 @@ final class PublicRuntimeSubscriber implements EventSubscriberInterface
     private function matchEndpoint(): ?Endpoint
     {
         $path = $this->pathService->path();
-        $endpoints = $this->usesDatabaseRuntime()
-            ? $this->endpointRepository->findAllOrderedById()
-            : $this->runtimeConfig->endpoints();
+        $endpoints = $this->runtimeConfig->endpoints();
 
         usort($endpoints, static fn (Endpoint $left, Endpoint $right): int => count($right->getArguments()) <=> count($left->getArguments()));
 
@@ -121,7 +117,7 @@ final class PublicRuntimeSubscriber implements EventSubscriberInterface
                 }
 
                 $targetDomain = $endpoint->getDomain();
-                if (!($targetDomain instanceof Domain) || $targetDomain->getId() !== $domain->getId()) {
+                if (!($targetDomain instanceof Domain) || $targetDomain->getTld() !== $domain->getTld()) {
                     continue;
                 }
             } elseif ($enforcement === Endpoint::ENFORCE_SUBDOMAIN) {
@@ -135,7 +131,7 @@ final class PublicRuntimeSubscriber implements EventSubscriberInterface
                     continue;
                 }
                 $targetDomain = $endpoint->getDomain();
-                if ($targetDomain instanceof Domain && $targetDomain->getId() !== $domain?->getId()) {
+                if ($targetDomain instanceof Domain && $targetDomain->getTld() !== $domain?->getTld()) {
                     continue;
                 }
             } elseif ($enforcement !== null) {
@@ -156,12 +152,6 @@ final class PublicRuntimeSubscriber implements EventSubscriberInterface
 
     private function endpointById(string $endpointId): ?Endpoint
     {
-        if ($this->usesDatabaseRuntime()) {
-            $endpoint = $this->endpointRepository->find($endpointId);
-
-            return $endpoint instanceof Endpoint ? $endpoint : null;
-        }
-
         return $this->runtimeConfig->endpointById($endpointId);
     }
 
@@ -180,11 +170,6 @@ final class PublicRuntimeSubscriber implements EventSubscriberInterface
         $path = $request->getPathInfo();
 
         return $path === '/m' || str_starts_with($path, '/m/');
-    }
-
-    private function usesDatabaseRuntime(): bool
-    {
-        return ($_SERVER['APP_ENV'] ?? null) === 'test';
     }
 
     private function sameSubdomain(?Subdomain $left, ?Subdomain $right): bool
@@ -209,6 +194,6 @@ final class PublicRuntimeSubscriber implements EventSubscriberInterface
             return false;
         }
 
-        return $left->getDomain()?->getId() === $right->getDomain()?->getId();
+        return $left->getDomain()?->getTld() === $right->getDomain()?->getTld();
     }
 }

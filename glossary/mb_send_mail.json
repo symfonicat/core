@@ -1,0 +1,231 @@
+{
+    "php_function": "mb_send_mail",
+    "zend_function": "mb_send_mail",
+    "source_file": "string.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "to",
+            "macro": "Z_PARAM_PATH",
+            "arguments": [
+                "to",
+                "to_len"
+            ],
+            "type": "mixed",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_PATH(to, to_len)"
+        },
+        {
+            "name": "subject",
+            "macro": "Z_PARAM_PATH_STR",
+            "arguments": [
+                "subject"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_PATH_STR(subject)"
+        },
+        {
+            "name": "message",
+            "macro": "Z_PARAM_PATH",
+            "arguments": [
+                "message",
+                "message_len"
+            ],
+            "type": "mixed",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_PATH(message, message_len)"
+        },
+        {
+            "name": "headers_ht",
+            "macro": "Z_PARAM_ARRAY_HT_OR_STR",
+            "arguments": [
+                "headers_ht",
+                "str_headers"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY_HT_OR_STR(headers_ht, str_headers)"
+        },
+        {
+            "name": "extra_cmd",
+            "macro": "Z_PARAM_PATH_STR_OR_NULL",
+            "arguments": [
+                "extra_cmd"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_PATH_STR_OR_NULL(extra_cmd)"
+        }
+    ],
+    "includes": [
+        "limits.h",
+        "libmbfl/config.h",
+        "php.h",
+        "php_ini.h",
+        "php_variables.h",
+        "mbstring.h",
+        "ext/standard/php_string.h",
+        "ext/standard/php_mail.h",
+        "ext/standard/exec.h",
+        "main/php_output.h",
+        "ext/standard/info.h",
+        "ext/pcre/php_pcre.h",
+        "libmbfl/mbfl/mbfilter_8bit.h",
+        "libmbfl/mbfl/mbfilter_pass.h",
+        "libmbfl/mbfl/eaw_table.h",
+        "libmbfl/filters/mbfilter_base64.h",
+        "libmbfl/filters/mbfilter_cjk.h",
+        "libmbfl/filters/mbfilter_qprint.h",
+        "libmbfl/filters/mbfilter_htmlent.h",
+        "libmbfl/filters/mbfilter_uuencode.h",
+        "libmbfl/filters/mbfilter_ucs4.h",
+        "libmbfl/filters/mbfilter_utf16.h",
+        "libmbfl/filters/mbfilter_singlebyte.h",
+        "libmbfl/filters/translit_kana_jisx0201_jisx0208.h",
+        "libmbfl/filters/unicode_prop.h",
+        "php_globals.h",
+        "rfc1867.h",
+        "php_content_types.h",
+        "SAPI.h",
+        "php_unicode.h",
+        "TSRM.h",
+        "mb_gpc.h",
+        "zend_smart_str.h",
+        "zend_multibyte.h",
+        "mbstring_arginfo.h",
+        "rare_cp_bitvec.h",
+        "emmintrin.h",
+        "immintrin.h",
+        "pmmintrin.h"
+    ],
+    "body": "char *to;\n\tsize_t to_len;\n\tchar *message;\n\tsize_t message_len;\n\tzend_string *subject;\n\tzend_string *extra_cmd = NULL;\n\tHashTable *headers_ht = NULL;\n\tzend_string *str_headers = NULL;\n\tsize_t i;\n\tchar *to_r = NULL;\n\tbool suppress_content_type = false;\n\tbool suppress_content_transfer_encoding = false;\n\n\tchar *p;\n\tenum mbfl_no_encoding;\n\tconst mbfl_encoding *tran_cs,\t/* transfer text charset */\n\t\t\t\t\t\t*head_enc,\t/* header transfer encoding */\n\t\t\t\t\t\t*body_enc;\t/* body transfer encoding */\n\tconst mbfl_language *lang;\n\tHashTable ht_headers;\n\tzval *s;\n\n\t/* character-set, transfer-encoding */\n\ttran_cs = &mbfl_encoding_utf8;\n\thead_enc = &mbfl_encoding_base64;\n\tbody_enc = &mbfl_encoding_base64;\n\tlang = mbfl_no2language(MBSTRG(language));\n\tif (lang != NULL) {\n\t\ttran_cs = mbfl_no2encoding(lang->mail_charset);\n\t\thead_enc = mbfl_no2encoding(lang->mail_header_encoding);\n\t\tbody_enc = mbfl_no2encoding(lang->mail_body_encoding);\n\t}\n\n\tZEND_PARSE_PARAMETERS_START(3, 5)\n\t\tZ_PARAM_PATH(to, to_len)\n\t\tZ_PARAM_PATH_STR(subject)\n\t\tZ_PARAM_PATH(message, message_len)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_ARRAY_HT_OR_STR(headers_ht, str_headers)\n\t\tZ_PARAM_PATH_STR_OR_NULL(extra_cmd)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (str_headers) {\n\t\tif (strlen(ZSTR_VAL(str_headers)) != ZSTR_LEN(str_headers)) {\n\t\t\tzend_argument_value_error(4, \"must not contain any null bytes\");\n\t\t\tRETURN_THROWS();\n\t\t}\n\t\tstr_headers = php_trim(str_headers, NULL, 0, 2);\n\t} else if (headers_ht) {\n\t\tstr_headers = php_mail_build_headers(headers_ht);\n\t\tif (EG(exception)) {\n\t\t\tRETURN_THROWS();\n\t\t}\n\t}\n\n\tzend_hash_init(&ht_headers, 0, NULL, ZVAL_PTR_DTOR, 0);\n\n\tif (str_headers != NULL) {\n\t\t_php_mbstr_parse_mail_headers(&ht_headers, ZSTR_VAL(str_headers), ZSTR_LEN(str_headers));\n\t}\n\n\tif ((s = zend_hash_str_find(&ht_headers, \"content-type\", sizeof(\"content-type\") - 1))) {\n\t\tchar *tmp;\n\t\tchar *param_name;\n\t\tchar *charset = NULL;\n\n\t\tZEND_ASSERT(Z_TYPE_P(s) == IS_STRING);\n\t\tp = strchr(Z_STRVAL_P(s), ';');\n\n\t\tif (p != NULL) {\n\t\t\t/* skipping the padded spaces */\n\t\t\tdo {\n\t\t\t\t++p;\n\t\t\t} while (*p == ' ' || *p == '\\t');\n\n\t\t\tif (*p != '\\0') {\n\t\t\t\tif ((param_name = php_strtok_r(p, \"= \", &tmp)) != NULL) {\n\t\t\t\t\tif (strcasecmp(param_name, \"charset\") == 0) {\n\t\t\t\t\t\tconst mbfl_encoding *_tran_cs = tran_cs;\n\n\t\t\t\t\t\tcharset = php_strtok_r(NULL, \"= \\\"\", &tmp);\n\t\t\t\t\t\tif (charset != NULL) {\n\t\t\t\t\t\t\t_tran_cs = mbfl_name2encoding(charset);\n\t\t\t\t\t\t}\n\n\t\t\t\t\t\tif (!_tran_cs) {\n\t\t\t\t\t\t\tphp_error_docref(NULL, E_WARNING, \"Unsupported charset \\\"%s\\\" - will be regarded as ascii\", charset);\n\t\t\t\t\t\t\t_tran_cs = &mbfl_encoding_ascii;\n\t\t\t\t\t\t}\n\t\t\t\t\t\ttran_cs = _tran_cs;\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\tsuppress_content_type = true;\n\t}\n\n\tif ((s = zend_hash_str_find(&ht_headers, \"content-transfer-encoding\", sizeof(\"content-transfer-encoding\") - 1))) {\n\t\tconst mbfl_encoding *_body_enc;\n\n\t\tZEND_ASSERT(Z_TYPE_P(s) == IS_STRING);\n\t\t_body_enc = mbfl_name2encoding(Z_STRVAL_P(s));\n\t\tswitch (_body_enc ? _body_enc->no_encoding : mbfl_no_encoding_invalid) {\n\t\t\tcase mbfl_no_encoding_base64:\n\t\t\tcase mbfl_no_encoding_7bit:\n\t\t\tcase mbfl_no_encoding_8bit:\n\t\t\t\tbody_enc = _body_enc;\n\t\t\t\tbreak;\n\n\t\t\tdefault:\n\t\t\t\tphp_error_docref(NULL, E_WARNING, \"Unsupported transfer encoding \\\"%s\\\" - will be regarded as 8bit\", Z_STRVAL_P(s));\n\t\t\t\tbody_enc =\t&mbfl_encoding_8bit;\n\t\t\t\tbreak;\n\t\t}\n\t\tsuppress_content_transfer_encoding = true;\n\t}\n\n\t/* To: */\n\tif (to_len > 0) {\n\t\tto_r = estrndup(to, to_len);\n\t\tfor (; to_len; to_len--) {\n\t\t\tif (!isspace((unsigned char) to_r[to_len - 1])) {\n\t\t\t\tbreak;\n\t\t\t}\n\t\t\tto_r[to_len - 1] = '\\0';\n\t\t}\n\t\tfor (i = 0; to_r[i]; i++) {\n\t\t\tif (iscntrl((unsigned char) to_r[i])) {\n\t\t\t\t/* According to RFC 822, section 3.1.1 long headers may be separated into\n\t\t\t\t * parts using CRLF followed at least one linear-white-space character ('\\t' or ' ').\n\t\t\t\t * To prevent these separators from being replaced with a space, we skip over them. */\n\t\t\t\tif (to_r[i] == '\\r' && to_r[i + 1] == '\\n' && (to_r[i + 2] == ' ' || to_r[i + 2] == '\\t')) {\n\t\t\t\t\ti += 2;\n\t\t\t\t\twhile (to_r[i + 1] == ' ' || to_r[i + 1] == '\\t') {\n\t\t\t\t\t\ti++;\n\t\t\t\t\t}\n\t\t\t\t\tcontinue;\n\t\t\t\t}\n\n\t\t\t\tto_r[i] = ' ';\n\t\t\t}\n\t\t}\n\t} else {\n\t\tto_r = to;\n\t}\n\n\t/* Subject: */\n\tconst mbfl_encoding *enc = MBSTRG(current_internal_encoding);\n\tif (enc == &mbfl_encoding_pass) {\n\t\tenc = mb_guess_encoding((unsigned char*)ZSTR_VAL(subject), ZSTR_LEN(subject), MBSTRG(current_detect_order_list), MBSTRG(current_detect_order_list_size), MBSTRG(strict_detection), false);\n\t}\n\tconst char *line_sep = PG(mail_mixed_lf_and_crlf) ? \"\\n\" : CRLF;\n\tsize_t line_sep_len = strlen(line_sep);\n\n\tsubject = mb_mime_header_encode(subject, enc, tran_cs, head_enc == &mbfl_encoding_base64, (char*)line_sep, line_sep_len, strlen(\"Subject: [PHP-jp nnnnnnnn]\") + line_sep_len);\n\n\t/* message body */\n\tconst mbfl_encoding *msg_enc = MBSTRG(current_internal_encoding);\n\tif (msg_enc == &mbfl_encoding_pass) {\n\t\tmsg_enc = mb_guess_encoding((unsigned char*)message, message_len, MBSTRG(current_detect_order_list), MBSTRG(current_detect_order_list_size), MBSTRG(strict_detection), false);\n\t}\n\n\tunsigned int num_errors = 0;\n\tzend_string *tmpstr = mb_fast_convert((unsigned char*)message, message_len, msg_enc, tran_cs, '?', MBFL_OUTPUTFILTER_ILLEGAL_MODE_CHAR, &num_errors);\n\tzend_string *conv = mb_fast_convert((unsigned char*)ZSTR_VAL(tmpstr), ZSTR_LEN(tmpstr), &mbfl_encoding_8bit, body_enc, '?', MBFL_OUTPUTFILTER_ILLEGAL_MODE_CHAR, &num_errors);\n\tzend_string_free(tmpstr);\n\tmessage = ZSTR_VAL(conv);\n\n\t/* other headers */\n#define PHP_MBSTR_MAIL_MIME_HEADER1 \"MIME-Version: 1.0\"\n#define PHP_MBSTR_MAIL_MIME_HEADER2 \"Content-Type: text/plain\"\n#define PHP_MBSTR_MAIL_MIME_HEADER3 \"; charset=\"\n#define PHP_MBSTR_MAIL_MIME_HEADER4 \"Content-Transfer-Encoding: \"\n\n\tsmart_str str = {0};\n\tbool empty = true;\n\n\tif (str_headers != NULL && ZSTR_LEN(str_headers) > 0) {\n\t\t/* Strip trailing CRLF from `str_headers`; we will add CRLF back if necessary */\n\t\tsize_t len = ZSTR_LEN(str_headers);\n\t\tif (ZSTR_VAL(str_headers)[len-1] == '\\n') {\n\t\t\tlen--;\n\t\t}\n\t\tif (ZSTR_VAL(str_headers)[len-1] == '\\r') {\n\t\t\tlen--;\n\t\t}\n\t\tsmart_str_appendl(&str, ZSTR_VAL(str_headers), len);\n\t\tempty = false;\n\t\tzend_string_release_ex(str_headers, 0);\n\t}\n\n\tif (!zend_hash_str_exists(&ht_headers, \"mime-version\", sizeof(\"mime-version\") - 1)) {\n\t\tif (!empty) {\n\t\t\tsmart_str_appendl(&str, line_sep, line_sep_len);\n\t\t}\n\t\tsmart_str_appendl(&str, PHP_MBSTR_MAIL_MIME_HEADER1, sizeof(PHP_MBSTR_MAIL_MIME_HEADER1) - 1);\n\t\tempty = false;\n\t}\n\n\tif (!suppress_content_type) {\n\t\tif (!empty) {\n\t\t\tsmart_str_appendl(&str, line_sep, line_sep_len);\n\t\t}\n\t\tsmart_str_appendl(&str, PHP_MBSTR_MAIL_MIME_HEADER2, sizeof(PHP_MBSTR_MAIL_MIME_HEADER2) - 1);\n\n\t\tp = (char *)mbfl_encoding_preferred_mime_name(tran_cs);\n\t\tif (p != NULL) {\n\t\t\tsmart_str_appendl(&str, PHP_MBSTR_MAIL_MIME_HEADER3, sizeof(PHP_MBSTR_MAIL_MIME_HEADER3) - 1);\n\t\t\tsmart_str_appends(&str, p);\n\t\t}\n\t\tempty = false;\n\t}\n\n\tif (!suppress_content_transfer_encoding) {\n\t\tif (!empty) {\n\t\t\tsmart_str_appendl(&str, line_sep, line_sep_len);\n\t\t}\n\t\tsmart_str_appendl(&str, PHP_MBSTR_MAIL_MIME_HEADER4, sizeof(PHP_MBSTR_MAIL_MIME_HEADER4) - 1);\n\t\tp = (char *)mbfl_encoding_preferred_mime_name(body_enc);\n\t\tif (p == NULL) {\n\t\t\tp = \"7bit\";\n\t\t}\n\t\tsmart_str_appends(&str, p);\n\t}\n\n\tstr_headers = smart_str_extract(&str);\n\n\tzend_string *force_extra_parameters = zend_ini_str_ex(\"mail.force_extra_parameters\", strlen(\"mail.force_extra_parameters\"), false, NULL);\n\tif (force_extra_parameters) {\n\t\textra_cmd = php_escape_shell_cmd(force_extra_parameters);\n\t} else if (extra_cmd) {\n\t\textra_cmd = php_escape_shell_cmd(extra_cmd);\n\t}\n\n\tRETVAL_BOOL(php_mail(to_r, ZSTR_VAL(subject), message, ZSTR_VAL(str_headers), extra_cmd ? ZSTR_VAL(extra_cmd) : NULL));\n\n\tif (extra_cmd) {\n\t\tzend_string_release_ex(extra_cmd, 0);\n\t}\n\tif (to_r != to) {\n\t\tefree(to_r);\n\t}\n\tzend_string_release(subject);\n\tzend_string_free(conv);\n\tzend_hash_destroy(&ht_headers);\n\tif (str_headers) {\n\t\tzend_string_release_ex(str_headers, 0);\n\t}",
+    "semantic": "transfer text charset",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_PATH",
+            "Z_PARAM_PATH_STR",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_ARRAY_HT_OR_STR",
+            "Z_PARAM_PATH_STR_OR_NULL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZSTR_VAL",
+            "ZSTR_LEN",
+            "RETURN_THROWS",
+            "ZVAL_PTR_DTOR",
+            "ZEND_ASSERT"
+        ],
+        "zend_types": [
+            "zend_string",
+            "HashTable",
+            "zval"
+        ],
+        "internal_helpers": [
+            "zend_argument_value_error",
+            "php_trim",
+            "php_mail_build_headers",
+            "zend_hash_init",
+            "zend_hash_str_find",
+            "php_strtok_r",
+            "php_error_docref",
+            "mb_guess_encoding",
+            "mb_mime_header_encode",
+            "mb_fast_convert",
+            "zend_string_free",
+            "smart_str_appendl",
+            "zend_string_release_ex",
+            "zend_hash_str_exists",
+            "smart_str_appends",
+            "smart_str_extract",
+            "zend_ini_str_ex",
+            "php_escape_shell_cmd",
+            "php_mail",
+            "zend_string_release",
+            "zend_hash_destroy"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common mb_send_mail inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": true,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 10,
+    "purpose": "transfer text charset",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "mb_language",
+        "mb_internal_encoding",
+        "mb_http_input",
+        "mb_http_output",
+        "mb_detect_order",
+        "mb_substitute_character",
+        "mb_preferred_mime_name",
+        "mb_parse_str",
+        "mb_output_handler",
+        "mb_str_split",
+        "mb_strlen",
+        "mb_strpos"
+    ]
+}

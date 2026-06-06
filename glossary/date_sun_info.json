@@ -1,0 +1,146 @@
+{
+    "php_function": "date_sun_info",
+    "zend_function": "date_sun_info",
+    "source_file": "te.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "time",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "time"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(time)"
+        },
+        {
+            "name": "latitude",
+            "macro": "Z_PARAM_DOUBLE",
+            "arguments": [
+                "latitude"
+            ],
+            "type": "double",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_DOUBLE(latitude)"
+        },
+        {
+            "name": "longitude",
+            "macro": "Z_PARAM_DOUBLE",
+            "arguments": [
+                "longitude"
+            ],
+            "type": "double",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_DOUBLE(longitude)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "php_main.h",
+        "php_ini.h",
+        "ext/standard/info.h",
+        "ext/standard/php_versioning.h",
+        "php_date.h",
+        "zend_attributes.h",
+        "zend_interfaces.h",
+        "zend_exceptions.h",
+        "lib/timelib.h",
+        "lib/timelib_private.h",
+        "time.h",
+        "win32/time.h",
+        "php_date_arginfo.h",
+        "zend_smart_str.h"
+    ],
+    "body": "zend_long       time;\n\tdouble          latitude, longitude;\n\ttimelib_time   *t, *t2;\n\ttimelib_tzinfo *tzi;\n\tint             rs;\n\ttimelib_sll     rise, set, transit;\n\tint             dummy;\n\tdouble          ddummy;\n\n\tZEND_PARSE_PARAMETERS_START(3, 3)\n\t\tZ_PARAM_LONG(time)\n\t\tZ_PARAM_DOUBLE(latitude)\n\t\tZ_PARAM_DOUBLE(longitude)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (!zend_finite(latitude)) {\n\t\tzend_argument_value_error(2, \"must be finite\");\n\t\tRETURN_THROWS();\n\t}\n\tif (!zend_finite(longitude)) {\n\t\tzend_argument_value_error(3, \"must be finite\");\n\t\tRETURN_THROWS();\n\t}\n\n\t/* Initialize time struct */\n\ttzi = get_timezone_info();\n\tif (!tzi) {\n\t\tRETURN_THROWS();\n\t}\n\tt = timelib_time_ctor();\n\tt->tz_info = tzi;\n\tt->zone_type = TIMELIB_ZONETYPE_ID;\n\ttimelib_unixtime2local(t, time);\n\n\t/* Setup */\n\tt2 = timelib_time_ctor();\n\tarray_init(return_value);\n\n\t/* Get sun up/down and transit */\n\trs = timelib_astro_rise_set_altitude(t, longitude, latitude, -50.0/60, 1, &ddummy, &ddummy, &rise, &set, &transit);\n\tswitch (rs) {\n\t\tcase -1: /* always below */\n\t\t\tadd_assoc_bool(return_value, \"sunrise\", 0);\n\t\t\tadd_assoc_bool(return_value, \"sunset\", 0);\n\t\t\tbreak;\n\t\tcase 1: /* always above */\n\t\t\tadd_assoc_bool(return_value, \"sunrise\", 1);\n\t\t\tadd_assoc_bool(return_value, \"sunset\", 1);\n\t\t\tbreak;\n\t\tdefault:\n\t\t\tt2->sse = rise;\n\t\t\tadd_assoc_long(return_value, \"sunrise\", timelib_date_to_int(t2, &dummy));\n\t\t\tt2->sse = set;\n\t\t\tadd_assoc_long(return_value, \"sunset\", timelib_date_to_int(t2, &dummy));\n\t}\n\tt2->sse = transit;\n\tadd_assoc_long(return_value, \"transit\", timelib_date_to_int(t2, &dummy));\n\n\t/* Get civil twilight */\n\trs = timelib_astro_rise_set_altitude(t, longitude, latitude, -6.0, 0, &ddummy, &ddummy, &rise, &set, &transit);\n\tswitch (rs) {\n\t\tcase -1: /* always below */\n\t\t\tadd_assoc_bool(return_value, \"civil_twilight_begin\", 0);\n\t\t\tadd_assoc_bool(return_value, \"civil_twilight_end\", 0);\n\t\t\tbreak;\n\t\tcase 1: /* always above */\n\t\t\tadd_assoc_bool(return_value, \"civil_twilight_begin\", 1);\n\t\t\tadd_assoc_bool(return_value, \"civil_twilight_end\", 1);\n\t\t\tbreak;\n\t\tdefault:\n\t\t\tt2->sse = rise;\n\t\t\tadd_assoc_long(return_value, \"civil_twilight_begin\", timelib_date_to_int(t2, &dummy));\n\t\t\tt2->sse = set;\n\t\t\tadd_assoc_long(return_value, \"civil_twilight_end\", timelib_date_to_int(t2, &dummy));\n\t}\n\n\t/* Get nautical twilight */\n\trs = timelib_astro_rise_set_altitude(t, longitude, latitude, -12.0, 0, &ddummy, &ddummy, &rise, &set, &transit);\n\tswitch (rs) {\n\t\tcase -1: /* always below */\n\t\t\tadd_assoc_bool(return_value, \"nautical_twilight_begin\", 0);\n\t\t\tadd_assoc_bool(return_value, \"nautical_twilight_end\", 0);\n\t\t\tbreak;\n\t\tcase 1: /* always above */\n\t\t\tadd_assoc_bool(return_value, \"nautical_twilight_begin\", 1);\n\t\t\tadd_assoc_bool(return_value, \"nautical_twilight_end\", 1);\n\t\t\tbreak;\n\t\tdefault:\n\t\t\tt2->sse = rise;\n\t\t\tadd_assoc_long(return_value, \"nautical_twilight_begin\", timelib_date_to_int(t2, &dummy));\n\t\t\tt2->sse = set;\n\t\t\tadd_assoc_long(return_value, \"nautical_twilight_end\", timelib_date_to_int(t2, &dummy));\n\t}\n\n\t/* Get astronomical twilight */\n\trs = timelib_astro_rise_set_altitude(t, longitude, latitude, -18.0, 0, &ddummy, &ddummy, &rise, &set, &transit);\n\tswitch (rs) {\n\t\tcase -1: /* always below */\n\t\t\tadd_assoc_bool(return_value, \"astronomical_twilight_begin\", 0);\n\t\t\tadd_assoc_bool(return_value, \"astronomical_twilight_end\", 0);\n\t\t\tbreak;\n\t\tcase 1: /* always above */\n\t\t\tadd_assoc_bool(return_value, \"astronomical_twilight_begin\", 1);\n\t\t\tadd_assoc_bool(return_value, \"astronomical_twilight_end\", 1);\n\t\t\tbreak;\n\t\tdefault:\n\t\t\tt2->sse = rise;\n\t\t\tadd_assoc_long(return_value, \"astronomical_twilight_begin\", timelib_date_to_int(t2, &dummy));\n\t\t\tt2->sse = set;\n\t\t\tadd_assoc_long(return_value, \"astronomical_twilight_end\", timelib_date_to_int(t2, &dummy));\n\t}\n\ttimelib_time_dtor(t);\n\ttimelib_time_dtor(t2);",
+    "semantic": "Initialize time struct",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_LONG",
+            "Z_PARAM_DOUBLE",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_THROWS"
+        ],
+        "zend_types": [
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_finite",
+            "zend_argument_value_error"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common date_sun_info inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 8,
+    "purpose": "Initialize time struct",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "date",
+        "gmdate",
+        "idate",
+        "strtotime",
+        "mktime",
+        "gmmktime",
+        "checkdate",
+        "strftime",
+        "gmstrftime",
+        "time",
+        "localtime",
+        "getdate"
+    ]
+}

@@ -1,0 +1,105 @@
+{
+    "php_function": "odbc_prepare",
+    "zend_function": "odbc_prepare",
+    "source_file": "bc.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_globals.h",
+        "zend_attributes.h",
+        "ext/standard/info.h",
+        "Zend/zend_interfaces.h",
+        "zend_smart_str.h",
+        "php_odbc.h",
+        "php_odbc_includes.h",
+        "php_odbc_utils.h",
+        "fcntl.h",
+        "php_ini.h",
+        "odbc_arginfo.h"
+    ],
+    "body": "zval *pv_conn;\n\tchar *query;\n\tsize_t query_len;\n\todbc_result *result = NULL;\n\tRETCODE rc;\n\tint i;\n#ifdef HAVE_SQL_EXTENDED_FETCH\n\tSQLUINTEGER      scrollopts;\n#endif\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"Os\", &pv_conn, odbc_connection_ce, &query, &query_len) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\todbc_connection *conn = Z_ODBC_CONNECTION_P(pv_conn);\n\tCHECK_ODBC_CONNECTION(conn);\n\n\tobject_init_ex(return_value, odbc_result_ce);\n\tresult = Z_ODBC_RESULT_P(return_value);\n\n\tresult->numparams = 0;\n\tresult->param_info = NULL;\n\n\trc = PHP_ODBC_SQLALLOCSTMT(conn->hdbc, &(result->stmt));\n\tif (rc == SQL_INVALID_HANDLE) {\n\t\tphp_error_docref(NULL, E_WARNING, \"SQLAllocStmt error 'Invalid Handle'\");\n\t\tzval_ptr_dtor(return_value);\n\t\tRETURN_FALSE;\n\t}\n\n\tif (rc == SQL_ERROR) {\n\t\todbc_sql_error(conn, SQL_NULL_HSTMT, \"SQLAllocStmt\");\n\t\tzval_ptr_dtor(return_value);\n\t\tRETURN_FALSE;\n\t}\n\n#ifdef HAVE_SQL_EXTENDED_FETCH\n\t/* Solid doesn't have ExtendedFetch, if DriverManager is used, get Info,\n\t   whether Driver supports ExtendedFetch */\n\trc = SQLGetInfo(conn->hdbc, SQL_FETCH_DIRECTION, (void *) &scrollopts, sizeof(scrollopts), NULL);\n\tif (rc == SQL_SUCCESS) {\n\t\tif ((result->fetch_abs = (scrollopts & SQL_FD_FETCH_ABSOLUTE))) {\n\t\t\t/* Try to set CURSOR_TYPE to dynamic. Driver will replace this with other\n\t\t\t   type if not possible.\n\t\t\t*/\n\t\t\tSQLSetStmtOption(result->stmt, SQL_CURSOR_TYPE, ODBCG(default_cursortype));\n\t\t}\n\t} else {\n\t\tresult->fetch_abs = 0;\n\t}\n#endif\n\n\trc = SQLPrepare(result->stmt, (SQLCHAR *) query, SQL_NTS);\n\tswitch (rc) {\n\t\tcase SQL_SUCCESS:\n\t\t\tbreak;\n\t\tcase SQL_SUCCESS_WITH_INFO:\n\t\t\todbc_sql_error(conn, result->stmt, \"SQLPrepare\");\n\t\t\tbreak;\n\t\tdefault:\n\t\t\todbc_sql_error(conn, result->stmt, \"SQLPrepare\");\n\t\t\tzval_ptr_dtor(return_value);\n\t\t\tRETURN_FALSE;\n\t}\n\n\tSQLNumParams(result->stmt, &(result->numparams));\n\tSQLNumResultCols(result->stmt, &(result->numcols));\n\n\tif (result->numcols > 0) {\n\t\todbc_bindcols(result);\n\t} else {\n\t\tresult->values = NULL;\n\t}\n\tresult->conn_ptr = conn;\n\tresult->fetched = 0;\n\n\tresult->param_info = (odbc_param_info *) safe_emalloc(sizeof(odbc_param_info), result->numparams, 0);\n\tfor (i=0;i<result->numparams;i++) {\n\t\trc = SQLDescribeParam(result->stmt, (SQLUSMALLINT)(i+1), &result->param_info[i].sqltype, &result->param_info[i].precision,\n\t\t\t\t\t\t\t\t\t\t\t\t\t&result->param_info[i].scale, &result->param_info[i].nullable);\n\t\tif (rc == SQL_ERROR) {\n\t\t\todbc_sql_error(result->conn_ptr, result->stmt, \"SQLDescribeParameter\");\n\t\t\tSQLFreeStmt(result->stmt, SQL_RESET_PARAMS);\n\t\t\tefree(result->param_info);\n\t\t\tzval_ptr_dtor(return_value);\n\t\t\tRETURN_FALSE;\n\t\t}\n\t}\n\n\todbc_insert_new_result(conn, return_value);",
+    "semantic": "Solid doesn't have ExtendedFetch, if DriverManager is used, get Info, whether Driver supports ExtendedFetch",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zval"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "php_error_docref",
+            "zval_ptr_dtor",
+            "odbc_sql_error",
+            "odbc_bindcols",
+            "odbc_insert_new_result"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common odbc_prepare inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 7,
+    "purpose": "Solid doesn't have ExtendedFetch, if DriverManager is used, get Info, whether Driver supports ExtendedFetch",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "odbc_close_all",
+        "odbc_binmode",
+        "odbc_longreadlen",
+        "odbc_execute",
+        "odbc_cursor",
+        "odbc_data_source",
+        "odbc_exec",
+        "odbc_fetch_object",
+        "odbc_fetch_array",
+        "odbc_fetch_into",
+        "odbc_fetch_row",
+        "odbc_result"
+    ]
+}

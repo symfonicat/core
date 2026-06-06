@@ -1,0 +1,86 @@
+{
+    "php_function": "tidy_get_output",
+    "zend_function": "tidy_get_output",
+    "source_file": "",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_tidy.h",
+        "php_ini.h",
+        "ext/standard/info.h",
+        "tidy.h",
+        "tidyp.h",
+        "tidybuffio.h",
+        "buffio.h",
+        "tidy_arginfo.h",
+        "Zend/zend_exceptions.h"
+    ],
+    "body": "TidyBuffer output;\n\tTIDY_FETCH_OBJECT;\n\n\ttidyBufInit(&output);\n\ttidySaveBuffer(obj->ptdoc->doc, &output);\n\tFIX_BUFFER(&output);\n\tRETVAL_STRINGL((const char *) output.bp, output.size ? output.size-1 : 0);\n\ttidyBufFree(&output);",
+    "semantic": "Implements the PHP function tidy_get_output in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [],
+        "zend_types": [],
+        "internal_helpers": []
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common tidy_get_output inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 1,
+    "purpose": "Implements the PHP function tidy_get_output in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "tidy_parse_string",
+        "tidy_get_error_buffer",
+        "tidy_parse_file",
+        "tidy_clean_repair",
+        "tidy_repair_string",
+        "tidy_repair_file",
+        "tidy_diagnose",
+        "tidy_get_release",
+        "tidy_get_opt_doc",
+        "tidy_get_config",
+        "tidy_get_status",
+        "tidy_get_html_ver"
+    ]
+}

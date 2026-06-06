@@ -1,5 +1,5 @@
-<tr id="domain_{{ domain.id(false) }}" class="btn-row">
-    <td class="fw-semibold"><a href="{{ app.request.scheme }}://{{ domain.id(false) }}" class="text-white">{{ domain.id(false) }}</a></td>
+<tr id="domain_{{ domain.tld }}" class="btn-row">
+    <td class="fw-semibold"><a href="{{ app.request.scheme }}://{{ domain.tld }}" class="text-white">{{ domain.tld }}</a></td>
     <td>
         {% for subdomain in domain.subdomains %}
             <a href="{{ path('symfonicat_subdomain_edit', {'id': subdomain.id}) }}" class="text-white">{{ subdomain.affix }}</a>{% if not loop.last %}, {% endif %}
@@ -52,7 +52,7 @@
     <td class="text-end btn-cell">
 
         <div class="btn-group btn-group-sm">
-            <a href="{{ path('symfonicat_domain_edit', {'id': domain.id}) }}" class="btn btn-sm btn-warning">
+            <a href="{{ path('symfonicat_domain_edit', {'id': domain.tld}) }}" class="btn btn-sm btn-warning">
                 <i class="fa fa-pencil">&nbsp;</i>
             </a>
             {{ include('@symfonicat/domain/_delete_form.html.twig') }}

@@ -1,0 +1,116 @@
+{
+    "php_function": "imagecreatefromstring",
+    "zend_function": "imagecreatefromstring",
+    "source_file": "",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "data",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "data"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(data)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "ext/standard/head.h",
+        "math.h",
+        "SAPI.h",
+        "php_gd.h",
+        "ext/standard/php_image.h",
+        "ext/standard/info.h",
+        "php_open_temporary_file.h",
+        "php_memory_streams.h",
+        "zend_object_handlers.h",
+        "gd_compat.h",
+        "gd_arginfo.h"
+    ],
+    "body": "zend_string *data;\n\tgdImagePtr im;\n\tint imtype;\n\n\tZEND_PARSE_PARAMETERS_START(1, 1)\n\t\tZ_PARAM_STR(data)\n\tZEND_PARSE_PARAMETERS_END();\n\n\timtype = _php_image_type(data);\n\n\tswitch (imtype) {\n\t\tcase PHP_GDIMG_TYPE_JPG:\n#ifdef HAVE_GD_JPG\n\t\t\tim = _php_image_create_from_string(data, \"JPEG\", gdImageCreateFromJpegCtx);\n#else\n\t\t\tphp_error_docref(NULL, E_WARNING, \"No JPEG support in this PHP build\");\n\t\t\tRETURN_FALSE;\n#endif\n\t\t\tbreak;\n\n\t\tcase PHP_GDIMG_TYPE_PNG:\n#ifdef HAVE_GD_PNG\n\t\t\tim = _php_image_create_from_string(data, \"PNG\", gdImageCreateFromPngCtx);\n#else\n\t\t\tphp_error_docref(NULL, E_WARNING, \"No PNG support in this PHP build\");\n\t\t\tRETURN_FALSE;\n#endif\n\t\t\tbreak;\n\n\t\tcase PHP_GDIMG_TYPE_GIF:\n\t\t\tim = _php_image_create_from_string(data, \"GIF\", gdImageCreateFromGifCtx);\n\t\t\tbreak;\n\n\t\tcase PHP_GDIMG_TYPE_WBM:\n\t\t\tim = _php_image_create_from_string(data, \"WBMP\", gdImageCreateFromWBMPCtx);\n\t\t\tbreak;\n\n\t\tcase PHP_GDIMG_TYPE_GD2:\n\t\t\tim = _php_image_create_from_string(data, \"GD2\", gdImageCreateFromGd2Ctx);\n\t\t\tbreak;\n\n\t\tcase PHP_GDIMG_TYPE_BMP:\n\t\t\tim = _php_image_create_from_string(data, \"BMP\", gdImageCreateFromBmpCtx);\n\t\t\tbreak;\n\n\t\tcase PHP_GDIMG_TYPE_WEBP:\n#ifdef HAVE_GD_WEBP\n\t\t\tim = _php_image_create_from_string(data, \"WEBP\", gdImageCreateFromWebpCtx);\n\t\t\tbreak;\n#else\n\t\t\tphp_error_docref(NULL, E_WARNING, \"No WEBP support in this PHP build\");\n\t\t\tRETURN_FALSE;\n#endif\n\n\t\tcase PHP_GDIMG_TYPE_AVIF:\n#ifdef HAVE_GD_AVIF\n\t\t\tim = _php_image_create_from_string(data, \"AVIF\", gdImageCreateFromAvifCtx);\n\t\t\tbreak;\n#else\n\t\t\tphp_error_docref(NULL, E_WARNING, \"No AVIF support in this PHP build\");\n\t\t\tRETURN_FALSE;\n#endif\n\n\t\tdefault:\n\t\t\tphp_error_docref(NULL, E_WARNING, \"Data is not in a recognized format\");\n\t\t\tRETURN_FALSE;\n\t}\n\n\tif (!im) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Couldn't create GD Image Stream out of Data\");\n\t\tRETURN_FALSE;\n\t}\n\n\tphp_gd_assign_libgdimageptr_as_extgdimage(return_value, im);",
+    "semantic": "Implements the PHP function imagecreatefromstring in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STR",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "php_error_docref",
+            "php_gd_assign_libgdimageptr_as_extgdimage"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common imagecreatefromstring inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "Implements the PHP function imagecreatefromstring in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "gd_info",
+        "imageloadfont",
+        "imagesetstyle",
+        "imagecreatetruecolor",
+        "imageistruecolor",
+        "imagetruecolortopalette",
+        "imagepalettetotruecolor",
+        "imagecolormatch",
+        "imagesetthickness",
+        "imagefilledellipse",
+        "imagefilledarc",
+        "imagealphablending"
+    ]
+}

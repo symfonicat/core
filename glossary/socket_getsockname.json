@@ -1,0 +1,147 @@
+{
+    "php_function": "socket_getsockname",
+    "zend_function": "socket_getsockname",
+    "source_file": "kets.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "arg1",
+            "macro": "Z_PARAM_OBJECT_OF_CLASS",
+            "arguments": [
+                "arg1",
+                "socket_ce"
+            ],
+            "type": "zend_object",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_OBJECT_OF_CLASS(arg1, socket_ce)"
+        },
+        {
+            "name": "addr",
+            "macro": "Z_PARAM_ZVAL",
+            "arguments": [
+                "addr"
+            ],
+            "type": "zval",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": true,
+            "raw": "Z_PARAM_ZVAL(addr)"
+        },
+        {
+            "name": "port",
+            "macro": "Z_PARAM_ZVAL",
+            "arguments": [
+                "port"
+            ],
+            "type": "zval",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": true,
+            "raw": "Z_PARAM_ZVAL(port)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_network.h",
+        "ext/standard/file.h",
+        "ext/standard/info.h",
+        "php_ini.h",
+        "stddef.h",
+        "sockaddr_conv.h",
+        "multicast.h",
+        "sendrecvmsg.h",
+        "sockets_arginfo.h"
+    ],
+    "body": "zval\t\t\t\t\t*arg1, *addr, *port = NULL;\n\tphp_sockaddr_storage\tsa_storage = {0};\n\tphp_socket\t\t\t\t*php_sock;\n\tstruct sockaddr\t\t\t*sa;\n\tstruct sockaddr_in\t\t*sin;\n#ifdef HAVE_IPV6\n\tstruct sockaddr_in6\t\t*sin6;\n#endif\n\tchar\t\t\t\t\taddrbuf[INET6_ADDRSTRLEN];\n\tstruct sockaddr_un\t\t*s_un;\n\tconst char\t\t\t\t*addr_string;\n\tsocklen_t\t\t\t\tsalen = sizeof(php_sockaddr_storage);\n\n\tZEND_PARSE_PARAMETERS_START(2, 3)\n\t\tZ_PARAM_OBJECT_OF_CLASS(arg1, socket_ce)\n\t\tZ_PARAM_ZVAL(addr)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_ZVAL(port)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tphp_sock = Z_SOCKET_P(arg1);\n\tENSURE_SOCKET_VALID(php_sock);\n\n\tsa = (struct sockaddr *) &sa_storage;\n\n\tif (getsockname(php_sock->bsd_socket, sa, &salen) != 0) {\n\t\tPHP_SOCKET_ERROR(php_sock, \"unable to retrieve socket name\", errno);\n\t\tRETURN_FALSE;\n\t}\n\n\tswitch (sa->sa_family) {\n#ifdef HAVE_IPV6\n\t\tcase AF_INET6:\n\t\t\tsin6 = (struct sockaddr_in6 *) sa;\n\t\t\tinet_ntop(AF_INET6, &sin6->sin6_addr,  addrbuf, sizeof(addrbuf));\n\t\t\tZEND_TRY_ASSIGN_REF_STRING(addr, addrbuf);\n\n\t\t\tif (port != NULL) {\n\t\t\t\tZEND_TRY_ASSIGN_REF_LONG(port, htons(sin6->sin6_port));\n\t\t\t}\n\t\t\tRETURN_TRUE;\n\t\t\tbreak;\n#endif\n\t\tcase AF_INET:\n\t\t\tsin = (struct sockaddr_in *) sa;\n\t\t\taddr_string = inet_ntop(AF_INET, &sin->sin_addr, addrbuf, sizeof(addrbuf));\n\t\t\tZEND_TRY_ASSIGN_REF_STRING(addr, addr_string);\n\n\t\t\tif (port != NULL) {\n\t\t\t\tZEND_TRY_ASSIGN_REF_LONG(port, htons(sin->sin_port));\n\t\t\t}\n\t\t\tRETURN_TRUE;\n\t\t\tbreak;\n\n\t\tcase AF_UNIX:\n\t\t\ts_un = (struct sockaddr_un *) sa;\n\n\t\t\tZEND_TRY_ASSIGN_REF_STRING(addr, s_un->sun_path);\n\t\t\tRETURN_TRUE;\n\t\t\tbreak;\n\n\t\tdefault:\n\t\t\tzend_argument_value_error(1, \"must be one of AF_UNIX, AF_INET, or AF_INET6\");\n\t\t\tRETURN_THROWS();\n\t}",
+    "semantic": "Implements the PHP function socket_getsockname in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_OBJECT_OF_CLASS",
+            "Z_PARAM_ZVAL",
+            "Z_PARAM_OPTIONAL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_FALSE",
+            "ZEND_TRY_ASSIGN_REF_STRING",
+            "ZEND_TRY_ASSIGN_REF_LONG",
+            "RETURN_TRUE",
+            "RETURN_THROWS"
+        ],
+        "zend_types": [
+            "zval"
+        ],
+        "internal_helpers": [
+            "zend_argument_value_error"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common socket_getsockname inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 6,
+    "purpose": "Implements the PHP function socket_getsockname in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "socket_select",
+        "socket_create_listen",
+        "socket_accept",
+        "socket_set_nonblock",
+        "socket_set_block",
+        "socket_listen",
+        "socket_close",
+        "socket_write",
+        "socket_read",
+        "socket_getpeername",
+        "socket_create",
+        "socket_connect"
+    ]
+}

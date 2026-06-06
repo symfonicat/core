@@ -397,11 +397,11 @@ final class AdminYaml implements AdminYamlDumper
      */
     private function decodeJsonValue(string $value)
     {
-        return symfonicat_json_decode($value);
+        return json_decode($value, true, 512, JSON_THROW_ON_ERROR);
     }
 
     private function encodeJsonValue(mixed $value): ?string
     {
-        return symfonicat_json_encode($value);
+        return json_encode($value, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
     }
 }

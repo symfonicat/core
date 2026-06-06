@@ -1,0 +1,116 @@
+{
+    "php_function": "transliterator_create",
+    "zend_function": "transliterator_create",
+    "source_file": "iterator/transliterator_methods.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "str_id",
+            "macro": "Z_PARAM_STRING",
+            "arguments": [
+                "str_id",
+                "str_id_len"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING(str_id, str_id_len)"
+        },
+        {
+            "name": "direction",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "direction"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(direction)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php_intl.h",
+        "transliterator.h",
+        "transliterator_class.h",
+        "intl_data.h",
+        "intl_convert.h",
+        "zend_exceptions.h"
+    ],
+    "body": "char     *str_id;\n\tsize_t    str_id_len;\n\tzend_long direction   = TRANSLITERATOR_FORWARD;\n\tint res;\n\n\tTRANSLITERATOR_METHOD_INIT_VARS;\n\n\t(void) to; /* unused */\n\n\tZEND_PARSE_PARAMETERS_START(1, 2)\n\t\tZ_PARAM_STRING(str_id, str_id_len)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_LONG(direction)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tobject = return_value;\n\tres = create_transliterator( str_id, str_id_len, direction, object );\n\tif( res == FAILURE )\n\t\tRETURN_NULL();\n\n\t/* success, leave return_value as it is (set by create_transliterator) */",
+    "semantic": "unused",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STRING",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_LONG",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_NULL"
+        ],
+        "zend_types": [
+            "zend_long"
+        ],
+        "internal_helpers": []
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common transliterator_create inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 2,
+    "purpose": "unused",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "transliterator_create_from_rules",
+        "transliterator_create_inverse",
+        "transliterator_list_ids",
+        "transliterator_transliterate",
+        "transliterator_get_error_code",
+        "transliterator_get_error_message"
+    ]
+}

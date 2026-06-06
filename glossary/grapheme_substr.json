@@ -1,0 +1,145 @@
+{
+    "php_function": "grapheme_substr",
+    "zend_function": "grapheme_substr",
+    "source_file": "me/grapheme_string.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "str",
+            "macro": "Z_PARAM_STRING",
+            "arguments": [
+                "str",
+                "str_len"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING(str, str_len)"
+        },
+        {
+            "name": "lstart",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "lstart"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(lstart)"
+        },
+        {
+            "name": "length",
+            "macro": "Z_PARAM_LONG_OR_NULL",
+            "arguments": [
+                "length",
+                "no_length"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG_OR_NULL(length, no_length)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "grapheme.h",
+        "grapheme_util.h",
+        "unicode/utypes.h",
+        "unicode/utf8.h",
+        "unicode/ucol.h",
+        "unicode/ustring.h",
+        "unicode/ubrk.h"
+    ],
+    "body": "char *str;\n\tzend_string *u8_sub_str;\n\tUChar *ustr;\n\tsize_t str_len;\n\tint32_t ustr_len;\n\tzend_long lstart = 0, length = 0;\n\tint32_t start = 0;\n\tint iter_val;\n\tUErrorCode status;\n\tunsigned char u_break_iterator_buffer[U_BRK_SAFECLONE_BUFFERSIZE];\n\tUBreakIterator* bi = NULL;\n\tint sub_str_start_pos, sub_str_end_pos;\n\tint32_t (*iter_func)(UBreakIterator *);\n\tbool no_length = true;\n\n\tZEND_PARSE_PARAMETERS_START(2, 3)\n\t\tZ_PARAM_STRING(str, str_len)\n\t\tZ_PARAM_LONG(lstart)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_LONG_OR_NULL(length, no_length)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (lstart < INT32_MIN || lstart > INT32_MAX) {\n\t\tzend_argument_value_error(2, \"is too large\");\n\t\tRETURN_THROWS();\n\t}\n\n\tstart = (int32_t) lstart;\n\n\tif (no_length) {\n\t\tlength = str_len;\n\t}\n\n\tif (length < INT32_MIN || length > INT32_MAX) {\n\t\tzend_argument_value_error(3, \"is too large\");\n\t\tRETURN_THROWS();\n\t}\n\n\t/* the offset is 'grapheme count offset' so it still might be invalid - we'll check it later */\n\n\tif ( grapheme_ascii_check((unsigned char *)str, str_len) >= 0 ) {\n\t\tint32_t asub_str_len;\n\t\tchar *sub_str;\n\t\tgrapheme_substr_ascii(str, str_len, start, (int32_t)length, &sub_str, &asub_str_len);\n\n\t\tif ( NULL == sub_str ) {\n\t\t\tintl_error_set( NULL, U_ILLEGAL_ARGUMENT_ERROR, \"grapheme_substr: invalid parameters\", 1 );\n\t\t\tRETURN_FALSE;\n\t\t}\n\n\t\tRETURN_STRINGL(sub_str, asub_str_len);\n\t}\n\n\tustr = NULL;\n\tustr_len = 0;\n\tstatus = U_ZERO_ERROR;\n\tintl_convert_utf8_to_utf16(&ustr, &ustr_len, str, str_len, &status);\n\n\tif ( U_FAILURE( status ) ) {\n\t\t/* Set global error code. */\n\t\tintl_error_set_code( NULL, status );\n\n\t\t/* Set error messages. */\n\t\tintl_error_set_custom_msg( NULL, \"Error converting input string to UTF-16\", 0 );\n\t\tif (ustr) {\n\t\t\tefree( ustr );\n\t\t}\n\t\tRETURN_FALSE;\n\t}\n\n\tbi = grapheme_get_break_iterator((void*)u_break_iterator_buffer, &status );\n\n\tif( U_FAILURE(status) ) {\n\t\tRETURN_FALSE;\n\t}\n\n\tubrk_setText(bi, ustr, ustr_len,\t&status);\n\n\tif ( start < 0 ) {\n\t\titer_func = ubrk_previous;\n\t\tubrk_last(bi);\n\t\titer_val = 1;\n\t}\n\telse {\n\t\titer_func = ubrk_next;\n\t\titer_val = -1;\n\t}\n\n\tsub_str_start_pos = 0;\n\n\twhile ( start ) {\n\t\tsub_str_start_pos = iter_func(bi);\n\n\t\tif ( UBRK_DONE == sub_str_start_pos ) {\n\t\t\tbreak;\n\t\t}\n\n\t\tstart += iter_val;\n\t}\n\n\tif (0 != start) {\n\t\tif (start > 0) {\n\t\t\tif (ustr) {\n\t\t\t\tefree(ustr);\n\t\t\t}\n\t\t\tubrk_close(bi);\n\t\t\tRETURN_EMPTY_STRING();\n\t\t}\n\n\t\tsub_str_start_pos = 0;\n\t\tubrk_first(bi);\n\t}\n\n\t/* OK to convert here since if str_len were big, convert above would fail */\n\tif (length >= (int32_t)str_len) {\n\n\t\t/* no length supplied or length is too big, return the rest of the string */\n\n\t\tstatus = U_ZERO_ERROR;\n\t\tu8_sub_str = intl_convert_utf16_to_utf8(ustr + sub_str_start_pos, ustr_len - sub_str_start_pos, &status);\n\n\t\tif (ustr) {\n\t\t\tefree( ustr );\n\t\t}\n\t\tubrk_close( bi );\n\n\t\tif ( !u8_sub_str ) {\n\t\t\t/* Set global error code. */\n\t\t\tintl_error_set_code( NULL, status );\n\n\t\t\t/* Set error messages. */\n\t\t\tintl_error_set_custom_msg( NULL, \"Error converting output string to UTF-8\", 0 );\n\n\t\t\tRETURN_FALSE;\n\t\t}\n\n\t\t/* return the allocated string, not a duplicate */\n\t\tRETVAL_NEW_STR(u8_sub_str);\n\t\treturn;\n\t}\n\n\tif(length == 0) {\n\t\t/* empty length - we've validated start, we can return \"\" now */\n\t\tif (ustr) {\n\t\t\tefree(ustr);\n\t\t}\n\t\tubrk_close(bi);\n\t\tRETURN_EMPTY_STRING();\n\t}\n\n\t/* find the end point of the string to return */\n\n\tif ( length < 0 ) {\n\t\titer_func = ubrk_previous;\n\t\tubrk_last(bi);\n\t\titer_val = 1;\n\t}\n\telse {\n\t\titer_func = ubrk_next;\n\t\titer_val = -1;\n\t}\n\n\tsub_str_end_pos = 0;\n\n\twhile ( length ) {\n\t\tsub_str_end_pos = iter_func(bi);\n\n\t\tif ( UBRK_DONE == sub_str_end_pos ) {\n\t\t\tbreak;\n\t\t}\n\n\t\tlength += iter_val;\n\t}\n\n\tubrk_close(bi);\n\n\tif ( UBRK_DONE == sub_str_end_pos) {\n\t\tif (length < 0) {\n\t\t\tefree(ustr);\n\t\t\tRETURN_EMPTY_STRING();\n\t\t} else {\n\t\t\tsub_str_end_pos = ustr_len;\n\t\t}\n\t}\n\n\tif (sub_str_start_pos > sub_str_end_pos) {\n\t\tefree(ustr);\n\t\tRETURN_EMPTY_STRING();\n\t}\n\n\tstatus = U_ZERO_ERROR;\n\tu8_sub_str = intl_convert_utf16_to_utf8(ustr + sub_str_start_pos, ( sub_str_end_pos - sub_str_start_pos ), &status);\n\n\tefree( ustr );\n\n\tif ( !u8_sub_str ) {\n\t\t/* Set global error code. */\n\t\tintl_error_set_code( NULL, status );\n\n\t\t/* Set error messages. */\n\t\tintl_error_set_custom_msg( NULL, \"Error converting output string to UTF-8\", 0 );\n\n\t\tRETURN_FALSE;\n\t}\n\n\t /* return the allocated string, not a duplicate */\n\tRETVAL_NEW_STR(u8_sub_str);",
+    "semantic": "the offset is 'grapheme count offset' so it still might be invalid - we'll check it later",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STRING",
+            "Z_PARAM_LONG",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_LONG_OR_NULL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_THROWS",
+            "RETURN_FALSE",
+            "RETURN_STRINGL",
+            "RETURN_EMPTY_STRING"
+        ],
+        "zend_types": [
+            "zend_string",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_argument_value_error"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common grapheme_substr inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 9,
+    "purpose": "the offset is 'grapheme count offset' so it still might be invalid - we'll check it later",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "grapheme_strlen",
+        "grapheme_strpos",
+        "grapheme_stripos",
+        "grapheme_strrpos",
+        "grapheme_strripos",
+        "grapheme_strstr",
+        "grapheme_stristr",
+        "grapheme_extract",
+        "grapheme_str_split"
+    ]
+}

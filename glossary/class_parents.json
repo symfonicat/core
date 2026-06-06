@@ -1,0 +1,107 @@
+{
+    "php_function": "class_parents",
+    "zend_function": "class_parents",
+    "source_file": ".c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_main.h",
+        "ext/standard/info.h",
+        "php_spl.h",
+        "php_spl_arginfo.h",
+        "spl_functions.h",
+        "spl_array.h",
+        "spl_directory.h",
+        "spl_iterators.h",
+        "spl_exceptions.h",
+        "spl_observer.h",
+        "spl_dllist.h",
+        "spl_fixedarray.h",
+        "spl_heap.h",
+        "zend_exceptions.h",
+        "zend_interfaces.h",
+        "main/snprintf.h"
+    ],
+    "body": "zval *obj;\n\tzend_class_entry *parent_class, *ce;\n\tbool autoload = 1;\n\n\t/* We do not use Z_PARAM_OBJ_OR_STR here to be able to exclude int, float, and bool which are bogus class names */\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"z|b\", &obj, &autoload) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tif (Z_TYPE_P(obj) != IS_OBJECT && Z_TYPE_P(obj) != IS_STRING) {\n\t\tzend_argument_type_error(1, \"must be of type object|string, %s given\", zend_zval_value_name(obj));\n\t\tRETURN_THROWS();\n\t}\n\n\tif (Z_TYPE_P(obj) == IS_STRING) {\n\t\tif (NULL == (ce = spl_find_ce_by_name(Z_STR_P(obj), autoload))) {\n\t\t\tRETURN_FALSE;\n\t\t}\n\t} else {\n\t\tce = Z_OBJCE_P(obj);\n\t}\n\n\tarray_init(return_value);\n\tparent_class = ce->parent;\n\twhile (parent_class) {\n\t\tspl_add_class_name(return_value, parent_class, 0, 0);\n\t\tparent_class = parent_class->parent;\n\t}",
+    "semantic": "We do not use Z_PARAM_OBJ_OR_STR here to be able to exclude int, float, and bool which are bogus class names",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "Z_PARAM_OBJ_OR_STR",
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_class_entry"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "zend_argument_type_error",
+            "zend_zval_value_name"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common class_parents inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "We do not use Z_PARAM_OBJ_OR_STR here to be able to exclude int, float, and bool which are bogus class names",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "class_implements",
+        "class_uses",
+        "spl_classes",
+        "spl_autoload",
+        "spl_autoload_extensions",
+        "spl_autoload_call",
+        "spl_autoload_register",
+        "spl_autoload_unregister",
+        "spl_autoload_functions",
+        "spl_object_hash",
+        "spl_object_id"
+    ]
+}

@@ -1,0 +1,93 @@
+{
+    "php_function": "name",
+    "zend_function": "name",
+    "source_file": "",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "SAPI.h",
+        "php_ini.h",
+        "ext/standard/info.h",
+        "php_zlib.h",
+        "zlib_arginfo.h"
+    ],
+    "body": "\\\n\tchar *in_buf, *out_buf; \\\n\tsize_t in_len; \\\n\tsize_t out_len; \\\n\tzend_long max_len = 0; \\\n\tif (SUCCESS != zend_parse_parameters(ZEND_NUM_ARGS(), \"s|l\", &in_buf, &in_len, &max_len)) { \\\n\t\tRETURN_THROWS(); \\\n\t} \\\n\tif (max_len < 0) { \\\n\t\tzend_argument_value_error(2, \"must be greater than or equal to 0\"); \\\n\t\tRETURN_THROWS(); \\\n\t} \\\n\tif (SUCCESS != php_zlib_decode(in_buf, in_len, &out_buf, &out_len, encoding, max_len)) { \\\n\t\tRETURN_FALSE; \\\n\t} \\\n\tRETVAL_STRINGL(out_buf, out_len); \\\n\tefree(out_buf); \\",
+    "semantic": "Implements the PHP function name in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "zend_argument_value_error",
+            "php_zlib_decode"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common name inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 4,
+    "purpose": "Implements the PHP function name in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "ob_gzhandler",
+        "zlib_get_coding_type",
+        "gzfile",
+        "gzopen",
+        "readgzfile",
+        "inflate_init",
+        "inflate_add",
+        "inflate_get_status",
+        "inflate_get_read_len",
+        "deflate_init",
+        "deflate_add"
+    ]
+}

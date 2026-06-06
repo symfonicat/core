@@ -1,0 +1,117 @@
+{
+    "php_function": "socket_export_stream",
+    "zend_function": "socket_export_stream",
+    "source_file": "kets.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "zsocket",
+            "macro": "Z_PARAM_OBJECT_OF_CLASS",
+            "arguments": [
+                "zsocket",
+                "socket_ce"
+            ],
+            "type": "zend_object",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_OBJECT_OF_CLASS(zsocket, socket_ce)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_network.h",
+        "ext/standard/file.h",
+        "ext/standard/info.h",
+        "php_ini.h",
+        "stddef.h",
+        "sockaddr_conv.h",
+        "multicast.h",
+        "sendrecvmsg.h",
+        "sockets_arginfo.h"
+    ],
+    "body": "zval *zsocket;\n\tphp_socket *socket;\n\tphp_stream *stream = NULL;\n\tphp_netstream_data_t *stream_data;\n\tconst char *protocol = NULL;\n\tsize_t protocollen = 0;\n\n\tZEND_PARSE_PARAMETERS_START(1, 1)\n\t\tZ_PARAM_OBJECT_OF_CLASS(zsocket, socket_ce)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tsocket = Z_SOCKET_P(zsocket);\n\tENSURE_SOCKET_VALID(socket);\n\n\t/* Either we already exported a stream or the socket came from an import,\n\t * just return the existing stream */\n\tif (!Z_ISUNDEF(socket->zstream)) {\n\t\tRETURN_COPY(&socket->zstream);\n\t}\n\n\t/* Determine if socket is using a protocol with one of the default registered\n\t * socket stream wrappers */\n\tif (socket->type == PF_INET\n#ifdef HAVE_IPV6\n\t\t || socket->type == PF_INET6\n#endif\n\t) {\n\t\tint protoid;\n\t\tsocklen_t protoidlen = sizeof(protoid);\n\n\t\tgetsockopt(socket->bsd_socket, SOL_SOCKET, SO_TYPE, (char *) &protoid, &protoidlen);\n\n\t\tif (protoid == SOCK_STREAM) {\n\t\t\t/* SO_PROTOCOL is not (yet?) supported on OS X, so let's assume it's TCP there */\n#ifdef SO_PROTOCOL\n\t\t\tprotoidlen = sizeof(protoid);\n\t\t\tgetsockopt(socket->bsd_socket, SOL_SOCKET, SO_PROTOCOL, (char *) &protoid, &protoidlen);\n\t\t\tif (protoid == IPPROTO_TCP)\n#endif\n\t\t\t{\n\t\t\t\tprotocol = \"tcp://\";\n\t\t\t\tprotocollen = sizeof(\"tcp://\") - 1;\n\t\t\t}\n\t\t} else if (protoid == SOCK_DGRAM) {\n\t\t\tprotocol = \"udp://\";\n\t\t\tprotocollen = sizeof(\"udp://\") - 1;\n\t\t}\n#ifdef PF_UNIX\n\t} else if (socket->type == PF_UNIX) {\n\t\tint type;\n\t\tsocklen_t typelen = sizeof(type);\n\n\t\tgetsockopt(socket->bsd_socket, SOL_SOCKET, SO_TYPE, (char *) &type, &typelen);\n\n\t\tif (type == SOCK_STREAM) {\n\t\t\tprotocol = \"unix://\";\n\t\t\tprotocollen = sizeof(\"unix://\") - 1;\n\t\t} else if (type == SOCK_DGRAM) {\n\t\t\tprotocol = \"udg://\";\n\t\t\tprotocollen = sizeof(\"udg://\") - 1;\n\t\t}\n#endif\n\t}\n\n\t/* Try to get a stream with the registered sockops for the protocol in use\n\t * We don't want streams to actually *do* anything though, so don't give it\n\t * anything apart from the protocol */\n\tif (protocol != NULL) {\n\t\tstream = php_stream_xport_create(protocol, protocollen, 0, 0, NULL, NULL, NULL, NULL, NULL);\n\t}\n\n\t/* Fall back to creating a generic socket stream */\n\tif (stream == NULL) {\n\t\tstream = php_stream_sock_open_from_socket(socket->bsd_socket, 0);\n\n\t\tif (stream == NULL) {\n\t\t\tphp_error_docref(NULL, E_WARNING, \"Failed to create stream\");\n\t\t\tRETURN_FALSE;\n\t\t}\n\t}\n\n\tstream_data = (php_netstream_data_t *) stream->abstract;\n\tstream_data->socket = socket->bsd_socket;\n\tstream_data->is_blocked = socket->blocking;\n\tstream_data->timeout.tv_sec = FG(default_socket_timeout);\n\tstream_data->timeout.tv_usec = 0;\n\n\tphp_stream_to_zval(stream, &socket->zstream);\n\n\tRETURN_COPY(&socket->zstream);",
+    "semantic": "Either we already exported a stream or the socket came from an import, just return the existing stream",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_OBJECT_OF_CLASS",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_COPY",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zval"
+        ],
+        "internal_helpers": [
+            "php_stream_xport_create",
+            "php_stream_sock_open_from_socket",
+            "php_error_docref",
+            "php_stream_to_zval"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common socket_export_stream inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 6,
+    "purpose": "Either we already exported a stream or the socket came from an import, just return the existing stream",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "socket_select",
+        "socket_create_listen",
+        "socket_accept",
+        "socket_set_nonblock",
+        "socket_set_block",
+        "socket_listen",
+        "socket_close",
+        "socket_write",
+        "socket_read",
+        "socket_getsockname",
+        "socket_getpeername",
+        "socket_create"
+    ]
+}

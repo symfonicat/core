@@ -1,0 +1,182 @@
+{
+    "php_function": "mb_convert_encoding",
+    "zend_function": "mb_convert_encoding",
+    "source_file": "string.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "input_ht",
+            "macro": "Z_PARAM_ARRAY_HT_OR_STR",
+            "arguments": [
+                "input_ht",
+                "input_str"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY_HT_OR_STR(input_ht, input_str)"
+        },
+        {
+            "name": "to_encoding_name",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "to_encoding_name"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(to_encoding_name)"
+        },
+        {
+            "name": "from_encodings_ht",
+            "macro": "Z_PARAM_ARRAY_HT_OR_STR_OR_NULL",
+            "arguments": [
+                "from_encodings_ht",
+                "from_encodings_str"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY_HT_OR_STR_OR_NULL(from_encodings_ht, from_encodings_str)"
+        }
+    ],
+    "includes": [
+        "limits.h",
+        "libmbfl/config.h",
+        "php.h",
+        "php_ini.h",
+        "php_variables.h",
+        "mbstring.h",
+        "ext/standard/php_string.h",
+        "ext/standard/php_mail.h",
+        "ext/standard/exec.h",
+        "main/php_output.h",
+        "ext/standard/info.h",
+        "ext/pcre/php_pcre.h",
+        "libmbfl/mbfl/mbfilter_8bit.h",
+        "libmbfl/mbfl/mbfilter_pass.h",
+        "libmbfl/mbfl/eaw_table.h",
+        "libmbfl/filters/mbfilter_base64.h",
+        "libmbfl/filters/mbfilter_cjk.h",
+        "libmbfl/filters/mbfilter_qprint.h",
+        "libmbfl/filters/mbfilter_htmlent.h",
+        "libmbfl/filters/mbfilter_uuencode.h",
+        "libmbfl/filters/mbfilter_ucs4.h",
+        "libmbfl/filters/mbfilter_utf16.h",
+        "libmbfl/filters/mbfilter_singlebyte.h",
+        "libmbfl/filters/translit_kana_jisx0201_jisx0208.h",
+        "libmbfl/filters/unicode_prop.h",
+        "php_globals.h",
+        "rfc1867.h",
+        "php_content_types.h",
+        "SAPI.h",
+        "php_unicode.h",
+        "TSRM.h",
+        "mb_gpc.h",
+        "zend_smart_str.h",
+        "zend_multibyte.h",
+        "mbstring_arginfo.h",
+        "rare_cp_bitvec.h",
+        "emmintrin.h",
+        "immintrin.h",
+        "pmmintrin.h"
+    ],
+    "body": "zend_string *to_encoding_name;\n\tzend_string *input_str, *from_encodings_str = NULL;\n\tHashTable *input_ht, *from_encodings_ht = NULL;\n\tconst mbfl_encoding **from_encodings;\n\tsize_t num_from_encodings;\n\tbool free_from_encodings = false;\n\n\tZEND_PARSE_PARAMETERS_START(2, 3)\n\t\tZ_PARAM_ARRAY_HT_OR_STR(input_ht, input_str)\n\t\tZ_PARAM_STR(to_encoding_name)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_ARRAY_HT_OR_STR_OR_NULL(from_encodings_ht, from_encodings_str)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tconst mbfl_encoding *to_encoding = php_mb_get_encoding(to_encoding_name, 2);\n\tif (!to_encoding) {\n\t\tRETURN_THROWS();\n\t}\n\n\tif (from_encodings_ht) {\n\t\tif (php_mb_parse_encoding_array(from_encodings_ht, &from_encodings, &num_from_encodings, 3) == FAILURE) {\n\t\t\tRETURN_THROWS();\n\t\t}\n\t\tfree_from_encodings = true;\n\t} else if (from_encodings_str) {\n\t\tif (php_mb_parse_encoding_list(ZSTR_VAL(from_encodings_str), ZSTR_LEN(from_encodings_str),\n\t\t\t\t&from_encodings, &num_from_encodings,\n\t\t\t\t/* persistent */ 0, /* arg_num */ 3) == FAILURE) {\n\t\t\tRETURN_THROWS();\n\t\t}\n\t\tfree_from_encodings = true;\n\t} else {\n\t\tfrom_encodings = &MBSTRG(current_internal_encoding);\n\t\tnum_from_encodings = 1;\n\t}\n\n\tif (num_from_encodings > 1) {\n\t\tremove_non_encodings_from_elist(from_encodings, &num_from_encodings);\n\t}\n\n\tif (!num_from_encodings) {\n\t\tefree(ZEND_VOIDP(from_encodings));\n\t\tzend_argument_value_error(3, \"must specify at least one encoding\");\n\t\tRETURN_THROWS();\n\t}\n\n\tif (input_str) {\n\t\tzend_string *ret = php_mb_convert_encoding(ZSTR_VAL(input_str), ZSTR_LEN(input_str), to_encoding, from_encodings, num_from_encodings);\n\t\tif (ret != NULL) {\n\t\t\tRETVAL_STR(ret);\n\t\t} else {\n\t\t\tRETVAL_FALSE;\n\t\t}\n\t} else {\n\t\tHashTable *tmp;\n\t\ttmp = php_mb_convert_encoding_recursive(\n\t\t\tinput_ht, to_encoding, from_encodings, num_from_encodings);\n\t\tRETVAL_ARR(tmp);\n\t}\n\n\tif (free_from_encodings) {\n\t\tefree(ZEND_VOIDP(from_encodings));\n\t}",
+    "semantic": "persistent",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_ARRAY_HT_OR_STR",
+            "Z_PARAM_STR",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_ARRAY_HT_OR_STR_OR_NULL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_THROWS",
+            "ZSTR_VAL",
+            "ZSTR_LEN",
+            "ZEND_VOIDP"
+        ],
+        "zend_types": [
+            "zend_string",
+            "HashTable"
+        ],
+        "internal_helpers": [
+            "php_mb_get_encoding",
+            "php_mb_parse_encoding_array",
+            "php_mb_parse_encoding_list",
+            "zend_argument_value_error",
+            "php_mb_convert_encoding",
+            "php_mb_convert_encoding_recursive"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common mb_convert_encoding inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 6,
+    "purpose": "persistent",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "mb_language",
+        "mb_internal_encoding",
+        "mb_http_input",
+        "mb_http_output",
+        "mb_detect_order",
+        "mb_substitute_character",
+        "mb_preferred_mime_name",
+        "mb_parse_str",
+        "mb_output_handler",
+        "mb_str_split",
+        "mb_strlen",
+        "mb_strpos"
+    ]
+}

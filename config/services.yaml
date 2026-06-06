@@ -27,10 +27,7 @@ services:
             - '../core/src/Maker/'
             - '../core/src/SymfonicatBundle.php'
 
-    Symfonicat\Service\DomainService:
-        arguments:
-            $subdomainDir: '%kernel.project_dir%'
-
+    Symfonicat\Service\DomainService: ~
     Symfonicat\EventSubscriber\AdminLockSubscriber:
         arguments:
             $subdomainDir: '%kernel.project_dir%'
@@ -44,10 +41,7 @@ services:
     Symfonicat\EventSubscriber\AdminYamlDumpSubscriber:
         tags: ['doctrine.event_subscriber']
 
-    Symfonicat\Service\AffixService:
-        arguments:
-            $subdomainDir: '%kernel.project_dir%'
-
+    Symfonicat\Service\AffixService: ~
     Symfonicat\Service\ModuleRequestContextStore:
         arguments:
             $secret: '%kernel.secret%'

@@ -1,0 +1,100 @@
+{
+    "php_function": "sodium_unpad",
+    "zend_function": "sodium_unpad",
+    "source_file": "odium.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "php.h",
+        "ext/standard/info.h",
+        "php_libsodium.h",
+        "zend_attributes.h",
+        "zend_exceptions.h",
+        "sodium.h",
+        "stdint.h",
+        "string.h",
+        "libsodium_arginfo.h"
+    ],
+    "body": "zend_string *unpadded;\n\tchar        *padded;\n\tsize_t       padded_len;\n\tsize_t       unpadded_len;\n\tzend_long    blocksize;\n\tint          ret;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"sl\",\n\t\t\t\t\t\t\t\t\t&padded, &padded_len, &blocksize) == FAILURE) {\n\t\tsodium_remove_param_values_from_backtrace(EG(exception));\n\t\tRETURN_THROWS();\n\t}\n\tif (blocksize <= 0) {\n\t\tzend_argument_error(sodium_exception_ce, 2, \"must be greater than 0\");\n\t\tRETURN_THROWS();\n\t}\n\tif (blocksize > SIZE_MAX) {\n\t\tzend_argument_error(sodium_exception_ce, 2, \"is too large\");\n\t\tRETURN_THROWS();\n\t}\n\tif (padded_len < blocksize) {\n\t\tzend_argument_error(sodium_exception_ce, 1, \"must be at least as long as the block size\");\n\t\tRETURN_THROWS();\n\t}\n\n#if SODIUM_LIBRARY_VERSION_MAJOR > 9 || (SODIUM_LIBRARY_VERSION_MAJOR == 9 && SODIUM_LIBRARY_VERSION_MINOR >= 6)\n\tret = sodium_unpad(&unpadded_len, (const unsigned char *) padded,\n\t\t\t\t\t   padded_len, (size_t) blocksize);\n#else\n\t{\n\t\tconst char      *tail;\n\t\tunsigned char    acc = 0U;\n\t\tunsigned char    c;\n\t\tunsigned char    valid = 0U;\n\t\tvolatile size_t  pad_len = 0U;\n\t\tsize_t           i;\n\t\tsize_t           is_barrier;\n\n\t\ttail = &padded[padded_len - 1U];\n\n\t\tfor (i = 0U; i < (size_t) blocksize; i++) {\n\t\t\tc = tail[-i];\n\t\t\tis_barrier =\n\t\t\t\t(( (acc - 1U) & (pad_len - 1U) & ((c ^ 0x80) - 1U) ) >> 8) & 1U;\n\t\t\tacc |= c;\n\t\t\tpad_len |= i & (1U + ~is_barrier);\n\t\t\tvalid |= (unsigned char) is_barrier;\n\t\t}\n\t\tunpadded_len = padded_len - 1U - pad_len;\n\t\tret = (int) (valid - 1U);\n\t}\n#endif\n\tif (ret != 0 || unpadded_len > LONG_MAX) {\n\t\tzend_throw_exception(sodium_exception_ce, \"invalid padding\", 0);\n\t\tRETURN_THROWS();\n\t}\n\tunpadded = zend_string_init(padded, padded_len, 0);\n\tPHP_SODIUM_ZSTR_TRUNCATE(unpadded, unpadded_len);\n\tZSTR_VAL(unpadded)[unpadded_len] = 0;\n\tRETURN_STR(unpadded);",
+    "semantic": "Implements the PHP function sodium_unpad in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "ZSTR_VAL",
+            "RETURN_STR"
+        ],
+        "zend_types": [
+            "zend_string",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "zend_argument_error",
+            "zend_throw_exception",
+            "zend_string_init"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common sodium_unpad inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 6,
+    "purpose": "Implements the PHP function sodium_unpad in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "sodium_memzero",
+        "sodium_increment",
+        "sodium_add",
+        "sodium_memcmp",
+        "sodium_crypto_shorthash",
+        "sodium_crypto_secretbox",
+        "sodium_crypto_secretbox_open",
+        "sodium_crypto_generichash",
+        "sodium_crypto_generichash_init",
+        "sodium_crypto_generichash_update",
+        "sodium_crypto_generichash_final",
+        "sodium_crypto_box_keypair"
+    ]
+}

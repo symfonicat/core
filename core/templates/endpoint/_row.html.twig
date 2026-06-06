@@ -8,9 +8,9 @@
         {% if endpoint.enforce is null %}
             <i class="fa fa-fw fa-times"></i>
         {% elseif endpoint.enforce == 'domain' %}
-            <b>{{ endpoint.domain ? endpoint.domain.id : '' }}</b>
+            <b>{{ endpoint.domain ? endpoint.domain.tld : '' }}</b>
         {% elseif endpoint.enforce == 'subdomain' %}
-            <b>{{ endpoint.subdomain ? endpoint.subdomain.affix : '' }}{% if endpoint.domain %} ({{ endpoint.domain.id }}){% endif %}</b>
+            <b>{{ endpoint.subdomain ? endpoint.subdomain.affix : '' }}{% if endpoint.domain %} ({{ endpoint.domain.tld }}){% endif %}</b>
         {% else %}
             <i class="fa fa-fw fa-times"></i>
         {% endif %}

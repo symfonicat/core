@@ -29,7 +29,7 @@ final class FileUploadItemType extends AbstractType
             ])
             ->add('domain', EntityType::class, [
                 'class' => Domain::class,
-                'choice_label' => static fn (Domain $domain): string => (string) $domain->getId(false),
+                'choice_label' => static fn (Domain $domain): string => (string) $domain->getTld(),
                 'label' => 'domain',
                 'required' => false,
                 'placeholder' => 'select domain',
@@ -38,7 +38,7 @@ final class FileUploadItemType extends AbstractType
                 'class' => Subdomain::class,
                 'choice_label' => static function (Subdomain $subdomain): string {
                     $affix = trim((string) $subdomain->getAffix());
-                    $domain = trim((string) $subdomain->getDomain()?->getId());
+                    $domain = trim((string) $subdomain->getDomain()?->getTld());
 
                     return $domain === '' ? $affix : sprintf('%s (%s)', $affix, $domain);
                 },

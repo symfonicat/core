@@ -1,0 +1,92 @@
+{
+    "php_function": "phar_readfile",
+    "zend_function": "phar_readfile",
+    "source_file": "nterceptors.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "phar_internal.h",
+        "ext/standard/php_filestat.h",
+        "ext/standard/file.h"
+    ],
+    "body": "zend_string *filename;\n\tbool use_include_path = 0;\n\tzval *zcontext = NULL;\n\n\tif (!PHAR_G(intercepted)) {\n\t\tgoto skip_phar;\n\t}\n\n\tif ((HT_IS_INITIALIZED(&PHAR_G(phar_fname_map)) && !zend_hash_num_elements(&(PHAR_G(phar_fname_map))))\n\t\t&& !HT_IS_INITIALIZED(&cached_phars)) {\n\t\tgoto skip_phar;\n\t}\n\tif (zend_parse_parameters_ex(ZEND_PARSE_PARAMS_QUIET, ZEND_NUM_ARGS(), \"P|br!\", &filename, &use_include_path, &zcontext) == FAILURE) {\n\t\tgoto skip_phar;\n\t}\n\tif (use_include_path || (!IS_ABSOLUTE_PATH(ZSTR_VAL(filename), ZSTR_LEN(filename)) && !strstr(ZSTR_VAL(filename), \"://\"))) {\n\t\tzend_string *name = phar_get_name_for_relative_paths(filename, use_include_path);\n\t\tif (!name) {\n\t\t\tgoto skip_phar;\n\t\t}\n\n\t\tphp_stream *stream;\n\t\tphp_stream_context *context = php_stream_context_from_zval(zcontext, 0);\n\n\t\tstream = php_stream_open_wrapper_ex(ZSTR_VAL(name), \"rb\", 0 | REPORT_ERRORS, NULL, context);\n\n\t\tzend_string_release_ex(name, false);\n\t\tif (stream == NULL) {\n\t\t\tRETURN_FALSE;\n\t\t}\n\t\tssize_t size = php_stream_passthru(stream);\n\t\tphp_stream_close(stream);\n\t\tRETURN_LONG(size);\n\t}\n\nskip_phar:\n\tPHAR_G(orig_readfile)(INTERNAL_FUNCTION_PARAM_PASSTHRU);\n\treturn;",
+    "semantic": "Implements the PHP function phar_readfile in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMS_QUIET",
+            "ZEND_NUM_ARGS",
+            "ZSTR_VAL",
+            "ZSTR_LEN",
+            "RETURN_FALSE",
+            "RETURN_LONG"
+        ],
+        "zend_types": [
+            "zend_string",
+            "zval"
+        ],
+        "internal_helpers": [
+            "zend_hash_num_elements",
+            "zend_parse_parameters_ex",
+            "php_stream_context_from_zval",
+            "php_stream_open_wrapper_ex",
+            "zend_string_release_ex",
+            "php_stream_passthru",
+            "php_stream_close"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common phar_readfile inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 4,
+    "purpose": "Implements the PHP function phar_readfile in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "phar_opendir",
+        "phar_file_get_contents",
+        "phar_fopen",
+        "fname",
+        "phar_is_file",
+        "phar_is_link"
+    ]
+}

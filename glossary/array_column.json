@@ -1,0 +1,165 @@
+{
+    "php_function": "array_column",
+    "zend_function": "array_column",
+    "source_file": "ray.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "input",
+            "macro": "Z_PARAM_ARRAY_HT",
+            "arguments": [
+                "input"
+            ],
+            "type": "HashTable",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY_HT(input)"
+        },
+        {
+            "name": "column_str",
+            "macro": "Z_PARAM_STR_OR_LONG_OR_NULL",
+            "arguments": [
+                "column_str",
+                "column_long",
+                "column_is_null"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR_OR_LONG_OR_NULL(column_str, column_long, column_is_null)"
+        },
+        {
+            "name": "index_str",
+            "macro": "Z_PARAM_STR_OR_LONG_OR_NULL",
+            "arguments": [
+                "index_str",
+                "index_long",
+                "index_is_null"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR_OR_LONG_OR_NULL(index_str, index_long, index_is_null)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "php_ini.h",
+        "stdarg.h",
+        "stdlib.h",
+        "math.h",
+        "time.h",
+        "string.h",
+        "zend_globals.h",
+        "zend_interfaces.h",
+        "php_array.h",
+        "basic_functions.h",
+        "php_string.h",
+        "php_math.h",
+        "zend_smart_str.h",
+        "zend_bitset.h",
+        "zend_exceptions.h",
+        "ext/random/php_random.h",
+        "zend_frameless_function.h"
+    ],
+    "body": "HashTable *input;\n\tzval *colval, *data, rv;\n\tzend_string *column_str = NULL;\n\tzend_long column_long = 0;\n\tbool column_is_null = 0;\n\tzend_string *index_str = NULL;\n\tzend_long index_long = 0;\n\tbool index_is_null = 1;\n\n\tZEND_PARSE_PARAMETERS_START(2, 3)\n\t\tZ_PARAM_ARRAY_HT(input)\n\t\tZ_PARAM_STR_OR_LONG_OR_NULL(column_str, column_long, column_is_null)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_STR_OR_LONG_OR_NULL(index_str, index_long, index_is_null)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tvoid* cache_slot_column[3] = { NULL, NULL, NULL };\n\tvoid* cache_slot_index[3] = { NULL, NULL, NULL };\n\n\tarray_init_size(return_value, zend_hash_num_elements(input));\n\t/* Index param is not passed */\n\tif (index_is_null) {\n\t\tzend_hash_real_init_packed(Z_ARRVAL_P(return_value));\n\t\tZEND_HASH_FILL_PACKED(Z_ARRVAL_P(return_value)) {\n\t\t\tZEND_HASH_FOREACH_VAL(input, data) {\n\t\t\t\tZVAL_DEREF(data);\n\t\t\t\tif (column_is_null) {\n\t\t\t\t\tZ_TRY_ADDREF_P(data);\n\t\t\t\t\tcolval = data;\n\t\t\t\t} else if ((colval = array_column_fetch_prop(data, column_str, column_long, cache_slot_column, &rv)) == NULL) {\n\t\t\t\t\tcontinue;\n\t\t\t\t}\n\t\t\t\tZEND_HASH_FILL_ADD(colval);\n\t\t\t} ZEND_HASH_FOREACH_END();\n\t\t} ZEND_HASH_FILL_END();\n\t} else {\n\t\tZEND_HASH_FOREACH_VAL(input, data) {\n\t\t\tZVAL_DEREF(data);\n\n\t\t\tif (column_is_null) {\n\t\t\t\tZ_TRY_ADDREF_P(data);\n\t\t\t\tcolval = data;\n\t\t\t} else if ((colval = array_column_fetch_prop(data, column_str, column_long, cache_slot_column, &rv)) == NULL) {\n\t\t\t\tcontinue;\n\t\t\t}\n\n\t\t\tzval rv;\n\t\t\tzval *keyval = array_column_fetch_prop(data, index_str, index_long, cache_slot_index, &rv);\n\t\t\tif (keyval) {\n\t\t\t\tarray_set_zval_key(Z_ARRVAL_P(return_value), keyval, colval);\n\t\t\t\tzval_ptr_dtor(colval);\n\t\t\t\tzval_ptr_dtor(keyval);\n\t\t\t} else {\n\t\t\t\tzend_hash_next_index_insert(Z_ARRVAL_P(return_value), colval);\n\t\t\t}\n\t\t} ZEND_HASH_FOREACH_END();\n\t}",
+    "semantic": "Index param is not passed",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_ARRAY_HT",
+            "Z_PARAM_STR_OR_LONG_OR_NULL",
+            "Z_PARAM_OPTIONAL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZEND_HASH_FILL_PACKED",
+            "ZEND_HASH_FOREACH_VAL",
+            "ZVAL_DEREF",
+            "ZEND_HASH_FILL_ADD",
+            "ZEND_HASH_FOREACH_END",
+            "ZEND_HASH_FILL_END"
+        ],
+        "zend_types": [
+            "HashTable",
+            "zval",
+            "zend_string",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_hash_num_elements",
+            "zend_hash_real_init_packed",
+            "zval_ptr_dtor",
+            "zend_hash_next_index_insert"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common array_column inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 6,
+    "purpose": "Index param is not passed",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "krsort",
+        "ksort",
+        "count",
+        "natsort",
+        "natcasesort",
+        "asort",
+        "arsort",
+        "sort",
+        "rsort",
+        "usort",
+        "uasort",
+        "uksort"
+    ]
+}

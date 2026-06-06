@@ -1,7 +1,7 @@
-<tr id="application_{{ application.id(false) }}" class="btn-row">
+<tr id="application_{{ application.id }}" class="btn-row">
     <td class="fw-semibold">{{ application.name }}</td>
     <td><code>{{ application.id }}</code></td>
-    <td><b>{% if application.domain %}{{ application.domain.id(false) }}{% else %}<i class="fa fa-fw fa-times"></i>{% endif %}</b></td>
+    <td><b>{% if application.domain %}{{ application.domain.tld }}{% else %}<i class="fa fa-fw fa-times"></i>{% endif %}</b></td>
     <td><b>{% if application.subdomain %}{{ application.subdomain.affix }}{% else %}<i class="fa fa-fw fa-times"></i>{% endif %}</b></td>
     <td><b>{% if application.endpoint %}<code>{{ application.endpoint.id }}</code>{% else %}<i class="fa fa-fw fa-times"></i>{% endif %}</b></td>
     {% for env_parent in env_parents %}

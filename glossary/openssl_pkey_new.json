@@ -1,0 +1,125 @@
+{
+    "php_function": "openssl_pkey_new",
+    "zend_function": "openssl_pkey_new",
+    "source_file": "nssl.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "php_openssl.h",
+        "zend_attributes.h",
+        "zend_exceptions.h",
+        "ext/standard/file.h",
+        "ext/standard/info.h",
+        "ext/standard/php_fopen_wrappers.h",
+        "ext/standard/md5.h",
+        "ext/standard/base64.h",
+        "openssl/evp.h",
+        "openssl/bn.h",
+        "openssl/rsa.h",
+        "openssl/dsa.h",
+        "openssl/dh.h",
+        "openssl/x509.h",
+        "openssl/x509v3.h",
+        "openssl/crypto.h",
+        "openssl/pem.h",
+        "openssl/err.h",
+        "openssl/conf.h",
+        "openssl/rand.h",
+        "openssl/ssl.h",
+        "openssl/pkcs12.h",
+        "openssl/cms.h",
+        "openssl/core_names.h",
+        "openssl/param_build.h",
+        "openssl/provider.h",
+        "openssl/engine.h",
+        "time.h",
+        "openssl_arginfo.h"
+    ],
+    "body": "struct php_x509_request req;\n\tzval * args = NULL;\n\tzval *data;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"|a!\", &args) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\tRETVAL_FALSE;\n\n\tif (args && Z_TYPE_P(args) == IS_ARRAY) {\n\t\tEVP_PKEY *pkey;\n\n\t\tif ((data = zend_hash_str_find(Z_ARRVAL_P(args), \"rsa\", sizeof(\"rsa\")-1)) != NULL &&\n\t\t\tZ_TYPE_P(data) == IS_ARRAY) {\n\t\t\tpkey = php_openssl_pkey_init_rsa(data);\n\t\t\tif (!pkey) {\n\t\t\t\tRETURN_FALSE;\n\t\t\t}\n\t\t\tphp_openssl_pkey_object_init(return_value, pkey, /* is_private */ true);\n\t\t\treturn;\n\t\t} else if ((data = zend_hash_str_find(Z_ARRVAL_P(args), \"dsa\", sizeof(\"dsa\") - 1)) != NULL &&\n\t\t\tZ_TYPE_P(data) == IS_ARRAY) {\n\t\t\tbool is_private;\n\t\t\tpkey = php_openssl_pkey_init_dsa(data, &is_private);\n\t\t\tif (!pkey) {\n\t\t\t\tRETURN_FALSE;\n\t\t\t}\n\t\t\tphp_openssl_pkey_object_init(return_value, pkey, is_private);\n\t\t\treturn;\n\t\t} else if ((data = zend_hash_str_find(Z_ARRVAL_P(args), \"dh\", sizeof(\"dh\") - 1)) != NULL &&\n\t\t\tZ_TYPE_P(data) == IS_ARRAY) {\n\t\t\tbool is_private;\n\t\t\tpkey = php_openssl_pkey_init_dh(data, &is_private);\n\t\t\tif (!pkey) {\n\t\t\t\tRETURN_FALSE;\n\t\t\t}\n\t\t\tphp_openssl_pkey_object_init(return_value, pkey, is_private);\n\t\t\treturn;\n#ifdef HAVE_EVP_PKEY_EC\n\t\t} else if ((data = zend_hash_str_find(Z_ARRVAL_P(args), \"ec\", sizeof(\"ec\") - 1)) != NULL &&\n\t\t\tZ_TYPE_P(data) == IS_ARRAY) {\n\t\t\tbool is_private;\n\t\t\tpkey = php_openssl_pkey_init_ec(data, &is_private);\n\t\t\tif (!pkey) {\n\t\t\t\tRETURN_FALSE;\n\t\t\t}\n\t\t\tphp_openssl_pkey_object_init(return_value, pkey, is_private);\n\t\t\treturn;\n#endif\n#if PHP_OPENSSL_API_VERSION >= 0x30000\n\t\t} else if ((data = zend_hash_str_find(Z_ARRVAL_P(args), \"x25519\", sizeof(\"x25519\") - 1)) != NULL &&\n\t\t\tZ_TYPE_P(data) == IS_ARRAY) {\n\t\t\tphp_openssl_pkey_object_curve_25519_448(return_value, EVP_PKEY_X25519, data);\n\t\t\treturn;\n\t\t} else if ((data = zend_hash_str_find(Z_ARRVAL_P(args), \"ed25519\", sizeof(\"ed25519\") - 1)) != NULL &&\n\t\t\tZ_TYPE_P(data) == IS_ARRAY) {\n\t\t\tphp_openssl_pkey_object_curve_25519_448(return_value, EVP_PKEY_ED25519, data);\n\t\t\treturn;\n\t\t} else if ((data = zend_hash_str_find(Z_ARRVAL_P(args), \"x448\", sizeof(\"x448\") - 1)) != NULL &&\n\t\t\tZ_TYPE_P(data) == IS_ARRAY) {\n\t\t\tphp_openssl_pkey_object_curve_25519_448(return_value, EVP_PKEY_X448, data);\n\t\t\treturn;\n\t\t} else if ((data = zend_hash_str_find(Z_ARRVAL_P(args), \"ed448\", sizeof(\"ed448\") - 1)) != NULL &&\n\t\t\tZ_TYPE_P(data) == IS_ARRAY) {\n\t\t\tphp_openssl_pkey_object_curve_25519_448(return_value, EVP_PKEY_ED448, data);\n\t\t\treturn;\n#endif\n\t\t}\n\t}\n\n\tPHP_SSL_REQ_INIT(&req);\n\n\tif (PHP_SSL_REQ_PARSE(&req, args) == SUCCESS) {\n\t\tif (php_openssl_generate_private_key(&req)) {\n\t\t\t/* pass back a key resource */\n\t\t\tphp_openssl_pkey_object_init(return_value, req.priv_key, /* is_private */ true);\n\t\t\t/* make sure the cleanup code doesn't zap it! */\n\t\t\treq.priv_key = NULL;\n\t\t}\n\t}\n\tPHP_SSL_REQ_DISPOSE(&req);",
+    "semantic": "is_private",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zval"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "zend_hash_str_find",
+            "php_openssl_pkey_init_rsa",
+            "php_openssl_pkey_object_init",
+            "php_openssl_pkey_init_dsa",
+            "php_openssl_pkey_init_dh",
+            "php_openssl_pkey_init_ec",
+            "php_openssl_pkey_object_curve_25519_448",
+            "php_openssl_generate_private_key"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common openssl_pkey_new inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 6,
+    "purpose": "is_private",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "openssl_get_cert_locations",
+        "openssl_x509_export_to_file",
+        "openssl_spki_new",
+        "openssl_spki_verify",
+        "openssl_spki_export",
+        "openssl_spki_export_challenge",
+        "openssl_x509_export",
+        "openssl_x509_fingerprint",
+        "openssl_x509_check_private_key",
+        "openssl_x509_verify",
+        "openssl_x509_parse",
+        "openssl_x509_checkpurpose"
+    ]
+}

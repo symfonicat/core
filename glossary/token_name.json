@@ -1,0 +1,100 @@
+{
+    "php_function": "token_name",
+    "zend_function": "token_name",
+    "source_file": "okenizer.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "type",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "type"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(type)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "ext/standard/info.h",
+        "php_tokenizer.h",
+        "zend.h",
+        "zend_exceptions.h",
+        "zend_language_scanner.h",
+        "zend_language_scanner_defs.h",
+        "zend_language_parser.h",
+        "zend_interfaces.h",
+        "tokenizer_data_arginfo.h",
+        "tokenizer_arginfo.h"
+    ],
+    "body": "zend_long type;\n\n\tZEND_PARSE_PARAMETERS_START(1, 1)\n\t\tZ_PARAM_LONG(type)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tconst char *token_name = get_token_type_name(type);\n\tif (!token_name) {\n\t\ttoken_name = \"UNKNOWN\";\n\t}\n\tRETURN_STRING(token_name);",
+    "semantic": "Implements the PHP function token_name in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_LONG",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_STRING"
+        ],
+        "zend_types": [
+            "zend_long"
+        ],
+        "internal_helpers": []
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common token_name inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 3,
+    "purpose": "Implements the PHP function token_name in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "token_get_all"
+    ]
+}

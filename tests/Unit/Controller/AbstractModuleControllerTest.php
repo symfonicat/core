@@ -14,12 +14,14 @@ use Symfonicat\Repository\SubdomainRepository;
 use Symfonicat\Service\DomainService;
 use Symfonicat\Service\ModuleService;
 use Symfonicat\Service\PathService;
+use Symfonicat\Service\PackageDiscoveryService;
 use Symfonicat\Service\SubdomainService;
 use Symfonicat\Service\RuntimeConfig;
 use Symfonicat\Service\AffixService;
 use Psr\Log\NullLogger;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -147,9 +149,54 @@ final class AbstractModuleControllerTest extends TestCase
         $controller->runModule(new Response('must not reach here'));
     }
 
+    public function testJsonHelperUsesSameGuard(): void
+    {
+        $module = $this->makeModule('analytics');
+        $domain = $this->makeDomain('example.com');
+        $domain->addModule($module);
+
+        $controller = $this->makeController(
+            domain: $domain,
+            subdomain: null,
+            module: $module,
+        );
+
+        $response = $controller->runJson(['working' => true], 201);
+
+        self::assertInstanceOf(JsonResponse::class, $response);
+        self::assertSame(201, $response->getStatusCode());
+        self::assertSame(['working' => true], json_decode((string) $response->getContent(), true));
+    }
+
+    public function testHtmlHelperUsesSameGuard(): void
+    {
+        $module = $this->makeModule('analytics');
+        $domain = $this->makeDomain('example.com');
+        $domain->addModule($module);
+
+        $controller = $this->makeController(
+            domain: $domain,
+            subdomain: null,
+            module: $module,
+        );
+
+        $response = $controller->runHtml('<p>ok</p>', 202);
+
+        self::assertInstanceOf(Response::class, $response);
+        self::assertSame(202, $response->getStatusCode());
+        self::assertSame('<p>ok</p>', $response->getContent());
+    }
+
     private function makeController(?Domain $domain, ?Subdomain $subdomain, ?Module $module, bool $validatedModuleRequest = true): object
     {
-        $subdomainDir = dirname(__DIR__, 3);
+        $subdomainDir = sys_get_temp_dir().'/symfonicat_controller_'.bin2hex(random_bytes(6));
+        mkdir($subdomainDir.'/config/packages', 0755, true);
+        file_put_contents($subdomainDir.'/config/packages/symfonicat.yaml', <<<'YAML'
+symfonicat:
+    symfonicat_module:
+        - id: symfonicat/analytics/main
+          package: symfonicat/analytics
+YAML);
         $requestStack = new RequestStack();
         $request = Request::create('/m/symfonicat/analytics/main', 'POST', [], [], [], [
             'HTTP_HOST' => $this->makeHost($domain, $subdomain),
@@ -162,31 +209,42 @@ final class AbstractModuleControllerTest extends TestCase
         $domainRepository = $this->createStub(DomainRepository::class);
         $domainRepository->method('find')->willReturn($domain);
         $domainRepository->method('findOneByHost')->willReturn($domain);
-        $runtimeConfig = new RuntimeConfig($subdomainDir);
         $entityManager = $this->createStub(EntityManagerInterface::class);
-        $domainService = new DomainService($subdomainDir, $requestStack, $domainRepository, $entityManager, $runtimeConfig);
-
         $subdomainRepository = $this->createStub(SubdomainRepository::class);
         $subdomainRepository->method('find')->willReturn($subdomain);
         $subdomainRepository->method('findOneByAffixForDomain')->willReturn($subdomain);
-        $affixService = new AffixService($subdomainDir, $requestStack, new NullLogger(), $domainService);
-        $subdomainService = new SubdomainService(
-            $domainService,
-            $affixService,
-            $subdomainRepository,
-            $entityManager,
-            $runtimeConfig,
-        );
+        $runtimeConfig = new RuntimeConfig($subdomainDir);
+        $domainService = new class($domain) extends DomainService {
+            public function __construct(private readonly ?Domain $domain)
+            {
+            }
 
+            public function load(): ?Domain
+            {
+                return $this->domain;
+            }
+        };
+        $subdomainService = new class($subdomain) extends SubdomainService {
+            public function __construct(private readonly ?Subdomain $subdomain)
+            {
+            }
+
+            public function load()
+            {
+                return $this->subdomain;
+            }
+        };
         $pathService = new PathService($requestStack);
         $moduleRepository = $this->createStub(ModuleRepository::class);
         $moduleRepository->method('find')->willReturn($module);
         $moduleRepository->method('findOneByFullOrCleanId')->willReturn($module);
+        $packageDiscoveryService = new PackageDiscoveryService($subdomainDir);
         $moduleService = new ModuleService(
             $requestStack,
             $pathService,
             $moduleRepository,
             $entityManager,
+            $packageDiscoveryService,
             $runtimeConfig,
         );
 
@@ -194,6 +252,16 @@ final class AbstractModuleControllerTest extends TestCase
             public function runModule(Response $shouldRun, Response|false $fallback = false): Response
             {
                 return $this->module($shouldRun, $fallback);
+            }
+
+            public function runJson(mixed $data, int $status = 200, array $headers = []): JsonResponse
+            {
+                return $this->json($data, $status, $headers);
+            }
+
+            public function runHtml(string $content, int $status = 200, array $headers = []): Response
+            {
+                return $this->html($content, $status, $headers);
             }
         };
     }
@@ -210,7 +278,7 @@ final class AbstractModuleControllerTest extends TestCase
 
     private function makeHost(?Domain $domain, ?Subdomain $subdomain): string
     {
-        $domainId = $domain?->getId(false) ?? 'example.com';
+        $domainId = $domain?->getTld() ?? 'example.com';
 
         if ($subdomain instanceof Subdomain && trim((string) $subdomain->getAffix()) !== '') {
             return $subdomain->getAffix().'.'.$domainId;

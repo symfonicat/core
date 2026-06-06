@@ -1,0 +1,14 @@
+#!/usr/bin/env sh
+
+set -eu
+
+root_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+target_dir="$root_dir/php-src"
+
+if [ -d "$target_dir/.git" ] || [ -f "$target_dir/.git" ]; then
+    printf 'php-src already exists at %s\n' "$target_dir" >&2
+    exit 1
+fi
+
+rm -rf "$target_dir"
+git clone --branch PHP-8.4.0 --single-branch https://github.com/php/php-src.git "$target_dir"

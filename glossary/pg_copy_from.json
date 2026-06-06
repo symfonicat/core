@@ -1,0 +1,191 @@
+{
+    "php_function": "pg_copy_from",
+    "zend_function": "pg_copy_from",
+    "source_file": ".c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "pgsql_link",
+            "macro": "Z_PARAM_OBJECT_OF_CLASS",
+            "arguments": [
+                "pgsql_link",
+                "pgsql_link_ce"
+            ],
+            "type": "zend_object",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_OBJECT_OF_CLASS(pgsql_link, pgsql_link_ce)"
+        },
+        {
+            "name": "table_name",
+            "macro": "Z_PARAM_PATH_STR",
+            "arguments": [
+                "table_name"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_PATH_STR(table_name)"
+        },
+        {
+            "name": "pg_rows",
+            "macro": "Z_PARAM_ARRAY",
+            "arguments": [
+                "pg_rows"
+            ],
+            "type": "HashTable",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY(pg_rows)"
+        },
+        {
+            "name": "pg_delimiter",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "pg_delimiter"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(pg_delimiter)"
+        },
+        {
+            "name": "pg_null_as",
+            "macro": "Z_PARAM_STRING",
+            "arguments": [
+                "pg_null_as",
+                "pg_null_as_len"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING(pg_null_as, pg_null_as_len)"
+        }
+    ],
+    "includes": [
+        "stdlib.h",
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "ext/standard/info.h",
+        "zend_smart_str.h",
+        "ext/pcre/php_pcre.h",
+        "php_pgsql.h",
+        "php_globals.h",
+        "zend_exceptions.h",
+        "zend_attributes.h",
+        "php_network.h",
+        "pgsql_arginfo.h"
+    ],
+    "body": "zval *pgsql_link = NULL, *pg_rows;\n\tpgsql_link_handle *link;\n\tzval *value;\n\tzend_string *table_name;\n\tzend_string *pg_delimiter = NULL;\n\tchar *pg_null_as = NULL;\n\tsize_t pg_null_as_len;\n\tbool pg_null_as_free = false;\n\tchar *query;\n\tPGconn *pgsql;\n\tPGresult *pgsql_result;\n\tExecStatusType status;\n\n\tZEND_PARSE_PARAMETERS_START(3, 5)\n\t\tZ_PARAM_OBJECT_OF_CLASS(pgsql_link, pgsql_link_ce)\n\t\tZ_PARAM_PATH_STR(table_name)\n\t\tZ_PARAM_ARRAY(pg_rows)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_STR(pg_delimiter)\n\t\tZ_PARAM_STRING(pg_null_as, pg_null_as_len)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tlink = Z_PGSQL_LINK_P(pgsql_link);\n\tCHECK_PGSQL_LINK(link);\n\tpgsql = link->conn;\n\n\tif (!pg_delimiter) {\n\t\tpg_delimiter = ZSTR_CHAR('\\t');\n\t} else if (ZSTR_LEN(pg_delimiter) != 1) {\n\t\tzend_argument_value_error(4, \"must be one character\");\n\t\tRETURN_THROWS();\n\t}\n\tif (!pg_null_as) {\n\t\tpg_null_as = estrdup(\"\\\\\\\\N\");\n\t\tpg_null_as_free = true;\n\t}\n\n\tspprintf(&query, 0, \"COPY %s FROM STDIN DELIMITER E'%c' NULL AS E'%s'\", ZSTR_VAL(table_name), *ZSTR_VAL(pg_delimiter), pg_null_as);\n\twhile ((pgsql_result = PQgetResult(pgsql))) {\n\t\tPQclear(pgsql_result);\n\t}\n\tpgsql_result = PQexec(pgsql, query);\n\n\tif (pg_null_as_free) {\n\t\tefree(pg_null_as);\n\t}\n\tefree(query);\n\n\tif (pgsql_result) {\n\t\tstatus = PQresultStatus(pgsql_result);\n\t} else {\n\t\tstatus = (ExecStatusType) PQstatus(pgsql);\n\t}\n\n\tswitch (status) {\n\t\tcase PGRES_COPY_IN:\n\t\t\tif (pgsql_result) {\n\t\t\t\tint command_failed = 0;\n\t\t\t\tPQclear(pgsql_result);\n\t\t\t\tZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(pg_rows), value) {\n\t\t\t\t\tzend_string *tmp = zval_try_get_string(value);\n\t\t\t\t\tif (UNEXPECTED(!tmp)) {\n\t\t\t\t\t\treturn;\n\t\t\t\t\t}\n\t\t\t\t\tzend_string *zquery = zend_string_alloc(ZSTR_LEN(tmp) + 1, false);\n\t\t\t\t\tmemcpy(ZSTR_VAL(zquery), ZSTR_VAL(tmp), ZSTR_LEN(tmp) + 1);\n\t\t\t\t\tZSTR_LEN(zquery) = ZSTR_LEN(tmp);\n\t\t\t\t\tif (ZSTR_LEN(tmp) > 0 && ZSTR_VAL(zquery)[ZSTR_LEN(tmp)]  != '\\n') {\n\t\t\t\t\t\tZSTR_VAL(zquery)[ZSTR_LEN(tmp)] = '\\n';\n\t\t\t\t\t\tZSTR_LEN(zquery) ++;\n\t\t\t\t\t}\n\t\t\t\t\tif (PQputCopyData(pgsql, ZSTR_VAL(zquery), ZSTR_LEN(zquery)) != 1) {\n\t\t\t\t\t\tzend_string_release_ex(zquery, false);\n\t\t\t\t\t\tzend_string_release(tmp);\n\t\t\t\t\t\tPHP_PQ_ERROR(\"copy failed: %s\", pgsql);\n\t\t\t\t\t\tRETURN_FALSE;\n\t\t\t\t\t}\n\t\t\t\t\tzend_string_release_ex(zquery, false);\n\t\t\t\t\tzend_string_release(tmp);\n\t\t\t\t} ZEND_HASH_FOREACH_END();\n\n\t\t\t\tif (PQputCopyEnd(pgsql, NULL) != 1) {\n\t\t\t\t\tPHP_PQ_ERROR(\"putcopyend failed: %s\", pgsql);\n\t\t\t\t\tRETURN_FALSE;\n\t\t\t\t}\n\t\t\t\twhile ((pgsql_result = PQgetResult(pgsql))) {\n\t\t\t\t\tif (PGRES_COMMAND_OK != PQresultStatus(pgsql_result)) {\n\t\t\t\t\t\tPHP_PQ_ERROR(\"Copy command failed: %s\", pgsql);\n\t\t\t\t\t\tcommand_failed = 1;\n\t\t\t\t\t}\n\t\t\t\t\tPQclear(pgsql_result);\n\t\t\t\t}\n\t\t\t\tif (command_failed) {\n\t\t\t\t\tRETURN_FALSE;\n\t\t\t\t}\n\t\t\t} else {\n\t\t\t\tPQclear(pgsql_result);\n\t\t\t\tRETURN_FALSE;\n\t\t\t}\n\t\t\tRETURN_TRUE;\n\t\t\tbreak;\n\t\tdefault:\n\t\t\tPQclear(pgsql_result);\n\t\t\tPHP_PQ_ERROR(\"Copy command failed: %s\", pgsql);\n\t\t\tRETURN_FALSE;\n\t\t\tbreak;\n\t}",
+    "semantic": "Implements the PHP function pg_copy_from in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_OBJECT_OF_CLASS",
+            "Z_PARAM_PATH_STR",
+            "Z_PARAM_ARRAY",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_STR",
+            "Z_PARAM_STRING",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZSTR_CHAR",
+            "ZSTR_LEN",
+            "RETURN_THROWS",
+            "ZSTR_VAL",
+            "ZEND_HASH_FOREACH_VAL",
+            "RETURN_FALSE",
+            "ZEND_HASH_FOREACH_END",
+            "RETURN_TRUE"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "zend_argument_value_error",
+            "zval_try_get_string",
+            "zend_string_alloc",
+            "zend_string_release_ex",
+            "zend_string_release"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common pg_copy_from inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 10,
+    "purpose": "Implements the PHP function pg_copy_from in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "pg_connect",
+        "pg_connect_poll",
+        "pg_pconnect",
+        "pg_close",
+        "pg_dbname",
+        "pg_last_error",
+        "pg_options",
+        "pg_port",
+        "pg_tty",
+        "pg_host",
+        "pg_version",
+        "pg_jit"
+    ]
+}

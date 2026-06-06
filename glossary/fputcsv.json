@@ -1,0 +1,205 @@
+{
+    "php_function": "fputcsv",
+    "zend_function": "fputcsv",
+    "source_file": "le.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "fp",
+            "macro": "Z_PARAM_RESOURCE",
+            "arguments": [
+                "fp"
+            ],
+            "type": "zend_resource",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_RESOURCE(fp)"
+        },
+        {
+            "name": "fields",
+            "macro": "Z_PARAM_ARRAY",
+            "arguments": [
+                "fields"
+            ],
+            "type": "HashTable",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY(fields)"
+        },
+        {
+            "name": "delimiter_str",
+            "macro": "Z_PARAM_STRING",
+            "arguments": [
+                "delimiter_str",
+                "delimiter_str_len"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING(delimiter_str, delimiter_str_len)"
+        },
+        {
+            "name": "enclosure_str",
+            "macro": "Z_PARAM_STRING",
+            "arguments": [
+                "enclosure_str",
+                "enclosure_str_len"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING(enclosure_str, enclosure_str_len)"
+        },
+        {
+            "name": "escape_str",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "escape_str"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(escape_str)"
+        },
+        {
+            "name": "eol_str",
+            "macro": "Z_PARAM_STR_OR_NULL",
+            "arguments": [
+                "eol_str"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR_OR_NULL(eol_str)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "ext/standard/flock_compat.h",
+        "ext/standard/php_filestat.h",
+        "php_open_temporary_file.h",
+        "ext/standard/basic_functions.h",
+        "php_ini.h",
+        "zend_smart_str.h",
+        "stdio.h",
+        "stdlib.h",
+        "errno.h",
+        "wchar.h",
+        "sys/types.h",
+        "sys/stat.h",
+        "fcntl.h",
+        "php_string.h",
+        "file.h",
+        "fsock.h",
+        "fopen_wrappers.h",
+        "streamsfuncs.h",
+        "scanf.h",
+        "zend_API.h",
+        "file_arginfo.h"
+    ],
+    "body": "char delimiter = ',';\t\t\t\t\t/* allow this to be set as parameter */\n\tchar enclosure = '\"';\t\t\t\t\t/* allow this to be set as parameter */\n\tphp_stream *stream;\n\tzval *fp = NULL, *fields = NULL;\n\tssize_t ret;\n\tchar *delimiter_str = NULL, *enclosure_str = NULL;\n\tzend_string *escape_str = NULL;\n\tsize_t delimiter_str_len = 0, enclosure_str_len = 0;\n\tzend_string *eol_str = NULL;\n\n\tZEND_PARSE_PARAMETERS_START(2, 6)\n\t\tZ_PARAM_RESOURCE(fp)\n\t\tZ_PARAM_ARRAY(fields)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_STRING(delimiter_str, delimiter_str_len)\n\t\tZ_PARAM_STRING(enclosure_str, enclosure_str_len)\n\t\tZ_PARAM_STR(escape_str)\n\t\tZ_PARAM_STR_OR_NULL(eol_str)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (delimiter_str != NULL) {\n\t\t/* Make sure that there is at least one character in string */\n\t\tif (delimiter_str_len != 1) {\n\t\t\tzend_argument_value_error(3, \"must be a single character\");\n\t\t\tRETURN_THROWS();\n\t\t}\n\n\t\t/* use first character from string */\n\t\tdelimiter = *delimiter_str;\n\t}\n\n\tif (enclosure_str != NULL) {\n\t\tif (enclosure_str_len != 1) {\n\t\t\tzend_argument_value_error(4, \"must be a single character\");\n\t\t\tRETURN_THROWS();\n\t\t}\n\t\t/* use first character from string */\n\t\tenclosure = *enclosure_str;\n\t}\n\n\tint escape_char = php_csv_handle_escape_argument(escape_str, 5);\n\tif (escape_char == PHP_CSV_ESCAPE_ERROR) {\n\t\tRETURN_THROWS();\n\t}\n\n\tPHP_STREAM_FROM_ZVAL(stream, fp);\n\n\tret = php_fputcsv(stream, fields, delimiter, enclosure, escape_char, eol_str);\n\tif (ret < 0) {\n\t\tRETURN_FALSE;\n\t}\n\tRETURN_LONG(ret);",
+    "semantic": "allow this to be set as parameter",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_RESOURCE",
+            "Z_PARAM_ARRAY",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_STRING",
+            "Z_PARAM_STR",
+            "Z_PARAM_STR_OR_NULL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_THROWS",
+            "RETURN_FALSE",
+            "RETURN_LONG"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "zend_argument_value_error",
+            "php_csv_handle_escape_argument",
+            "php_fputcsv"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common fputcsv inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 6,
+    "purpose": "allow this to be set as parameter",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "flock",
+        "get_meta_tags",
+        "file_get_contents",
+        "file_put_contents",
+        "file",
+        "tempnam",
+        "tmpfile",
+        "fopen",
+        "popen",
+        "pclose",
+        "fscanf",
+        "mkdir"
+    ]
+}

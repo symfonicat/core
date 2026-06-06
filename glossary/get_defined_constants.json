@@ -1,0 +1,104 @@
+{
+    "php_function": "get_defined_constants",
+    "zend_function": "get_defined_constants",
+    "source_file": "in_functions.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "zend.h",
+        "zend_API.h",
+        "zend_attributes.h",
+        "zend_gc.h",
+        "zend_builtin_functions.h",
+        "zend_constants.h",
+        "zend_ini.h",
+        "zend_interfaces.h",
+        "zend_exceptions.h",
+        "zend_extensions.h",
+        "zend_closures.h",
+        "zend_generators.h",
+        "zend_builtin_functions_arginfo.h",
+        "zend_smart_str.h"
+    ],
+    "body": "bool categorize = 0;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"|b\", &categorize) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tarray_init(return_value);\n\n\tif (categorize) {\n\t\tzend_constant *val;\n\t\tint module_number;\n\t\tzval *modules, const_val;\n\t\tchar **module_names;\n\t\tzend_module_entry *module;\n\t\tint i = 1;\n\n\t\tmodules = ecalloc(zend_hash_num_elements(&module_registry) + 2, sizeof(zval));\n\t\tmodule_names = emalloc((zend_hash_num_elements(&module_registry) + 2) * sizeof(char *));\n\n\t\tmodule_names[0] = \"internal\";\n\t\tZEND_HASH_MAP_FOREACH_PTR(&module_registry, module) {\n\t\t\tmodule_names[module->module_number] = (char *)module->name;\n\t\t\ti++;\n\t\t} ZEND_HASH_FOREACH_END();\n\t\tmodule_names[i] = \"user\";\n\n\t\tZEND_HASH_MAP_FOREACH_PTR(EG(zend_constants), val) {\n\t\t\tif (!val->name) {\n\t\t\t\t/* skip special constants */\n\t\t\t\tcontinue;\n\t\t\t}\n\n\t\t\tif (ZEND_CONSTANT_MODULE_NUMBER(val) == PHP_USER_CONSTANT) {\n\t\t\t\tmodule_number = i;\n\t\t\t} else if (ZEND_CONSTANT_MODULE_NUMBER(val) > i) {\n\t\t\t\t/* should not happen */\n\t\t\t\tcontinue;\n\t\t\t} else {\n\t\t\t\tmodule_number = ZEND_CONSTANT_MODULE_NUMBER(val);\n\t\t\t}\n\n\t\t\tif (Z_TYPE(modules[module_number]) == IS_UNDEF) {\n\t\t\t\tarray_init(&modules[module_number]);\n\t\t\t\tadd_assoc_zval(return_value, module_names[module_number], &modules[module_number]);\n\t\t\t}\n\n\t\t\tZVAL_COPY_OR_DUP(&const_val, &val->value);\n\t\t\tzend_hash_add_new(Z_ARRVAL(modules[module_number]), val->name, &const_val);\n\t\t} ZEND_HASH_FOREACH_END();\n\n\t\tefree(module_names);\n\t\tefree(modules);\n\t} else {\n\t\tzend_constant *constant;\n\t\tzval const_val;\n\n\t\tZEND_HASH_MAP_FOREACH_PTR(EG(zend_constants), constant) {\n\t\t\tif (!constant->name) {\n\t\t\t\t/* skip special constants */\n\t\t\t\tcontinue;\n\t\t\t}\n\t\t\tZVAL_COPY_OR_DUP(&const_val, &constant->value);\n\t\t\tzend_hash_add_new(Z_ARRVAL_P(return_value), constant->name, &const_val);\n\t\t} ZEND_HASH_FOREACH_END();\n\t}",
+    "semantic": "skip special constants",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "ZEND_HASH_MAP_FOREACH_PTR",
+            "ZEND_HASH_FOREACH_END",
+            "ZEND_CONSTANT_MODULE_NUMBER",
+            "ZVAL_COPY_OR_DUP"
+        ],
+        "zend_types": [
+            "zval"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "zend_hash_num_elements",
+            "zend_hash_add_new"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common get_defined_constants inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "skip special constants",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "exit",
+        "zend_version",
+        "gc_mem_caches",
+        "gc_collect_cycles",
+        "gc_enabled",
+        "gc_enable",
+        "gc_disable",
+        "gc_status",
+        "func_num_args",
+        "func_get_arg",
+        "func_get_args",
+        "strlen"
+    ]
+}

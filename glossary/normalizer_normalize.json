@@ -1,0 +1,85 @@
+{
+    "php_function": "normalizer_normalize",
+    "zend_function": "normalizer_normalize",
+    "source_file": "izer/normalizer_normalize.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php_intl.h",
+        "unicode/unorm.h",
+        "unicode/unorm2.h",
+        "normalizer.h",
+        "normalizer_class.h",
+        "intl_convert.h",
+        "unicode/utf8.h"
+    ],
+    "body": "char*\t\t\tinput = NULL;\n\t/* form is optional, defaults to FORM_C */\n\tzend_long\t    form = NORMALIZER_DEFAULT;\n\tsize_t\t\t\tinput_len = 0;\n\n\tUChar*\t\t\tuinput = NULL;\n\tint32_t\t\t    uinput_len = 0;\n\tint\t\t\t    expansion_factor = 1;\n\tUErrorCode\t\tstatus = U_ZERO_ERROR;\n\n\tUChar*\t\t\turet_buf = NULL;\n\tint32_t\t\t\turet_len = 0;\n\n\tzend_string*    u8str;\n\n\tint32_t\t\t\tsize_needed;\n\n\tintl_error_reset( NULL );\n\n\t/* Parse parameters. */\n\tif( zend_parse_method_parameters( ZEND_NUM_ARGS(), getThis(), \"s|l\",\n\t\t\t\t&input, &input_len, &form ) == FAILURE )\n\t{\n\t\tRETURN_THROWS();\n\t}\n\n\texpansion_factor = 1;\n\n\tswitch(form) {\n\t\tcase NORMALIZER_FORM_D:\n\t\t\texpansion_factor = 3;\n\t\t\tbreak;\n\t\tcase NORMALIZER_FORM_KD:\n\t\t\texpansion_factor = 3;\n\t\t\tbreak;\n\t\tcase NORMALIZER_FORM_C:\n\t\tcase NORMALIZER_FORM_KC:\n#if U_ICU_VERSION_MAJOR_NUM >= 56\n\t\tcase NORMALIZER_FORM_KC_CF:\n#endif\n\t\t\tbreak;\n\t\tdefault:\n\t\t\tzend_argument_value_error(2, \"must be a a valid normalization form\");\n\t\t\tRETURN_THROWS();\n\t}\n\n\t/*\n\t * Normalize string (converting it to UTF-16 first).\n\t */\n\n\t/* First convert the string to UTF-16. */\n\tintl_convert_utf8_to_utf16(&uinput, &uinput_len, input, input_len, &status );\n\n\tif( U_FAILURE( status ) )\n\t{\n\t\t/* Set global error code. */\n\t\tintl_error_set_code( NULL, status );\n\n\t\t/* Set error messages. */\n\t\tintl_error_set_custom_msg( NULL, \"Error converting input string to UTF-16\", 0 );\n\t\tif (uinput) {\n\t\t\tefree( uinput );\n\t\t}\n\t\tRETURN_FALSE;\n\t}\n\n\n\t/* Allocate memory for the destination buffer for normalization */\n\turet_len = uinput_len * expansion_factor;\n\turet_buf = eumalloc( uret_len + 1 );\n\n\t/* normalize */\n#if U_ICU_VERSION_MAJOR_NUM < 56\n\tsize_needed = unorm_normalize( uinput, uinput_len, form, (int32_t) 0 /* options */, uret_buf, uret_len, &status);\n#else\n\tsize_needed = intl_normalize(form, uinput, uinput_len, uret_buf, uret_len, &status);\n#endif\n\n\t/* Bail out if an unexpected error occurred.\n\t * (U_BUFFER_OVERFLOW_ERROR means that *target buffer is not large enough).\n\t * (U_STRING_NOT_TERMINATED_WARNING usually means that the input string is empty).\n\t */\n\tif( U_FAILURE(status) && status != U_BUFFER_OVERFLOW_ERROR && status != U_STRING_NOT_TERMINATED_WARNING ) {\n\t\tintl_error_set_custom_msg( NULL, \"Error normalizing string\", 0 );\n\t\tefree( uret_buf );\n\t\tefree( uinput );\n\t\tRETURN_FALSE;\n\t}\n\n\tif ( size_needed > uret_len ) {\n\t\t/* realloc does not seem to work properly - memory is corrupted\n\t\t * uret_buf =  eurealloc(uret_buf, size_needed + 1);\n\t\t */\n\t\tefree( uret_buf );\n\t\turet_buf = eumalloc( size_needed + 1 );\n\t\turet_len = size_needed;\n\n\t\tstatus = U_ZERO_ERROR;\n\n\t\t/* try normalize again */\n#if U_ICU_VERSION_MAJOR_NUM < 56\n\t\tsize_needed = unorm_normalize( uinput, uinput_len, form, (int32_t) 0 /* options */, uret_buf, uret_len, &status);\n#else\n\t\tsize_needed = intl_normalize(form, uinput, uinput_len, uret_buf, uret_len, &status);\n#endif\n\n\t\t/* Bail out if an unexpected error occurred. */\n\t\tif( U_FAILURE(status)  ) {\n\t\t\t/* Set error messages. */\n\t\t\tintl_error_set_custom_msg( NULL,\"Error normalizing string\", 0 );\n\t\t\tefree( uret_buf );\n\t\t\tefree( uinput );\n\t\t\tRETURN_FALSE;\n\t\t}\n\t}\n\n\tefree( uinput );\n\n\t/* the buffer we actually used */\n\turet_len = size_needed;\n\n\t/* Convert normalized string from UTF-16 to UTF-8. */\n\tu8str = intl_convert_utf16_to_utf8(uret_buf, uret_len, &status );\n\tefree( uret_buf );\n\tif( !u8str )\n\t{\n\t\tintl_error_set( NULL, status,\n\t\t\t\t\"normalizer_normalize: error converting normalized text UTF-8\", 0 );\n\t\tRETURN_FALSE;\n\t}\n\n\t/* Return it. */\n\tRETVAL_NEW_STR( u8str );",
+    "semantic": "form is optional, defaults to FORM_C",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zend_long",
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "zend_parse_method_parameters",
+            "zend_argument_value_error"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common normalizer_normalize inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "form is optional, defaults to FORM_C",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "normalizer_is_normalized",
+        "normalizer_get_raw_decomposition"
+    ]
+}

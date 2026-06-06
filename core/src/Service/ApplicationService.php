@@ -52,7 +52,7 @@ class ApplicationService
             return null;
         }
 
-        if ($this->usesDatabaseRuntime()) {
+        if ($this->isCoreRoute()) {
             return $this->applicationRepository->find($id);
         }
 
@@ -66,7 +66,7 @@ class ApplicationService
         }
 
         if ($endpoint instanceof Endpoint) {
-            if ($this->usesDatabaseRuntime()) {
+            if ($this->isCoreRoute()) {
                 return $this->applicationRepository->findOneForEndpoint($endpoint);
             }
 
@@ -82,7 +82,7 @@ class ApplicationService
         }
 
         if ($subdomain instanceof Subdomain) {
-            if ($this->usesDatabaseRuntime()) {
+            if ($this->isCoreRoute()) {
                 if ($domain instanceof Domain) {
                     return $this->applicationRepository->findOneForSubdomainAndDomain($subdomain, $domain)
                         ?? $this->applicationRepository->findOneForSubdomain($subdomain);
@@ -100,7 +100,7 @@ class ApplicationService
         }
 
         if ($domain instanceof Domain) {
-            if ($this->usesDatabaseRuntime()) {
+            if ($this->isCoreRoute()) {
                 return $this->applicationRepository->findOneForDomain($domain);
             }
 
@@ -158,8 +158,13 @@ class ApplicationService
         return null;
     }
 
-    private function usesDatabaseRuntime(): bool
+    private function isCoreRoute(): bool
     {
-        return ($_SERVER['APP_ENV'] ?? null) === 'test';
+        $path = $this->requestStack->getCurrentRequest()?->getPathInfo();
+        if (!is_string($path)) {
+            return false;
+        }
+
+        return $path === '/core' || str_starts_with($path, '/core/');
     }
 }

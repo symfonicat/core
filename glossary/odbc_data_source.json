@@ -1,0 +1,102 @@
+{
+    "php_function": "odbc_data_source",
+    "zend_function": "odbc_data_source",
+    "source_file": "bc.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_globals.h",
+        "zend_attributes.h",
+        "ext/standard/info.h",
+        "Zend/zend_interfaces.h",
+        "zend_smart_str.h",
+        "php_odbc.h",
+        "php_odbc_includes.h",
+        "php_odbc_utils.h",
+        "fcntl.h",
+        "php_ini.h",
+        "odbc_arginfo.h"
+    ],
+    "body": "zval *zv_conn;\n\tzend_long zv_fetch_type;\n\tRETCODE rc = 0; /* assume all is good */\n\tUCHAR server_name[100], desc[200];\n\tSQLSMALLINT len1=0, len2=0, fetch_type;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"Ol\", &zv_conn, odbc_connection_ce, &zv_fetch_type) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tfetch_type = (SQLSMALLINT) zv_fetch_type;\n\n\tif (!(fetch_type == SQL_FETCH_FIRST || fetch_type == SQL_FETCH_NEXT)) {\n\t\tzend_argument_value_error(2, \"must be either SQL_FETCH_FIRST or SQL_FETCH_NEXT\");\n\t\tRETURN_THROWS();\n\t}\n\n\todbc_connection *conn = Z_ODBC_CONNECTION_P(zv_conn);\n\tCHECK_ODBC_CONNECTION(conn);\n\n\t/* now we have the \"connection\" lets call the DataSource object */\n\trc = SQLDataSources(conn->henv,\n\t\t\tfetch_type,\n\t\t\tserver_name,\n\t\t\t(SQLSMALLINT)sizeof(server_name),\n\t\t\t&len1,\n\t\t\tdesc,\n\t\t\t(SQLSMALLINT)sizeof(desc),\n\t\t\t&len2);\n\n\tif (SQL_NO_DATA == rc) {\n\t\t/* System has no data sources, no error. Signal it by returning NULL,\n\t\t\tnot false. */\n\t\tRETURN_NULL();\n\t} else if (rc != SQL_SUCCESS) {\n\t\t/* ummm.... he did it */\n\t\todbc_sql_error(conn, SQL_NULL_HSTMT, \"SQLDataSources\");\n\t\tRETURN_FALSE;\n\t}\n\n\tif (len1 == 0 || len2 == 0) {\n\t\t/* we have a non-valid entry... so stop the looping */\n\t\tRETURN_FALSE;\n\t}\n\n\tarray_init(return_value);\n\n\tadd_assoc_string_ex(return_value, \"server\", sizeof(\"server\")-1, (char *) server_name);\n\tadd_assoc_string_ex(return_value, \"description\", sizeof(\"description\")-1, (char *) desc);",
+    "semantic": "assume all is good",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_NULL",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "zend_argument_value_error",
+            "odbc_sql_error"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common odbc_data_source inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 4,
+    "purpose": "assume all is good",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "odbc_close_all",
+        "odbc_binmode",
+        "odbc_longreadlen",
+        "odbc_prepare",
+        "odbc_execute",
+        "odbc_cursor",
+        "odbc_exec",
+        "odbc_fetch_object",
+        "odbc_fetch_array",
+        "odbc_fetch_into",
+        "odbc_fetch_row",
+        "odbc_result"
+    ]
+}

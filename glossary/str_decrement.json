@@ -1,0 +1,129 @@
+{
+    "php_function": "str_decrement",
+    "zend_function": "str_decrement",
+    "source_file": "ring.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "str",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "str"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(str)"
+        }
+    ],
+    "includes": [
+        "stdio.h",
+        "php.h",
+        "php_string.h",
+        "php_variables.h",
+        "locale.h",
+        "scanf.h",
+        "zend_API.h",
+        "zend_execute.h",
+        "basic_functions.h",
+        "zend_smart_str.h",
+        "Zend/zend_exceptions.h",
+        "TSRM.h",
+        "ext/standard/file.h",
+        "ext/standard/html.h",
+        "ext/random/php_random.h",
+        "emmintrin.h",
+        "Zend/zend_bitset.h",
+        "tmmintrin.h",
+        "arm_neon.h"
+    ],
+    "body": "zend_string *str;\n\n\tZEND_PARSE_PARAMETERS_START(1, 1)\n\t\tZ_PARAM_STR(str)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (ZSTR_LEN(str) == 0) {\n\t\tzend_argument_must_not_be_empty_error(1);\n\t\tRETURN_THROWS();\n\t}\n\tif (!zend_string_only_has_ascii_alphanumeric(str)) {\n\t\tzend_argument_value_error(1, \"must be composed only of alphanumeric ASCII characters\");\n\t\tRETURN_THROWS();\n\t}\n\tif (ZSTR_LEN(str) >= 1 && ZSTR_VAL(str)[0] == '0') {\n\t\tzend_argument_value_error(1, \"\\\"%s\\\" is out of decrement range\", ZSTR_VAL(str));\n\t\tRETURN_THROWS();\n\t}\n\n\tzend_string *decremented = zend_string_init(ZSTR_VAL(str), ZSTR_LEN(str), /* persistent */ false);\n\tsize_t position = ZSTR_LEN(str)-1;\n\tbool carry = false;\n\n\tdo {\n\t\tchar c = ZSTR_VAL(decremented)[position];\n\t\t/* We know c is in ['a', 'z'], ['A', 'Z'], or ['0', '9'] range from zend_string_only_has_ascii_alphanumeric() */\n\t\tif (EXPECTED( c != 'a' && c != 'A' && c != '0' )) {\n\t\t\tcarry = false;\n\t\t\tZSTR_VAL(decremented)[position]--;\n\t\t} else { /* if 'a', 'A', or '0' */\n\t\t\tcarry = true;\n\t\t\tif (c == '0') {\n\t\t\t\tZSTR_VAL(decremented)[position] = '9';\n\t\t\t} else {\n\t\t\t\tZSTR_VAL(decremented)[position] += 25;\n\t\t\t}\n\t\t}\n\t} while (carry && position-- > 0);\n\n\tif (UNEXPECTED(carry || (ZSTR_VAL(decremented)[0] == '0' && ZSTR_LEN(decremented) > 1))) {\n\t\tif (ZSTR_LEN(decremented) == 1) {\n\t\t\tzend_string_release_ex(decremented, /* persistent */ false);\n\t\t\tzend_argument_value_error(1, \"\\\"%s\\\" is out of decrement range\", ZSTR_VAL(str));\n\t\t\tRETURN_THROWS();\n\t\t}\n\t\tzend_string *tmp = zend_string_alloc(ZSTR_LEN(decremented) - 1, 0);\n\t\tmemcpy(ZSTR_VAL(tmp), ZSTR_VAL(decremented) + 1, ZSTR_LEN(decremented) - 1);\n\t\tZSTR_VAL(tmp)[ZSTR_LEN(decremented) - 1] = '\\0';\n\t\tzend_string_release_ex(decremented, /* persistent */ false);\n\t\tRETURN_STR(tmp);\n\t}\n\tRETURN_STR(decremented);",
+    "semantic": "persistent",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STR",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZSTR_LEN",
+            "RETURN_THROWS",
+            "ZSTR_VAL",
+            "RETURN_STR"
+        ],
+        "zend_types": [
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "zend_argument_must_not_be_empty_error",
+            "zend_string_only_has_ascii_alphanumeric",
+            "zend_argument_value_error",
+            "zend_string_init",
+            "zend_string_release_ex",
+            "zend_string_alloc"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common str_decrement inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 7,
+    "purpose": "persistent",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "bin2hex",
+        "hex2bin",
+        "strspn",
+        "strcspn",
+        "nl_langinfo",
+        "strcoll",
+        "trim",
+        "rtrim",
+        "ltrim",
+        "wordwrap",
+        "explode",
+        "implode"
+    ]
+}

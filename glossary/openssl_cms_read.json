@@ -1,0 +1,120 @@
+{
+    "php_function": "openssl_cms_read",
+    "zend_function": "openssl_cms_read",
+    "source_file": "nssl.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "php_openssl.h",
+        "zend_attributes.h",
+        "zend_exceptions.h",
+        "ext/standard/file.h",
+        "ext/standard/info.h",
+        "ext/standard/php_fopen_wrappers.h",
+        "ext/standard/md5.h",
+        "ext/standard/base64.h",
+        "openssl/evp.h",
+        "openssl/bn.h",
+        "openssl/rsa.h",
+        "openssl/dsa.h",
+        "openssl/dh.h",
+        "openssl/x509.h",
+        "openssl/x509v3.h",
+        "openssl/crypto.h",
+        "openssl/pem.h",
+        "openssl/err.h",
+        "openssl/conf.h",
+        "openssl/rand.h",
+        "openssl/ssl.h",
+        "openssl/pkcs12.h",
+        "openssl/cms.h",
+        "openssl/core_names.h",
+        "openssl/param_build.h",
+        "openssl/provider.h",
+        "openssl/engine.h",
+        "time.h",
+        "openssl_arginfo.h"
+    ],
+    "body": "zval * zout = NULL, zcert;\n\tchar *p7b;\n\tsize_t p7b_len;\n\tSTACK_OF(X509) *certs = NULL;\n\tSTACK_OF(X509_CRL) *crls = NULL;\n\tBIO * bio_in = NULL, * bio_out = NULL;\n\tCMS_ContentInfo * cms = NULL;\n\tint i;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"sz\", &p7b, &p7b_len,\n\t\t\t\t&zout) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tRETVAL_FALSE;\n\n\tPHP_OPENSSL_CHECK_SIZE_T_TO_INT(p7b_len, p7b, 1);\n\n\tbio_in = BIO_new(BIO_s_mem());\n\tif (bio_in == NULL) {\n\t\tgoto clean_exit;\n\t}\n\n\tif (0 >= BIO_write(bio_in, p7b, (int)p7b_len)) {\n\t\tphp_openssl_store_errors();\n\t\tgoto clean_exit;\n\t}\n\n\tcms = PEM_read_bio_CMS(bio_in, NULL, NULL, NULL);\n\tif (cms == NULL) {\n\t\tphp_openssl_store_errors();\n\t\tgoto clean_exit;\n\t}\n\n\tswitch (OBJ_obj2nid(CMS_get0_type(cms))) {\n\t\tcase NID_pkcs7_signed:\n\t\tcase NID_pkcs7_signedAndEnveloped:\n\t\t\tcerts = CMS_get1_certs(cms);\n\t\t\tcrls = CMS_get1_crls(cms);\n\t\t\tbreak;\n\t\tdefault:\n\t\t\tbreak;\n\t}\n\n\tzout = zend_try_array_init(zout);\n\tif (!zout) {\n\t\tgoto clean_exit;\n\t}\n\n\tif (certs != NULL) {\n\t\tfor (i = 0; i < sk_X509_num(certs); i++) {\n\t\t\tX509* ca = sk_X509_value(certs, i);\n\n\t\t\tbio_out = BIO_new(BIO_s_mem());\n\t\t\tif (bio_out && PEM_write_bio_X509(bio_out, ca)) {\n\t\t\t\tBUF_MEM *bio_buf;\n\t\t\t\tBIO_get_mem_ptr(bio_out, &bio_buf);\n\t\t\t\tZVAL_STRINGL(&zcert, bio_buf->data, bio_buf->length);\n\t\t\t\tadd_index_zval(zout, i, &zcert);\n\t\t\t\tBIO_free(bio_out);\n\t\t\t}\n\t\t}\n\t}\n\n\tif (crls != NULL) {\n\t\tfor (i = 0; i < sk_X509_CRL_num(crls); i++) {\n\t\t\tX509_CRL* crl = sk_X509_CRL_value(crls, i);\n\n\t\t\tbio_out = BIO_new(BIO_s_mem());\n\t\t\tif (bio_out && PEM_write_bio_X509_CRL(bio_out, crl)) {\n\t\t\t\tBUF_MEM *bio_buf;\n\t\t\t\tBIO_get_mem_ptr(bio_out, &bio_buf);\n\t\t\t\tZVAL_STRINGL(&zcert, bio_buf->data, bio_buf->length);\n\t\t\t\tadd_index_zval(zout, i, &zcert);\n\t\t\t\tBIO_free(bio_out);\n\t\t\t}\n\t\t}\n\t}\n\n\tRETVAL_TRUE;\n\nclean_exit:\n\tBIO_free(bio_in);\n\tif (cms != NULL) {\n\t\tCMS_ContentInfo_free(cms);\n\t}\n\tif (certs != NULL) {\n\t\tsk_X509_pop_free(certs, X509_free);\n\t}\n\tif (crls != NULL) {\n\t\tsk_X509_CRL_pop_free(crls, X509_CRL_free);\n\t}",
+    "semantic": "Implements the PHP function openssl_cms_read in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "ZVAL_STRINGL"
+        ],
+        "zend_types": [
+            "zval"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "php_openssl_store_errors",
+            "zend_try_array_init"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common openssl_cms_read inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 8,
+    "purpose": "Implements the PHP function openssl_cms_read in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "openssl_get_cert_locations",
+        "openssl_x509_export_to_file",
+        "openssl_spki_new",
+        "openssl_spki_verify",
+        "openssl_spki_export",
+        "openssl_spki_export_challenge",
+        "openssl_x509_export",
+        "openssl_x509_fingerprint",
+        "openssl_x509_check_private_key",
+        "openssl_x509_verify",
+        "openssl_x509_parse",
+        "openssl_x509_checkpurpose"
+    ]
+}

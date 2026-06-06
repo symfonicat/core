@@ -1,0 +1,175 @@
+{
+    "php_function": "forward_static_call",
+    "zend_function": "forward_static_call",
+    "source_file": "sic_functions.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "fci",
+            "macro": "Z_PARAM_FUNC",
+            "arguments": [
+                "fci",
+                "fci_cache"
+            ],
+            "type": "zend_fcall_info",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_FUNC(fci, fci_cache)"
+        },
+        {
+            "name": "'*'",
+            "macro": "Z_PARAM_VARIADIC",
+            "arguments": [
+                "'*'",
+                "fci.params",
+                "fci.param_count"
+            ],
+            "type": "mixed",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": true,
+            "by_reference": false,
+            "raw": "Z_PARAM_VARIADIC('*', fci.params, fci.param_count)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "php_assert.h",
+        "php_crypt.h",
+        "php_streams.h",
+        "php_main.h",
+        "php_globals.h",
+        "php_variables.h",
+        "php_ini.h",
+        "php_image.h",
+        "php_standard.h",
+        "php_math.h",
+        "php_http.h",
+        "php_incomplete_class.h",
+        "php_getopt.h",
+        "php_ext_syslog.h",
+        "ext/standard/info.h",
+        "ext/session/php_session.h",
+        "zend_exceptions.h",
+        "zend_attributes.h",
+        "zend_enum.h",
+        "zend_ini.h",
+        "zend_operators.h",
+        "ext/standard/php_dns.h",
+        "ext/standard/php_uuencode.h",
+        "ext/standard/crc32_x86.h",
+        "win32/php_win32_globals.h",
+        "win32/time.h",
+        "win32/ioutil.h",
+        "zend.h",
+        "zend_ini_scanner.h",
+        "zend_language_scanner.h",
+        "zend_language_parser.h",
+        "zend_portability.h",
+        "stdarg.h",
+        "stdlib.h",
+        "math.h",
+        "time.h",
+        "stdio.h",
+        "sys/types.h",
+        "sys/stat.h",
+        "string.h",
+        "locale.h",
+        "zend_globals.h",
+        "SAPI.h",
+        "php_ticks.h",
+        "php_fopen_wrappers.h",
+        "streamsfuncs.h",
+        "zend_frameless_function.h",
+        "basic_functions_arginfo.h"
+    ],
+    "body": "zval retval;\n\tzend_fcall_info fci;\n\tzend_fcall_info_cache fci_cache;\n\tzend_class_entry *called_scope;\n\n\tZEND_PARSE_PARAMETERS_START(1, -1)\n\t\tZ_PARAM_FUNC(fci, fci_cache)\n\t\tZ_PARAM_VARIADIC('*', fci.params, fci.param_count)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (!EX(prev_execute_data) || !EX(prev_execute_data)->func->common.scope) {\n\t\tzend_throw_error(NULL, \"Cannot call forward_static_call() when no class scope is active\");\n\t\tRETURN_THROWS();\n\t}\n\n\tfci.retval = &retval;\n\n\tcalled_scope = zend_get_called_scope(execute_data);\n\tif (called_scope && fci_cache.calling_scope &&\n\t\tinstanceof_function(called_scope, fci_cache.calling_scope)) {\n\t\t\tfci_cache.called_scope = called_scope;\n\t}\n\n\tif (zend_call_function(&fci, &fci_cache) == SUCCESS && Z_TYPE(retval) != IS_UNDEF) {\n\t\tif (Z_ISREF(retval)) {\n\t\t\tzend_unwrap_reference(&retval);\n\t\t}\n\t\tZVAL_COPY_VALUE(return_value, &retval);\n\t}",
+    "semantic": "Implements the PHP function forward_static_call in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_FUNC",
+            "Z_PARAM_VARIADIC",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_THROWS",
+            "ZVAL_COPY_VALUE"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_fcall_info",
+            "zend_fcall_info_cache",
+            "zend_class_entry"
+        ],
+        "internal_helpers": [
+            "zend_throw_error",
+            "zend_get_called_scope",
+            "zend_call_function",
+            "zend_unwrap_reference"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common forward_static_call inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "Implements the PHP function forward_static_call in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "constant",
+        "inet_ntop",
+        "inet_pton",
+        "ip2long",
+        "long2ip",
+        "getenv",
+        "getopt",
+        "flush",
+        "sleep",
+        "usleep",
+        "time_nanosleep",
+        "time_sleep_until"
+    ]
+}

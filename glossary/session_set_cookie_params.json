@@ -1,0 +1,205 @@
+{
+    "php_function": "session_set_cookie_params",
+    "zend_function": "session_set_cookie_params",
+    "source_file": "sion.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "options_ht",
+            "macro": "Z_PARAM_ARRAY_HT_OR_LONG",
+            "arguments": [
+                "options_ht",
+                "lifetime_long"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY_HT_OR_LONG(options_ht, lifetime_long)"
+        },
+        {
+            "name": "path",
+            "macro": "Z_PARAM_STR_OR_NULL",
+            "arguments": [
+                "path"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR_OR_NULL(path)"
+        },
+        {
+            "name": "domain",
+            "macro": "Z_PARAM_STR_OR_NULL",
+            "arguments": [
+                "domain"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR_OR_NULL(domain)"
+        },
+        {
+            "name": "secure",
+            "macro": "Z_PARAM_BOOL_OR_NULL",
+            "arguments": [
+                "secure",
+                "secure_null"
+            ],
+            "type": "bool",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_BOOL_OR_NULL(secure, secure_null)"
+        },
+        {
+            "name": "httponly",
+            "macro": "Z_PARAM_BOOL_OR_NULL",
+            "arguments": [
+                "httponly",
+                "httponly_null"
+            ],
+            "type": "bool",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_BOOL_OR_NULL(httponly, httponly_null)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "sys/stat.h",
+        "fcntl.h",
+        "php_ini.h",
+        "rfc1867.h",
+        "php_variables.h",
+        "php_session.h",
+        "session_arginfo.h",
+        "ext/standard/php_var.h",
+        "ext/date/php_date.h",
+        "ext/standard/url_scanner_ex.h",
+        "ext/standard/info.h",
+        "zend_smart_str.h",
+        "ext/standard/url.h",
+        "ext/standard/basic_functions.h",
+        "ext/standard/head.h",
+        "ext/random/php_random.h",
+        "ext/random/php_random_csprng.h",
+        "mod_files.h",
+        "mod_user.h",
+        "mod_mm.h"
+    ],
+    "body": "HashTable *options_ht;\n\tzend_long lifetime_long;\n\tzend_string *lifetime = NULL, *path = NULL, *domain = NULL, *samesite = NULL;\n\tbool secure = 0, secure_null = 1;\n\tbool httponly = 0, httponly_null = 1;\n\tzend_string *ini_name;\n\tzend_result result;\n\tint found = 0;\n\n\tZEND_PARSE_PARAMETERS_START(1, 5)\n\t\tZ_PARAM_ARRAY_HT_OR_LONG(options_ht, lifetime_long)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_STR_OR_NULL(path)\n\t\tZ_PARAM_STR_OR_NULL(domain)\n\t\tZ_PARAM_BOOL_OR_NULL(secure, secure_null)\n\t\tZ_PARAM_BOOL_OR_NULL(httponly, httponly_null)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (!PS(use_cookies)) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Session cookies cannot be used when session.use_cookies is disabled\");\n\t\tRETURN_FALSE;\n\t}\n\n\tif (PS(session_status) == php_session_active) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Session cookie parameters cannot be changed when a session is active\");\n\t\tRETURN_FALSE;\n\t}\n\n\tif (SG(headers_sent)) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Session cookie parameters cannot be changed after headers have already been sent\");\n\t\tRETURN_FALSE;\n\t}\n\n\tif (options_ht) {\n\t\tzend_string *key;\n\t\tzval *value;\n\n\t\tif (path) {\n\t\t\tzend_argument_value_error(2, \"must be null when argument #1 ($lifetime_or_options) is an array\");\n\t\t\tRETURN_THROWS();\n\t\t}\n\n\t\tif (domain) {\n\t\t\tzend_argument_value_error(3, \"must be null when argument #1 ($lifetime_or_options) is an array\");\n\t\t\tRETURN_THROWS();\n\t\t}\n\n\t\tif (!secure_null) {\n\t\t\tzend_argument_value_error(4, \"must be null when argument #1 ($lifetime_or_options) is an array\");\n\t\t\tRETURN_THROWS();\n\t\t}\n\n\t\tif (!httponly_null) {\n\t\t\tzend_argument_value_error(5, \"must be null when argument #1 ($lifetime_or_options) is an array\");\n\t\t\tRETURN_THROWS();\n\t\t}\n\t\tZEND_HASH_FOREACH_STR_KEY_VAL(options_ht, key, value) {\n\t\t\tif (key) {\n\t\t\t\tZVAL_DEREF(value);\n\t\t\t\tif (zend_string_equals_literal_ci(key, \"lifetime\")) {\n\t\t\t\t\tlifetime = zval_get_string(value);\n\t\t\t\t\tfound++;\n\t\t\t\t} else if (zend_string_equals_literal_ci(key, \"path\")) {\n\t\t\t\t\tpath = zval_get_string(value);\n\t\t\t\t\tfound++;\n\t\t\t\t} else if (zend_string_equals_literal_ci(key, \"domain\")) {\n\t\t\t\t\tdomain = zval_get_string(value);\n\t\t\t\t\tfound++;\n\t\t\t\t} else if (zend_string_equals_literal_ci(key, \"secure\")) {\n\t\t\t\t\tsecure = zval_is_true(value);\n\t\t\t\t\tsecure_null = 0;\n\t\t\t\t\tfound++;\n\t\t\t\t} else if (zend_string_equals_literal_ci(key, \"httponly\")) {\n\t\t\t\t\thttponly = zval_is_true(value);\n\t\t\t\t\thttponly_null = 0;\n\t\t\t\t\tfound++;\n\t\t\t\t} else if (zend_string_equals_literal_ci(key, \"samesite\")) {\n\t\t\t\t\tsamesite = zval_get_string(value);\n\t\t\t\t\tfound++;\n\t\t\t\t} else {\n\t\t\t\t\tphp_error_docref(NULL, E_WARNING, \"Argument #1 ($lifetime_or_options) contains an unrecognized key \\\"%s\\\"\", ZSTR_VAL(key));\n\t\t\t\t}\n\t\t\t} else {\n\t\t\t\tphp_error_docref(NULL, E_WARNING, \"Argument #1 ($lifetime_or_options) cannot contain numeric keys\");\n\t\t\t}\n\t\t} ZEND_HASH_FOREACH_END();\n\n\t\tif (found == 0) {\n\t\t\tzend_argument_value_error(1, \"must contain at least 1 valid key\");\n\t\t\tRETURN_THROWS();\n\t\t}\n\t} else {\n\t\tlifetime = zend_long_to_str(lifetime_long);\n\t}\n\n\t/* Exception during string conversion */\n\tif (EG(exception)) {\n\t\tgoto cleanup;\n\t}\n\n\tif (lifetime) {\n\t\tini_name = ZSTR_INIT_LITERAL(\"session.cookie_lifetime\", 0);\n\t\tresult = zend_alter_ini_entry(ini_name, lifetime, PHP_INI_USER, PHP_INI_STAGE_RUNTIME);\n\t\tzend_string_release_ex(ini_name, 0);\n\t\tif (result == FAILURE) {\n\t\t\tRETVAL_FALSE;\n\t\t\tgoto cleanup;\n\t\t}\n\t}\n\tif (path) {\n\t\tini_name = ZSTR_INIT_LITERAL(\"session.cookie_path\", 0);\n\t\tresult = zend_alter_ini_entry(ini_name, path, PHP_INI_USER, PHP_INI_STAGE_RUNTIME);\n\t\tzend_string_release_ex(ini_name, 0);\n\t\tif (result == FAILURE) {\n\t\t\tRETVAL_FALSE;\n\t\t\tgoto cleanup;\n\t\t}\n\t}\n\tif (domain) {\n\t\tini_name = ZSTR_INIT_LITERAL(\"session.cookie_domain\", 0);\n\t\tresult = zend_alter_ini_entry(ini_name, domain, PHP_INI_USER, PHP_INI_STAGE_RUNTIME);\n\t\tzend_string_release_ex(ini_name, 0);\n\t\tif (result == FAILURE) {\n\t\t\tRETVAL_FALSE;\n\t\t\tgoto cleanup;\n\t\t}\n\t}\n\tif (!secure_null) {\n\t\tini_name = ZSTR_INIT_LITERAL(\"session.cookie_secure\", 0);\n\t\tresult = zend_alter_ini_entry_chars(ini_name, secure ? \"1\" : \"0\", 1, PHP_INI_USER, PHP_INI_STAGE_RUNTIME);\n\t\tzend_string_release_ex(ini_name, 0);\n\t\tif (result == FAILURE) {\n\t\t\tRETVAL_FALSE;\n\t\t\tgoto cleanup;\n\t\t}\n\t}\n\tif (!httponly_null) {\n\t\tini_name = ZSTR_INIT_LITERAL(\"session.cookie_httponly\", 0);\n\t\tresult = zend_alter_ini_entry_chars(ini_name, httponly ? \"1\" : \"0\", 1, PHP_INI_USER, PHP_INI_STAGE_RUNTIME);\n\t\tzend_string_release_ex(ini_name, 0);\n\t\tif (result == FAILURE) {\n\t\t\tRETVAL_FALSE;\n\t\t\tgoto cleanup;\n\t\t}\n\t}\n\tif (samesite) {\n\t\tini_name = ZSTR_INIT_LITERAL(\"session.cookie_samesite\", 0);\n\t\tresult = zend_alter_ini_entry(ini_name, samesite, PHP_INI_USER, PHP_INI_STAGE_RUNTIME);\n\t\tzend_string_release_ex(ini_name, 0);\n\t\tif (result == FAILURE) {\n\t\t\tRETVAL_FALSE;\n\t\t\tgoto cleanup;\n\t\t}\n\t}\n\n\tRETVAL_TRUE;\n\ncleanup:\n\tif (lifetime) zend_string_release(lifetime);\n\tif (found > 0) {\n\t\tif (path) zend_string_release(path);\n\t\tif (domain) zend_string_release(domain);\n\t\tif (samesite) zend_string_release(samesite);\n\t}",
+    "semantic": "Exception during string conversion",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_ARRAY_HT_OR_LONG",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_STR_OR_NULL",
+            "Z_PARAM_BOOL_OR_NULL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_FALSE",
+            "RETURN_THROWS",
+            "ZEND_HASH_FOREACH_STR_KEY_VAL",
+            "ZVAL_DEREF",
+            "ZSTR_VAL",
+            "ZEND_HASH_FOREACH_END",
+            "ZSTR_INIT_LITERAL"
+        ],
+        "zend_types": [
+            "HashTable",
+            "zend_long",
+            "zend_string",
+            "zend_result",
+            "zval"
+        ],
+        "internal_helpers": [
+            "php_error_docref",
+            "zend_argument_value_error",
+            "zend_string_equals_literal_ci",
+            "zval_get_string",
+            "zval_is_true",
+            "zend_long_to_str",
+            "zend_alter_ini_entry",
+            "zend_string_release_ex",
+            "zend_alter_ini_entry_chars",
+            "zend_string_release"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common session_set_cookie_params inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 9,
+    "purpose": "Exception during string conversion",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "session_get_cookie_params",
+        "session_name",
+        "session_module_name",
+        "session_set_save_handler",
+        "session_save_path",
+        "session_id",
+        "session_regenerate_id",
+        "session_create_id",
+        "session_cache_limiter",
+        "session_cache_expire",
+        "session_encode",
+        "session_decode"
+    ]
+}

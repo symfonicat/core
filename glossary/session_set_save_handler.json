@@ -1,0 +1,125 @@
+{
+    "php_function": "session_set_save_handler",
+    "zend_function": "session_set_save_handler",
+    "source_file": "sion.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "sys/stat.h",
+        "fcntl.h",
+        "php_ini.h",
+        "rfc1867.h",
+        "php_variables.h",
+        "php_session.h",
+        "session_arginfo.h",
+        "ext/standard/php_var.h",
+        "ext/date/php_date.h",
+        "ext/standard/url_scanner_ex.h",
+        "ext/standard/info.h",
+        "zend_smart_str.h",
+        "ext/standard/url.h",
+        "ext/standard/basic_functions.h",
+        "ext/standard/head.h",
+        "ext/random/php_random.h",
+        "ext/random/php_random_csprng.h",
+        "mod_files.h",
+        "mod_user.h",
+        "mod_mm.h"
+    ],
+    "body": "/* OOP Version */\n\tif (ZEND_NUM_ARGS() <= 2) {\n\t\tzval *obj = NULL;\n\t\tbool register_shutdown = 1;\n\n\t\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"O|b\", &obj, php_session_iface_entry, &register_shutdown) == FAILURE) {\n\t\t\tRETURN_THROWS();\n\t\t}\n\n\t\tif (!can_session_handler_be_changed()) {\n\t\t\tRETURN_FALSE;\n\t\t}\n\n\t\tif (PS(mod_user_class_name)) {\n\t\t\tzend_string_release(PS(mod_user_class_name));\n\t\t}\n\t\tPS(mod_user_class_name) = zend_string_copy(Z_OBJCE_P(obj)->name);\n\n\t\t/* Define mandatory handlers */\n\t\tSESSION_SET_USER_HANDLER_OO_MANDATORY(ps_open, \"open\");\n\t\tSESSION_SET_USER_HANDLER_OO_MANDATORY(ps_close, \"close\");\n\t\tSESSION_SET_USER_HANDLER_OO_MANDATORY(ps_read, \"read\");\n\t\tSESSION_SET_USER_HANDLER_OO_MANDATORY(ps_write, \"write\");\n\t\tSESSION_SET_USER_HANDLER_OO_MANDATORY(ps_destroy, \"destroy\");\n\t\tSESSION_SET_USER_HANDLER_OO_MANDATORY(ps_gc, \"gc\");\n\n\t\t/* Elements of object_methods HashTable are zend_function *method */\n\t\tHashTable *object_methods = &Z_OBJCE_P(obj)->function_table;\n\n\t\t/* Find implemented methods - SessionIdInterface (optional) */\n\t\t/* First release old handlers */\n\t\tSESSION_RELEASE_USER_HANDLER_OO(ps_create_sid);\n\t\tzend_string *create_sid_name = ZSTR_INIT_LITERAL(\"create_sid\", false);\n\t\tif (instanceof_function(Z_OBJCE_P(obj), php_session_id_iface_entry)) {\n\t\t\tSESSION_SET_USER_HANDLER_OO(ps_create_sid, zend_string_copy(create_sid_name));\n\t\t} else if (zend_hash_find_ptr(object_methods, create_sid_name)) {\n\t\t\t/* For BC reasons we accept methods even if the class does not implement the interface */\n\t\t\tSESSION_SET_USER_HANDLER_OO(ps_create_sid, zend_string_copy(create_sid_name));\n\t\t}\n\t\tzend_string_release_ex(create_sid_name, false);\n\n\t\t/* Find implemented methods - SessionUpdateTimestampInterface (optional) */\n\t\t/* First release old handlers */\n\t\tSESSION_RELEASE_USER_HANDLER_OO(ps_validate_sid);\n\t\tSESSION_RELEASE_USER_HANDLER_OO(ps_update_timestamp);\n\t\t/* Method names need to be lowercase */\n\t\tzend_string *validate_sid_name = ZSTR_INIT_LITERAL(\"validateid\", false);\n\t\tzend_string *update_timestamp_name = ZSTR_INIT_LITERAL(\"updatetimestamp\", false);\n\t\tif (instanceof_function(Z_OBJCE_P(obj), php_session_update_timestamp_iface_entry)) {\n\t\t\t/* Validate ID handler */\n\t\t\tSESSION_SET_USER_HANDLER_OO(ps_validate_sid, zend_string_copy(validate_sid_name));\n\t\t\t/* Update Timestamp handler */\n\t\t\tSESSION_SET_USER_HANDLER_OO(ps_update_timestamp, zend_string_copy(update_timestamp_name));\n\t\t} else {\n\t\t\t/* For BC reasons we accept methods even if the class does not implement the interface */\n\t\t\tif (zend_hash_find_ptr(object_methods, validate_sid_name)) {\n\t\t\t\t/* For BC reasons we accept methods even if the class does not implement the interface */\n\t\t\t\tSESSION_SET_USER_HANDLER_OO(ps_validate_sid, zend_string_copy(validate_sid_name));\n\t\t\t}\n\t\t\tif (zend_hash_find_ptr(object_methods, update_timestamp_name)) {\n\t\t\t\t/* For BC reasons we accept methods even if the class does not implement the interface */\n\t\t\t\tSESSION_SET_USER_HANDLER_OO(ps_update_timestamp, zend_string_copy(update_timestamp_name));\n\t\t\t}\n\t\t}\n\t\tzend_string_release_ex(validate_sid_name, false);\n\t\tzend_string_release_ex(update_timestamp_name, false);\n\n\t\tif (register_shutdown) {\n\t\t\t/* create shutdown function */\n\t\t\tphp_shutdown_function_entry shutdown_function_entry;\n\t\t\tzval callable;\n\t\t\tzend_result result;\n\n\t\t\tZVAL_STRING(&callable, \"session_register_shutdown\");\n\t\t\tresult = zend_fcall_info_init(&callable, 0, &shutdown_function_entry.fci,\n\t\t\t\t&shutdown_function_entry.fci_cache, NULL, NULL);\n\n\t\t\tZEND_ASSERT(result == SUCCESS);\n\n\t\t\t/* add shutdown function, removing the old one if it exists */\n\t\t\tif (!register_user_shutdown_function(\"session_shutdown\", strlen(\"session_shutdown\"), &shutdown_function_entry)) {\n\t\t\t\tzval_ptr_dtor(&callable);\n\t\t\t\tphp_error_docref(NULL, E_WARNING, \"Unable to register session shutdown function\");\n\t\t\t\tRETURN_FALSE;\n\t\t\t}\n\t\t} else {\n\t\t\t/* remove shutdown function */\n\t\t\tremove_user_shutdown_function(\"session_shutdown\", strlen(\"session_shutdown\"));\n\t\t}\n\n\t\tif (PS(session_status) != php_session_active && (!PS(mod) || PS(mod) != &ps_mod_user)) {\n\t\t\tset_user_save_handler_ini();\n\t\t}\n\n\t\tRETURN_TRUE;\n\t}\n\n\tphp_error_docref(NULL, E_DEPRECATED, \"Providing individual callbacks instead of an object implementing SessionHandlerInterface is deprecated\");\n\tif (UNEXPECTED(EG(exception))) {\n\t\tRETURN_THROWS();\n\t}\n\n\t/* Procedural version */\n\tzend_fcall_info open_fci = {0};\n\tzend_fcall_info_cache open_fcc;\n\tzend_fcall_info close_fci = {0};\n\tzend_fcall_info_cache close_fcc;\n\tzend_fcall_info read_fci = {0};\n\tzend_fcall_info_cache read_fcc;\n\tzend_fcall_info write_fci = {0};\n\tzend_fcall_info_cache write_fcc;\n\tzend_fcall_info destroy_fci = {0};\n\tzend_fcall_info_cache destroy_fcc;\n\tzend_fcall_info gc_fci = {0};\n\tzend_fcall_info_cache gc_fcc;\n\tzend_fcall_info create_id_fci = {0};\n\tzend_fcall_info_cache create_id_fcc;\n\tzend_fcall_info validate_id_fci = {0};\n\tzend_fcall_info_cache validate_id_fcc;\n\tzend_fcall_info update_timestamp_fci = {0};\n\tzend_fcall_info_cache update_timestamp_fcc;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(),\n\t\t\"ffffff|f!f!f!\",\n\t\t&open_fci, &open_fcc,\n\t\t&close_fci, &close_fcc,\n\t\t&read_fci, &read_fcc,\n\t\t&write_fci, &write_fcc,\n\t\t&destroy_fci, &destroy_fcc,\n\t\t&gc_fci, &gc_fcc,\n\t\t&create_id_fci, &create_id_fcc,\n\t\t&validate_id_fci, &validate_id_fcc,\n\t\t&update_timestamp_fci, &update_timestamp_fcc) == FAILURE\n\t) {\n\t\tRETURN_THROWS();\n\t}\n\tif (!can_session_handler_be_changed()) {\n\t\tRETURN_FALSE;\n\t}\n\n\t/* If a custom session handler is already set, release relevant info */\n\tif (PS(mod_user_class_name)) {\n\t\tzend_string_release(PS(mod_user_class_name));\n\t\tPS(mod_user_class_name) = NULL;\n\t}\n\n\t/* remove shutdown function */\n\tremove_user_shutdown_function(\"session_shutdown\", strlen(\"session_shutdown\"));\n\n\tif (!PS(mod) || PS(mod) != &ps_mod_user) {\n\t\tset_user_save_handler_ini();\n\t}\n\n\t/* Define mandatory handlers */\n\tSESSION_SET_USER_HANDLER_PROCEDURAL(ps_open, open_fci);\n\tSESSION_SET_USER_HANDLER_PROCEDURAL(ps_close, close_fci);\n\tSESSION_SET_USER_HANDLER_PROCEDURAL(ps_read, read_fci);\n\tSESSION_SET_USER_HANDLER_PROCEDURAL(ps_write, write_fci);\n\tSESSION_SET_USER_HANDLER_PROCEDURAL(ps_destroy, destroy_fci);\n\tSESSION_SET_USER_HANDLER_PROCEDURAL(ps_gc, gc_fci);\n\n\t/* Check for optional handlers */\n\tSESSION_SET_USER_HANDLER_PROCEDURAL_OPTIONAL(ps_create_sid, create_id_fci);\n\tSESSION_SET_USER_HANDLER_PROCEDURAL_OPTIONAL(ps_validate_sid, validate_id_fci);\n\tSESSION_SET_USER_HANDLER_PROCEDURAL_OPTIONAL(ps_update_timestamp, update_timestamp_fci);\n\n\tRETURN_TRUE;",
+    "semantic": "OOP Version",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_FALSE",
+            "ZSTR_INIT_LITERAL",
+            "ZVAL_STRING",
+            "ZEND_ASSERT",
+            "RETURN_TRUE"
+        ],
+        "zend_types": [
+            "zval",
+            "HashTable",
+            "zend_function",
+            "zend_string",
+            "zend_result",
+            "zend_fcall_info",
+            "zend_fcall_info_cache"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "zend_string_release",
+            "zend_string_copy",
+            "zend_hash_find_ptr",
+            "zend_string_release_ex",
+            "zend_fcall_info_init",
+            "zval_ptr_dtor",
+            "php_error_docref"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common session_set_save_handler inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 8,
+    "purpose": "OOP Version",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "session_set_cookie_params",
+        "session_get_cookie_params",
+        "session_name",
+        "session_module_name",
+        "session_save_path",
+        "session_id",
+        "session_regenerate_id",
+        "session_create_id",
+        "session_cache_limiter",
+        "session_cache_expire",
+        "session_encode",
+        "session_decode"
+    ]
+}

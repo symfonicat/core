@@ -1,0 +1,125 @@
+{
+    "php_function": "get_browser",
+    "zend_function": "get_browser",
+    "source_file": "owscap.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "agent_name",
+            "macro": "Z_PARAM_STR_OR_NULL",
+            "arguments": [
+                "agent_name"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR_OR_NULL(agent_name)"
+        },
+        {
+            "name": "return_array",
+            "macro": "Z_PARAM_BOOL",
+            "arguments": [
+                "return_array"
+            ],
+            "type": "bool",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_BOOL(return_array)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "php_browscap.h",
+        "php_ini.h",
+        "zend_ini_scanner.h",
+        "zend_globals.h"
+    ],
+    "body": "zend_string *agent_name = NULL, *lookup_browser_name;\n\tbool return_array = 0;\n\tbrowser_data *bdata;\n\tbrowscap_entry *found_entry = NULL;\n\tHashTable *agent_ht;\n\n\tZEND_PARSE_PARAMETERS_START(0, 2)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_STR_OR_NULL(agent_name)\n\t\tZ_PARAM_BOOL(return_array)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (BROWSCAP_G(activation_bdata).filename[0] != '\\0') {\n\t\tbdata = &BROWSCAP_G(activation_bdata);\n\t\tif (bdata->htab == NULL) { /* not initialized yet */\n\t\t\tif (browscap_read_file(bdata->filename, bdata, false) == FAILURE) {\n\t\t\t\tRETURN_FALSE;\n\t\t\t}\n\t\t}\n\t} else {\n\t\tif (!global_bdata.htab) {\n\t\t\tphp_error_docref(NULL, E_WARNING, \"browscap ini directive not set\");\n\t\t\tRETURN_FALSE;\n\t\t}\n\t\tbdata = &global_bdata;\n\t}\n\n\tif (agent_name == NULL) {\n\t\tzval *http_user_agent = NULL;\n\t\tif (Z_TYPE(PG(http_globals)[TRACK_VARS_SERVER]) == IS_ARRAY\n\t\t\t\t|| zend_is_auto_global(ZSTR_KNOWN(ZEND_STR_AUTOGLOBAL_SERVER))) {\n\t\t\thttp_user_agent = zend_hash_str_find(\n\t\t\t\tZ_ARRVAL_P(&PG(http_globals)[TRACK_VARS_SERVER]),\n\t\t\t\t\"HTTP_USER_AGENT\", sizeof(\"HTTP_USER_AGENT\")-1);\n\t\t}\n\t\tif (http_user_agent == NULL) {\n\t\t\tphp_error_docref(NULL, E_WARNING, \"HTTP_USER_AGENT variable is not set, cannot determine user agent name\");\n\t\t\tRETURN_FALSE;\n\t\t}\n\t\tagent_name = Z_STR_P(http_user_agent);\n\t}\n\n\tlookup_browser_name = zend_string_tolower(agent_name);\n\tfound_entry = zend_hash_find_ptr(bdata->htab, lookup_browser_name);\n\tif (found_entry == NULL) {\n\t\tbrowscap_entry *entry;\n\t\tsize_t cached_prev_len = 0; /* silence compiler warning */\n\n\t\tZEND_HASH_MAP_FOREACH_PTR(bdata->htab, entry) {\n\t\t\t/* The following two early-skip checks are inside this loop instead of inside browser_reg_compare().\n\t\t\t * That's because we want to avoid the call frame overhead, especially as browser_reg_compare() is\n\t\t\t * a function that uses alloca(). */\n\n\t\t\t/* Agent name too short */\n\t\t\tif (ZSTR_LEN(lookup_browser_name) < browscap_get_minimum_length(entry)) {\n\t\t\t\tcontinue;\n\t\t\t}\n\n\t\t\t/* Quickly discard patterns where the prefix doesn't match. */\n\t\t\tbool prefix_matches = true;\n\t\t\tfor (size_t i = 0; i < entry->prefix_len; i++) {\n\t\t\t\tif (ZSTR_VAL(lookup_browser_name)[i] != zend_tolower_ascii(ZSTR_VAL(entry->pattern)[i])) {\n\t\t\t\t\tprefix_matches = false;\n\t\t\t\t\tbreak;\n\t\t\t\t}\n\t\t\t}\n\t\t\tif (!prefix_matches) {\n\t\t\t\tcontinue;\n\t\t\t}\n\n\t\t\tif (browser_reg_compare(entry, lookup_browser_name, &found_entry, &cached_prev_len)) {\n\t\t\t\tbreak;\n\t\t\t}\n\t\t} ZEND_HASH_FOREACH_END();\n\n\t\tif (found_entry == NULL) {\n\t\t\tfound_entry = zend_hash_str_find_ptr(bdata->htab,\n\t\t\t\tDEFAULT_SECTION_NAME, sizeof(DEFAULT_SECTION_NAME)-1);\n\t\t\tif (found_entry == NULL) {\n\t\t\t\tzend_string_release_ex(lookup_browser_name, false);\n\t\t\t\tRETURN_FALSE;\n\t\t\t}\n\t\t}\n\t}\n\n\tzend_string_release_ex(lookup_browser_name, false);\n\n\tagent_ht = browscap_entry_to_array(bdata, found_entry);\n\n\tif (return_array) {\n\t\tRETVAL_ARR(agent_ht);\n\t} else {\n\t\tobject_and_properties_init(return_value, zend_standard_class_def, agent_ht);\n\t}\n\n\tHashTable *target_ht = return_array ? Z_ARRVAL_P(return_value) : Z_OBJPROP_P(return_value);\n\n\twhile (found_entry->parent) {\n\t\tfound_entry = zend_hash_find_ptr(bdata->htab, found_entry->parent);\n\t\tif (found_entry == NULL) {\n\t\t\tbreak;\n\t\t}\n\n\t\tbrowscap_entry_add_kv_to_existing_array(bdata, found_entry, target_ht);\n\t}",
+    "semantic": "not initialized yet",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_STR_OR_NULL",
+            "Z_PARAM_BOOL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_FALSE",
+            "ZSTR_KNOWN",
+            "ZEND_STR_AUTOGLOBAL_SERVER",
+            "ZEND_HASH_MAP_FOREACH_PTR",
+            "ZSTR_LEN",
+            "ZSTR_VAL",
+            "ZEND_HASH_FOREACH_END"
+        ],
+        "zend_types": [
+            "zend_string",
+            "HashTable",
+            "zval"
+        ],
+        "internal_helpers": [
+            "php_error_docref",
+            "zend_is_auto_global",
+            "zend_hash_str_find",
+            "zend_string_tolower",
+            "zend_hash_find_ptr",
+            "zend_tolower_ascii",
+            "zend_hash_str_find_ptr",
+            "zend_string_release_ex"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common get_browser inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 10,
+    "purpose": "not initialized yet",
+    "php_version": "8.4.0-dev",
+    "related": []
+}

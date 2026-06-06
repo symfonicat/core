@@ -1,0 +1,160 @@
+{
+    "php_function": "array_unique",
+    "zend_function": "array_unique",
+    "source_file": "ray.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "array",
+            "macro": "Z_PARAM_ARRAY",
+            "arguments": [
+                "array"
+            ],
+            "type": "HashTable",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY(array)"
+        },
+        {
+            "name": "sort_type",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "sort_type"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(sort_type)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "php_ini.h",
+        "stdarg.h",
+        "stdlib.h",
+        "math.h",
+        "time.h",
+        "string.h",
+        "zend_globals.h",
+        "zend_interfaces.h",
+        "php_array.h",
+        "basic_functions.h",
+        "php_string.h",
+        "php_math.h",
+        "zend_smart_str.h",
+        "zend_bitset.h",
+        "zend_exceptions.h",
+        "ext/random/php_random.h",
+        "zend_frameless_function.h"
+    ],
+    "body": "zval *array;\n\tBucket *p;\n\tzend_long sort_type = PHP_SORT_STRING;\n\tbucket_compare_func_t cmp;\n\tstruct bucketindex *arTmp, *cmpdata, *lastkept;\n\tuint32_t i, idx;\n\n\tZEND_PARSE_PARAMETERS_START(1, 2)\n\t\tZ_PARAM_ARRAY(array)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_LONG(sort_type)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (Z_ARRVAL_P(array)->nNumOfElements <= 1) {\t/* nothing to do */\n\t\tZVAL_COPY(return_value, array);\n\t\treturn;\n\t}\n\n\tif (sort_type == PHP_SORT_STRING) {\n\t\tHashTable seen;\n\t\tzend_long num_key;\n\t\tzend_string *str_key;\n\t\tzval *val;\n\n\t\tzend_hash_init(&seen, zend_hash_num_elements(Z_ARRVAL_P(array)), NULL, NULL, 0);\n\t\tarray_init(return_value);\n\n\t\tZEND_HASH_FOREACH_KEY_VAL(Z_ARRVAL_P(array), num_key, str_key, val) {\n\t\t\tzval *retval;\n\t\t\tif (Z_TYPE_P(val) == IS_STRING) {\n\t\t\t\tretval = zend_hash_add_empty_element(&seen, Z_STR_P(val));\n\t\t\t} else {\n\t\t\t\tzend_string *tmp_str_val;\n\t\t\t\tzend_string *str_val = zval_get_tmp_string(val, &tmp_str_val);\n\t\t\t\tretval = zend_hash_add_empty_element(&seen, str_val);\n\t\t\t\tzend_tmp_string_release(tmp_str_val);\n\t\t\t}\n\n\t\t\tif (retval) {\n\t\t\t\t/* First occurrence of the value */\n\t\t\t\tif (UNEXPECTED(Z_ISREF_P(val) && Z_REFCOUNT_P(val) == 1)) {\n\t\t\t\t\tZVAL_DEREF(val);\n\t\t\t\t}\n\t\t\t\tZ_TRY_ADDREF_P(val);\n\n\t\t\t\tif (str_key) {\n\t\t\t\t\tzend_hash_add_new(Z_ARRVAL_P(return_value), str_key, val);\n\t\t\t\t} else {\n\t\t\t\t\tzend_hash_index_add_new(Z_ARRVAL_P(return_value), num_key, val);\n\t\t\t\t}\n\t\t\t}\n\t\t} ZEND_HASH_FOREACH_END();\n\n\t\tzend_hash_destroy(&seen);\n\t\treturn;\n\t}\n\n\tcmp = php_get_data_compare_func_unstable(sort_type, 0);\n\n\tbool in_place = zend_may_modify_arg_in_place(array);\n\tif (in_place) {\n\t\tRETVAL_ARR(Z_ARRVAL_P(array));\n\t} else {\n\t\tRETVAL_ARR(zend_array_dup(Z_ARRVAL_P(array)));\n\t}\n\n\t/* create and sort array with pointers to the target_hash buckets */\n\tarTmp = pemalloc((Z_ARRVAL_P(array)->nNumOfElements + 1) * sizeof(struct bucketindex), GC_FLAGS(Z_ARRVAL_P(array)) & IS_ARRAY_PERSISTENT);\n\tif (HT_IS_PACKED(Z_ARRVAL_P(array))) {\n\t\tzval *zv = Z_ARRVAL_P(array)->arPacked;\n\t\tfor (i = 0, idx = 0; idx < Z_ARRVAL_P(array)->nNumUsed; idx++, zv++) {\n\t\t\tif (Z_TYPE_P(zv) == IS_UNDEF) continue;\n\t\t\tZVAL_COPY_VALUE(&arTmp[i].b.val, zv);\n\t\t\tarTmp[i].b.h = idx;\n\t\t\tarTmp[i].b.key = NULL;\n\t\t\tarTmp[i].i = i;\n\t\t\ti++;\n\t\t}\n\t} else {\n\t\tp = Z_ARRVAL_P(array)->arData;\n\t\tfor (i = 0, idx = 0; idx < Z_ARRVAL_P(array)->nNumUsed; idx++, p++) {\n\t\t\tif (Z_TYPE(p->val) == IS_UNDEF) continue;\n\t\t\tarTmp[i].b = *p;\n\t\t\tarTmp[i].i = i;\n\t\t\ti++;\n\t\t}\n\t}\n\tZVAL_UNDEF(&arTmp[i].b.val);\n\tzend_sort((void *) arTmp, i, sizeof(struct bucketindex),\n\t\t\t(compare_func_t) cmp, (swap_func_t) array_bucketindex_swap);\n\t/* go through the sorted array and delete duplicates from the copy */\n\tlastkept = arTmp;\n\tfor (cmpdata = arTmp + 1; Z_TYPE(cmpdata->b.val) != IS_UNDEF; cmpdata++) {\n\t\tif (cmp(&lastkept->b, &cmpdata->b)) {\n\t\t\tlastkept = cmpdata;\n\t\t} else {\n\t\t\tif (lastkept->i > cmpdata->i) {\n\t\t\t\tp = &lastkept->b;\n\t\t\t\tlastkept = cmpdata;\n\t\t\t} else {\n\t\t\t\tp = &cmpdata->b;\n\t\t\t}\n\t\t\tif (p->key == NULL) {\n\t\t\t\tzend_hash_index_del(Z_ARRVAL_P(return_value), p->h);\n\t\t\t} else {\n\t\t\t\tzend_hash_del(Z_ARRVAL_P(return_value), p->key);\n\t\t\t}\n\t\t}\n\t}\n\tpefree(arTmp, GC_FLAGS(Z_ARRVAL_P(array)) & IS_ARRAY_PERSISTENT);\n\n\tif (in_place) {\n\t\tZ_ADDREF_P(return_value);\n\t}",
+    "semantic": "nothing to do",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_ARRAY",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_LONG",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZVAL_COPY",
+            "ZEND_HASH_FOREACH_KEY_VAL",
+            "ZVAL_DEREF",
+            "ZEND_HASH_FOREACH_END",
+            "GC_FLAGS",
+            "ZVAL_COPY_VALUE",
+            "ZVAL_UNDEF"
+        ],
+        "zend_types": [
+            "zval",
+            "Bucket",
+            "zend_long",
+            "HashTable",
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "zend_hash_init",
+            "zend_hash_num_elements",
+            "zend_hash_add_empty_element",
+            "zval_get_tmp_string",
+            "zend_tmp_string_release",
+            "zend_hash_add_new",
+            "zend_hash_index_add_new",
+            "zend_hash_destroy",
+            "php_get_data_compare_func_unstable",
+            "zend_may_modify_arg_in_place",
+            "zend_array_dup",
+            "zend_sort",
+            "zend_hash_index_del",
+            "zend_hash_del"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common array_unique inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 10,
+    "purpose": "nothing to do",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "krsort",
+        "ksort",
+        "count",
+        "natsort",
+        "natcasesort",
+        "asort",
+        "arsort",
+        "sort",
+        "rsort",
+        "usort",
+        "uasort",
+        "uksort"
+    ]
+}

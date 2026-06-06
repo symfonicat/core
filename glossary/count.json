@@ -1,0 +1,151 @@
+{
+    "php_function": "count",
+    "zend_function": "count",
+    "source_file": "ray.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "array",
+            "macro": "Z_PARAM_ZVAL",
+            "arguments": [
+                "array"
+            ],
+            "type": "zval",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": true,
+            "raw": "Z_PARAM_ZVAL(array)"
+        },
+        {
+            "name": "mode",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "mode"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(mode)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "php_ini.h",
+        "stdarg.h",
+        "stdlib.h",
+        "math.h",
+        "time.h",
+        "string.h",
+        "zend_globals.h",
+        "zend_interfaces.h",
+        "php_array.h",
+        "basic_functions.h",
+        "php_string.h",
+        "php_math.h",
+        "zend_smart_str.h",
+        "zend_bitset.h",
+        "zend_exceptions.h",
+        "ext/random/php_random.h",
+        "zend_frameless_function.h"
+    ],
+    "body": "zval *array;\n\tzend_long mode = PHP_COUNT_NORMAL;\n\tzend_long cnt;\n\n\tZEND_PARSE_PARAMETERS_START(1, 2)\n\t\tZ_PARAM_ZVAL(array)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_LONG(mode)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (mode != PHP_COUNT_NORMAL && mode != PHP_COUNT_RECURSIVE) {\n\t\tzend_argument_value_error(2, \"must be either COUNT_NORMAL or COUNT_RECURSIVE\");\n\t\tRETURN_THROWS();\n\t}\n\n\tswitch (Z_TYPE_P(array)) {\n\t\tcase IS_ARRAY:\n\t\t\tif (mode != PHP_COUNT_RECURSIVE) {\n\t\t\t\tcnt = zend_hash_num_elements(Z_ARRVAL_P(array));\n\t\t\t} else {\n\t\t\t\tcnt = php_count_recursive(Z_ARRVAL_P(array));\n\t\t\t}\n\t\t\tRETURN_LONG(cnt);\n\t\t\tbreak;\n\t\tcase IS_OBJECT: {\n\t\t\tzval retval;\n\t\t\t/* first, we check if the handler is defined */\n\t\t\tzend_object *zobj = Z_OBJ_P(array);\n\t\t\tif (zobj->handlers->count_elements) {\n\t\t\t\tRETVAL_LONG(1);\n\t\t\t\tif (SUCCESS == zobj->handlers->count_elements(zobj, &Z_LVAL_P(return_value))) {\n\t\t\t\t\treturn;\n\t\t\t\t}\n\t\t\t\tif (EG(exception)) {\n\t\t\t\t\tRETURN_THROWS();\n\t\t\t\t}\n\t\t\t}\n\t\t\t/* if not and the object implements Countable we call its count() method */\n\t\t\tif (instanceof_function(zobj->ce, zend_ce_countable)) {\n\t\t\t\tzend_function *count_fn = zend_hash_find_ptr(&zobj->ce->function_table, ZSTR_KNOWN(ZEND_STR_COUNT));\n\t\t\t\tzend_call_known_instance_method_with_0_params(count_fn, zobj, &retval);\n\t\t\t\tif (Z_TYPE(retval) != IS_UNDEF) {\n\t\t\t\t\tRETVAL_LONG(zval_get_long(&retval));\n\t\t\t\t\tzval_ptr_dtor(&retval);\n\t\t\t\t}\n\t\t\t\treturn;\n\t\t\t}\n\t\t}\n\t\tZEND_FALLTHROUGH;\n\t\tdefault:\n\t\t\tzend_argument_type_error(1, \"must be of type Countable|array, %s given\", zend_zval_value_name(array));\n\t\t\tRETURN_THROWS();\n\t}",
+    "semantic": "first, we check if the handler is defined",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_ZVAL",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_LONG",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_THROWS",
+            "RETURN_LONG",
+            "ZSTR_KNOWN",
+            "ZEND_STR_COUNT",
+            "ZEND_FALLTHROUGH"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_long",
+            "zend_object",
+            "zend_function"
+        ],
+        "internal_helpers": [
+            "zend_argument_value_error",
+            "zend_hash_num_elements",
+            "php_count_recursive",
+            "zend_hash_find_ptr",
+            "zend_call_known_instance_method_with_0_params",
+            "zval_get_long",
+            "zval_ptr_dtor",
+            "zend_argument_type_error",
+            "zend_zval_value_name"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common count inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 8,
+    "purpose": "first, we check if the handler is defined",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "krsort",
+        "ksort",
+        "natsort",
+        "natcasesort",
+        "asort",
+        "arsort",
+        "sort",
+        "rsort",
+        "usort",
+        "uasort",
+        "uksort",
+        "end"
+    ]
+}

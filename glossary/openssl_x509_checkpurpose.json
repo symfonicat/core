@@ -1,0 +1,186 @@
+{
+    "php_function": "openssl_x509_checkpurpose",
+    "zend_function": "openssl_x509_checkpurpose",
+    "source_file": "nssl.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "cert_obj",
+            "macro": "Z_PARAM_OBJ_OF_CLASS_OR_STR",
+            "arguments": [
+                "cert_obj",
+                "php_openssl_certificate_ce",
+                "cert_str"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_OBJ_OF_CLASS_OR_STR(cert_obj, php_openssl_certificate_ce, cert_str)"
+        },
+        {
+            "name": "purpose",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "purpose"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(purpose)"
+        },
+        {
+            "name": "zcainfo",
+            "macro": "Z_PARAM_ARRAY",
+            "arguments": [
+                "zcainfo"
+            ],
+            "type": "HashTable",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY(zcainfo)"
+        },
+        {
+            "name": "untrusted",
+            "macro": "Z_PARAM_STRING_OR_NULL",
+            "arguments": [
+                "untrusted",
+                "untrusted_len"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING_OR_NULL(untrusted, untrusted_len)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "php_openssl.h",
+        "zend_attributes.h",
+        "zend_exceptions.h",
+        "ext/standard/file.h",
+        "ext/standard/info.h",
+        "ext/standard/php_fopen_wrappers.h",
+        "ext/standard/md5.h",
+        "ext/standard/base64.h",
+        "openssl/evp.h",
+        "openssl/bn.h",
+        "openssl/rsa.h",
+        "openssl/dsa.h",
+        "openssl/dh.h",
+        "openssl/x509.h",
+        "openssl/x509v3.h",
+        "openssl/crypto.h",
+        "openssl/pem.h",
+        "openssl/err.h",
+        "openssl/conf.h",
+        "openssl/rand.h",
+        "openssl/ssl.h",
+        "openssl/pkcs12.h",
+        "openssl/cms.h",
+        "openssl/core_names.h",
+        "openssl/param_build.h",
+        "openssl/provider.h",
+        "openssl/engine.h",
+        "time.h",
+        "openssl_arginfo.h"
+    ],
+    "body": "X509 *cert;\n\tzend_object *cert_obj;\n\tzend_string *cert_str;\n\tzval *zcainfo = NULL;\n\tX509_STORE *cainfo = NULL;\n\tSTACK_OF(X509) *untrustedchain = NULL;\n\tzend_long purpose;\n\tchar * untrusted = NULL;\n\tsize_t untrusted_len = 0;\n\tint ret;\n\n\tZEND_PARSE_PARAMETERS_START(2, 4)\n\t\tZ_PARAM_OBJ_OF_CLASS_OR_STR(cert_obj, php_openssl_certificate_ce, cert_str)\n\t\tZ_PARAM_LONG(purpose)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_ARRAY(zcainfo)\n\t\tZ_PARAM_STRING_OR_NULL(untrusted, untrusted_len)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tRETVAL_LONG(-1);\n\n\tif (untrusted) {\n\t\tuntrustedchain = php_openssl_load_all_certs_from_file(untrusted, untrusted_len, 4);\n\t\tif (untrustedchain == NULL) {\n\t\t\tgoto clean_exit;\n\t\t}\n\t}\n\n\tcainfo = php_openssl_setup_verify(zcainfo, 3);\n\tif (cainfo == NULL) {\n\t\tgoto clean_exit;\n\t}\n\tcert = php_openssl_x509_from_param(cert_obj, cert_str, 1);\n\tif (cert == NULL) {\n\t\t// TODO Add Warning?\n\t\tgoto clean_exit;\n\t}\n\n\tret = check_cert(cainfo, cert, untrustedchain, (int)purpose);\n\tif (ret != 0 && ret != 1) {\n\t\tRETVAL_LONG(ret);\n\t} else {\n\t\tRETVAL_BOOL(ret);\n\t}\n\tif (cert_str) {\n\t\tX509_free(cert);\n\t}\nclean_exit:\n\tif (cainfo) {\n\t\tX509_STORE_free(cainfo);\n\t}\n\tif (untrustedchain) {\n\t\tsk_X509_pop_free(untrustedchain, X509_free);\n\t}",
+    "semantic": "Implements the PHP function openssl_x509_checkpurpose in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_OBJ_OF_CLASS_OR_STR",
+            "Z_PARAM_LONG",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_ARRAY",
+            "Z_PARAM_STRING_OR_NULL",
+            "ZEND_PARSE_PARAMETERS_END"
+        ],
+        "zend_types": [
+            "zend_object",
+            "zend_string",
+            "zval",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "php_openssl_load_all_certs_from_file",
+            "php_openssl_setup_verify",
+            "php_openssl_x509_from_param"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common openssl_x509_checkpurpose inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 6,
+    "purpose": "Implements the PHP function openssl_x509_checkpurpose in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "openssl_get_cert_locations",
+        "openssl_x509_export_to_file",
+        "openssl_spki_new",
+        "openssl_spki_verify",
+        "openssl_spki_export",
+        "openssl_spki_export_challenge",
+        "openssl_x509_export",
+        "openssl_x509_fingerprint",
+        "openssl_x509_check_private_key",
+        "openssl_x509_verify",
+        "openssl_x509_parse",
+        "openssl_x509_read"
+    ]
+}

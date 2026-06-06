@@ -1,0 +1,128 @@
+{
+    "php_function": "phpdbg_get_executable",
+    "zend_function": "phpdbg_get_executable",
+    "source_file": "dbg.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "phpdbg.h",
+        "phpdbg_prompt.h",
+        "phpdbg_bp.h",
+        "phpdbg_break.h",
+        "phpdbg_list.h",
+        "phpdbg_utils.h",
+        "phpdbg_set.h",
+        "phpdbg_io.h",
+        "zend_alloc.h",
+        "phpdbg_print.h",
+        "phpdbg_help.h",
+        "phpdbg_arginfo.h",
+        "zend_vm.h",
+        "php_ini_builder.h",
+        "php_main.h",
+        "ext/standard/basic_functions.h"
+    ],
+    "body": "HashTable *options = NULL;\n\tzval *option_buffer;\n\tbool by_function = false;\n\tbool by_opcode = false;\n\tHashTable *insert_ht;\n\n\tzend_function *func;\n\tzend_class_entry *ce;\n\tzend_string *name;\n\tHashTable *files = &PHPDBG_G(file_sources);\n\tHashTable files_tmp;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"|H\", &options) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tif (options && (option_buffer = zend_hash_str_find(options, ZEND_STRL(\"functions\")))) {\n\t\tby_function = zend_is_true(option_buffer);\n\t}\n\n\tif (options && (option_buffer = zend_hash_str_find(options, ZEND_STRL(\"opcodes\")))) {\n\t\tif (by_function) {\n\t\t\tby_opcode = zend_is_true(option_buffer);\n\t\t}\n\t}\n\n\tif (options && (option_buffer = zend_hash_str_find(options, ZEND_STRL(\"files\")))) {\n\t\tZVAL_DEREF(option_buffer);\n\t\tif (Z_TYPE_P(option_buffer) == IS_ARRAY && zend_hash_num_elements(Z_ARR_P(option_buffer)) > 0) {\n\t\t\tzval *filename;\n\n\t\t\tfiles = &files_tmp;\n\t\t\tzend_hash_init(files, 0, NULL, NULL, 0);\n\n\t\t\tZEND_HASH_FOREACH_VAL(Z_ARR_P(option_buffer), filename) {\n\t\t\t\tzend_hash_add_empty_element(files, zval_get_string(filename));\n\t\t\t} ZEND_HASH_FOREACH_END();\n\t\t} else {\n\t\t\tGC_ADDREF(files);\n\t\t}\n\t} else {\n\t\tGC_ADDREF(files);\n\t}\n\n\tarray_init(return_value);\n\n\tZEND_HASH_MAP_FOREACH_STR_KEY_PTR(EG(function_table), name, func) {\n\t\tif (func->type == ZEND_USER_FUNCTION) {\n\t\t\tif (zend_hash_exists(files, func->op_array.filename)) {\n\t\t\t\tinsert_ht = phpdbg_add_empty_array(Z_ARR_P(return_value), func->op_array.filename);\n\n\t\t\t\tif (by_function) {\n\t\t\t\t\tinsert_ht = phpdbg_add_empty_array(insert_ht, name);\n\t\t\t\t}\n\n\t\t\t\tphpdbg_oplog_fill_executable(&func->op_array, insert_ht, by_opcode);\n\t\t\t}\n\t\t}\n\t} ZEND_HASH_FOREACH_END();\n\n\tZEND_HASH_MAP_FOREACH_STR_KEY_PTR(EG(class_table), name, ce) {\n\t\tif (ce->type == ZEND_USER_CLASS) {\n\t\t\tif (zend_hash_exists(files, ce->info.user.filename)) {\n\t\t\t\tZEND_HASH_MAP_FOREACH_PTR(&ce->function_table, func) {\n\t\t\t\t\tif (func->type == ZEND_USER_FUNCTION && zend_hash_exists(files, func->op_array.filename)) {\n\t\t\t\t\t\tinsert_ht = phpdbg_add_empty_array(Z_ARR_P(return_value), func->op_array.filename);\n\n\t\t\t\t\t\tif (by_function) {\n\t\t\t\t\t\t\tzend_string *fn_name = strpprintf(ZSTR_LEN(name) + ZSTR_LEN(func->op_array.function_name) + 2, \"%.*s::%.*s\", (int) ZSTR_LEN(name), ZSTR_VAL(name), (int) ZSTR_LEN(func->op_array.function_name), ZSTR_VAL(func->op_array.function_name));\n\t\t\t\t\t\t\tinsert_ht = phpdbg_add_empty_array(insert_ht, fn_name);\n\t\t\t\t\t\t\tzend_string_release(fn_name);\n\t\t\t\t\t\t}\n\n\t\t\t\t\t\tphpdbg_oplog_fill_executable(&func->op_array, insert_ht, by_opcode);\n\t\t\t\t\t}\n\t\t\t\t} ZEND_HASH_FOREACH_END();\n\t\t\t}\n\t\t}\n\t} ZEND_HASH_FOREACH_END();\n\n\tZEND_HASH_MAP_FOREACH_STR_KEY(files, name) {\n\t\tphpdbg_file_source *source = zend_hash_find_ptr(&PHPDBG_G(file_sources), name);\n\t\tif (source) {\n\t\t\tphpdbg_oplog_fill_executable(\n\t\t\t\t&source->op_array,\n\t\t\t\tphpdbg_add_empty_array(Z_ARR_P(return_value), source->op_array.filename),\n\t\t\t\tby_opcode);\n\t\t}\n\t} ZEND_HASH_FOREACH_END();\n\n\tif (!GC_DELREF(files)) {\n\t\tzend_hash_destroy(files);\n\t}",
+    "semantic": "Implements the PHP function phpdbg_get_executable in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "ZEND_STRL",
+            "ZVAL_DEREF",
+            "ZEND_HASH_FOREACH_VAL",
+            "ZEND_HASH_FOREACH_END",
+            "GC_ADDREF",
+            "ZEND_HASH_MAP_FOREACH_STR_KEY_PTR",
+            "ZEND_USER_FUNCTION",
+            "ZEND_USER_CLASS",
+            "ZEND_HASH_MAP_FOREACH_PTR",
+            "ZSTR_LEN",
+            "ZSTR_VAL",
+            "ZEND_HASH_MAP_FOREACH_STR_KEY",
+            "GC_DELREF"
+        ],
+        "zend_types": [
+            "HashTable",
+            "zval",
+            "zend_function",
+            "zend_class_entry",
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "zend_hash_str_find",
+            "zend_is_true",
+            "zend_hash_num_elements",
+            "zend_hash_init",
+            "zend_hash_add_empty_element",
+            "zval_get_string",
+            "zend_hash_exists",
+            "phpdbg_add_empty_array",
+            "phpdbg_oplog_fill_executable",
+            "zend_string_release",
+            "zend_hash_find_ptr",
+            "zend_hash_destroy"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common phpdbg_get_executable inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 6,
+    "purpose": "Implements the PHP function phpdbg_get_executable in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "phpdbg_exec",
+        "phpdbg_break_next",
+        "phpdbg_break_file",
+        "phpdbg_break_method",
+        "phpdbg_break_function",
+        "phpdbg_clear",
+        "phpdbg_color",
+        "phpdbg_prompt",
+        "phpdbg_start_oplog",
+        "phpdbg_end_oplog"
+    ]
+}

@@ -49,11 +49,11 @@ final class PublicFileUploadService
 
     private function domainDirectory(?Domain $domain): string
     {
-        if (!$domain instanceof Domain || trim((string) $domain->getId(false)) === '') {
+        if (!$domain instanceof Domain || trim((string) $domain->getTld()) === '') {
             throw new \InvalidArgumentException('Select a domain for each domain file upload.');
         }
 
-        return 'domains/'.$this->normalizeTargetId((string) $domain->getId(false));
+        return 'domains/'.$this->normalizeTargetId((string) $domain->getTld());
     }
 
     private function subdomainDirectory(?Subdomain $subdomain): string

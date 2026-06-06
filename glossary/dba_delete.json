@@ -1,0 +1,144 @@
+{
+    "php_function": "dba_delete",
+    "zend_function": "dba_delete",
+    "source_file": "",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "key_ht",
+            "macro": "Z_PARAM_ARRAY_HT_OR_STR",
+            "arguments": [
+                "key_ht",
+                "key_str"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY_HT_OR_STR(key_ht, key_str)"
+        },
+        {
+            "name": "id",
+            "macro": "Z_PARAM_OBJECT_OF_CLASS",
+            "arguments": [
+                "id",
+                "dba_connection_ce"
+            ],
+            "type": "zend_object",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_OBJECT_OF_CLASS(id, dba_connection_ce);"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "stdio.h",
+        "fcntl.h",
+        "sys/file.h",
+        "php_dba.h",
+        "ext/standard/info.h",
+        "ext/standard/flock_compat.h",
+        "php_gdbm.h",
+        "php_ndbm.h",
+        "php_dbm.h",
+        "php_cdb.h",
+        "php_db1.h",
+        "php_db2.h",
+        "php_db3.h",
+        "php_db4.h",
+        "php_flatfile.h",
+        "php_inifile.h",
+        "php_qdbm.h",
+        "php_tcadb.h",
+        "php_lmdb.h",
+        "dba_arginfo.h",
+        "zend_smart_str.h"
+    ],
+    "body": "zval *id;\n\tdba_info *info = NULL;\n\tHashTable *key_ht = NULL;\n\tzend_string *key_str = NULL;\n\n\tZEND_PARSE_PARAMETERS_START(2, 2)\n\t\tZ_PARAM_ARRAY_HT_OR_STR(key_ht, key_str)\n\t\tZ_PARAM_OBJECT_OF_CLASS(id, dba_connection_ce);\n\tZEND_PARSE_PARAMETERS_END();\n\n\tinfo = Z_DBA_INFO_P(id);\n\tCHECK_DBA_CONNECTION(info);\n\tDBA_WRITE_CHECK(info);\n\n\tif (key_ht) {\n\t\tkey_str = php_dba_make_key(key_ht);\n\t\tif (!key_str) {\n\t\t\t// TODO ValueError?\n\t\t\tRETURN_FALSE;\n\t\t}\n\t}\n\n\tRETVAL_BOOL(info->hnd->delete(info, key_str) == SUCCESS);\n\tDBA_RELEASE_HT_KEY_CREATION();",
+    "semantic": "Implements the PHP function dba_delete in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_ARRAY_HT_OR_STR",
+            "Z_PARAM_OBJECT_OF_CLASS",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zval",
+            "HashTable",
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "php_dba_make_key"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common dba_delete inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 4,
+    "purpose": "Implements the PHP function dba_delete in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "dba_popen",
+        "dba_open",
+        "dba_close",
+        "dba_exists",
+        "dba_fetch",
+        "dba_key_split",
+        "dba_firstkey",
+        "dba_nextkey",
+        "dba_insert",
+        "dba_replace",
+        "dba_optimize",
+        "dba_sync"
+    ]
+}

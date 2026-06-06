@@ -1,0 +1,135 @@
+{
+    "php_function": "imageaffinematrixconcat",
+    "zend_function": "imageaffinematrixconcat",
+    "source_file": "",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "z_m1",
+            "macro": "Z_PARAM_ARRAY",
+            "arguments": [
+                "z_m1"
+            ],
+            "type": "HashTable",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY(z_m1)"
+        },
+        {
+            "name": "z_m2",
+            "macro": "Z_PARAM_ARRAY",
+            "arguments": [
+                "z_m2"
+            ],
+            "type": "HashTable",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY(z_m2)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "ext/standard/head.h",
+        "math.h",
+        "SAPI.h",
+        "php_gd.h",
+        "ext/standard/php_image.h",
+        "ext/standard/info.h",
+        "php_open_temporary_file.h",
+        "php_memory_streams.h",
+        "zend_object_handlers.h",
+        "gd_compat.h",
+        "gd_arginfo.h"
+    ],
+    "body": "double m1[6];\n\tdouble m2[6];\n\tdouble mr[6];\n\n\tzval *tmp;\n\tzval *z_m1;\n\tzval *z_m2;\n\tint i;\n\n\tZEND_PARSE_PARAMETERS_START(2, 2)\n\t\tZ_PARAM_ARRAY(z_m1)\n\t\tZ_PARAM_ARRAY(z_m2)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (zend_hash_num_elements(Z_ARRVAL_P(z_m1)) != 6) {\n\t\tzend_argument_value_error(1, \"must have 6 elements\");\n\t\tRETURN_THROWS();\n\t}\n\n\tif (zend_hash_num_elements(Z_ARRVAL_P(z_m2)) != 6) {\n\t\tzend_argument_value_error(1, \"must have 6 elements\");\n\t\tRETURN_THROWS();\n\t}\n\n\tfor (i = 0; i < 6; i++) {\n\t\tif ((tmp = zend_hash_index_find(Z_ARRVAL_P(z_m1), i)) != NULL) {\n\t\t\tswitch (Z_TYPE_P(tmp)) {\n\t\t\t\tcase IS_LONG:\n\t\t\t\t\tm1[i]  = Z_LVAL_P(tmp);\n\t\t\t\t\tbreak;\n\t\t\t\tcase IS_DOUBLE:\n\t\t\t\t\tm1[i] = Z_DVAL_P(tmp);\n\t\t\t\t\tbreak;\n\t\t\t\tcase IS_STRING:\n\t\t\t\t\tm1[i] = zval_get_double(tmp);\n\t\t\t\t\tbreak;\n\t\t\t\tdefault:\n\t\t\t\t\tzend_argument_type_error(1, \"contains invalid type for element %i\", i);\n\t\t\t\t\tRETURN_THROWS();\n\t\t\t}\n\t\t}\n\n\t\tif ((tmp = zend_hash_index_find(Z_ARRVAL_P(z_m2), i)) != NULL) {\n\t\t\tswitch (Z_TYPE_P(tmp)) {\n\t\t\t\tcase IS_LONG:\n\t\t\t\t\tm2[i]  = Z_LVAL_P(tmp);\n\t\t\t\t\tbreak;\n\t\t\t\tcase IS_DOUBLE:\n\t\t\t\t\tm2[i] = Z_DVAL_P(tmp);\n\t\t\t\t\tbreak;\n\t\t\t\tcase IS_STRING:\n\t\t\t\t\tm2[i] = zval_get_double(tmp);\n\t\t\t\t\tbreak;\n\t\t\t\tdefault:\n\t\t\t\t\tzend_argument_type_error(2, \"contains invalid type for element %i\", i);\n\t\t\t\t\tRETURN_THROWS();\n\t\t\t}\n\t\t}\n\t}\n\n\tif (gdAffineConcat (mr, m1, m2) != GD_TRUE) {\n\t\tRETURN_FALSE;\n\t}\n\n\tarray_init(return_value);\n\tfor (i = 0; i < 6; i++) {\n\t\tadd_index_double(return_value, i, mr[i]);\n\t}",
+    "semantic": "Implements the PHP function imageaffinematrixconcat in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_ARRAY",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_THROWS",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zval"
+        ],
+        "internal_helpers": [
+            "zend_hash_num_elements",
+            "zend_argument_value_error",
+            "zend_hash_index_find",
+            "zval_get_double",
+            "zend_argument_type_error"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common imageaffinematrixconcat inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 10,
+    "purpose": "Implements the PHP function imageaffinematrixconcat in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "gd_info",
+        "imageloadfont",
+        "imagesetstyle",
+        "imagecreatetruecolor",
+        "imageistruecolor",
+        "imagetruecolortopalette",
+        "imagepalettetotruecolor",
+        "imagecolormatch",
+        "imagesetthickness",
+        "imagefilledellipse",
+        "imagefilledarc",
+        "imagealphablending"
+    ]
+}

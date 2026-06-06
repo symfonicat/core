@@ -115,7 +115,7 @@ class Subdomain
     public function hasDomain(Domain $domain): bool
     {
         return $this->domain === $domain
-            || ($this->domain instanceof Domain && $domain->getId() !== null && $this->domain->getId() === $domain->getId());
+            || ($this->domain instanceof Domain && $domain->getTld() !== null && $this->domain->getTld() === $domain->getTld());
     }
 
     public function getParcel(): ?Parcel

@@ -1,0 +1,129 @@
+{
+    "php_function": "socket_shutdown",
+    "zend_function": "socket_shutdown",
+    "source_file": "kets.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "arg1",
+            "macro": "Z_PARAM_OBJECT_OF_CLASS",
+            "arguments": [
+                "arg1",
+                "socket_ce"
+            ],
+            "type": "zend_object",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_OBJECT_OF_CLASS(arg1, socket_ce)"
+        },
+        {
+            "name": "how_shutdown",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "how_shutdown"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(how_shutdown)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_network.h",
+        "ext/standard/file.h",
+        "ext/standard/info.h",
+        "php_ini.h",
+        "stddef.h",
+        "sockaddr_conv.h",
+        "multicast.h",
+        "sendrecvmsg.h",
+        "sockets_arginfo.h"
+    ],
+    "body": "zval\t\t*arg1;\n\tzend_long\t\thow_shutdown = 2;\n\tphp_socket\t*php_sock;\n\n\tZEND_PARSE_PARAMETERS_START(1, 2)\n\t\tZ_PARAM_OBJECT_OF_CLASS(arg1, socket_ce)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_LONG(how_shutdown)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tphp_sock = Z_SOCKET_P(arg1);\n\tENSURE_SOCKET_VALID(php_sock);\n\n\tif (shutdown(php_sock->bsd_socket, how_shutdown) != 0) {\n\t\tPHP_SOCKET_ERROR(php_sock, \"Unable to shutdown socket\", errno);\n\t\tRETURN_FALSE;\n\t}\n\n\tRETURN_TRUE;",
+    "semantic": "Implements the PHP function socket_shutdown in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_OBJECT_OF_CLASS",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_LONG",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_FALSE",
+            "RETURN_TRUE"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_long"
+        ],
+        "internal_helpers": []
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common socket_shutdown inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 3,
+    "purpose": "Implements the PHP function socket_shutdown in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "socket_select",
+        "socket_create_listen",
+        "socket_accept",
+        "socket_set_nonblock",
+        "socket_set_block",
+        "socket_listen",
+        "socket_close",
+        "socket_write",
+        "socket_read",
+        "socket_getsockname",
+        "socket_getpeername",
+        "socket_create"
+    ]
+}

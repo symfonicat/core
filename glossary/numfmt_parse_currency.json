@@ -1,0 +1,86 @@
+{
+    "php_function": "numfmt_parse_currency",
+    "zend_function": "numfmt_parse_currency",
+    "source_file": "ter/formatter_parse.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php_intl.h",
+        "unicode/ustring.h",
+        "locale.h",
+        "formatter_class.h",
+        "formatter_format.h",
+        "intl_convert.h"
+    ],
+    "body": "double number;\n\tUChar currency[5] = {0};\n\tUChar* sstr = NULL;\n\tint32_t sstr_len = 0;\n\tzend_string *u8str;\n\tchar *str;\n\tsize_t str_len;\n\tint32_t* position_p = NULL;\n\tint32_t position = 0;\n\tzval *zcurrency, *zposition = NULL;\n\tFORMATTER_METHOD_INIT_VARS;\n\n\t/* Parse parameters. */\n\tif( zend_parse_method_parameters( ZEND_NUM_ARGS(), getThis(), \"Osz/|z!\",\n\t\t&object, NumberFormatter_ce_ptr,  &str, &str_len, &zcurrency, &zposition ) == FAILURE )\n\t{\n\t\tRETURN_THROWS();\n\t}\n\n\t/* Fetch the object. */\n\tFORMATTER_METHOD_FETCH_OBJECT;\n\n\t/* Convert given string to UTF-16. */\n\tintl_convert_utf8_to_utf16(&sstr, &sstr_len, str, str_len, &INTL_DATA_ERROR_CODE(nfo));\n\tINTL_METHOD_CHECK_STATUS( nfo, \"String conversion to UTF-16 failed\" );\n\n\tif(zposition) {\n\t\tposition = (int32_t) zval_get_long(zposition);\n\t\tposition_p = &position;\n\t}\n\n\tnumber = unum_parseDoubleCurrency(FORMATTER_OBJECT(nfo), sstr, sstr_len, position_p, currency, &INTL_DATA_ERROR_CODE(nfo));\n\tif(zposition) {\n\t\tZEND_TRY_ASSIGN_REF_LONG(zposition, position);\n\t}\n\tif (sstr) {\n\t\tefree(sstr);\n\t}\n\tINTL_METHOD_CHECK_STATUS( nfo, \"Number parsing failed\" );\n\n\t/* Convert parsed currency to UTF-8 and pass it back to caller. */\n\tu8str = intl_convert_utf16_to_utf8(currency, u_strlen(currency), &INTL_DATA_ERROR_CODE(nfo));\n\tINTL_METHOD_CHECK_STATUS( nfo, \"Currency conversion to UTF-8 failed\" );\n\tzval_ptr_dtor( zcurrency );\n\tZVAL_NEW_STR(zcurrency, u8str);\n\n\tRETVAL_DOUBLE( number );",
+    "semantic": "Parse parameters.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "ZEND_TRY_ASSIGN_REF_LONG",
+            "ZVAL_NEW_STR"
+        ],
+        "zend_types": [
+            "zend_string",
+            "zval"
+        ],
+        "internal_helpers": [
+            "zend_parse_method_parameters",
+            "zval_get_long",
+            "zval_ptr_dtor"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common numfmt_parse_currency inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 3,
+    "purpose": "Parse parameters.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "numfmt_parse"
+    ]
+}

@@ -6,6 +6,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfonicat\Entity\Domain;
 use Symfonicat\Entity\Subdomain;
 use Symfonicat\Repository\SubdomainRepository;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 class SubdomainService
 {
@@ -17,6 +18,7 @@ class SubdomainService
         private readonly SubdomainRepository $subdomainRepository,
         private readonly EntityManagerInterface $entityManager,
         private readonly RuntimeConfig $runtimeConfig,
+        private readonly RequestStack $requestStack,
 
     ) {
     }
@@ -29,11 +31,9 @@ class SubdomainService
             return null;
         }
 
-        // First try the domain-scoped affix so explicitly created DB rows win
-        // over any package-backed discovery.
-        if (($_SERVER['APP_ENV'] ?? null) === 'test') {
+        if ($this->isCoreRoute()) {
             if ($domain) {
-                $found = $this->subdomainRepository->findOneByAffixForDomain($affix, (string) $domain->getId());
+                $found = $this->subdomainRepository->findOneByAffixForDomain($affix, (string) $domain->getTld());
                 if ($found) {
                     return $found;
                 }
@@ -111,7 +111,7 @@ class SubdomainService
                     return null;
                 }
 
-                $domainId = trim((string) $subdomain->getDomain()?->getId());
+                $domainId = trim((string) $subdomain->getDomain()?->getTld());
 
                 return $this->subdomainKey($domainId === '' ? null : $subdomain->getDomain(), $affix);
             },
@@ -153,5 +153,15 @@ class SubdomainService
         [$domainId, $affix] = array_pad(explode('|', $key, 2), 2, '');
 
         return [trim($domainId), trim($affix)];
+    }
+
+    private function isCoreRoute(): bool
+    {
+        $path = $this->requestStack->getCurrentRequest()?->getPathInfo();
+        if (!is_string($path)) {
+            return false;
+        }
+
+        return $path === '/core' || str_starts_with($path, '/core/');
     }
 }

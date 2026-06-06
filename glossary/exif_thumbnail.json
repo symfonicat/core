@@ -1,0 +1,153 @@
+{
+    "php_function": "exif_thumbnail",
+    "zend_function": "exif_thumbnail",
+    "source_file": "",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "stream",
+            "macro": "Z_PARAM_ZVAL",
+            "arguments": [
+                "stream"
+            ],
+            "type": "zval",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": true,
+            "raw": "Z_PARAM_ZVAL(stream)"
+        },
+        {
+            "name": "z_width",
+            "macro": "Z_PARAM_ZVAL",
+            "arguments": [
+                "z_width"
+            ],
+            "type": "zval",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": true,
+            "raw": "Z_PARAM_ZVAL(z_width)"
+        },
+        {
+            "name": "z_height",
+            "macro": "Z_PARAM_ZVAL",
+            "arguments": [
+                "z_height"
+            ],
+            "type": "zval",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": true,
+            "raw": "Z_PARAM_ZVAL(z_height)"
+        },
+        {
+            "name": "z_imagetype",
+            "macro": "Z_PARAM_ZVAL",
+            "arguments": [
+                "z_imagetype"
+            ],
+            "type": "zval",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": true,
+            "raw": "Z_PARAM_ZVAL(z_imagetype)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "ext/standard/file.h",
+        "php_exif.h",
+        "exif_arginfo.h",
+        "math.h",
+        "php_ini.h",
+        "ext/standard/php_string.h",
+        "ext/standard/php_image.h",
+        "ext/standard/info.h",
+        "sys/types.h"
+    ],
+    "body": "bool ret;\n\tint arg_c = ZEND_NUM_ARGS();\n\timage_info_type ImageInfo;\n\tzval *stream;\n\tzval *z_width = NULL, *z_height = NULL, *z_imagetype = NULL;\n\n\t/* Parse arguments */\n\tZEND_PARSE_PARAMETERS_START(1, 4)\n\t\tZ_PARAM_ZVAL(stream)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_ZVAL(z_width)\n\t\tZ_PARAM_ZVAL(z_height)\n\t\tZ_PARAM_ZVAL(z_imagetype)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tmemset(&ImageInfo, 0, sizeof(ImageInfo));\n\n\tif (Z_TYPE_P(stream) == IS_RESOURCE) {\n\t\tphp_stream *p_stream = NULL;\n\n\t\tphp_stream_from_res(p_stream, Z_RES_P(stream));\n\n\t\tret = exif_read_from_stream(&ImageInfo, p_stream, 1, 0);\n\t} else {\n\t\tif (!try_convert_to_string(stream)) {\n\t\t\tRETURN_THROWS();\n\t\t}\n\n\t\tif (!Z_STRLEN_P(stream)) {\n\t\t\tzend_argument_must_not_be_empty_error(1);\n\t\t\tRETURN_THROWS();\n\t\t}\n\n\t\tif (CHECK_NULL_PATH(Z_STRVAL_P(stream), Z_STRLEN_P(stream))) {\n\t\t\tzend_argument_value_error(1, \"must not contain any null bytes\");\n\t\t\tRETURN_THROWS();\n\t\t}\n\n\t\tret = exif_read_from_file(&ImageInfo, Z_STRVAL_P(stream), 1, 0);\n\t}\n\n\tif (ret == false) {\n\t\texif_discard_imageinfo(&ImageInfo);\n\t\tRETURN_FALSE;\n\t}\n\n#ifdef EXIF_DEBUG\n\texif_error_docref(NULL EXIFERR_CC, &ImageInfo, E_NOTICE, \"Thumbnail data %d %d %d, %d x %d\", ImageInfo.Thumbnail.data, ImageInfo.Thumbnail.size, ImageInfo.Thumbnail.filetype, ImageInfo.Thumbnail.width, ImageInfo.Thumbnail.height);\n#endif\n\tif (!ImageInfo.Thumbnail.data || !ImageInfo.Thumbnail.size) {\n\t\texif_discard_imageinfo(&ImageInfo);\n\t\tRETURN_FALSE;\n\t}\n\n#ifdef EXIF_DEBUG\n\texif_error_docref(NULL EXIFERR_CC, &ImageInfo, E_NOTICE, \"Returning thumbnail(%d)\", ImageInfo.Thumbnail.size);\n#endif\n\n\tZVAL_STRINGL(return_value, ImageInfo.Thumbnail.data, ImageInfo.Thumbnail.size);\n\tif (arg_c >= 3) {\n\t\tif (!ImageInfo.Thumbnail.width || !ImageInfo.Thumbnail.height) {\n\t\t\tif (!exif_scan_thumbnail(&ImageInfo)) {\n\t\t\t\tImageInfo.Thumbnail.width = ImageInfo.Thumbnail.height = 0;\n\t\t\t}\n\t\t}\n\t\tZEND_TRY_ASSIGN_REF_LONG(z_width,  ImageInfo.Thumbnail.width);\n\t\tZEND_TRY_ASSIGN_REF_LONG(z_height, ImageInfo.Thumbnail.height);\n\t}\n\tif (arg_c >= 4)\t{\n\t\tZEND_TRY_ASSIGN_REF_LONG(z_imagetype, ImageInfo.Thumbnail.filetype);\n\t}\n\n#ifdef EXIF_DEBUG\n\texif_error_docref(NULL EXIFERR_CC, &ImageInfo, E_NOTICE, \"Discarding info\");\n#endif\n\n\texif_discard_imageinfo(&ImageInfo);\n\n#ifdef EXIF_DEBUG\n\tphp_error_docref1(NULL, (Z_TYPE_P(stream) == IS_RESOURCE ? \"<stream>\" : Z_STRVAL_P(stream)), E_NOTICE, \"Done\");\n#endif",
+    "semantic": "Parse arguments",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_ZVAL",
+            "Z_PARAM_OPTIONAL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_THROWS",
+            "RETURN_FALSE",
+            "ZVAL_STRINGL",
+            "ZEND_TRY_ASSIGN_REF_LONG"
+        ],
+        "zend_types": [
+            "zval"
+        ],
+        "internal_helpers": [
+            "php_stream_from_res",
+            "zend_argument_must_not_be_empty_error",
+            "zend_argument_value_error",
+            "php_error_docref1"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common exif_thumbnail inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 6,
+    "purpose": "Parse arguments",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "exif_tagname",
+        "exif_read_data",
+        "exif_imagetype"
+    ]
+}

@@ -1,0 +1,89 @@
+{
+    "php_function": "shmop_open",
+    "zend_function": "shmop_open",
+    "source_file": ".c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_shmop.h",
+        "Zend/zend_attributes.h",
+        "shmop_arginfo.h",
+        "tsrm_win32.h",
+        "ext/standard/info.h"
+    ],
+    "body": "zend_long key, mode, size;\n\tphp_shmop *shmop;\n\tstruct shmid_ds shm;\n\tchar *flags;\n\tsize_t flags_len;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"lsll\", &key, &flags, &flags_len, &mode, &size) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tif (flags_len != 1) {\n\t\tzend_argument_value_error(2, \"must be a valid access mode\");\n\t\tRETURN_THROWS();\n\t}\n\n\tobject_init_ex(return_value, shmop_ce);\n\tshmop = Z_SHMOP_P(return_value);\n\tshmop->key = key;\n\tshmop->shmflg |= mode;\n\n\tswitch (flags[0])\n\t{\n\t\tcase 'a':\n\t\t\tshmop->shmatflg |= SHM_RDONLY;\n\t\t\tbreak;\n\t\tcase 'c':\n\t\t\tshmop->shmflg |= IPC_CREAT;\n\t\t\tshmop->size = size;\n\t\t\tbreak;\n\t\tcase 'n':\n\t\t\tshmop->shmflg |= (IPC_CREAT | IPC_EXCL);\n\t\t\tshmop->size = size;\n\t\t\tbreak;\n\t\tcase 'w':\n\t\t\t/* noop\n\t\t\t\tshm segment is being opened for read & write\n\t\t\t\twill fail if segment does not exist\n\t\t\t*/\n\t\t\tbreak;\n\t\tdefault:\n\t\t\tzend_argument_value_error(2, \"must be a valid access mode\");\n\t\t\tgoto err;\n\t}\n\n\tif (shmop->shmflg & IPC_CREAT && shmop->size < 1) {\n\t\tzend_argument_value_error(4, \"must be greater than 0 for the \\\"c\\\" and \\\"n\\\" access modes\");\n\t\tgoto err;\n\t}\n\n\tshmop->shmid = shmget(shmop->key, shmop->size, shmop->shmflg);\n\tif (shmop->shmid == -1) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Unable to attach or create shared memory segment \\\"%s\\\"\", strerror(errno));\n\t\tgoto err;\n\t}\n\n\tif (shmctl(shmop->shmid, IPC_STAT, &shm)) {\n\t\t/* please do not add coverage here: the segment would be leaked and impossible to delete via php */\n\t\tphp_error_docref(NULL, E_WARNING, \"Unable to get shared memory segment information \\\"%s\\\"\", strerror(errno));\n\t\tgoto err;\n\t}\n\n\tif (shm.shm_segsz > ZEND_LONG_MAX) {\n\t\tzend_argument_value_error(4, \"is too large\");\n\t\tgoto err;\n\t}\n\n\tshmop->addr = shmat(shmop->shmid, 0, shmop->shmatflg);\n\tif (shmop->addr == (char*) -1) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Unable to attach to shared memory segment \\\"%s\\\"\", strerror(errno));\n\t\tgoto err;\n\t}\n\n\tshmop->size = shm.shm_segsz;\n\treturn;\n\nerr:\n\tzend_object_release(Z_OBJ_P(return_value));\n\tRETURN_FALSE;",
+    "semantic": "noop shm segment is being opened for read & write will fail if segment does not exist",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "ZEND_LONG_MAX",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "zend_argument_value_error",
+            "php_error_docref",
+            "zend_object_release"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common shmop_open inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 6,
+    "purpose": "noop shm segment is being opened for read & write will fail if segment does not exist",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "shmop_read",
+        "shmop_close",
+        "shmop_size",
+        "shmop_write",
+        "shmop_delete"
+    ]
+}

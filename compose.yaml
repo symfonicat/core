@@ -5,6 +5,7 @@ services:
       dockerfile: Dockerfile
       target: npm
     restart: "no"
+    working_dir: /symfonicat
     entrypoint:
       - docker-php-entrypoint
     command:
@@ -38,6 +39,7 @@ services:
       dockerfile: Dockerfile
     image: symfonicat-core-php:local
     restart: unless-stopped
+    working_dir: /symfonicat
     ports:
       - "80:80"
       - "443:443"
@@ -54,6 +56,7 @@ services:
       MERCURE_URL: http://php/.well-known/mercure
       MERCURE_PUBLIC_URL: ${MERCURE_PUBLIC_URL:-/.well-known/mercure}
       MERCURE_JWT_SECRET: ${MERCURE_JWT_SECRET:-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
+      SYMFONICAT_NATIVE_WATCH: ${SYMFONICAT_NATIVE_WATCH:-0}
     volumes:
       - ./:/symfonicat
       - ./Caddyfile:/etc/frankenphp/Caddyfile:ro
@@ -76,6 +79,7 @@ services:
     restart: unless-stopped
     scale: ${MESSENGER_WORKERS:-8}
     stop_grace_period: 30s
+    working_dir: /symfonicat
     healthcheck:
       disable: true
     entrypoint:

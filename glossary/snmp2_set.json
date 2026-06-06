@@ -1,0 +1,100 @@
+{
+    "php_function": "snmp2_set",
+    "zend_function": "snmp2_set",
+    "source_file": "",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "main/php_network.h",
+        "ext/standard/info.h",
+        "php_snmp.h",
+        "zend_exceptions.h",
+        "zend_smart_string.h",
+        "ext/spl/spl_exceptions.h",
+        "sys/types.h",
+        "errno.h",
+        "winsock2.h",
+        "process.h",
+        "win32/time.h",
+        "sys/socket.h",
+        "netinet/in.h",
+        "arpa/inet.h",
+        "netdb.h",
+        "unistd.h",
+        "locale.h",
+        "net-snmp/net-snmp-config.h",
+        "net-snmp/net-snmp-includes.h",
+        "snmp_arginfo.h"
+    ],
+    "body": "php_snmp(INTERNAL_FUNCTION_PARAM_PASSTHRU, SNMP_CMD_SET, SNMP_VERSION_2c);",
+    "semantic": "Implements the PHP function snmp2_set in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [],
+        "zend_types": [],
+        "internal_helpers": [
+            "php_snmp"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common snmp2_set inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": false,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 1,
+    "purpose": "Implements the PHP function snmp2_set in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "snmpget",
+        "snmpgetnext",
+        "snmpwalk",
+        "snmprealwalk",
+        "snmpset",
+        "snmp_get_quick_print",
+        "snmp_set_quick_print",
+        "snmp_set_enum_print",
+        "snmp_set_oid_output_format",
+        "snmp2_get",
+        "snmp2_getnext",
+        "snmp2_walk"
+    ]
+}

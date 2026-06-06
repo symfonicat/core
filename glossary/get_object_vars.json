@@ -1,0 +1,143 @@
+{
+    "php_function": "get_object_vars",
+    "zend_function": "get_object_vars",
+    "source_file": "in_functions.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "zobj",
+            "macro": "Z_PARAM_OBJ",
+            "arguments": [
+                "zobj"
+            ],
+            "type": "zend_object",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_OBJ(zobj)"
+        }
+    ],
+    "includes": [
+        "zend.h",
+        "zend_API.h",
+        "zend_attributes.h",
+        "zend_gc.h",
+        "zend_builtin_functions.h",
+        "zend_constants.h",
+        "zend_ini.h",
+        "zend_interfaces.h",
+        "zend_exceptions.h",
+        "zend_extensions.h",
+        "zend_closures.h",
+        "zend_generators.h",
+        "zend_builtin_functions_arginfo.h",
+        "zend_smart_str.h"
+    ],
+    "body": "zval *value;\n\tHashTable *properties;\n\tzend_string *key;\n\tzend_object *zobj;\n\tzend_ulong num_key;\n\n\tZEND_PARSE_PARAMETERS_START(1, 1)\n\t\tZ_PARAM_OBJ(zobj)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tzval obj_zv;\n\tZVAL_OBJ(&obj_zv, zobj);\n\tproperties = zend_get_properties_for(&obj_zv, ZEND_PROP_PURPOSE_GET_OBJECT_VARS);\n\tif (properties == NULL) {\n\t\tRETURN_EMPTY_ARRAY();\n\t}\n\n\tif (!zobj->ce->default_properties_count && properties == zobj->properties && !GC_IS_RECURSIVE(properties)) {\n\t\t/* fast copy */\n\t\tbool always_duplicate = zobj->handlers != &std_object_handlers;\n\t\tRETVAL_ARR(zend_proptable_to_symtable(properties, always_duplicate));\n\t} else {\n\t\tarray_init_size(return_value, zend_hash_num_elements(properties));\n\n\t\tZEND_HASH_FOREACH_KEY_VAL(properties, num_key, key, value) {\n\t\t\tbool is_dynamic = 1;\n\t\t\tzval tmp;\n\t\t\tZVAL_UNDEF(&tmp);\n\t\t\tif (Z_TYPE_P(value) == IS_INDIRECT) {\n\t\t\t\tvalue = Z_INDIRECT_P(value);\n\t\t\t\tif (UNEXPECTED(Z_ISUNDEF_P(value))) {\n\t\t\t\t\tcontinue;\n\t\t\t\t}\n\n\t\t\t\tis_dynamic = 0;\n\t\t\t} else if (Z_TYPE_P(value) == IS_PTR) {\n\t\t\t\tis_dynamic = 0;\n\t\t\t}\n\n\t\t\tif (key && zend_check_property_access(zobj, key, is_dynamic) == FAILURE) {\n\t\t\t\tcontinue;\n\t\t\t}\n\n\t\t\tif (Z_ISREF_P(value) && Z_REFCOUNT_P(value) == 1) {\n\t\t\t\tvalue = Z_REFVAL_P(value);\n\t\t\t}\n\t\t\tif (Z_TYPE_P(value) == IS_PTR) {\n\t\t\t\t/* value is IS_PTR for properties with hooks. */\n\t\t\t\tzend_property_info *prop_info = Z_PTR_P(value);\n\t\t\t\tif ((prop_info->flags & ZEND_ACC_VIRTUAL) && !prop_info->hooks[ZEND_PROPERTY_HOOK_GET]) {\n\t\t\t\t\tcontinue;\n\t\t\t\t}\n\t\t\t\tconst char *unmangled_name_cstr = zend_get_unmangled_property_name(prop_info->name);\n\t\t\t\tzend_string *unmangled_name = zend_string_init(unmangled_name_cstr, strlen(unmangled_name_cstr), false);\n\t\t\t\tzend_read_property_ex(prop_info->ce, zobj, unmangled_name, /* silent */ true, &tmp);\n\t\t\t\tzend_string_release_ex(unmangled_name, false);\n\t\t\t\tif (EG(exception)) {\n\t\t\t\t\tzend_release_properties(properties);\n\t\t\t\t\tzval_ptr_dtor(return_value);\n\t\t\t\t\tZVAL_UNDEF(return_value);\n\t\t\t\t\tRETURN_THROWS();\n\t\t\t\t}\n\t\t\t\tvalue = &tmp;\n\t\t\t}\n\t\t\tZ_TRY_ADDREF_P(value);\n\n\t\t\tif (UNEXPECTED(!key)) {\n\t\t\t\t/* This case is only possible due to loopholes, e.g. ArrayObject */\n\t\t\t\tzend_hash_index_add(Z_ARRVAL_P(return_value), num_key, value);\n\t\t\t} else if (!is_dynamic && ZSTR_VAL(key)[0] == 0) {\n\t\t\t\tconst char *prop_name, *class_name;\n\t\t\t\tsize_t prop_len;\n\t\t\t\tzend_unmangle_property_name_ex(key, &class_name, &prop_name, &prop_len);\n\t\t\t\t/* We assume here that a mangled property name is never\n\t\t\t\t * numeric. This is probably a safe assumption, but\n\t\t\t\t * theoretically someone might write an extension with\n\t\t\t\t * private, numeric properties. Well, too bad.\n\t\t\t\t */\n\t\t\t\tzend_hash_str_add_new(Z_ARRVAL_P(return_value), prop_name, prop_len, value);\n\t\t\t} else {\n\t\t\t\tzend_symtable_add_new(Z_ARRVAL_P(return_value), key, value);\n\t\t\t}\n\t\t\tzval_ptr_dtor(&tmp);\n\t\t} ZEND_HASH_FOREACH_END();\n\t}\n\tzend_release_properties(properties);",
+    "semantic": "fast copy",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_OBJ",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZVAL_OBJ",
+            "ZEND_PROP_PURPOSE_GET_OBJECT_VARS",
+            "RETURN_EMPTY_ARRAY",
+            "GC_IS_RECURSIVE",
+            "ZEND_HASH_FOREACH_KEY_VAL",
+            "ZVAL_UNDEF",
+            "ZEND_ACC_VIRTUAL",
+            "ZEND_PROPERTY_HOOK_GET",
+            "RETURN_THROWS",
+            "ZSTR_VAL",
+            "ZEND_HASH_FOREACH_END"
+        ],
+        "zend_types": [
+            "zval",
+            "HashTable",
+            "zend_string",
+            "zend_object",
+            "zend_property_info"
+        ],
+        "internal_helpers": [
+            "zend_get_properties_for",
+            "zend_proptable_to_symtable",
+            "zend_hash_num_elements",
+            "zend_check_property_access",
+            "zend_get_unmangled_property_name",
+            "zend_string_init",
+            "zend_read_property_ex",
+            "zend_string_release_ex",
+            "zend_release_properties",
+            "zval_ptr_dtor",
+            "zend_hash_index_add",
+            "zend_unmangle_property_name_ex",
+            "zend_hash_str_add_new",
+            "zend_symtable_add_new"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common get_object_vars inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 7,
+    "purpose": "fast copy",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "exit",
+        "zend_version",
+        "gc_mem_caches",
+        "gc_collect_cycles",
+        "gc_enabled",
+        "gc_enable",
+        "gc_disable",
+        "gc_status",
+        "func_num_args",
+        "func_get_arg",
+        "func_get_args",
+        "strlen"
+    ]
+}

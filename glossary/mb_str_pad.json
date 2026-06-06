@@ -1,0 +1,214 @@
+{
+    "php_function": "mb_str_pad",
+    "zend_function": "mb_str_pad",
+    "source_file": "string.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "input",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "input"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(input)"
+        },
+        {
+            "name": "pad_to_length",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "pad_to_length"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(pad_to_length)"
+        },
+        {
+            "name": "pad",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "pad"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(pad)"
+        },
+        {
+            "name": "pad_type_val",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "pad_type_val"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(pad_type_val)"
+        },
+        {
+            "name": "encoding_str",
+            "macro": "Z_PARAM_STR_OR_NULL",
+            "arguments": [
+                "encoding_str"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR_OR_NULL(encoding_str)"
+        }
+    ],
+    "includes": [
+        "limits.h",
+        "libmbfl/config.h",
+        "php.h",
+        "php_ini.h",
+        "php_variables.h",
+        "mbstring.h",
+        "ext/standard/php_string.h",
+        "ext/standard/php_mail.h",
+        "ext/standard/exec.h",
+        "main/php_output.h",
+        "ext/standard/info.h",
+        "ext/pcre/php_pcre.h",
+        "libmbfl/mbfl/mbfilter_8bit.h",
+        "libmbfl/mbfl/mbfilter_pass.h",
+        "libmbfl/mbfl/eaw_table.h",
+        "libmbfl/filters/mbfilter_base64.h",
+        "libmbfl/filters/mbfilter_cjk.h",
+        "libmbfl/filters/mbfilter_qprint.h",
+        "libmbfl/filters/mbfilter_htmlent.h",
+        "libmbfl/filters/mbfilter_uuencode.h",
+        "libmbfl/filters/mbfilter_ucs4.h",
+        "libmbfl/filters/mbfilter_utf16.h",
+        "libmbfl/filters/mbfilter_singlebyte.h",
+        "libmbfl/filters/translit_kana_jisx0201_jisx0208.h",
+        "libmbfl/filters/unicode_prop.h",
+        "php_globals.h",
+        "rfc1867.h",
+        "php_content_types.h",
+        "SAPI.h",
+        "php_unicode.h",
+        "TSRM.h",
+        "mb_gpc.h",
+        "zend_smart_str.h",
+        "zend_multibyte.h",
+        "mbstring_arginfo.h",
+        "rare_cp_bitvec.h",
+        "emmintrin.h",
+        "immintrin.h",
+        "pmmintrin.h"
+    ],
+    "body": "zend_string *input, *encoding_str = NULL, *pad = ZSTR_CHAR(' ');\n\tzend_long pad_to_length;\n\tzend_long pad_type_val = PHP_STR_PAD_RIGHT;\n\n\tZEND_PARSE_PARAMETERS_START(2, 5)\n\t\tZ_PARAM_STR(input)\n\t\tZ_PARAM_LONG(pad_to_length)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_STR(pad)\n\t\tZ_PARAM_LONG(pad_type_val)\n\t\tZ_PARAM_STR_OR_NULL(encoding_str)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tconst mbfl_encoding *encoding = php_mb_get_encoding(encoding_str, 5);\n\tif (!encoding) {\n\t\tRETURN_THROWS();\n\t}\n\n\tsize_t input_length = mb_get_strlen(input, encoding);\n\n\t/* If resulting string turns out to be shorter than input string,\n\t   we simply copy the input and return. */\n\tif (pad_to_length < 0 || (size_t)pad_to_length <= input_length) {\n\t\tRETURN_STR_COPY(input);\n\t}\n\n\tif (ZSTR_LEN(pad) == 0) {\n\t\tzend_argument_must_not_be_empty_error(3);\n\t\tRETURN_THROWS();\n\t}\n\n\tif (pad_type_val < PHP_STR_PAD_LEFT || pad_type_val > PHP_STR_PAD_BOTH) {\n\t\tzend_argument_value_error(4, \"must be STR_PAD_LEFT, STR_PAD_RIGHT, or STR_PAD_BOTH\");\n\t\tRETURN_THROWS();\n\t}\n\n\tsize_t pad_length = mb_get_strlen(pad, encoding);\n\n\tsize_t num_mb_pad_chars = pad_to_length - input_length;\n\n\t/* We need to figure out the left/right padding lengths. */\n\tsize_t left_pad = 0, right_pad = 0; /* Initialize here to silence compiler warnings. */\n\tswitch (pad_type_val) {\n\t\tcase PHP_STR_PAD_RIGHT:\n\t\t\tright_pad = num_mb_pad_chars;\n\t\t\tbreak;\n\n\t\tcase PHP_STR_PAD_LEFT:\n\t\t\tleft_pad = num_mb_pad_chars;\n\t\t\tbreak;\n\n\t\tcase PHP_STR_PAD_BOTH:\n\t\t\tleft_pad = num_mb_pad_chars / 2;\n\t\t\tright_pad = num_mb_pad_chars - left_pad;\n\t\t\tbreak;\n\t}\n\n\t/* How many full block copies need to happen, and how many characters are then left over? */\n\tsize_t full_left_pad_copies = left_pad / pad_length;\n\tsize_t full_right_pad_copies = right_pad / pad_length;\n\tsize_t remaining_left_pad_chars = left_pad % pad_length;\n\tsize_t remaining_right_pad_chars = right_pad % pad_length;\n\n\tif (UNEXPECTED(full_left_pad_copies > SIZE_MAX / ZSTR_LEN(pad) || full_right_pad_copies > SIZE_MAX / ZSTR_LEN(pad))) {\n\t\tgoto overflow_no_release;\n\t}\n\n\t/* Compute the number of bytes required for the padding */\n\tsize_t full_left_pad_bytes = full_left_pad_copies * ZSTR_LEN(pad);\n\tsize_t full_right_pad_bytes = full_right_pad_copies * ZSTR_LEN(pad);\n\n\t/* No special fast-path handling necessary for zero-length pads because these functions will not\n\t * allocate memory in case a zero-length pad is required. */\n\tzend_string *remaining_left_pad_str = mb_get_substr(pad, 0, remaining_left_pad_chars, encoding);\n\tzend_string *remaining_right_pad_str = mb_get_substr(pad, 0, remaining_right_pad_chars, encoding);\n\n\tif (UNEXPECTED(full_left_pad_bytes > ZSTR_MAX_LEN - ZSTR_LEN(remaining_left_pad_str)\n\t\t|| full_right_pad_bytes > ZSTR_MAX_LEN - ZSTR_LEN(remaining_right_pad_str))) {\n\t\tgoto overflow;\n\t}\n\n\tsize_t left_pad_bytes = full_left_pad_bytes + ZSTR_LEN(remaining_left_pad_str);\n\tsize_t right_pad_bytes = full_right_pad_bytes + ZSTR_LEN(remaining_right_pad_str);\n\n\tif (UNEXPECTED(left_pad_bytes > ZSTR_MAX_LEN - right_pad_bytes\n\t\t|| ZSTR_LEN(input) > ZSTR_MAX_LEN - left_pad_bytes - right_pad_bytes)) {\n\t\tgoto overflow;\n\t}\n\n\tzend_string *result = zend_string_alloc(ZSTR_LEN(input) + left_pad_bytes + right_pad_bytes, false);\n\tchar *buffer = ZSTR_VAL(result);\n\n\t/* First we pad the left. */\n\tfor (size_t i = 0; i < full_left_pad_copies; i++, buffer += ZSTR_LEN(pad)) {\n\t\tmemcpy(buffer, ZSTR_VAL(pad), ZSTR_LEN(pad));\n\t}\n\tmemcpy(buffer, ZSTR_VAL(remaining_left_pad_str), ZSTR_LEN(remaining_left_pad_str));\n\tbuffer += ZSTR_LEN(remaining_left_pad_str);\n\n\t/* Then we copy the input string. */\n\tmemcpy(buffer, ZSTR_VAL(input), ZSTR_LEN(input));\n\tbuffer += ZSTR_LEN(input);\n\n\t/* Finally, we pad on the right. */\n\tfor (size_t i = 0; i < full_right_pad_copies; i++, buffer += ZSTR_LEN(pad)) {\n\t\tmemcpy(buffer, ZSTR_VAL(pad), ZSTR_LEN(pad));\n\t}\n\tmemcpy(buffer, ZSTR_VAL(remaining_right_pad_str), ZSTR_LEN(remaining_right_pad_str));\n\n\tZSTR_VAL(result)[ZSTR_LEN(result)] = '\\0';\n\n\tzend_string_release_ex(remaining_left_pad_str, false);\n\tzend_string_release_ex(remaining_right_pad_str, false);\n\n\tRETURN_NEW_STR(result);\n\noverflow:\n\tzend_string_release_ex(remaining_left_pad_str, false);\n\tzend_string_release_ex(remaining_right_pad_str, false);\noverflow_no_release:\n\tzend_throw_error(NULL, \"String size overflow\");\n\tRETURN_THROWS();",
+    "semantic": "If resulting string turns out to be shorter than input string, we simply copy the input and return.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZSTR_CHAR",
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STR",
+            "Z_PARAM_LONG",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_STR_OR_NULL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_THROWS",
+            "RETURN_STR_COPY",
+            "ZSTR_LEN",
+            "ZSTR_MAX_LEN",
+            "ZSTR_VAL",
+            "RETURN_NEW_STR"
+        ],
+        "zend_types": [
+            "zend_string",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "php_mb_get_encoding",
+            "mb_get_strlen",
+            "zend_argument_must_not_be_empty_error",
+            "zend_argument_value_error",
+            "mb_get_substr",
+            "zend_string_alloc",
+            "zend_string_release_ex",
+            "zend_throw_error"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common mb_str_pad inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 10,
+    "purpose": "If resulting string turns out to be shorter than input string, we simply copy the input and return.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "mb_language",
+        "mb_internal_encoding",
+        "mb_http_input",
+        "mb_http_output",
+        "mb_detect_order",
+        "mb_substitute_character",
+        "mb_preferred_mime_name",
+        "mb_parse_str",
+        "mb_output_handler",
+        "mb_str_split",
+        "mb_strlen",
+        "mb_strpos"
+    ]
+}

@@ -1,0 +1,161 @@
+{
+    "php_function": "strripos",
+    "zend_function": "strripos",
+    "source_file": "ring.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "haystack",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "haystack"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(haystack)"
+        },
+        {
+            "name": "needle",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "needle"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(needle)"
+        },
+        {
+            "name": "offset",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "offset"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(offset)"
+        }
+    ],
+    "includes": [
+        "stdio.h",
+        "php.h",
+        "php_string.h",
+        "php_variables.h",
+        "locale.h",
+        "scanf.h",
+        "zend_API.h",
+        "zend_execute.h",
+        "basic_functions.h",
+        "zend_smart_str.h",
+        "Zend/zend_exceptions.h",
+        "TSRM.h",
+        "ext/standard/file.h",
+        "ext/standard/html.h",
+        "ext/random/php_random.h",
+        "emmintrin.h",
+        "Zend/zend_bitset.h",
+        "tmmintrin.h",
+        "arm_neon.h"
+    ],
+    "body": "zend_string *needle;\n\tzend_string *haystack;\n\tzend_long offset = 0;\n\tconst char *p, *e, *found;\n\tzend_string *needle_dup, *haystack_dup;\n\n\tZEND_PARSE_PARAMETERS_START(2, 3)\n\t\tZ_PARAM_STR(haystack)\n\t\tZ_PARAM_STR(needle)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_LONG(offset)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (ZSTR_LEN(needle) == 1) {\n\t\t/* Single character search can shortcut memcmps\n\t\t   Can also avoid tolower emallocs */\n\t\tchar lowered;\n\t\tif (offset >= 0) {\n\t\t\tif ((size_t)offset > ZSTR_LEN(haystack)) {\n\t\t\t\tzend_argument_value_error(3, \"must be contained in argument #1 ($haystack)\");\n\t\t\t\tRETURN_THROWS();\n\t\t\t}\n\t\t\tp = ZSTR_VAL(haystack) + (size_t)offset;\n\t\t\te = ZSTR_VAL(haystack) + ZSTR_LEN(haystack) - 1;\n\t\t} else {\n\t\t\tp = ZSTR_VAL(haystack);\n\t\t\tif (offset < -ZEND_LONG_MAX || (size_t)(-offset) > ZSTR_LEN(haystack)) {\n\t\t\t\tzend_argument_value_error(3, \"must be contained in argument #1 ($haystack)\");\n\t\t\t\tRETURN_THROWS();\n\t\t\t}\n\t\t\te = ZSTR_VAL(haystack) + (ZSTR_LEN(haystack) + (size_t)offset);\n\t\t}\n\t\tlowered = zend_tolower_ascii(*ZSTR_VAL(needle));\n\t\twhile (e >= p) {\n\t\t\tif (zend_tolower_ascii(*e) == lowered) {\n\t\t\t\tRETURN_LONG(e - p + (offset > 0 ? offset : 0));\n\t\t\t}\n\t\t\te--;\n\t\t}\n\t\tRETURN_FALSE;\n\t}\n\n\thaystack_dup = zend_string_tolower(haystack);\n\tif (offset >= 0) {\n\t\tif ((size_t)offset > ZSTR_LEN(haystack)) {\n\t\t\tzend_string_release_ex(haystack_dup, 0);\n\t\t\tzend_argument_value_error(3, \"must be contained in argument #1 ($haystack)\");\n\t\t\tRETURN_THROWS();\n\t\t}\n\t\tp = ZSTR_VAL(haystack_dup) + offset;\n\t\te = ZSTR_VAL(haystack_dup) + ZSTR_LEN(haystack);\n\t} else {\n\t\tif (offset < -ZEND_LONG_MAX || (size_t)(-offset) > ZSTR_LEN(haystack)) {\n\t\t\tzend_string_release_ex(haystack_dup, 0);\n\t\t\tzend_argument_value_error(3, \"must be contained in argument #1 ($haystack)\");\n\t\t\tRETURN_THROWS();\n\t\t}\n\n\t\tp = ZSTR_VAL(haystack_dup);\n\t\tif ((size_t)-offset < ZSTR_LEN(needle)) {\n\t\t\te = ZSTR_VAL(haystack_dup) + ZSTR_LEN(haystack);\n\t\t} else {\n\t\t\te = ZSTR_VAL(haystack_dup) + ZSTR_LEN(haystack) + offset + ZSTR_LEN(needle);\n\t\t}\n\t}\n\n\tneedle_dup = zend_string_tolower(needle);\n\tif ((found = (char *)zend_memnrstr(p, ZSTR_VAL(needle_dup), ZSTR_LEN(needle_dup), e))) {\n\t\tRETVAL_LONG(found - ZSTR_VAL(haystack_dup));\n\t\tzend_string_release_ex(needle_dup, 0);\n\t\tzend_string_release_ex(haystack_dup, 0);\n\t} else {\n\t\tzend_string_release_ex(needle_dup, 0);\n\t\tzend_string_release_ex(haystack_dup, 0);\n\t\tRETURN_FALSE;\n\t}",
+    "semantic": "Single character search can shortcut memcmps Can also avoid tolower emallocs",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STR",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_LONG",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZSTR_LEN",
+            "RETURN_THROWS",
+            "ZSTR_VAL",
+            "ZEND_LONG_MAX",
+            "RETURN_LONG",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zend_string",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_argument_value_error",
+            "zend_tolower_ascii",
+            "zend_string_tolower",
+            "zend_string_release_ex",
+            "zend_memnrstr"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common strripos inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 7,
+    "purpose": "Single character search can shortcut memcmps Can also avoid tolower emallocs",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "bin2hex",
+        "hex2bin",
+        "strspn",
+        "strcspn",
+        "nl_langinfo",
+        "strcoll",
+        "trim",
+        "rtrim",
+        "ltrim",
+        "wordwrap",
+        "explode",
+        "implode"
+    ]
+}

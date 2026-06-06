@@ -1,0 +1,162 @@
+{
+    "php_function": "socket_create_pair",
+    "zend_function": "socket_create_pair",
+    "source_file": "kets.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "domain",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "domain"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(domain)"
+        },
+        {
+            "name": "type",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "type"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(type)"
+        },
+        {
+            "name": "protocol",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "protocol"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(protocol)"
+        },
+        {
+            "name": "fds_array_zval",
+            "macro": "Z_PARAM_ZVAL",
+            "arguments": [
+                "fds_array_zval"
+            ],
+            "type": "zval",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": true,
+            "raw": "Z_PARAM_ZVAL(fds_array_zval)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_network.h",
+        "ext/standard/file.h",
+        "ext/standard/info.h",
+        "php_ini.h",
+        "stddef.h",
+        "sockaddr_conv.h",
+        "multicast.h",
+        "sendrecvmsg.h",
+        "sockets_arginfo.h"
+    ],
+    "body": "zval\t\tretval[2], *fds_array_zval;\n\tphp_socket\t*php_sock[2];\n\tPHP_SOCKET\tfds_array[2];\n\tzend_long\t\tdomain, type, checktype, protocol;\n\n\tZEND_PARSE_PARAMETERS_START(4, 4)\n\t\tZ_PARAM_LONG(domain)\n\t\tZ_PARAM_LONG(type)\n\t\tZ_PARAM_LONG(protocol)\n\t\tZ_PARAM_ZVAL(fds_array_zval)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (domain != AF_INET\n#ifdef HAVE_IPV6\n\t\t&& domain != AF_INET6\n#endif\n\t\t&& domain != AF_UNIX) {\n\t\tzend_argument_value_error(1, \"must be one of AF_UNIX, AF_INET6, or AF_INET\");\n\t\tRETURN_THROWS();\n\t}\n\n\tchecktype = type;\n#ifdef SOCK_NONBLOCK\n\tchecktype &= ~(SOCK_CLOEXEC | SOCK_NONBLOCK);\n#endif\n\n\tif (checktype > 10) {\n\t\tzend_argument_value_error(2, \"must be one of SOCK_STREAM, SOCK_DGRAM, SOCK_SEQPACKET,\"\n\t\t\t\" SOCK_RAW, or SOCK_RDM\"\n#ifdef SOCK_NONBLOCK\n\t\t\t\" optionally OR'ed with SOCK_CLOEXEC, SOCK_NONBLOCK\"\n#endif\n\t\t);\n\t\tRETURN_THROWS();\n\t}\n\n\tobject_init_ex(&retval[0], socket_ce);\n\tphp_sock[0] = Z_SOCKET_P(&retval[0]);\n\n\tobject_init_ex(&retval[1], socket_ce);\n\tphp_sock[1] = Z_SOCKET_P(&retval[1]);\n\n\tif (socketpair(domain, type, protocol, fds_array) != 0) {\n\t\tSOCKETS_G(last_error) = errno;\n\t\tphp_error_docref(NULL, E_WARNING, \"Unable to create socket pair [%d]: %s\", errno, sockets_strerror(errno));\n\t\tzval_ptr_dtor(&retval[0]);\n\t\tzval_ptr_dtor(&retval[1]);\n\t\tRETURN_FALSE;\n\t}\n\n\tfds_array_zval = zend_try_array_init(fds_array_zval);\n\tif (!fds_array_zval) {\n\t\tzval_ptr_dtor(&retval[0]);\n\t\tzval_ptr_dtor(&retval[1]);\n\t\tRETURN_THROWS();\n\t}\n\n\tphp_sock[0]->bsd_socket = fds_array[0];\n\tphp_sock[1]->bsd_socket = fds_array[1];\n\tphp_sock[0]->type\t\t= domain;\n\tphp_sock[1]->type\t\t= domain;\n\tphp_sock[0]->error\t\t= 0;\n\tphp_sock[1]->error\t\t= 0;\n\tphp_sock[0]->blocking\t= 1;\n\tphp_sock[1]->blocking\t= 1;\n\n\tadd_index_zval(fds_array_zval, 0, &retval[0]);\n\tadd_index_zval(fds_array_zval, 1, &retval[1]);\n\n\tRETURN_TRUE;",
+    "semantic": "Implements the PHP function socket_create_pair in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_LONG",
+            "Z_PARAM_ZVAL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_THROWS",
+            "RETURN_FALSE",
+            "RETURN_TRUE"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_argument_value_error",
+            "php_error_docref",
+            "zval_ptr_dtor",
+            "zend_try_array_init"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common socket_create_pair inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 6,
+    "purpose": "Implements the PHP function socket_create_pair in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "socket_select",
+        "socket_create_listen",
+        "socket_accept",
+        "socket_set_nonblock",
+        "socket_set_block",
+        "socket_listen",
+        "socket_close",
+        "socket_write",
+        "socket_read",
+        "socket_getsockname",
+        "socket_getpeername",
+        "socket_create"
+    ]
+}

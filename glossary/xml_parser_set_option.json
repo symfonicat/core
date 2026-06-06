@@ -1,0 +1,103 @@
+{
+    "php_function": "xml_parser_set_option",
+    "zend_function": "xml_parser_set_option",
+    "source_file": "",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "zend_variables.h",
+        "zend_attributes.h",
+        "ext/standard/info.h",
+        "ext/standard/html.h",
+        "php_xml.h",
+        "ext/libxml/php_libxml.h",
+        "xml_arginfo.h"
+    ],
+    "body": "xml_parser *parser;\n\tzval *pind;\n\tzend_long opt;\n\tzval *value;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"Olz\", &pind, xml_parser_ce, &opt, &value) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tif (Z_TYPE_P(value) != IS_FALSE && Z_TYPE_P(value) != IS_TRUE &&\n\t\tZ_TYPE_P(value) != IS_LONG && Z_TYPE_P(value) != IS_STRING) {\n\t\tphp_error_docref(NULL, E_WARNING,\n\t\t\t\"Argument #3 ($value) must be of type string|int|bool, %s given\", zend_zval_type_name(value));\n\t}\n\n\tparser = Z_XMLPARSER_P(pind);\n\tswitch (opt) {\n\t\t/* Boolean option */\n\t\tcase PHP_XML_OPTION_CASE_FOLDING:\n\t\t\tparser->case_folding = zend_is_true(value);\n\t\t\tbreak;\n\t\t/* Boolean option */\n\t\tcase PHP_XML_OPTION_SKIP_WHITE:\n\t\t\tparser->skipwhite = zend_is_true(value);\n\t\t\tbreak;\n\t\t/* Boolean option */\n\t\tcase PHP_XML_OPTION_PARSE_HUGE:\n\t\t\t/* Prevent wreaking havock to the parser internals during parsing */\n\t\t\tif (UNEXPECTED(parser->isparsing)) {\n\t\t\t\tzend_throw_error(NULL, \"Cannot change option XML_OPTION_PARSE_HUGE while parsing\");\n\t\t\t\tRETURN_THROWS();\n\t\t\t}\n\t\t\tparser->parsehuge = zend_is_true(value);\n\t\t\tbreak;\n\t\t/* Integer option */\n\t\tcase PHP_XML_OPTION_SKIP_TAGSTART: {\n\t\t\t/* The tag start offset is stored in an int */\n\t\t\t/* TODO Improve handling of values? */\n\t\t\tzend_long value_long = zval_get_long(value);\n\t\t\tif (value_long < 0 || value_long > INT_MAX) {\n\t\t\t\t/* TODO Promote to ValueError in PHP 9.0 */\n\t\t\t\tphp_error_docref(NULL, E_WARNING, \"Argument #3 ($value) must be between 0 and %d\"\n\t\t\t\t\t\t\t\t\t\t\t\t  \" for option XML_OPTION_SKIP_TAGSTART\", INT_MAX);\n\t\t\t\tRETURN_FALSE;\n\t\t\t}\n\t\t\tparser->toffset = (int) value_long;\n\t\t\tbreak;\n\t\t}\n\t\t/* String option */\n\t\tcase PHP_XML_OPTION_TARGET_ENCODING: {\n\t\t\tconst xml_encoding *enc;\n\t\t\tif (!try_convert_to_string(value)) {\n\t\t\t\tRETURN_THROWS();\n\t\t\t}\n\n\t\t\tenc = xml_get_encoding((XML_Char*)Z_STRVAL_P(value));\n\t\t\tif (enc == NULL) {\n\t\t\t\tzend_argument_value_error(3, \"is not a supported target encoding\");\n\t\t\t\tRETURN_THROWS();\n\t\t\t}\n\n\t\t\tparser->target_encoding = enc->name;\n\t\t\tbreak;\n\t\t}\n\t\tdefault:\n\t\t\tzend_argument_value_error(2, \"must be a XML_OPTION_* constant\");\n\t\t\tRETURN_THROWS();\n\t\t\tbreak;\n\t}\n\n\tRETURN_TRUE;",
+    "semantic": "Boolean option",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_FALSE",
+            "RETURN_TRUE"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "php_error_docref",
+            "zend_zval_type_name",
+            "zend_is_true",
+            "zend_throw_error",
+            "zval_get_long",
+            "xml_get_encoding",
+            "zend_argument_value_error"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common xml_parser_set_option inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 7,
+    "purpose": "Boolean option",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "xml_parser_create",
+        "xml_parser_create_ns",
+        "xml_set_object",
+        "xml_set_element_handler",
+        "function_name",
+        "xml_parse",
+        "xml_parse_into_struct",
+        "xml_get_error_code",
+        "xml_error_string",
+        "xml_get_current_line_number",
+        "xml_get_current_column_number",
+        "xml_get_current_byte_index"
+    ]
+}

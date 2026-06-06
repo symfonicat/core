@@ -1,0 +1,101 @@
+{
+    "php_function": "quoted_printable_decode",
+    "zend_function": "quoted_printable_decode",
+    "source_file": "ot_print.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "arg1",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "arg1"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(arg1)"
+        }
+    ],
+    "includes": [
+        "stdlib.h",
+        "unistd.h",
+        "string.h",
+        "errno.h",
+        "php.h",
+        "quot_print.h",
+        "stdio.h"
+    ],
+    "body": "zend_string *arg1;\n\tchar *str_in;\n\tzend_string *str_out;\n\tsize_t i = 0, j = 0, k;\n\n\tZEND_PARSE_PARAMETERS_START(1, 1)\n\t\tZ_PARAM_STR(arg1)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (ZSTR_LEN(arg1) == 0) {\n\t\t/* shortcut */\n\t\tRETURN_EMPTY_STRING();\n\t}\n\n\tstr_in = ZSTR_VAL(arg1);\n\tstr_out = zend_string_alloc(ZSTR_LEN(arg1), 0);\n\twhile (str_in[i]) {\n\t\tswitch (str_in[i]) {\n\t\tcase '=':\n\t\t\tif (str_in[i + 1] && str_in[i + 2] &&\n\t\t\t\tisxdigit((int) str_in[i + 1]) &&\n\t\t\t\tisxdigit((int) str_in[i + 2]))\n\t\t\t{\n\t\t\t\tZSTR_VAL(str_out)[j++] = (php_hex2int((int) str_in[i + 1]) << 4)\n\t\t\t\t\t\t+ php_hex2int((int) str_in[i + 2]);\n\t\t\t\ti += 3;\n\t\t\t} else  /* check for soft line break according to RFC 2045*/ {\n\t\t\t\tk = 1;\n\t\t\t\twhile (str_in[i + k] && ((str_in[i + k] == 32) || (str_in[i + k] == 9))) {\n\t\t\t\t\t/* Possibly, skip spaces/tabs at the end of line */\n\t\t\t\t\tk++;\n\t\t\t\t}\n\t\t\t\tif (!str_in[i + k]) {\n\t\t\t\t\t/* End of line reached */\n\t\t\t\t\ti += k;\n\t\t\t\t}\n\t\t\t\telse if ((str_in[i + k] == 13) && (str_in[i + k + 1] == 10)) {\n\t\t\t\t\t/* CRLF */\n\t\t\t\t\ti += k + 2;\n\t\t\t\t}\n\t\t\t\telse if ((str_in[i + k] == 13) || (str_in[i + k] == 10)) {\n\t\t\t\t\t/* CR or LF */\n\t\t\t\t\ti += k + 1;\n\t\t\t\t}\n\t\t\t\telse {\n\t\t\t\t\tZSTR_VAL(str_out)[j++] = str_in[i++];\n\t\t\t\t}\n\t\t\t}\n\t\t\tbreak;\n\t\tdefault:\n\t\t\tZSTR_VAL(str_out)[j++] = str_in[i++];\n\t\t}\n\t}\n\tZSTR_VAL(str_out)[j] = '\\0';\n\tZSTR_LEN(str_out) = j;\n\n\tRETVAL_NEW_STR(str_out);",
+    "semantic": "shortcut",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STR",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZSTR_LEN",
+            "RETURN_EMPTY_STRING",
+            "ZSTR_VAL"
+        ],
+        "zend_types": [
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "zend_string_alloc",
+            "php_hex2int"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common quoted_printable_decode inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 8,
+    "purpose": "shortcut",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "quoted_printable_encode"
+    ]
+}

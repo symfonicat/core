@@ -1,0 +1,96 @@
+{
+    "php_function": "ftp_delete",
+    "zend_function": "ftp_delete",
+    "source_file": ".c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "ext/standard/info.h",
+        "ext/standard/file.h",
+        "Zend/zend_attributes.h",
+        "Zend/zend_exceptions.h",
+        "php_ftp.h",
+        "ftp.h",
+        "ftp_arginfo.h"
+    ],
+    "body": "zval\t\t*z_ftp;\n\tftpbuf_t\t*ftp;\n\tchar\t\t*file;\n\tsize_t\t\tfile_len;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"Os\", &z_ftp, php_ftp_ce, &file, &file_len) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\tGET_FTPBUF(ftp, z_ftp);\n\n\t/* delete the file */\n\tif (!ftp_delete(ftp, file, file_len)) {\n\t\tif (*ftp->inbuf) {\n\t\t\tphp_error_docref(NULL, E_WARNING, \"%s\", ftp->inbuf);\n\t\t}\n\t\tRETURN_FALSE;\n\t}\n\n\tRETURN_TRUE;",
+    "semantic": "delete the file",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_FALSE",
+            "RETURN_TRUE"
+        ],
+        "zend_types": [
+            "zval"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "php_error_docref"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common ftp_delete inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 3,
+    "purpose": "delete the file",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "ftp_connect",
+        "ftp_ssl_connect",
+        "ftp_login",
+        "ftp_pwd",
+        "ftp_cdup",
+        "ftp_chdir",
+        "ftp_exec",
+        "ftp_raw",
+        "ftp_mkdir",
+        "ftp_rmdir",
+        "ftp_chmod",
+        "ftp_alloc"
+    ]
+}

@@ -1,0 +1,199 @@
+{
+    "php_function": "file_get_contents",
+    "zend_function": "file_get_contents",
+    "source_file": "le.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "filename",
+            "macro": "Z_PARAM_PATH",
+            "arguments": [
+                "filename",
+                "filename_len"
+            ],
+            "type": "mixed",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_PATH(filename, filename_len)"
+        },
+        {
+            "name": "use_include_path",
+            "macro": "Z_PARAM_BOOL",
+            "arguments": [
+                "use_include_path"
+            ],
+            "type": "bool",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_BOOL(use_include_path)"
+        },
+        {
+            "name": "zcontext",
+            "macro": "Z_PARAM_RESOURCE_OR_NULL",
+            "arguments": [
+                "zcontext"
+            ],
+            "type": "zend_resource",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_RESOURCE_OR_NULL(zcontext)"
+        },
+        {
+            "name": "offset",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "offset"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(offset)"
+        },
+        {
+            "name": "maxlen",
+            "macro": "Z_PARAM_LONG_OR_NULL",
+            "arguments": [
+                "maxlen",
+                "maxlen_is_null"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG_OR_NULL(maxlen, maxlen_is_null)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "ext/standard/flock_compat.h",
+        "ext/standard/php_filestat.h",
+        "php_open_temporary_file.h",
+        "ext/standard/basic_functions.h",
+        "php_ini.h",
+        "zend_smart_str.h",
+        "stdio.h",
+        "stdlib.h",
+        "errno.h",
+        "wchar.h",
+        "sys/types.h",
+        "sys/stat.h",
+        "fcntl.h",
+        "php_string.h",
+        "file.h",
+        "fsock.h",
+        "fopen_wrappers.h",
+        "streamsfuncs.h",
+        "scanf.h",
+        "zend_API.h",
+        "file_arginfo.h"
+    ],
+    "body": "char *filename;\n\tsize_t filename_len;\n\tbool use_include_path = 0;\n\tphp_stream *stream;\n\tzend_long offset = 0;\n\tzend_long maxlen;\n\tbool maxlen_is_null = 1;\n\tzval *zcontext = NULL;\n\tphp_stream_context *context = NULL;\n\tzend_string *contents;\n\n\t/* Parse arguments */\n\tZEND_PARSE_PARAMETERS_START(1, 5)\n\t\tZ_PARAM_PATH(filename, filename_len)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_BOOL(use_include_path)\n\t\tZ_PARAM_RESOURCE_OR_NULL(zcontext)\n\t\tZ_PARAM_LONG(offset)\n\t\tZ_PARAM_LONG_OR_NULL(maxlen, maxlen_is_null)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (maxlen_is_null) {\n\t\tmaxlen = (ssize_t) PHP_STREAM_COPY_ALL;\n\t} else if (maxlen < 0) {\n\t\tzend_argument_value_error(5, \"must be greater than or equal to 0\");\n\t\tRETURN_THROWS();\n\t}\n\n\tcontext = php_stream_context_from_zval(zcontext, 0);\n\n\tstream = php_stream_open_wrapper_ex(filename, \"rb\",\n\t\t\t\t(use_include_path ? USE_PATH : 0) | REPORT_ERRORS,\n\t\t\t\tNULL, context);\n\tif (!stream) {\n\t\tRETURN_FALSE;\n\t}\n\n\t/* disabling the read buffer allows doing the whole transfer\n\t   in just one read() system call */\n\tif (php_stream_is(stream, PHP_STREAM_IS_STDIO)) {\n\t\tphp_stream_set_option(stream, PHP_STREAM_OPTION_READ_BUFFER, PHP_STREAM_BUFFER_NONE, NULL);\n\t}\n\n\tif (offset != 0 && php_stream_seek(stream, offset, ((offset > 0) ? SEEK_SET : SEEK_END)) < 0) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Failed to seek to position \" ZEND_LONG_FMT \" in the stream\", offset);\n\t\tphp_stream_close(stream);\n\t\tRETURN_FALSE;\n\t}\n\n\tif ((contents = php_stream_copy_to_mem(stream, maxlen, 0)) != NULL) {\n\t\tRETVAL_STR(contents);\n\t} else {\n\t\tRETVAL_EMPTY_STRING();\n\t}\n\n\tphp_stream_close(stream);",
+    "semantic": "Parse arguments",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_PATH",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_BOOL",
+            "Z_PARAM_RESOURCE_OR_NULL",
+            "Z_PARAM_LONG",
+            "Z_PARAM_LONG_OR_NULL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_THROWS",
+            "RETURN_FALSE",
+            "ZEND_LONG_FMT"
+        ],
+        "zend_types": [
+            "zend_long",
+            "zval",
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "zend_argument_value_error",
+            "php_stream_context_from_zval",
+            "php_stream_open_wrapper_ex",
+            "php_stream_is",
+            "php_stream_set_option",
+            "php_stream_seek",
+            "php_error_docref",
+            "php_stream_close",
+            "php_stream_copy_to_mem"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common file_get_contents inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": true,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid leaving streams open on any early-exit branch."
+    ],
+    "complexity": 7,
+    "purpose": "Parse arguments",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "flock",
+        "get_meta_tags",
+        "file_put_contents",
+        "file",
+        "tempnam",
+        "tmpfile",
+        "fopen",
+        "popen",
+        "pclose",
+        "fscanf",
+        "mkdir",
+        "rmdir"
+    ]
+}

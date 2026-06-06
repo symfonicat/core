@@ -56,6 +56,15 @@
 		php_server
 	}
 
+	@moduleRequest path_regexp module ^/m(?:/|$)
+
+	handle @moduleRequest {
+		route {
+			brotli_decompress
+			php_server
+		}
+	}
+
 	handle {
 		php_server
 	}
@@ -101,6 +110,15 @@
 		request_header X-Symfonicat-Core-Locked "1"
 		rewrite * /index.php
 		php_server
+	}
+
+	@moduleRequest path_regexp module ^/m(?:/|$)
+
+	handle @moduleRequest {
+		route {
+			brotli_decompress
+			php_server
+		}
 	}
 
 	handle {

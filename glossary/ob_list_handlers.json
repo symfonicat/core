@@ -1,0 +1,89 @@
+{
+    "php_function": "ob_list_handlers",
+    "zend_function": "ob_list_handlers",
+    "source_file": "",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "php.h",
+        "ext/standard/head.h",
+        "ext/standard/url_scanner_ex.h",
+        "SAPI.h",
+        "zend_stack.h",
+        "php_output.h"
+    ],
+    "body": "if (zend_parse_parameters_none() == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tarray_init(return_value);\n\n\tif (!OG(active)) {\n\t\treturn;\n\t}\n\n\tzend_stack_apply_with_argument(&OG(handlers), ZEND_STACK_APPLY_BOTTOMUP, php_output_stack_apply_list, return_value);",
+    "semantic": "Implements the PHP function ob_list_handlers in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "RETURN_THROWS",
+            "ZEND_STACK_APPLY_BOTTOMUP"
+        ],
+        "zend_types": [],
+        "internal_helpers": [
+            "zend_parse_parameters_none",
+            "zend_stack_apply_with_argument"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common ob_list_handlers inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 3,
+    "purpose": "Implements the PHP function ob_list_handlers in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "ob_start",
+        "ob_flush",
+        "ob_clean",
+        "ob_end_flush",
+        "ob_end_clean",
+        "ob_get_flush",
+        "ob_get_clean",
+        "ob_get_contents",
+        "ob_get_level",
+        "ob_get_length",
+        "ob_get_status",
+        "ob_implicit_flush"
+    ]
+}

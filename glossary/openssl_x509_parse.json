@@ -1,0 +1,162 @@
+{
+    "php_function": "openssl_x509_parse",
+    "zend_function": "openssl_x509_parse",
+    "source_file": "nssl.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "cert_obj",
+            "macro": "Z_PARAM_OBJ_OF_CLASS_OR_STR",
+            "arguments": [
+                "cert_obj",
+                "php_openssl_certificate_ce",
+                "cert_str"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_OBJ_OF_CLASS_OR_STR(cert_obj, php_openssl_certificate_ce, cert_str)"
+        },
+        {
+            "name": "useshortnames",
+            "macro": "Z_PARAM_BOOL",
+            "arguments": [
+                "useshortnames"
+            ],
+            "type": "bool",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_BOOL(useshortnames)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "php_openssl.h",
+        "zend_attributes.h",
+        "zend_exceptions.h",
+        "ext/standard/file.h",
+        "ext/standard/info.h",
+        "ext/standard/php_fopen_wrappers.h",
+        "ext/standard/md5.h",
+        "ext/standard/base64.h",
+        "openssl/evp.h",
+        "openssl/bn.h",
+        "openssl/rsa.h",
+        "openssl/dsa.h",
+        "openssl/dh.h",
+        "openssl/x509.h",
+        "openssl/x509v3.h",
+        "openssl/crypto.h",
+        "openssl/pem.h",
+        "openssl/err.h",
+        "openssl/conf.h",
+        "openssl/rand.h",
+        "openssl/ssl.h",
+        "openssl/pkcs12.h",
+        "openssl/cms.h",
+        "openssl/core_names.h",
+        "openssl/param_build.h",
+        "openssl/provider.h",
+        "openssl/engine.h",
+        "time.h",
+        "openssl_arginfo.h"
+    ],
+    "body": "X509 *cert;\n\tzend_object *cert_obj;\n\tzend_string *cert_str;\n\tint i, sig_nid;\n\tbool useshortnames = 1;\n\tchar * tmpstr;\n\tzval subitem;\n\tX509_EXTENSION *extension;\n\tX509_NAME *subject_name;\n\tchar *cert_name;\n\tchar *extname;\n\tBIO *bio_out;\n\tBUF_MEM *bio_buf;\n\tASN1_INTEGER *asn1_serial;\n\tBIGNUM *bn_serial;\n\tchar *str_serial;\n\tchar *hex_serial;\n\tchar buf[256];\n\n\tZEND_PARSE_PARAMETERS_START(1, 2)\n\t\tZ_PARAM_OBJ_OF_CLASS_OR_STR(cert_obj, php_openssl_certificate_ce, cert_str)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_BOOL(useshortnames)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tcert = php_openssl_x509_from_param(cert_obj, cert_str, 1);\n\tif (cert == NULL) {\n\t\t// TODO Add Warning?\n\t\tRETURN_FALSE;\n\t}\n\tarray_init(return_value);\n\n\tsubject_name = X509_get_subject_name(cert);\n\tcert_name = X509_NAME_oneline(subject_name, NULL, 0);\n\tadd_assoc_string(return_value, \"name\", cert_name);\n\tOPENSSL_free(cert_name);\n\n\tphp_openssl_add_assoc_name_entry(return_value, \"subject\", subject_name, useshortnames);\n\t/* hash as used in CA directories to lookup cert by subject name */\n\t{\n\t\tchar buf[32];\n\t\tsnprintf(buf, sizeof(buf), \"%08lx\", X509_subject_name_hash(cert));\n\t\tadd_assoc_string(return_value, \"hash\", buf);\n\t}\n\n\tphp_openssl_add_assoc_name_entry(return_value, \"issuer\", X509_get_issuer_name(cert), useshortnames);\n\tadd_assoc_long(return_value, \"version\", X509_get_version(cert));\n\n\tasn1_serial = X509_get_serialNumber(cert);\n\n\tbn_serial = ASN1_INTEGER_to_BN(asn1_serial, NULL);\n\t/* Can return NULL on error or memory allocation failure */\n\tif (!bn_serial) {\n\t\tphp_openssl_store_errors();\n\t\tgoto err;\n\t}\n\n\thex_serial = BN_bn2hex(bn_serial);\n\tBN_free(bn_serial);\n\t/* Can return NULL on error or memory allocation failure */\n\tif (!hex_serial) {\n\t\tphp_openssl_store_errors();\n\t\tgoto err;\n\t}\n\n\tstr_serial = i2s_ASN1_INTEGER(NULL, asn1_serial);\n\tadd_assoc_string(return_value, \"serialNumber\", str_serial);\n\tOPENSSL_free(str_serial);\n\n\t/* Return the hex representation of the serial number, as defined by OpenSSL */\n\tadd_assoc_string(return_value, \"serialNumberHex\", hex_serial);\n\tOPENSSL_free(hex_serial);\n\n\tphp_openssl_add_assoc_asn1_string(return_value, \"validFrom\", \tX509_getm_notBefore(cert));\n\tphp_openssl_add_assoc_asn1_string(return_value, \"validTo\", \t\tX509_getm_notAfter(cert));\n\n\tadd_assoc_long(return_value, \"validFrom_time_t\", php_openssl_asn1_time_to_time_t(X509_getm_notBefore(cert)));\n\tadd_assoc_long(return_value, \"validTo_time_t\",  php_openssl_asn1_time_to_time_t(X509_getm_notAfter(cert)));\n\n\ttmpstr = (char *)X509_alias_get0(cert, NULL);\n\tif (tmpstr) {\n\t\tadd_assoc_string(return_value, \"alias\", tmpstr);\n\t}\n\n\tsig_nid = X509_get_signature_nid(cert);\n\tadd_assoc_string(return_value, \"signatureTypeSN\", (char*)OBJ_nid2sn(sig_nid));\n\tadd_assoc_string(return_value, \"signatureTypeLN\", (char*)OBJ_nid2ln(sig_nid));\n\tadd_assoc_long(return_value, \"signatureTypeNID\", sig_nid);\n\tarray_init(&subitem);\n\n\t/* NOTE: the purposes are added as integer keys - the keys match up to the X509_PURPOSE_SSL_XXX defines\n\t   in x509v3.h */\n\tfor (i = 0; i < X509_PURPOSE_get_count(); i++) {\n\t\tint id, purpset;\n\t\tchar * pname;\n\t\tX509_PURPOSE * purp;\n\t\tzval subsub;\n\n\t\tarray_init(&subsub);\n\n\t\tpurp = X509_PURPOSE_get0(i);\n\t\tid = X509_PURPOSE_get_id(purp);\n\n\t\tpurpset = X509_check_purpose(cert, id, 0);\n\t\tadd_index_bool(&subsub, 0, purpset);\n\n\t\tpurpset = X509_check_purpose(cert, id, 1);\n\t\tadd_index_bool(&subsub, 1, purpset);\n\n\t\tpname = useshortnames ? X509_PURPOSE_get0_sname(purp) : X509_PURPOSE_get0_name(purp);\n\t\tadd_index_string(&subsub, 2, pname);\n\n\t\t/* NOTE: if purpset > 1 then it's a warning - we should mention it ? */\n\n\t\tadd_index_zval(&subitem, id, &subsub);\n\t}\n\tadd_assoc_zval(return_value, \"purposes\", &subitem);\n\n\tarray_init(&subitem);\n\n\n\tfor (i = 0; i < X509_get_ext_count(cert); i++) {\n\t\tint nid;\n\t\textension = X509_get_ext(cert, i);\n\t\tnid = OBJ_obj2nid(X509_EXTENSION_get_object(extension));\n\t\tif (nid != NID_undef) {\n\t\t\textname = (char *)OBJ_nid2sn(OBJ_obj2nid(X509_EXTENSION_get_object(extension)));\n\t\t} else {\n\t\t\tOBJ_obj2txt(buf, sizeof(buf)-1, X509_EXTENSION_get_object(extension), 1);\n\t\t\textname = buf;\n\t\t}\n\t\tbio_out = BIO_new(BIO_s_mem());\n\t\tif (bio_out == NULL) {\n\t\t\tphp_openssl_store_errors();\n\t\t\tgoto err_subitem;\n\t\t}\n\t\tif (nid == NID_subject_alt_name) {\n\t\t\tif (openssl_x509v3_subjectAltName(bio_out, extension) == 0) {\n\t\t\t\tBIO_get_mem_ptr(bio_out, &bio_buf);\n\t\t\t\tadd_assoc_stringl(&subitem, extname, bio_buf->data, bio_buf->length);\n\t\t\t} else {\n\t\t\t\tBIO_free(bio_out);\n\t\t\t\tgoto err_subitem;\n\t\t\t}\n\t\t}\n\t\telse if (X509V3_EXT_print(bio_out, extension, 0, 0)) {\n\t\t\tBIO_get_mem_ptr(bio_out, &bio_buf);\n\t\t\tadd_assoc_stringl(&subitem, extname, bio_buf->data, bio_buf->length);\n\t\t} else {\n\t\t\tphp_openssl_add_assoc_asn1_string(&subitem, extname, X509_EXTENSION_get_data(extension));\n\t\t}\n\t\tBIO_free(bio_out);\n\t}\n\tadd_assoc_zval(return_value, \"extensions\", &subitem);\n\tif (cert_str) {\n\t\tX509_free(cert);\n\t}\n\treturn;\n\nerr_subitem:\n\tzval_ptr_dtor(&subitem);\nerr:\n\tzend_array_destroy(Z_ARR_P(return_value));\n\tif (cert_str) {\n\t\tX509_free(cert);\n\t}\n\tRETURN_FALSE;",
+    "semantic": "hash as used in CA directories to lookup cert by subject name",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_OBJ_OF_CLASS_OR_STR",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_BOOL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zend_object",
+            "zend_string",
+            "zval"
+        ],
+        "internal_helpers": [
+            "php_openssl_x509_from_param",
+            "php_openssl_add_assoc_name_entry",
+            "php_openssl_store_errors",
+            "php_openssl_add_assoc_asn1_string",
+            "php_openssl_asn1_time_to_time_t",
+            "openssl_x509v3_subjectAltName",
+            "zval_ptr_dtor",
+            "zend_array_destroy"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common openssl_x509_parse inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 10,
+    "purpose": "hash as used in CA directories to lookup cert by subject name",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "openssl_get_cert_locations",
+        "openssl_x509_export_to_file",
+        "openssl_spki_new",
+        "openssl_spki_verify",
+        "openssl_spki_export",
+        "openssl_spki_export_challenge",
+        "openssl_x509_export",
+        "openssl_x509_fingerprint",
+        "openssl_x509_check_private_key",
+        "openssl_x509_verify",
+        "openssl_x509_checkpurpose",
+        "openssl_x509_read"
+    ]
+}

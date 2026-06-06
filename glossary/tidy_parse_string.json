@@ -1,0 +1,154 @@
+{
+    "php_function": "tidy_parse_string",
+    "zend_function": "tidy_parse_string",
+    "source_file": "",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "input",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "input"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(input)"
+        },
+        {
+            "name": "options_ht",
+            "macro": "Z_PARAM_ARRAY_HT_OR_STR_OR_NULL",
+            "arguments": [
+                "options_ht",
+                "options_str"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY_HT_OR_STR_OR_NULL(options_ht, options_str)"
+        },
+        {
+            "name": "enc",
+            "macro": "Z_PARAM_STRING_OR_NULL",
+            "arguments": [
+                "enc",
+                "enc_len"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING_OR_NULL(enc, enc_len)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_tidy.h",
+        "php_ini.h",
+        "ext/standard/info.h",
+        "tidy.h",
+        "tidyp.h",
+        "tidybuffio.h",
+        "buffio.h",
+        "tidy_arginfo.h",
+        "Zend/zend_exceptions.h"
+    ],
+    "body": "char *enc = NULL;\n\tsize_t enc_len = 0;\n\tzend_string *input, *options_str = NULL;\n\tHashTable *options_ht = NULL;\n\tPHPTidyObj *obj;\n\n\tZEND_PARSE_PARAMETERS_START(1, 3)\n\t\tZ_PARAM_STR(input)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_ARRAY_HT_OR_STR_OR_NULL(options_ht, options_str)\n\t\tZ_PARAM_STRING_OR_NULL(enc, enc_len)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (ZEND_SIZE_T_UINT_OVFL(ZSTR_LEN(input))) {\n\t\tzend_argument_value_error(1, \"is too long\");\n\t\tRETURN_THROWS();\n\t}\n\n\ttidy_instantiate(tidy_ce_doc, return_value);\n\tobj = Z_TIDY_P(return_value);\n\n\tif (php_tidy_apply_config(obj->ptdoc->doc, options_str, options_ht) != SUCCESS\n\t || php_tidy_parse_string(obj, ZSTR_VAL(input), (uint32_t)ZSTR_LEN(input), enc) != SUCCESS) {\n\t\tzval_ptr_dtor(return_value);\n\t\tRETURN_FALSE;\n\t}",
+    "semantic": "Implements the PHP function tidy_parse_string in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STR",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_ARRAY_HT_OR_STR_OR_NULL",
+            "Z_PARAM_STRING_OR_NULL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZEND_SIZE_T_UINT_OVFL",
+            "ZSTR_LEN",
+            "RETURN_THROWS",
+            "ZSTR_VAL",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zend_string",
+            "HashTable"
+        ],
+        "internal_helpers": [
+            "zend_argument_value_error",
+            "php_tidy_apply_config",
+            "php_tidy_parse_string",
+            "zval_ptr_dtor"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common tidy_parse_string inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 5,
+    "purpose": "Implements the PHP function tidy_parse_string in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "tidy_get_error_buffer",
+        "tidy_get_output",
+        "tidy_parse_file",
+        "tidy_clean_repair",
+        "tidy_repair_string",
+        "tidy_repair_file",
+        "tidy_diagnose",
+        "tidy_get_release",
+        "tidy_get_opt_doc",
+        "tidy_get_config",
+        "tidy_get_status",
+        "tidy_get_html_ver"
+    ]
+}

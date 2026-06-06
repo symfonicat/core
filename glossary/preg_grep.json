@@ -1,0 +1,140 @@
+{
+    "php_function": "preg_grep",
+    "zend_function": "preg_grep",
+    "source_file": "re.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "regex",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "regex"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(regex)"
+        },
+        {
+            "name": "input",
+            "macro": "Z_PARAM_ARRAY",
+            "arguments": [
+                "input"
+            ],
+            "type": "HashTable",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY(input)"
+        },
+        {
+            "name": "flags",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "flags"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(flags)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "php_ini.h",
+        "php_pcre.h",
+        "ext/standard/info.h",
+        "ext/standard/basic_functions.h",
+        "zend_smart_str.h",
+        "SAPI.h",
+        "php_pcre_arginfo.h"
+    ],
+    "body": "zend_string\t\t\t*regex;\t\t\t/* Regular expression */\n\tzval\t\t\t\t*input;\t\t\t/* Input array */\n\tzend_long\t\t\t flags = 0;\t\t/* Match control flags */\n\tpcre_cache_entry\t*pce;\t\t\t/* Compiled regular expression */\n\n\t/* Get arguments and do error checking */\n\tZEND_PARSE_PARAMETERS_START(2, 3)\n\t\tZ_PARAM_STR(regex)\n\t\tZ_PARAM_ARRAY(input)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_LONG(flags)\n\tZEND_PARSE_PARAMETERS_END();\n\n\t/* Compile regex or get it from cache. */\n\tif ((pce = pcre_get_compiled_regex_cache(regex)) == NULL) {\n\t\tRETURN_FALSE;\n\t}\n\n\tpce->refcount++;\n\tphp_pcre_grep_impl(pce, input, return_value, flags);\n\tpce->refcount--;",
+    "semantic": "Regular expression",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STR",
+            "Z_PARAM_ARRAY",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_LONG",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zend_string",
+            "zval",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "php_pcre_grep_impl"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common preg_grep inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 3,
+    "purpose": "Regular expression",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "preg_match",
+        "preg_match_all",
+        "preg_replace",
+        "preg_replace_callback",
+        "preg_replace_callback_array",
+        "preg_filter",
+        "preg_split",
+        "preg_quote",
+        "preg_last_error",
+        "preg_last_error_msg"
+    ]
+}

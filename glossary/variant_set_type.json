@@ -1,0 +1,94 @@
+{
+    "php_function": "variant_set_type",
+    "zend_function": "variant_set_type",
+    "source_file": "com_variant.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "ext/standard/info.h",
+        "php_com_dotnet.h",
+        "php_com_dotnet_internal.h"
+    ],
+    "body": "zval *zobj;\n\tphp_com_dotnet_object *obj;\n\t/* VARTYPE == unsigned short */ zend_long vt;\n\tVARIANT vtmp;\n\tHRESULT res;\n\n\tif (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS(),\n\t\t\"Ol\", &zobj, php_com_variant_class_entry, &vt)) {\n\t\tRETURN_THROWS();\n\t}\n\tobj = CDNO_FETCH(zobj);\n\n\tif (V_VT(&obj->v) == VT_ERROR) {\n\t\tVariantInit(&vtmp);\n\t\tV_VT(&vtmp) = VT_I4;\n\t\tV_I4(&vtmp) = V_ERROR(&obj->v);\n\t}\n\tres = VariantChangeType(&obj->v, V_VT(&obj->v) != VT_ERROR ? &obj->v : &vtmp, 0, (VARTYPE)vt);\n\n\tif (SUCCEEDED(res)) {\n\t\tif (vt != VT_DISPATCH && obj->typeinfo) {\n\t\t\tITypeInfo_Release(obj->typeinfo);\n\t\t\tobj->typeinfo = NULL;\n\t\t}\n\t} else {\n\t\tchar *werr, *msg;\n\n\t\twerr = php_win32_error_to_msg(res);\n\t\tspprintf(&msg, 0, \"Variant type conversion failed: %s\", werr);\n\t\tphp_win32_error_msg_free(werr);\n\n\t\tphp_com_throw_exception(res, msg);\n\t\tefree(msg);\n\t}",
+    "semantic": "VARTYPE == unsigned short",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "php_win32_error_to_msg",
+            "php_win32_error_msg_free",
+            "php_com_throw_exception"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common variant_set_type inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 4,
+    "purpose": "VARTYPE == unsigned short",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "variant_set",
+        "variant_add",
+        "variant_cat",
+        "variant_sub",
+        "variant_mul",
+        "variant_and",
+        "variant_div",
+        "variant_eqv",
+        "variant_idiv",
+        "variant_imp",
+        "variant_mod",
+        "variant_or"
+    ]
+}

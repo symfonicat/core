@@ -1,0 +1,141 @@
+{
+    "php_function": "get_headers",
+    "zend_function": "get_headers",
+    "source_file": "l.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "url",
+            "macro": "Z_PARAM_PATH",
+            "arguments": [
+                "url",
+                "url_len"
+            ],
+            "type": "mixed",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_PATH(url, url_len)"
+        },
+        {
+            "name": "format",
+            "macro": "Z_PARAM_BOOL",
+            "arguments": [
+                "format"
+            ],
+            "type": "bool",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_BOOL(format)"
+        },
+        {
+            "name": "zcontext",
+            "macro": "Z_PARAM_RESOURCE_OR_NULL",
+            "arguments": [
+                "zcontext"
+            ],
+            "type": "zend_resource",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_RESOURCE_OR_NULL(zcontext)"
+        }
+    ],
+    "includes": [
+        "stdlib.h",
+        "string.h",
+        "ctype.h",
+        "sys/types.h",
+        "emmintrin.h",
+        "php.h",
+        "url.h",
+        "file.h"
+    ],
+    "body": "char *url;\n\tsize_t url_len;\n\tphp_stream *stream;\n\tzval *prev_val, *hdr = NULL;\n\tbool format = 0;\n\tzval *zcontext = NULL;\n\tphp_stream_context *context;\n\n\tZEND_PARSE_PARAMETERS_START(1, 3)\n\t\tZ_PARAM_PATH(url, url_len)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_BOOL(format)\n\t\tZ_PARAM_RESOURCE_OR_NULL(zcontext)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tcontext = php_stream_context_from_zval(zcontext, 0);\n\n\tif (!(stream = php_stream_open_wrapper_ex(url, \"r\", REPORT_ERRORS | STREAM_USE_URL | STREAM_ONLY_GET_HEADERS, NULL, context))) {\n\t\tRETURN_FALSE;\n\t}\n\n\tif (Z_TYPE(stream->wrapperdata) != IS_ARRAY) {\n\t\tphp_stream_close(stream);\n\t\tRETURN_FALSE;\n\t}\n\n\tarray_init(return_value);\n\n\tZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(&stream->wrapperdata), hdr) {\n\t\tif (Z_TYPE_P(hdr) != IS_STRING) {\n\t\t\tcontinue;\n\t\t}\n\t\tif (!format) {\nno_name_header:\n\t\t\tadd_next_index_str(return_value, zend_string_copy(Z_STR_P(hdr)));\n\t\t} else {\n\t\t\tchar c;\n\t\t\tchar *s, *p;\n\n\t\t\tif ((p = strchr(Z_STRVAL_P(hdr), ':'))) {\n\t\t\t\tc = *p;\n\t\t\t\t*p = '\\0';\n\t\t\t\ts = p + 1;\n\t\t\t\twhile (isspace((int)*(unsigned char *)s)) {\n\t\t\t\t\ts++;\n\t\t\t\t}\n\n\t\t\t\tif ((prev_val = zend_hash_str_find(Z_ARRVAL_P(return_value), Z_STRVAL_P(hdr), (p - Z_STRVAL_P(hdr)))) == NULL) {\n\t\t\t\t\tadd_assoc_stringl_ex(return_value, Z_STRVAL_P(hdr), (p - Z_STRVAL_P(hdr)), s, (Z_STRLEN_P(hdr) - (s - Z_STRVAL_P(hdr))));\n\t\t\t\t} else { /* some headers may occur more than once, therefore we need to remake the string into an array */\n\t\t\t\t\tconvert_to_array(prev_val);\n\t\t\t\t\tadd_next_index_stringl(prev_val, s, (Z_STRLEN_P(hdr) - (s - Z_STRVAL_P(hdr))));\n\t\t\t\t}\n\n\t\t\t\t*p = c;\n\t\t\t} else {\n\t\t\t\tgoto no_name_header;\n\t\t\t}\n\t\t}\n\t} ZEND_HASH_FOREACH_END();\n\n\tphp_stream_close(stream);",
+    "semantic": "some headers may occur more than once, therefore we need to remake the string into an array",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_PATH",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_BOOL",
+            "Z_PARAM_RESOURCE_OR_NULL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_FALSE",
+            "ZEND_HASH_FOREACH_VAL",
+            "ZEND_HASH_FOREACH_END"
+        ],
+        "zend_types": [
+            "zval"
+        ],
+        "internal_helpers": [
+            "php_stream_context_from_zval",
+            "php_stream_open_wrapper_ex",
+            "php_stream_close",
+            "zend_string_copy",
+            "zend_hash_str_find"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common get_headers inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 7,
+    "purpose": "some headers may occur more than once, therefore we need to remake the string into an array",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "parse_url",
+        "urlencode",
+        "urldecode",
+        "rawurlencode",
+        "rawurldecode"
+    ]
+}

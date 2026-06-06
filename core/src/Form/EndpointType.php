@@ -44,7 +44,7 @@ final class EndpointType extends AbstractType
             ])
             ->add('domain', EntityType::class, [
                 'class' => Domain::class,
-                'choice_label' => static fn (Domain $d): string => (string) $d->getId(),
+                'choice_label' => static fn (Domain $d): string => (string) $d->getTld(),
                 'label' => 'domain',
                 'placeholder' => 'select domain',
                 'required' => false,
@@ -53,7 +53,7 @@ final class EndpointType extends AbstractType
                 'class' => Subdomain::class,
                 'choice_label' => static function (Subdomain $subdomain): string {
                     $affix = trim((string) $subdomain->getAffix());
-                    $domain = trim((string) $subdomain->getDomain()?->getId());
+                    $domain = trim((string) $subdomain->getDomain()?->getTld());
 
                     return $domain === '' ? $affix : sprintf('%s (%s)', $affix, $domain);
                 },

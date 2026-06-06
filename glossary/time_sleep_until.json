@@ -1,0 +1,152 @@
+{
+    "php_function": "time_sleep_until",
+    "zend_function": "time_sleep_until",
+    "source_file": "sic_functions.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "target_secs",
+            "macro": "Z_PARAM_DOUBLE",
+            "arguments": [
+                "target_secs"
+            ],
+            "type": "double",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_DOUBLE(target_secs)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "php_assert.h",
+        "php_crypt.h",
+        "php_streams.h",
+        "php_main.h",
+        "php_globals.h",
+        "php_variables.h",
+        "php_ini.h",
+        "php_image.h",
+        "php_standard.h",
+        "php_math.h",
+        "php_http.h",
+        "php_incomplete_class.h",
+        "php_getopt.h",
+        "php_ext_syslog.h",
+        "ext/standard/info.h",
+        "ext/session/php_session.h",
+        "zend_exceptions.h",
+        "zend_attributes.h",
+        "zend_enum.h",
+        "zend_ini.h",
+        "zend_operators.h",
+        "ext/standard/php_dns.h",
+        "ext/standard/php_uuencode.h",
+        "ext/standard/crc32_x86.h",
+        "win32/php_win32_globals.h",
+        "win32/time.h",
+        "win32/ioutil.h",
+        "zend.h",
+        "zend_ini_scanner.h",
+        "zend_language_scanner.h",
+        "zend_language_parser.h",
+        "zend_portability.h",
+        "stdarg.h",
+        "stdlib.h",
+        "math.h",
+        "time.h",
+        "stdio.h",
+        "sys/types.h",
+        "sys/stat.h",
+        "string.h",
+        "locale.h",
+        "zend_globals.h",
+        "SAPI.h",
+        "php_ticks.h",
+        "php_fopen_wrappers.h",
+        "streamsfuncs.h",
+        "zend_frameless_function.h",
+        "basic_functions_arginfo.h"
+    ],
+    "body": "double target_secs;\n\tstruct timeval tm;\n\tstruct timespec php_req, php_rem;\n\tuint64_t current_ns, target_ns, diff_ns;\n\tconst uint64_t ns_per_sec = 1000000000;\n\tconst double top_target_sec = (double)(UINT64_MAX / ns_per_sec);\n\n\tZEND_PARSE_PARAMETERS_START(1, 1)\n\t\tZ_PARAM_DOUBLE(target_secs)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (gettimeofday((struct timeval *) &tm, NULL) != 0) {\n\t\tRETURN_FALSE;\n\t}\n\n\tif (UNEXPECTED(!(target_secs >= 0 && target_secs <= top_target_sec))) {\n\t\tzend_argument_value_error(1, \"must be between 0 and %\" PRIu64, (uint64_t)top_target_sec);\n\t\tRETURN_THROWS();\n\t}\n\n\ttarget_ns = (uint64_t) (target_secs * ns_per_sec);\n\tcurrent_ns = ((uint64_t) tm.tv_sec) * ns_per_sec + ((uint64_t) tm.tv_usec) * 1000;\n\tif (target_ns < current_ns) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Argument #1 ($timestamp) must be greater than or equal to the current time\");\n\t\tRETURN_FALSE;\n\t}\n\n\tdiff_ns = target_ns - current_ns;\n\tphp_req.tv_sec = (time_t) (diff_ns / ns_per_sec);\n\tphp_req.tv_nsec = (long) (diff_ns % ns_per_sec);\n\n\twhile (nanosleep(&php_req, &php_rem)) {\n\t\tif (errno == EINTR) {\n\t\t\tphp_req.tv_sec = php_rem.tv_sec;\n\t\t\tphp_req.tv_nsec = php_rem.tv_nsec;\n\t\t} else {\n\t\t\tRETURN_FALSE;\n\t\t}\n\t}\n\n\tRETURN_TRUE;",
+    "semantic": "Implements the PHP function time_sleep_until in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_DOUBLE",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_FALSE",
+            "RETURN_THROWS",
+            "RETURN_TRUE"
+        ],
+        "zend_types": [],
+        "internal_helpers": [
+            "zend_argument_value_error",
+            "php_error_docref"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common time_sleep_until inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "Implements the PHP function time_sleep_until in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "constant",
+        "inet_ntop",
+        "inet_pton",
+        "ip2long",
+        "long2ip",
+        "getenv",
+        "getopt",
+        "flush",
+        "sleep",
+        "usleep",
+        "time_nanosleep",
+        "get_current_user"
+    ]
+}

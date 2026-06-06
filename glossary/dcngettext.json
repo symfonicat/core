@@ -1,0 +1,163 @@
+{
+    "php_function": "dcngettext",
+    "zend_function": "dcngettext",
+    "source_file": "text.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "domain",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "domain"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(domain)"
+        },
+        {
+            "name": "msgid1",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "msgid1"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(msgid1)"
+        },
+        {
+            "name": "msgid2",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "msgid2"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(msgid2)"
+        },
+        {
+            "name": "count",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "count"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(count)"
+        },
+        {
+            "name": "category",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "category"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(category)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "stdio.h",
+        "locale.h",
+        "ext/standard/info.h",
+        "php_gettext.h",
+        "gettext_arginfo.h",
+        "libintl.h"
+    ],
+    "body": "char *msgstr = NULL;\n\tzend_string *domain, *msgid1, *msgid2;\n\tzend_long count, category;\n\n\tRETVAL_FALSE;\n\n\tZEND_PARSE_PARAMETERS_START(5, 5)\n\t\tZ_PARAM_STR(domain)\n\t\tZ_PARAM_STR(msgid1)\n\t\tZ_PARAM_STR(msgid2)\n\t\tZ_PARAM_LONG(count)\n\t\tZ_PARAM_LONG(category)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tPHP_GETTEXT_DOMAIN_LENGTH_CHECK(1, ZSTR_LEN(domain))\n\tPHP_GETTEXT_LENGTH_CHECK(2, ZSTR_LEN(msgid1))\n\tPHP_GETTEXT_LENGTH_CHECK(3, ZSTR_LEN(msgid2))\n\tPHP_DCGETTEXT_CATEGORY_CHECK(5, category)\n\n\tmsgstr = dcngettext(ZSTR_VAL(domain), ZSTR_VAL(msgid1), ZSTR_VAL(msgid2), count, category);\n\n\tZEND_ASSERT(msgstr);\n\tRETURN_STRING(msgstr);",
+    "semantic": "Implements the PHP function dcngettext in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STR",
+            "Z_PARAM_LONG",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZSTR_LEN",
+            "ZSTR_VAL",
+            "ZEND_ASSERT",
+            "RETURN_STRING"
+        ],
+        "zend_types": [
+            "zend_string",
+            "zend_long"
+        ],
+        "internal_helpers": []
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common dcngettext inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 2,
+    "purpose": "Implements the PHP function dcngettext in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "textdomain",
+        "gettext",
+        "dgettext",
+        "dcgettext",
+        "bindtextdomain",
+        "ngettext",
+        "dngettext",
+        "bind_textdomain_codeset"
+    ]
+}

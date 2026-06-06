@@ -1,0 +1,164 @@
+{
+    "php_function": "transliterator_transliterate",
+    "zend_function": "transliterator_transliterate",
+    "source_file": "iterator/transliterator_methods.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "arg1_obj",
+            "macro": "Z_PARAM_OBJ_OF_CLASS_OR_STR",
+            "arguments": [
+                "arg1_obj",
+                "Transliterator_ce_ptr",
+                "arg1_str"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_OBJ_OF_CLASS_OR_STR(arg1_obj, Transliterator_ce_ptr, arg1_str)"
+        },
+        {
+            "name": "str",
+            "macro": "Z_PARAM_STRING",
+            "arguments": [
+                "str",
+                "str_len"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING(str, str_len)"
+        },
+        {
+            "name": "start",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "start"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(start)"
+        },
+        {
+            "name": "limit",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "limit"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(limit)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php_intl.h",
+        "transliterator.h",
+        "transliterator_class.h",
+        "intl_data.h",
+        "intl_convert.h",
+        "zend_exceptions.h"
+    ],
+    "body": "char\t    *str;\n\tUChar\t\t*ustr\t\t= NULL,\n\t\t\t\t*uresult\t= NULL;\n\tsize_t\t    str_len;\n\tint32_t\t\tustr_len\t= 0,\n\t\t\t\tcapacity,\n\t\t\t\turesult_len;\n\tzend_long\tstart\t\t= 0,\n\t\t\t\tlimit\t\t= -1;\n\tint\t\t\tsuccess     = 0;\n\tzval \t\ttmp_object;\n\tTRANSLITERATOR_METHOD_INIT_VARS;\n\n\tobject = getThis();\n\n\tZVAL_UNDEF(&tmp_object);\n\n\tif (object == NULL) {\n\t\t/* in non-OOP version, accept both a transliterator and a string */\n\t\tzend_string *arg1_str;\n\t\tzend_object *arg1_obj;\n\n\t\tZEND_PARSE_PARAMETERS_START(2, 4)\n\t\t\tZ_PARAM_OBJ_OF_CLASS_OR_STR(arg1_obj, Transliterator_ce_ptr, arg1_str)\n\t\t\tZ_PARAM_STRING(str, str_len)\n\t\t\tZ_PARAM_OPTIONAL\n\t\t\tZ_PARAM_LONG(start)\n\t\t\tZ_PARAM_LONG(limit)\n\t\tZEND_PARSE_PARAMETERS_END();\n\n\t\tif (arg1_str) { /* not a transliterator object as first argument */\n\t\t\tint res;\n\t\t\tobject = &tmp_object;\n\t\t\tres = create_transliterator(ZSTR_VAL(arg1_str), ZSTR_LEN(arg1_str), TRANSLITERATOR_FORWARD, object);\n\t\t\tif( res == FAILURE )\n\t\t\t{\n\t\t\t\tif (!EG(exception)) {\n\t\t\t\t\tzend_string *message = intl_error_get_message( NULL );\n\t\t\t\t\tphp_error_docref(NULL, E_WARNING, \"Could not create transliterator with ID \\\"%s\\\" (%s)\", ZSTR_VAL(arg1_str), ZSTR_VAL(message) );\n\t\t\t\t\tzend_string_free( message );\n\t\t\t\t}\n\t\t\t\tZVAL_UNDEF(&tmp_object);\n\t\t\t\t/* don't set U_ILLEGAL_ARGUMENT_ERROR to allow fetching of inner error */\n\t\t\t\tgoto cleanup;\n\t\t\t}\n\t\t} else {\n\t\t\tZVAL_OBJ_COPY(&tmp_object, arg1_obj);\n\t\t\tobject = &tmp_object;\n\t\t}\n\t} else if(zend_parse_parameters( ZEND_NUM_ARGS(), \"s|ll\", &str, &str_len, &start, &limit) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tif (limit < -1) {\n\t\tzend_argument_value_error(object ? 3 : 4, \"must be greater than or equal to -1\");\n\t\tgoto cleanup_object;\n\t}\n\n\tif (start < 0) {\n\t\tzend_argument_value_error(object ? 2 : 3, \"must be greater than or equal to 0\");\n\t\tgoto cleanup_object;\n\t}\n\n\tif (limit != -1 && start > limit) {\n\t\tzend_argument_value_error(object ? 2 : 3, \"must be less than or equal to argument #%d ($end)\", object ? 3 : 4);\n\t\tgoto cleanup_object;\n\t}\n\n\t/* end argument parsing/validation */\n\n\tTRANSLITERATOR_METHOD_FETCH_OBJECT;\n\n\tintl_convert_utf8_to_utf16(&ustr, &ustr_len, str, str_len, TRANSLITERATOR_ERROR_CODE_P(to));\n\tINTL_METHOD_CHECK_STATUS_OR_GOTO(to, \"String conversion of string to UTF-16 failed\", cleanup_object);\n\n\t/* we've started allocating resources, goto from now on */\n\n\tif( ( start > ustr_len ) || (( limit != -1 ) && (limit > ustr_len ) ) )\n\t{\n\t\tchar *msg;\n\t\tspprintf( &msg, 0,\n\t\t\t\"transliterator_transliterate: Neither \\\"start\\\" nor the \\\"end\\\" \"\n\t\t\t\"arguments can exceed the number of UTF-16 code units \"\n\t\t\t\"(in this case, %d)\", (int) ustr_len );\n\t\tif(msg != NULL )\n\t\t{\n\t\t\tintl_errors_set( TRANSLITERATOR_ERROR_P( to ), U_ILLEGAL_ARGUMENT_ERROR,\n\t\t\t\tmsg, 1 );\n\t\t\tefree( msg );\n\t\t}\n\t\tgoto cleanup;\n\t}\n\n\turesult = safe_emalloc( ustr_len, sizeof( UChar ), 1 * sizeof( UChar ) );\n\tcapacity = ustr_len + 1;\n\n\twhile( 1 )\n\t{\n\t\tint32_t temp_limit = ( limit == -1 ? ustr_len : (int32_t) limit );\n\t\tmemcpy( uresult, ustr, ustr_len * sizeof( UChar ) );\n\t\turesult_len = ustr_len;\n\n\t\tutrans_transUChars( to->utrans, uresult, &uresult_len, capacity, (int32_t) start,\n\t\t\t&temp_limit, TRANSLITERATOR_ERROR_CODE_P( to ) );\n\t\tif( TRANSLITERATOR_ERROR_CODE( to ) == U_BUFFER_OVERFLOW_ERROR )\n\t\t{\n\t\t\tefree( uresult );\n\n\t\t\turesult = safe_emalloc( uresult_len, sizeof( UChar ), 1 * sizeof( UChar ) );\n\t\t\tcapacity = uresult_len + 1;\n\n\t\t\tintl_error_reset( TRANSLITERATOR_ERROR_P( to ) );\n\t\t}\n\t\telse if(TRANSLITERATOR_ERROR_CODE( to ) == U_STRING_NOT_TERMINATED_WARNING )\n\t\t{\n\t\t\turesult = safe_erealloc( uresult, uresult_len, sizeof( UChar ), 1 * sizeof( UChar ) );\n\n\t\t\tintl_error_reset( TRANSLITERATOR_ERROR_P( to ) );\n\t\t\tbreak;\n\t\t}\n\t\telse if( U_FAILURE( TRANSLITERATOR_ERROR_CODE( to ) ) )\n\t\t{\n\t\t\tintl_error_set_code( NULL, TRANSLITERATOR_ERROR_CODE( to ) );\n\t\t\tintl_errors_set_custom_msg( TRANSLITERATOR_ERROR_P( to ),\n\t\t\t\t\"transliterator_transliterate: transliteration failed\", 0 );\n\t\t\tgoto cleanup;\n\t\t}\n\t\telse\n\t\t\tbreak;\n\t}\n\n\turesult[uresult_len] = (UChar) 0;\n\n\tsuccess = 1;\n\ncleanup:\n\tif( ustr )\n\t\tefree( ustr );\n\n\tif( success ) {\n\t\t/* frees uresult even on error */\n\t\tINTL_METHOD_RETVAL_UTF8( to, uresult, uresult_len, 1 );\n\t}\n\telse\n\t{\n\t\tif( uresult )\n\t\t\tefree( uresult );\n\t\tRETVAL_FALSE;\n\t}\n\ncleanup_object:\n\tzval_ptr_dtor( &tmp_object );",
+    "semantic": "in non-OOP version, accept both a transliterator and a string",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZVAL_UNDEF",
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_OBJ_OF_CLASS_OR_STR",
+            "Z_PARAM_STRING",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_LONG",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZSTR_VAL",
+            "ZSTR_LEN",
+            "ZVAL_OBJ_COPY",
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS"
+        ],
+        "zend_types": [
+            "zend_long",
+            "zval",
+            "zend_string",
+            "zend_object"
+        ],
+        "internal_helpers": [
+            "php_error_docref",
+            "zend_string_free",
+            "zend_parse_parameters",
+            "zend_argument_value_error",
+            "zval_ptr_dtor"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common transliterator_transliterate inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 8,
+    "purpose": "in non-OOP version, accept both a transliterator and a string",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "transliterator_create",
+        "transliterator_create_from_rules",
+        "transliterator_create_inverse",
+        "transliterator_list_ids",
+        "transliterator_get_error_code",
+        "transliterator_get_error_message"
+    ]
+}

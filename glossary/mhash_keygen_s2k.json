@@ -1,0 +1,100 @@
+{
+    "php_function": "mhash_keygen_s2k",
+    "zend_function": "mhash_keygen_s2k",
+    "source_file": "",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "math.h",
+        "php_hash.h",
+        "ext/standard/info.h",
+        "ext/standard/file.h",
+        "ext/standard/php_var.h",
+        "zend_attributes.h",
+        "zend_exceptions.h",
+        "zend_interfaces.h",
+        "zend_smart_str.h",
+        "hash_arginfo.h"
+    ],
+    "body": "zend_long algorithm, l_bytes;\n\tint bytes;\n\tchar *password, *salt;\n\tsize_t password_len, salt_len;\n\tchar padded_salt[SALT_SIZE];\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"lssl\", &algorithm, &password, &password_len, &salt, &salt_len, &l_bytes) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tbytes = (int)l_bytes;\n\tif (bytes <= 0){\n\t\tzend_argument_value_error(4, \"must be a greater than 0\");\n\t\tRETURN_THROWS();\n\t}\n\n\tsalt_len = MIN(salt_len, SALT_SIZE);\n\n\tmemcpy(padded_salt, salt, salt_len);\n\tif (salt_len < SALT_SIZE) {\n\t\tmemset(padded_salt + salt_len, 0, SALT_SIZE - salt_len);\n\t}\n\tsalt_len = SALT_SIZE;\n\n\tRETVAL_FALSE;\n\tif (algorithm >= 0 && algorithm < MHASH_NUM_ALGOS) {\n\t\tstruct mhash_bc_entry algorithm_lookup = mhash_to_hash[algorithm];\n\t\tif (algorithm_lookup.mhash_name) {\n\t\t\tconst php_hash_ops *ops = zend_hash_str_find_ptr(&php_hash_hashtable, algorithm_lookup.hash_name, strlen(algorithm_lookup.hash_name));\n\t\t\tif (ops) {\n\t\t\t\tunsigned char null = '\\0';\n\t\t\t\tvoid *context;\n\t\t\t\tchar *key, *digest;\n\t\t\t\tint i = 0, j = 0;\n\t\t\t\tsize_t block_size = ops->digest_size;\n\t\t\t\tsize_t times = bytes / block_size;\n\n\t\t\t\tif ((bytes % block_size) != 0) {\n\t\t\t\t\ttimes++;\n\t\t\t\t}\n\n\t\t\t\tcontext = php_hash_alloc_context(ops);\n\t\t\t\tops->hash_init(context, NULL);\n\n\t\t\t\tkey = ecalloc(1, times * block_size);\n\t\t\t\tdigest = emalloc(ops->digest_size + 1);\n\n\t\t\t\tfor (i = 0; i < times; i++) {\n\t\t\t\t\tops->hash_init(context, NULL);\n\n\t\t\t\t\tfor (j=0;j<i;j++) {\n\t\t\t\t\t\tops->hash_update(context, &null, 1);\n\t\t\t\t\t}\n\t\t\t\t\tops->hash_update(context, (unsigned char *)padded_salt, salt_len);\n\t\t\t\t\tops->hash_update(context, (unsigned char *)password, password_len);\n\t\t\t\t\tops->hash_final((unsigned char *)digest, context);\n\t\t\t\t\tmemcpy( &key[i*block_size], digest, block_size);\n\t\t\t\t}\n\n\t\t\t\tRETVAL_STRINGL(key, bytes);\n\t\t\t\tZEND_SECURE_ZERO(key, bytes);\n\t\t\t\tefree(digest);\n\t\t\t\tefree(context);\n\t\t\t\tefree(key);\n\t\t\t}\n\t\t}\n\t}",
+    "semantic": "Implements the PHP function mhash_keygen_s2k in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "ZEND_SECURE_ZERO"
+        ],
+        "zend_types": [
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "zend_argument_value_error",
+            "zend_hash_str_find_ptr",
+            "php_hash_alloc_context"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common mhash_keygen_s2k inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 7,
+    "purpose": "Implements the PHP function mhash_keygen_s2k in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "hash",
+        "hash_file",
+        "hash_hmac",
+        "hash_hmac_file",
+        "hash_init",
+        "hash_update",
+        "hash_update_stream",
+        "hash_update_file",
+        "hash_final",
+        "hash_copy",
+        "hash_algos",
+        "hash_hmac_algos"
+    ]
+}

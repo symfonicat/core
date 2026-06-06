@@ -1,0 +1,128 @@
+{
+    "php_function": "preg_quote",
+    "zend_function": "preg_quote",
+    "source_file": "re.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "str",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "str"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(str)"
+        },
+        {
+            "name": "delim",
+            "macro": "Z_PARAM_STR_OR_NULL",
+            "arguments": [
+                "delim"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR_OR_NULL(delim)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "php_ini.h",
+        "php_pcre.h",
+        "ext/standard/info.h",
+        "ext/standard/basic_functions.h",
+        "zend_smart_str.h",
+        "SAPI.h",
+        "php_pcre_arginfo.h"
+    ],
+    "body": "zend_string *str;       \t\t/* Input string argument */\n\tzend_string\t*delim = NULL;\t\t/* Additional delimiter argument */\n\tchar\t\t*in_str;\t\t\t/* Input string */\n\tchar\t\t*in_str_end;    \t/* End of the input string */\n\tzend_string\t*out_str;\t\t\t/* Output string with quoted characters */\n\tsize_t       extra_len;         /* Number of additional characters */\n\tchar \t\t*p,\t\t\t\t\t/* Iterator for input string */\n\t\t\t\t*q,\t\t\t\t\t/* Iterator for output string */\n\t\t\t\t delim_char = '\\0',\t/* Delimiter character to be quoted */\n\t\t\t\t c;\t\t\t\t\t/* Current character */\n\n\t/* Get the arguments and check for errors */\n\tZEND_PARSE_PARAMETERS_START(1, 2)\n\t\tZ_PARAM_STR(str)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_STR_OR_NULL(delim)\n\tZEND_PARSE_PARAMETERS_END();\n\n\t/* Nothing to do if we got an empty string */\n\tif (ZSTR_LEN(str) == 0) {\n\t\tRETURN_EMPTY_STRING();\n\t}\n\n\tin_str = ZSTR_VAL(str);\n\tin_str_end = in_str + ZSTR_LEN(str);\n\n\tif (delim) {\n\t\tdelim_char = ZSTR_VAL(delim)[0];\n\t}\n\n\t/* Go through the string and quote necessary characters */\n\textra_len = 0;\n\tp = in_str;\n\tdo {\n\t\tc = *p;\n\t\tswitch(c) {\n\t\t\tcase '.':\n\t\t\tcase '\\\\':\n\t\t\tcase '+':\n\t\t\tcase '*':\n\t\t\tcase '?':\n\t\t\tcase '[':\n\t\t\tcase '^':\n\t\t\tcase ']':\n\t\t\tcase '$':\n\t\t\tcase '(':\n\t\t\tcase ')':\n\t\t\tcase '{':\n\t\t\tcase '}':\n\t\t\tcase '=':\n\t\t\tcase '!':\n\t\t\tcase '>':\n\t\t\tcase '<':\n\t\t\tcase '|':\n\t\t\tcase ':':\n\t\t\tcase '-':\n\t\t\tcase '#':\n\t\t\t\textra_len++;\n\t\t\t\tbreak;\n\n\t\t\tcase '\\0':\n\t\t\t\textra_len+=3;\n\t\t\t\tbreak;\n\n\t\t\tdefault:\n\t\t\t\tif (c == delim_char) {\n\t\t\t\t\textra_len++;\n\t\t\t\t}\n\t\t\t\tbreak;\n\t\t}\n\t\tp++;\n\t} while (p != in_str_end);\n\n\tif (extra_len == 0) {\n\t\tRETURN_STR_COPY(str);\n\t}\n\n\t/* Allocate enough memory so that even if each character\n\t   is quoted, we won't run out of room */\n\tout_str = zend_string_safe_alloc(1, ZSTR_LEN(str), extra_len, 0);\n\tq = ZSTR_VAL(out_str);\n\tp = in_str;\n\n\tdo {\n\t\tc = *p;\n\t\tswitch(c) {\n\t\t\tcase '.':\n\t\t\tcase '\\\\':\n\t\t\tcase '+':\n\t\t\tcase '*':\n\t\t\tcase '?':\n\t\t\tcase '[':\n\t\t\tcase '^':\n\t\t\tcase ']':\n\t\t\tcase '$':\n\t\t\tcase '(':\n\t\t\tcase ')':\n\t\t\tcase '{':\n\t\t\tcase '}':\n\t\t\tcase '=':\n\t\t\tcase '!':\n\t\t\tcase '>':\n\t\t\tcase '<':\n\t\t\tcase '|':\n\t\t\tcase ':':\n\t\t\tcase '-':\n\t\t\tcase '#':\n\t\t\t\t*q++ = '\\\\';\n\t\t\t\t*q++ = c;\n\t\t\t\tbreak;\n\n\t\t\tcase '\\0':\n\t\t\t\t*q++ = '\\\\';\n\t\t\t\t*q++ = '0';\n\t\t\t\t*q++ = '0';\n\t\t\t\t*q++ = '0';\n\t\t\t\tbreak;\n\n\t\t\tdefault:\n\t\t\t\tif (c == delim_char) {\n\t\t\t\t\t*q++ = '\\\\';\n\t\t\t\t}\n\t\t\t\t*q++ = c;\n\t\t\t\tbreak;\n\t\t}\n\t\tp++;\n\t} while (p != in_str_end);\n\t*q = '\\0';\n\n\tRETURN_NEW_STR(out_str);",
+    "semantic": "Input string argument",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STR",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_STR_OR_NULL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZSTR_LEN",
+            "RETURN_EMPTY_STRING",
+            "ZSTR_VAL",
+            "RETURN_STR_COPY",
+            "RETURN_NEW_STR"
+        ],
+        "zend_types": [
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "zend_string_safe_alloc"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common preg_quote inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 8,
+    "purpose": "Input string argument",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "preg_match",
+        "preg_match_all",
+        "preg_replace",
+        "preg_replace_callback",
+        "preg_replace_callback_array",
+        "preg_filter",
+        "preg_split",
+        "preg_grep",
+        "preg_last_error",
+        "preg_last_error_msg"
+    ]
+}

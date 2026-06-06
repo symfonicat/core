@@ -1,0 +1,116 @@
+{
+    "php_function": "session_regenerate_id",
+    "zend_function": "session_regenerate_id",
+    "source_file": "sion.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "sys/stat.h",
+        "fcntl.h",
+        "php_ini.h",
+        "rfc1867.h",
+        "php_variables.h",
+        "php_session.h",
+        "session_arginfo.h",
+        "ext/standard/php_var.h",
+        "ext/date/php_date.h",
+        "ext/standard/url_scanner_ex.h",
+        "ext/standard/info.h",
+        "zend_smart_str.h",
+        "ext/standard/url.h",
+        "ext/standard/basic_functions.h",
+        "ext/standard/head.h",
+        "ext/random/php_random.h",
+        "ext/random/php_random_csprng.h",
+        "mod_files.h",
+        "mod_user.h",
+        "mod_mm.h"
+    ],
+    "body": "bool del_ses = 0;\n\tzend_string *data;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"|b\", &del_ses) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tif (PS(session_status) != php_session_active) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Session ID cannot be regenerated when there is no active session\");\n\t\tRETURN_FALSE;\n\t}\n\n\tif (SG(headers_sent)) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Session ID cannot be regenerated after headers have already been sent\");\n\t\tRETURN_FALSE;\n\t}\n\n\t/* Process old session data */\n\tif (del_ses) {\n\t\tif (PS(mod)->s_destroy(&PS(mod_data), PS(id)) == FAILURE) {\n\t\t\tPS(mod)->s_close(&PS(mod_data));\n\t\t\tPS(session_status) = php_session_none;\n\t\t\tif (!EG(exception)) {\n\t\t\t\tphp_error_docref(NULL, E_WARNING, \"Session object destruction failed. ID: %s (path: %s)\", PS(mod)->s_name, PS(save_path));\n\t\t\t}\n\t\t\tRETURN_FALSE;\n\t\t}\n\t} else {\n\t\tzend_result ret;\n\t\tdata = php_session_encode();\n\t\tif (data) {\n\t\t\tret = PS(mod)->s_write(&PS(mod_data), PS(id), data, PS(gc_maxlifetime));\n\t\t\tzend_string_release_ex(data, 0);\n\t\t} else {\n\t\t\tret = PS(mod)->s_write(&PS(mod_data), PS(id), ZSTR_EMPTY_ALLOC(), PS(gc_maxlifetime));\n\t\t}\n\t\tif (ret == FAILURE) {\n\t\t\tPS(mod)->s_close(&PS(mod_data));\n\t\t\tPS(session_status) = php_session_none;\n\t\t\tphp_error_docref(NULL, E_WARNING, \"Session write failed. ID: %s (path: %s)\", PS(mod)->s_name, PS(save_path));\n\t\t\tRETURN_FALSE;\n\t\t}\n\t}\n\tPS(mod)->s_close(&PS(mod_data));\n\n\t/* New session data */\n\tif (PS(session_vars)) {\n\t\tzend_string_release_ex(PS(session_vars), 0);\n\t\tPS(session_vars) = NULL;\n\t}\n\tzend_string_release_ex(PS(id), 0);\n\tPS(id) = NULL;\n\n\tif (PS(mod)->s_open(&PS(mod_data), PS(save_path), PS(session_name)) == FAILURE) {\n\t\tPS(session_status) = php_session_none;\n\t\tif (!EG(exception)) {\n\t\t\tzend_throw_error(NULL, \"Failed to open session: %s (path: %s)\", PS(mod)->s_name, PS(save_path));\n\t\t}\n\t\tRETURN_THROWS();\n\t}\n\n\tPS(id) = PS(mod)->s_create_sid(&PS(mod_data));\n\tif (!PS(id)) {\n\t\tPS(session_status) = php_session_none;\n\t\tif (!EG(exception)) {\n\t\t\tzend_throw_error(NULL, \"Failed to create new session ID: %s (path: %s)\", PS(mod)->s_name, PS(save_path));\n\t\t}\n\t\tRETURN_THROWS();\n\t}\n\tif (PS(use_strict_mode)) {\n\t\tif ((!PS(mod_user_implemented) && PS(mod)->s_validate_sid) || !Z_ISUNDEF(PS(mod_user_names).ps_validate_sid)) {\n\t\t\tint limit = 3;\n\t\t\t/* Try to generate non-existing ID */\n\t\t\twhile (limit-- && PS(mod)->s_validate_sid(&PS(mod_data), PS(id)) == SUCCESS) {\n\t\t\t\tzend_string_release_ex(PS(id), 0);\n\t\t\t\tPS(id) = PS(mod)->s_create_sid(&PS(mod_data));\n\t\t\t\tif (!PS(id)) {\n\t\t\t\t\tPS(mod)->s_close(&PS(mod_data));\n\t\t\t\t\tPS(session_status) = php_session_none;\n\t\t\t\t\tif (!EG(exception)) {\n\t\t\t\t\t\tzend_throw_error(NULL, \"Failed to create session ID by collision: %s (path: %s)\", PS(mod)->s_name, PS(save_path));\n\t\t\t\t\t}\n\t\t\t\t\tRETURN_THROWS();\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\t// TODO warn that ID cannot be verified? else { }\n\t}\n\t/* Read is required to make new session data at this point. */\n\tif (PS(mod)->s_read(&PS(mod_data), PS(id), &data, PS(gc_maxlifetime)) == FAILURE) {\n\t\tPS(mod)->s_close(&PS(mod_data));\n\t\tPS(session_status) = php_session_none;\n\t\tif (!EG(exception)) {\n\t\t\tzend_throw_error(NULL, \"Failed to create(read) session ID: %s (path: %s)\", PS(mod)->s_name, PS(save_path));\n\t\t}\n\t\tRETURN_THROWS();\n\t}\n\tif (data) {\n\t\tzend_string_release_ex(data, 0);\n\t}\n\n\tif (PS(use_cookies)) {\n\t\tPS(send_cookie) = 1;\n\t}\n\tif (php_session_reset_id() == FAILURE) {\n\t\tRETURN_FALSE;\n\t}\n\n\tRETURN_TRUE;",
+    "semantic": "Process old session data",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_FALSE",
+            "ZSTR_EMPTY_ALLOC",
+            "RETURN_TRUE"
+        ],
+        "zend_types": [
+            "zend_string",
+            "zend_result"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "php_error_docref",
+            "php_session_encode",
+            "zend_string_release_ex",
+            "zend_throw_error",
+            "php_session_reset_id"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common session_regenerate_id inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 7,
+    "purpose": "Process old session data",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "session_set_cookie_params",
+        "session_get_cookie_params",
+        "session_name",
+        "session_module_name",
+        "session_set_save_handler",
+        "session_save_path",
+        "session_id",
+        "session_create_id",
+        "session_cache_limiter",
+        "session_cache_expire",
+        "session_encode",
+        "session_decode"
+    ]
+}

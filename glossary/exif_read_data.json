@@ -1,0 +1,156 @@
+{
+    "php_function": "exif_read_data",
+    "zend_function": "exif_read_data",
+    "source_file": "",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "stream",
+            "macro": "Z_PARAM_ZVAL",
+            "arguments": [
+                "stream"
+            ],
+            "type": "zval",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": true,
+            "raw": "Z_PARAM_ZVAL(stream)"
+        },
+        {
+            "name": "z_sections_needed",
+            "macro": "Z_PARAM_STR_OR_NULL",
+            "arguments": [
+                "z_sections_needed"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR_OR_NULL(z_sections_needed)"
+        },
+        {
+            "name": "sub_arrays",
+            "macro": "Z_PARAM_BOOL",
+            "arguments": [
+                "sub_arrays"
+            ],
+            "type": "bool",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_BOOL(sub_arrays)"
+        },
+        {
+            "name": "read_thumbnail",
+            "macro": "Z_PARAM_BOOL",
+            "arguments": [
+                "read_thumbnail"
+            ],
+            "type": "bool",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_BOOL(read_thumbnail)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "ext/standard/file.h",
+        "php_exif.h",
+        "exif_arginfo.h",
+        "math.h",
+        "php_ini.h",
+        "ext/standard/php_string.h",
+        "ext/standard/php_image.h",
+        "ext/standard/info.h",
+        "sys/types.h"
+    ],
+    "body": "zend_string *z_sections_needed = NULL;\n\tbool sub_arrays = 0, read_thumbnail = 0, read_all = 0;\n\tzval *stream;\n\tbool ret;\n\tint i, sections_needed = 0;\n\timage_info_type ImageInfo;\n\tchar tmp[64], *sections_str, *s;\n\n\t/* Parse arguments */\n\tZEND_PARSE_PARAMETERS_START(1, 4)\n\t\tZ_PARAM_ZVAL(stream)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_STR_OR_NULL(z_sections_needed)\n\t\tZ_PARAM_BOOL(sub_arrays)\n\t\tZ_PARAM_BOOL(read_thumbnail)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tmemset(&ImageInfo, 0, sizeof(ImageInfo));\n\n\tif (z_sections_needed) {\n\t\tspprintf(&sections_str, 0, \",%s,\", ZSTR_VAL(z_sections_needed));\n\t\t/* sections_str DOES start with , and SPACES are NOT allowed in names */\n\t\ts = sections_str;\n\t\twhile (*++s) {\n\t\t\tif (*s == ' ') {\n\t\t\t\t*s = ',';\n\t\t\t}\n\t\t}\n\n\t\tfor (i = 0; i < SECTION_COUNT; i++) {\n\t\t\tsnprintf(tmp, sizeof(tmp), \",%s,\", exif_get_sectionname(i));\n\t\t\tif (strstr(sections_str, tmp)) {\n\t\t\t\tsections_needed |= 1<<i;\n\t\t\t}\n\t\t}\n\t\tEFREE_IF(sections_str);\n\t\t/* now see what we need */\n#ifdef EXIF_DEBUG\n\t\tsections_str = exif_get_sectionlist(sections_needed);\n\t\tif (!sections_str) {\n\t\t\tRETURN_FALSE;\n\t\t}\n\t\texif_error_docref(NULL EXIFERR_CC, &ImageInfo, E_NOTICE, \"Sections needed: %s\", sections_str[0] ? sections_str : \"None\");\n\t\tEFREE_IF(sections_str);\n#endif\n\t}\n\n\tif (Z_TYPE_P(stream) == IS_RESOURCE) {\n\t\tphp_stream *p_stream = NULL;\n\n\t\tphp_stream_from_res(p_stream, Z_RES_P(stream));\n\n\t\tret = exif_read_from_stream(&ImageInfo, p_stream, read_thumbnail, read_all);\n\t} else {\n\t\tif (!try_convert_to_string(stream)) {\n\t\t\tRETURN_THROWS();\n\t\t}\n\n\t\tif (!Z_STRLEN_P(stream)) {\n\t\t\tzend_argument_must_not_be_empty_error(1);\n\t\t\tRETURN_THROWS();\n\t\t}\n\n\t\tif (CHECK_NULL_PATH(Z_STRVAL_P(stream), Z_STRLEN_P(stream))) {\n\t\t\tzend_argument_value_error(1, \"must not contain any null bytes\");\n\t\t\tRETURN_THROWS();\n\t\t}\n\n\t\tret = exif_read_from_file(&ImageInfo, Z_STRVAL_P(stream), read_thumbnail, read_all);\n\t}\n\n\tsections_str = exif_get_sectionlist(ImageInfo.sections_found);\n\n#ifdef EXIF_DEBUG\n\tif (sections_str) {\n\t\texif_error_docref(NULL EXIFERR_CC, &ImageInfo, E_NOTICE, \"Sections found: %s\", sections_str[0] ? sections_str : \"None\");\n\t}\n#endif\n\n\tImageInfo.sections_found |= FOUND_COMPUTED|FOUND_FILE;/* do not inform about in debug*/\n\n\tif (ret == false || (sections_needed && !(sections_needed&ImageInfo.sections_found))) {\n\t\t/* array_init must be checked at last! otherwise the array must be freed if a later test fails. */\n\t\texif_discard_imageinfo(&ImageInfo);\n\t   \tEFREE_IF(sections_str);\n\t\tRETURN_FALSE;\n\t}\n\n\tarray_init(return_value);\n\n#ifdef EXIF_DEBUG\n\texif_error_docref(NULL EXIFERR_CC, &ImageInfo, E_NOTICE, \"Generate section FILE\");\n#endif\n\n\t/* now we can add our information */\n\texif_iif_add_str(&ImageInfo, SECTION_FILE, \"FileName\",      ImageInfo.FileName);\n\texif_iif_add_int(&ImageInfo, SECTION_FILE, \"FileDateTime\",  ImageInfo.FileDateTime);\n\texif_iif_add_int(&ImageInfo, SECTION_FILE, \"FileSize\",      ImageInfo.FileSize);\n\texif_iif_add_int(&ImageInfo, SECTION_FILE, \"FileType\",      ImageInfo.FileType);\n\texif_iif_add_str(&ImageInfo, SECTION_FILE, \"MimeType\",      (char*)php_image_type_to_mime_type(ImageInfo.FileType));\n\texif_iif_add_str(&ImageInfo, SECTION_FILE, \"SectionsFound\", sections_str ? sections_str : \"NONE\");\n\n#ifdef EXIF_DEBUG\n\texif_error_docref(NULL EXIFERR_CC, &ImageInfo, E_NOTICE, \"Generate section COMPUTED\");\n#endif\n\n\tif (ImageInfo.Width>0 &&  ImageInfo.Height>0) {\n\t\texif_iif_add_fmt(&ImageInfo, SECTION_COMPUTED, \"html\"   , \"width=\\\"%d\\\" height=\\\"%d\\\"\", ImageInfo.Width, ImageInfo.Height);\n\t\texif_iif_add_int(&ImageInfo, SECTION_COMPUTED, \"Height\", ImageInfo.Height);\n\t\texif_iif_add_int(&ImageInfo, SECTION_COMPUTED, \"Width\",  ImageInfo.Width);\n\t}\n\texif_iif_add_int(&ImageInfo, SECTION_COMPUTED, \"IsColor\", ImageInfo.IsColor);\n\tif (ImageInfo.motorola_intel != -1) {\n\t\texif_iif_add_int(&ImageInfo, SECTION_COMPUTED, \"ByteOrderMotorola\", ImageInfo.motorola_intel);\n\t}\n\tif (ImageInfo.FocalLength) {\n\t\texif_iif_add_fmt(&ImageInfo, SECTION_COMPUTED, \"FocalLength\", \"%4.1Fmm\", ImageInfo.FocalLength);\n\t\tif(ImageInfo.CCDWidth) {\n\t\t\texif_iif_add_fmt(&ImageInfo, SECTION_COMPUTED, \"35mmFocalLength\", \"%dmm\", (int)(ImageInfo.FocalLength/ImageInfo.CCDWidth*35+0.5));\n\t\t}\n\t}\n\tif(ImageInfo.CCDWidth) {\n\t\texif_iif_add_fmt(&ImageInfo, SECTION_COMPUTED, \"CCDWidth\", \"%dmm\", (int)ImageInfo.CCDWidth);\n\t}\n\tif(ImageInfo.ExposureTime>0) {\n\t\tfloat recip_exposure_time = 0.5f + 1.0f/ImageInfo.ExposureTime;\n\t\tif (ImageInfo.ExposureTime <= 0.5 && recip_exposure_time < (float)INT_MAX) {\n\t\t\texif_iif_add_fmt(&ImageInfo, SECTION_COMPUTED, \"ExposureTime\", \"%0.3F s (1/%d)\", ImageInfo.ExposureTime, (int) recip_exposure_time);\n\t\t} else {\n\t\t\texif_iif_add_fmt(&ImageInfo, SECTION_COMPUTED, \"ExposureTime\", \"%0.3F s\", ImageInfo.ExposureTime);\n\t\t}\n\t}\n\tif(ImageInfo.ApertureFNumber) {\n\t\texif_iif_add_fmt(&ImageInfo, SECTION_COMPUTED, \"ApertureFNumber\", \"f/%.1F\", ImageInfo.ApertureFNumber);\n\t}\n\tif(ImageInfo.Distance) {\n\t\tif(ImageInfo.Distance<0) {\n\t\t\texif_iif_add_str(&ImageInfo, SECTION_COMPUTED, \"FocusDistance\", \"Infinite\");\n\t\t} else {\n\t\t\texif_iif_add_fmt(&ImageInfo, SECTION_COMPUTED, \"FocusDistance\", \"%0.2Fm\", ImageInfo.Distance);\n\t\t}\n\t}\n\tif (ImageInfo.UserComment) {\n\t\texif_iif_add_buffer(&ImageInfo, SECTION_COMPUTED, \"UserComment\", ImageInfo.UserCommentLength, ImageInfo.UserComment);\n\t\tif (ImageInfo.UserCommentEncoding && strlen(ImageInfo.UserCommentEncoding)) {\n\t\t\texif_iif_add_str(&ImageInfo, SECTION_COMPUTED, \"UserCommentEncoding\", ImageInfo.UserCommentEncoding);\n\t\t}\n\t}\n\n\texif_iif_add_str(&ImageInfo, SECTION_COMPUTED, \"Copyright\",              ImageInfo.Copyright);\n\texif_iif_add_str(&ImageInfo, SECTION_COMPUTED, \"Copyright.Photographer\", ImageInfo.CopyrightPhotographer);\n\texif_iif_add_str(&ImageInfo, SECTION_COMPUTED, \"Copyright.Editor\",       ImageInfo.CopyrightEditor);\n\n\tfor (i=0; i<ImageInfo.xp_fields.count; i++) {\n\t\texif_iif_add_str(&ImageInfo, SECTION_WINXP, exif_get_tagname_debug(ImageInfo.xp_fields.list[i].tag, exif_get_tag_table(SECTION_WINXP)), ImageInfo.xp_fields.list[i].value);\n\t}\n\tif (ImageInfo.Thumbnail.size) {\n\t\tif (read_thumbnail) {\n\t\t\t/* not exif_iif_add_str : this is a buffer */\n\t\t\texif_iif_add_tag(&ImageInfo, SECTION_THUMBNAIL, \"THUMBNAIL\", TAG_NONE, TAG_FMT_UNDEFINED, ImageInfo.Thumbnail.size, ImageInfo.Thumbnail.data, ImageInfo.Thumbnail.size);\n\t\t}\n\t\tif (!ImageInfo.Thumbnail.width || !ImageInfo.Thumbnail.height) {\n\t\t\t/* try to evaluate if thumbnail data is present */\n\t\t\texif_scan_thumbnail(&ImageInfo);\n\t\t}\n\t\texif_iif_add_int(&ImageInfo, SECTION_COMPUTED, \"Thumbnail.FileType\", ImageInfo.Thumbnail.filetype);\n\t\texif_iif_add_str(&ImageInfo, SECTION_COMPUTED, \"Thumbnail.MimeType\", (char*)php_image_type_to_mime_type(ImageInfo.Thumbnail.filetype));\n\t}\n\tif (ImageInfo.Thumbnail.width && ImageInfo.Thumbnail.height) {\n\t\texif_iif_add_int(&ImageInfo, SECTION_COMPUTED, \"Thumbnail.Height\", ImageInfo.Thumbnail.height);\n\t\texif_iif_add_int(&ImageInfo, SECTION_COMPUTED, \"Thumbnail.Width\",  ImageInfo.Thumbnail.width);\n\t}\n\tEFREE_IF(sections_str);\n\n#ifdef EXIF_DEBUG\n\texif_error_docref(NULL EXIFERR_CC, &ImageInfo, E_NOTICE, \"Adding image infos\");\n#endif\n\n\tadd_assoc_image_info(return_value, sub_arrays, &ImageInfo, SECTION_FILE      );\n\tadd_assoc_image_info(return_value, 1,          &ImageInfo, SECTION_COMPUTED  );\n\tadd_assoc_image_info(return_value, sub_arrays, &ImageInfo, SECTION_ANY_TAG   );\n\tadd_assoc_image_info(return_value, sub_arrays, &ImageInfo, SECTION_IFD0      );\n\tadd_assoc_image_info(return_value, 1,          &ImageInfo, SECTION_THUMBNAIL );\n\tadd_assoc_image_info(return_value, 1,          &ImageInfo, SECTION_COMMENT   );\n\tadd_assoc_image_info(return_value, sub_arrays, &ImageInfo, SECTION_EXIF      );\n\tadd_assoc_image_info(return_value, sub_arrays, &ImageInfo, SECTION_GPS       );\n\tadd_assoc_image_info(return_value, sub_arrays, &ImageInfo, SECTION_INTEROP   );\n\tadd_assoc_image_info(return_value, sub_arrays, &ImageInfo, SECTION_FPIX      );\n\tadd_assoc_image_info(return_value, sub_arrays, &ImageInfo, SECTION_APP12     );\n\tadd_assoc_image_info(return_value, sub_arrays, &ImageInfo, SECTION_WINXP     );\n\tadd_assoc_image_info(return_value, sub_arrays, &ImageInfo, SECTION_MAKERNOTE );\n\n#ifdef EXIF_DEBUG\n\texif_error_docref(NULL EXIFERR_CC, &ImageInfo, E_NOTICE, \"Discarding info\");\n#endif\n\n\texif_discard_imageinfo(&ImageInfo);\n\n#ifdef EXIF_DEBUG\n\tphp_error_docref1(NULL, (Z_TYPE_P(stream) == IS_RESOURCE ? \"<stream>\" : Z_STRVAL_P(stream)), E_NOTICE, \"Done\");\n#endif",
+    "semantic": "Parse arguments",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_ZVAL",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_STR_OR_NULL",
+            "Z_PARAM_BOOL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZSTR_VAL",
+            "RETURN_FALSE",
+            "RETURN_THROWS"
+        ],
+        "zend_types": [
+            "zend_string",
+            "zval"
+        ],
+        "internal_helpers": [
+            "php_stream_from_res",
+            "zend_argument_must_not_be_empty_error",
+            "zend_argument_value_error",
+            "php_image_type_to_mime_type",
+            "php_error_docref1"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common exif_read_data inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 10,
+    "purpose": "Parse arguments",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "exif_tagname",
+        "exif_thumbnail",
+        "exif_imagetype"
+    ]
+}

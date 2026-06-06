@@ -1,0 +1,144 @@
+{
+    "php_function": "array_diff",
+    "zend_function": "array_diff",
+    "source_file": "ray.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "'+'",
+            "macro": "Z_PARAM_VARIADIC",
+            "arguments": [
+                "'+'",
+                "args",
+                "argc"
+            ],
+            "type": "mixed",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": true,
+            "by_reference": false,
+            "raw": "Z_PARAM_VARIADIC('+', args, argc)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "php_ini.h",
+        "stdarg.h",
+        "stdlib.h",
+        "math.h",
+        "time.h",
+        "string.h",
+        "zend_globals.h",
+        "zend_interfaces.h",
+        "php_array.h",
+        "basic_functions.h",
+        "php_string.h",
+        "php_math.h",
+        "zend_smart_str.h",
+        "zend_bitset.h",
+        "zend_exceptions.h",
+        "ext/random/php_random.h",
+        "zend_frameless_function.h"
+    ],
+    "body": "zval *args;\n\tuint32_t argc, i;\n\tuint32_t num;\n\tHashTable exclude;\n\tzval *value;\n\tzend_string *str, *tmp_str, *key;\n\tzend_long idx;\n\tzval dummy;\n\n\tZEND_PARSE_PARAMETERS_START(1, -1)\n\t\tZ_PARAM_VARIADIC('+', args, argc)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (Z_TYPE(args[0]) != IS_ARRAY) {\n\t\tzend_argument_type_error(1, \"must be of type array, %s given\", zend_zval_value_name(&args[0]));\n\t\tRETURN_THROWS();\n\t}\n\n\tnum = zend_hash_num_elements(Z_ARRVAL(args[0]));\n\tif (num == 0) {\n\t\tfor (i = 1; i < argc; i++) {\n\t\t\tif (Z_TYPE(args[i]) != IS_ARRAY) {\n\t\t\t\tzend_argument_type_error(i + 1, \"must be of type array, %s given\", zend_zval_value_name(&args[i]));\n\t\t\t\tRETURN_THROWS();\n\t\t\t}\n\t\t}\n\t\tRETURN_EMPTY_ARRAY();\n\t} else if (num == 1) {\n\t\tint found = 0;\n\t\tzend_string *search_str, *tmp_search_str;\n\n\t\tvalue = NULL;\n\t\tZEND_HASH_FOREACH_VAL(Z_ARRVAL(args[0]), value) {\n\t\t\tbreak;\n\t\t} ZEND_HASH_FOREACH_END();\n\n\t\tif (!value) {\n\t\t\tfor (i = 1; i < argc; i++) {\n\t\t\t\tif (Z_TYPE(args[i]) != IS_ARRAY) {\n\t\t\t\t\tzend_argument_type_error(i + 1, \"must be of type array, %s given\", zend_zval_value_name(&args[i]));\n\t\t\t\t\tRETURN_THROWS();\n\t\t\t\t}\n\t\t\t}\n\t\t\tRETURN_EMPTY_ARRAY();\n\t\t}\n\n\t\tsearch_str = zval_get_tmp_string(value, &tmp_search_str);\n\n\t\tfor (i = 1; i < argc; i++) {\n\t\t\tif (Z_TYPE(args[i]) != IS_ARRAY) {\n\t\t\t\tzend_argument_type_error(i + 1, \"must be of type array, %s given\", zend_zval_value_name(&args[i]));\n\t\t\t\tRETURN_THROWS();\n\t\t\t}\n\t\t\tif (!found) {\n\t\t\t\tZEND_HASH_FOREACH_VAL(Z_ARRVAL(args[i]), value) {\n\t\t\t\t\tstr = zval_get_tmp_string(value, &tmp_str);\n\t\t\t\t\tif (zend_string_equals(search_str, str)) {\n\t\t\t\t\t\tzend_tmp_string_release(tmp_str);\n\t\t\t\t\t\tfound = 1;\n\t\t\t\t\t\tbreak;\n\t\t\t\t\t}\n\t\t\t\t\tzend_tmp_string_release(tmp_str);\n\t\t\t\t} ZEND_HASH_FOREACH_END();\n\t\t\t}\n\t\t}\n\n\t\tzend_tmp_string_release(tmp_search_str);\n\n\t\tif (found) {\n\t\t\tRETVAL_EMPTY_ARRAY();\n\t\t} else {\n\t\t\tZVAL_COPY(return_value, &args[0]);\n\t\t}\n\t\treturn;\n\t}\n\n\t/* count number of elements */\n\tnum = 0;\n\tfor (i = 1; i < argc; i++) {\n\t\tif (Z_TYPE(args[i]) != IS_ARRAY) {\n\t\t\tzend_argument_type_error(i + 1, \"must be of type array, %s given\", zend_zval_value_name(&args[i]));\n\t\t\tRETURN_THROWS();\n\t\t}\n\t\tnum += zend_hash_num_elements(Z_ARRVAL(args[i]));\n\t}\n\n\tif (num == 0) {\n\t\tZVAL_COPY(return_value, &args[0]);\n\t\treturn;\n\t}\n\n\tZVAL_NULL(&dummy);\n\t/* create exclude map */\n\tzend_hash_init(&exclude, num, NULL, NULL, 0);\n\tfor (i = 1; i < argc; i++) {\n\t\tZEND_HASH_FOREACH_VAL(Z_ARRVAL(args[i]), value) {\n\t\t\tstr = zval_get_tmp_string(value, &tmp_str);\n\t\t\tzend_hash_add(&exclude, str, &dummy);\n\t\t\tzend_tmp_string_release(tmp_str);\n\t\t} ZEND_HASH_FOREACH_END();\n\t}\n\n\t/* copy all elements of first array that are not in exclude set */\n\tarray_init_size(return_value, zend_hash_num_elements(Z_ARRVAL(args[0])));\n\tZEND_HASH_FOREACH_KEY_VAL(Z_ARRVAL(args[0]), idx, key, value) {\n\t\tstr = zval_get_tmp_string(value, &tmp_str);\n\t\tif (!zend_hash_exists(&exclude, str)) {\n\t\t\tif (key) {\n\t\t\t\tvalue = zend_hash_add_new(Z_ARRVAL_P(return_value), key, value);\n\t\t\t} else {\n\t\t\t\tvalue = zend_hash_index_add_new(Z_ARRVAL_P(return_value), idx, value);\n\t\t\t}\n\t\t\tzval_add_ref(value);\n\t\t}\n\t\tzend_tmp_string_release(tmp_str);\n\t} ZEND_HASH_FOREACH_END();\n\n\tzend_hash_destroy(&exclude);",
+    "semantic": "count number of elements",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_VARIADIC",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_THROWS",
+            "RETURN_EMPTY_ARRAY",
+            "ZEND_HASH_FOREACH_VAL",
+            "ZEND_HASH_FOREACH_END",
+            "ZVAL_COPY",
+            "ZVAL_NULL",
+            "ZEND_HASH_FOREACH_KEY_VAL"
+        ],
+        "zend_types": [
+            "zval",
+            "HashTable",
+            "zend_string",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_argument_type_error",
+            "zend_zval_value_name",
+            "zend_hash_num_elements",
+            "zval_get_tmp_string",
+            "zend_string_equals",
+            "zend_tmp_string_release",
+            "zend_hash_init",
+            "zend_hash_add",
+            "zend_hash_exists",
+            "zend_hash_add_new",
+            "zend_hash_index_add_new",
+            "zval_add_ref",
+            "zend_hash_destroy"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common array_diff inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 10,
+    "purpose": "count number of elements",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "krsort",
+        "ksort",
+        "count",
+        "natsort",
+        "natcasesort",
+        "asort",
+        "arsort",
+        "sort",
+        "rsort",
+        "usort",
+        "uasort",
+        "uksort"
+    ]
+}

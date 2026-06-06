@@ -1,0 +1,88 @@
+{
+    "php_function": "dns_get_record",
+    "zend_function": "dns_get_record",
+    "source_file": "s_win32.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "php.h",
+        "windows.h",
+        "Winbase.h ",
+        "Windns.h",
+        "Ws2tcpip.h",
+        "php_dns.h"
+    ],
+    "body": "char *hostname;\n\tsize_t hostname_len;\n\tzend_long type_param = PHP_DNS_ANY;\n\tzval *authns = NULL, *addtl = NULL;\n\tint type, type_to_fetch, first_query = 1, store_results = 1;\n\tbool raw = 0;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"s|lz!z!b\",\n\t\t\t&hostname, &hostname_len, &type_param, &authns, &addtl, &raw) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tif (authns) {\n\t\tauthns = zend_try_array_init(authns);\n\t\tif (!authns) {\n\t\t\tRETURN_THROWS();\n\t\t}\n\t}\n\tif (addtl) {\n\t\taddtl = zend_try_array_init(addtl);\n\t\tif (!addtl) {\n\t\t\tRETURN_THROWS();\n\t\t}\n\t}\n\n\tif (!raw) {\n\t\tif ((type_param & ~PHP_DNS_ALL) && (type_param != PHP_DNS_ANY)) {\n\t\t\tzend_argument_value_error(2, \"must be a DNS_* constant\");\n\t\t\tRETURN_THROWS();\n\t\t}\n\t} else {\n\t\tif ((type_param < 1) || (type_param > 0xFFFF)) {\n\t\t\tzend_argument_value_error(2, \"must be between 1 and 65535 when argument #5 ($raw) is true\");\n\t\t\tRETURN_THROWS();\n\t\t}\n\t}\n\n\t/* Initialize the return array */\n\tarray_init(return_value);\n\n\tif (raw) {\n\t\ttype = -1;\n\t} else if (type_param == PHP_DNS_ANY) {\n\t\ttype = PHP_DNS_NUM_TYPES + 1;\n\t} else {\n\t\ttype = 0;\n\t}\n\n\tfor ( ;\n\t\ttype < (addtl ? (PHP_DNS_NUM_TYPES + 2) : PHP_DNS_NUM_TYPES) || first_query;\n\t\ttype++\n\t) {\n\t\tDNS_STATUS      status;                 /* Return value of DnsQuery_A() function */\n\t\tPDNS_RECORD     pResult, pRec;          /* Pointer to DNS_RECORD structure */\n\n\t\tfirst_query = 0;\n\t\tswitch (type) {\n\t\t\tcase -1: /* raw */\n\t\t\t\ttype_to_fetch = type_param;\n\t\t\t\t/* skip over the rest and go directly to additional records */\n\t\t\t\ttype = PHP_DNS_NUM_TYPES - 1;\n\t\t\t\tbreak;\n\t\t\tcase 0:\n\t\t\t\ttype_to_fetch = type_param&PHP_DNS_A     ? DNS_TYPE_A     : 0;\n\t\t\t\tbreak;\n\t\t\tcase 1:\n\t\t\t\ttype_to_fetch = type_param&PHP_DNS_NS    ? DNS_TYPE_NS    : 0;\n\t\t\t\tbreak;\n\t\t\tcase 2:\n\t\t\t\ttype_to_fetch = type_param&PHP_DNS_CNAME ? DNS_TYPE_CNAME : 0;\n\t\t\t\tbreak;\n\t\t\tcase 3:\n\t\t\t\ttype_to_fetch = type_param&PHP_DNS_SOA   ? DNS_TYPE_SOA   : 0;\n\t\t\t\tbreak;\n\t\t\tcase 4:\n\t\t\t\ttype_to_fetch = type_param&PHP_DNS_PTR   ? DNS_TYPE_PTR   : 0;\n\t\t\t\tbreak;\n\t\t\tcase 5:\n\t\t\t\ttype_to_fetch = type_param&PHP_DNS_HINFO ? DNS_TYPE_HINFO : 0;\n\t\t\t\tbreak;\n\t\t\tcase 6:\n\t\t\t\ttype_to_fetch = type_param&PHP_DNS_MX    ? DNS_TYPE_MX    : 0;\n\t\t\t\tbreak;\n\t\t\tcase 7:\n\t\t\t\ttype_to_fetch = type_param&PHP_DNS_TXT   ? DNS_TYPE_TEXT   : 0;\n\t\t\t\tbreak;\n\t\t\tcase 8:\n\t\t\t\ttype_to_fetch = type_param&PHP_DNS_AAAA\t ? DNS_TYPE_AAAA  : 0;\n\t\t\t\tbreak;\n\t\t\tcase 9:\n\t\t\t\ttype_to_fetch = type_param&PHP_DNS_SRV   ? DNS_TYPE_SRV   : 0;\n\t\t\t\tbreak;\n\t\t\tcase 10:\n\t\t\t\ttype_to_fetch = type_param&PHP_DNS_NAPTR ? DNS_TYPE_NAPTR : 0;\n\t\t\t\tbreak;\n\t\t\tcase 11:\n\t\t\t\ttype_to_fetch = type_param&PHP_DNS_A6\t ? DNS_TYPE_A6 : 0;\n\t\t\t\tbreak;\n\t\t\tcase PHP_DNS_NUM_TYPES:\n\t\t\t\tstore_results = 0;\n\t\t\t\tcontinue;\n\t\t\tdefault:\n\t\t\tcase (PHP_DNS_NUM_TYPES + 1):\n\t\t\t\ttype_to_fetch = DNS_TYPE_ANY;\n\t\t\t\tbreak;\n\t\t}\n\n\t\tif (type_to_fetch) {\n\t\t\tstatus = DnsQuery_A(hostname, type_to_fetch, DNS_QUERY_STANDARD, NULL, &pResult, NULL);\n\n\t\t\tif (status) {\n\t\t\t\tif (status == DNS_INFO_NO_RECORDS || status == DNS_ERROR_RCODE_NAME_ERROR) {\n\t\t\t\t\tcontinue;\n\t\t\t\t} else {\n\t\t\t\t\tphp_error_docref(NULL, E_WARNING, \"DNS Query failed\");\n\t\t\t\t\tzend_array_destroy(Z_ARR_P(return_value));\n\t\t\t\t\tRETURN_FALSE;\n\t\t\t\t}\n\t\t\t}\n\n\t\t\tfor (pRec = pResult; pRec; pRec = pRec->pNext) {\n\t\t\t\tzval retval;\n\n\t\t\t\tif (pRec->Flags.S.Section == DnsSectionAnswer) {\n\t\t\t\t\tphp_parserr(pRec, type_to_fetch, store_results, raw, &retval);\n\t\t\t\t\tif (!Z_ISUNDEF(retval) && store_results) {\n\t\t\t\t\t\tadd_next_index_zval(return_value, &retval);\n\t\t\t\t\t}\n\t\t\t\t}\n\n\t\t\t\tif (authns && pRec->Flags.S.Section == DnsSectionAuthority) {\n\n\t\t\t\t\tphp_parserr(pRec, type_to_fetch, 1, raw, &retval);\n\t\t\t\t\tif (!Z_ISUNDEF(retval)) {\n\t\t\t\t\t\tadd_next_index_zval(authns, &retval);\n\t\t\t\t\t}\n\t\t\t\t}\n\n/* Stupid typo in PSDK 6.1, WinDNS.h(1258)... */\n#ifndef DnsSectionAdditional\n# ifdef DnsSectionAddtional\n#  define DnsSectionAdditional DnsSectionAddtional\n# else\n# define DnsSectionAdditional 3\n# endif\n#endif\n\t\t\t\tif (addtl && pRec->Flags.S.Section == DnsSectionAdditional) {\n\t\t\t\t\tphp_parserr(pRec, type_to_fetch, 1, raw, &retval);\n\t\t\t\t\tif (!Z_ISUNDEF(retval)) {\n\t\t\t\t\t\tadd_next_index_zval(addtl, &retval);\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t\t/* Free memory allocated for DNS records. */\n\t\t\tDnsRecordListFree(pResult, DnsFreeRecordListDeep);\n\t\t}\n\t}",
+    "semantic": "Initialize the return array",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zend_long",
+            "zval"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "zend_try_array_init",
+            "zend_argument_value_error",
+            "php_error_docref",
+            "zend_array_destroy",
+            "php_parserr"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common dns_get_record inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 10,
+    "purpose": "Initialize the return array",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "dns_get_mx",
+        "dns_check_record"
+    ]
+}

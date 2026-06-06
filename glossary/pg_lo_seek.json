@@ -1,0 +1,148 @@
+{
+    "php_function": "pg_lo_seek",
+    "zend_function": "pg_lo_seek",
+    "source_file": ".c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "pgsql_id",
+            "macro": "Z_PARAM_OBJECT_OF_CLASS",
+            "arguments": [
+                "pgsql_id",
+                "pgsql_lob_ce"
+            ],
+            "type": "zend_object",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_OBJECT_OF_CLASS(pgsql_id, pgsql_lob_ce)"
+        },
+        {
+            "name": "offset",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "offset"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(offset)"
+        },
+        {
+            "name": "whence",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "whence"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(whence)"
+        }
+    ],
+    "includes": [
+        "stdlib.h",
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "ext/standard/info.h",
+        "zend_smart_str.h",
+        "ext/pcre/php_pcre.h",
+        "php_pgsql.h",
+        "php_globals.h",
+        "zend_exceptions.h",
+        "zend_attributes.h",
+        "php_network.h",
+        "pgsql_arginfo.h"
+    ],
+    "body": "zval *pgsql_id = NULL;\n\tzend_long result, offset = 0, whence = SEEK_CUR;\n\tpgLofp *pgsql;\n\n\tZEND_PARSE_PARAMETERS_START(2, 3)\n\t\tZ_PARAM_OBJECT_OF_CLASS(pgsql_id, pgsql_lob_ce)\n\t\tZ_PARAM_LONG(offset)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_LONG(whence)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (whence != SEEK_SET && whence != SEEK_CUR && whence != SEEK_END) {\n\t\tzend_argument_value_error(3, \"must be one of PGSQL_SEEK_SET, PGSQL_SEEK_CUR, or PGSQL_SEEK_END\");\n\t\tRETURN_THROWS();\n\t}\n\n\tpgsql = Z_PGSQL_LOB_P(pgsql_id);\n\tCHECK_PGSQL_LOB(pgsql);\n\n\tif (PQserverVersion((PGconn *)pgsql->conn) >= 90300) {\n\t\tresult = lo_lseek64((PGconn *)pgsql->conn, pgsql->lofd, offset, (int)whence);\n\t} else {\n\t\tresult = lo_lseek((PGconn *)pgsql->conn, pgsql->lofd, (int)offset, (int)whence);\n\t}\n\n\tif (result > -1) {\n\t\tRETURN_TRUE;\n\t} else {\n\t\tRETURN_FALSE;\n\t}",
+    "semantic": "Implements the PHP function pg_lo_seek in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_OBJECT_OF_CLASS",
+            "Z_PARAM_LONG",
+            "Z_PARAM_OPTIONAL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_THROWS",
+            "RETURN_TRUE",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_argument_value_error"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common pg_lo_seek inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 4,
+    "purpose": "Implements the PHP function pg_lo_seek in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "pg_connect",
+        "pg_connect_poll",
+        "pg_pconnect",
+        "pg_close",
+        "pg_dbname",
+        "pg_last_error",
+        "pg_options",
+        "pg_port",
+        "pg_tty",
+        "pg_host",
+        "pg_version",
+        "pg_jit"
+    ]
+}

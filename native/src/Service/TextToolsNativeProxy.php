@@ -15,7 +15,7 @@ final readonly class TextToolsNativeProxy implements TextToolsInterface
 
     ): string {
 
-        return \native_remove_string(
+        return \remove_string(
             $value,
             $needle,
         );

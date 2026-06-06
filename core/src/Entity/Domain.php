@@ -59,6 +59,11 @@ class Domain
 
     public function getId(bool $includeVendor = true): ?string
     {
+        return $this->getTld();
+    }
+
+    public function getTld(): ?string
+    {
         return $this->id;
     }
 

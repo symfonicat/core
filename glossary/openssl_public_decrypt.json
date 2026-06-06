@@ -1,0 +1,128 @@
+{
+    "php_function": "openssl_public_decrypt",
+    "zend_function": "openssl_public_decrypt",
+    "source_file": "nssl.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "php_openssl.h",
+        "zend_attributes.h",
+        "zend_exceptions.h",
+        "ext/standard/file.h",
+        "ext/standard/info.h",
+        "ext/standard/php_fopen_wrappers.h",
+        "ext/standard/md5.h",
+        "ext/standard/base64.h",
+        "openssl/evp.h",
+        "openssl/bn.h",
+        "openssl/rsa.h",
+        "openssl/dsa.h",
+        "openssl/dh.h",
+        "openssl/x509.h",
+        "openssl/x509v3.h",
+        "openssl/crypto.h",
+        "openssl/pem.h",
+        "openssl/err.h",
+        "openssl/conf.h",
+        "openssl/rand.h",
+        "openssl/ssl.h",
+        "openssl/pkcs12.h",
+        "openssl/cms.h",
+        "openssl/core_names.h",
+        "openssl/param_build.h",
+        "openssl/provider.h",
+        "openssl/engine.h",
+        "time.h",
+        "openssl_arginfo.h"
+    ],
+    "body": "zval *key, *crypted;\n\tzend_long padding = RSA_PKCS1_PADDING;\n\tchar * data;\n\tsize_t data_len;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"szz|l\", &data, &data_len, &crypted, &key, &padding) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tEVP_PKEY *pkey = php_openssl_pkey_from_zval(key, 1, NULL, 0, 3);\n\tif (pkey == NULL) {\n\t\tif (!EG(exception)) {\n\t\t\tphp_error_docref(NULL, E_WARNING, \"key parameter is not a valid public key\");\n\t\t}\n\t\tRETURN_FALSE;\n\t}\n\n\tsize_t out_len = 0;\n\tEVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new(pkey, NULL);\n\tif (!ctx || EVP_PKEY_verify_recover_init(ctx) <= 0 ||\n\t\t\tEVP_PKEY_CTX_set_rsa_padding(ctx, padding) <= 0 ||\n\t\t\tEVP_PKEY_verify_recover(ctx, NULL, &out_len, (unsigned char *) data, data_len) <= 0) {\n\t\tphp_openssl_store_errors();\n\t\tRETVAL_FALSE;\n\t\tgoto cleanup;\n\t}\n\n\tzend_string *out = zend_string_alloc(out_len, 0);\n\tif (EVP_PKEY_verify_recover(ctx, (unsigned char *) ZSTR_VAL(out), &out_len,\n\t\t\t(unsigned char *) data, data_len) <= 0) {\n\t\tzend_string_release(out);\n\t\tphp_openssl_store_errors();\n\t\tRETVAL_FALSE;\n\t\tgoto cleanup;\n\t}\n\n\tout = zend_string_truncate(out, out_len, 0);\n\tZSTR_VAL(out)[out_len] = '\\0';\n\tZEND_TRY_ASSIGN_REF_NEW_STR(crypted, out);\n\tRETVAL_TRUE;\n\ncleanup:\n\tEVP_PKEY_CTX_free(ctx);\n\tEVP_PKEY_free(pkey);",
+    "semantic": "Implements the PHP function openssl_public_decrypt in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_FALSE",
+            "ZSTR_VAL",
+            "ZEND_TRY_ASSIGN_REF_NEW_STR"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_long",
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "php_openssl_pkey_from_zval",
+            "php_error_docref",
+            "php_openssl_store_errors",
+            "zend_string_alloc",
+            "zend_string_release",
+            "zend_string_truncate"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common openssl_public_decrypt inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 4,
+    "purpose": "Implements the PHP function openssl_public_decrypt in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "openssl_get_cert_locations",
+        "openssl_x509_export_to_file",
+        "openssl_spki_new",
+        "openssl_spki_verify",
+        "openssl_spki_export",
+        "openssl_spki_export_challenge",
+        "openssl_x509_export",
+        "openssl_x509_fingerprint",
+        "openssl_x509_check_private_key",
+        "openssl_x509_verify",
+        "openssl_x509_parse",
+        "openssl_x509_checkpurpose"
+    ]
+}

@@ -70,7 +70,23 @@ Core asset stack lives under `core/assets/`.
 
 Canonical runtime uses Docker/FrankenPHP. Redis is provided by the dedicated Compose service and backs cache, sessions, locks, core throttling, and Messenger `async` transport.
 
+- Flush caches through `docker exec` only; do not use local PHP for cache-clearing commands.
+- Run PHPUnit inside the container only; local PHP is not the supported test runtime because this app depends on FrankenPHP and custom Go/C extensions.
+- If Docker is not already running, do not start it. If it cannot run in the current environment, skip Docker-based commands instead of trying to work around it locally.
+
 ## Documentation
 
 Every change must update both `README.md` and `README_PROFILE.md` as clean current-state snapshots.
 When one readme changes, mirror the same factual edits into the other in the same turn. Use `README.md` as the source of truth for runtime behavior, keep section names and ordering aligned where practical, and write terse notes that name the exact commands, paths, or boot/runtime effects that changed. Avoid speculative prose and avoid leaving one readme with a stale command, path, or startup note.
+
+## Native C
+
+When generating new native PHP functionality in C, do not place new extension code under `./core/native/ext`. The `core/` tree is for the Symfony application and the existing core-native build glue, not for new reusable native extension projects.
+
+Put new extension sources under `./native/ext/<ext>/<ext>.c` and pair them with a matching `config.m4`. Keep the extension name and directory aligned so the build discovery commands can copy and compile the extension without custom path handling.
+
+Prefix extension names with `symfonicat_` when defining the extension identity. That keeps the native build output stable, avoids collisions with upstream PHP extensions, and makes the compiled module name obvious in Docker and runtime logs.
+
+Group related PHP functions into the same extension when they share a domain, buffer type, or dependency surface. Keep functions that operate on the same runtime concept together so the extension boundary matches the specialization boundary and reduces cross-extension indirection.
+
+Use `./glossary` as a working reference when implementing or optimizing native PHP functions. The JSON files capture `php_function`, `zend_function`, `source_file`, `extension`, `parameters`, `includes`, `body`, `semantic`, `control_flow`, `dependencies`, `specialization_candidates`, `strategies`, `memory_model`, `avoid`, `complexity`, `purpose`, `php_version`, and `related`, and they are meant to help with specialization choices, memory handling, and hot-path design.

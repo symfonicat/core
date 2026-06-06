@@ -1,0 +1,90 @@
+{
+    "php_function": "socket_recvmsg",
+    "zend_function": "socket_recvmsg",
+    "source_file": "drecvmsg.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "php.h",
+        "php_sockets.h",
+        "sendrecvmsg.h",
+        "conversions.h",
+        "limits.h",
+        "Zend/zend_llist.h",
+        "TSRM/TSRM.h",
+        "windows_common.h",
+        "Mswsock.h"
+    ],
+    "body": "zval\t\t\t*zsocket,\n\t\t\t\t\t*zmsg;\n\tzend_long\t\t\tflags = 0;\n\tphp_socket\t\t*php_sock;\n\tssize_t\t\t\tres;\n\tstruct msghdr\t*msghdr;\n\tzend_llist\t\t*allocations;\n\tstruct err_s\terr = {0};\n\n\t//ssize_t recvmsg(int sockfd, struct msghdr *msg, int flags);\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"Oa|l\", &zsocket, socket_ce, &zmsg, &flags) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tLONG_CHECK_VALID_INT(flags, 3);\n\n\tphp_sock = Z_SOCKET_P(zsocket);\n\tENSURE_SOCKET_VALID(php_sock);\n\n\tmsghdr = from_zval_run_conversions(zmsg, php_sock, from_zval_write_msghdr_recv,\n\t\t\tsizeof(*msghdr), \"msghdr\", &allocations, &err);\n\n\tif (err.has_error) {\n\t\terr_msg_dispose(&err);\n\t\tRETURN_FALSE;\n\t}\n\n\tres = recvmsg(php_sock->bsd_socket, msghdr, (int)flags);\n\n\tif (res != -1) {\n\t\tzval *zres, tmp;\n\t\tstruct key_value kv[] = {\n\t\t\t\t{KEY_RECVMSG_RET, sizeof(KEY_RECVMSG_RET), &res},\n\t\t\t\t{0}\n\t\t};\n\n\n\t\tzres = to_zval_run_conversions((char *)msghdr, to_zval_read_msghdr,\n\t\t\t\t\"msghdr\", kv, &err, &tmp);\n\n\t\t/* we don;t need msghdr anymore; free it */\n\t\tmsghdr = NULL;\n\n\t\tzval_ptr_dtor(zmsg);\n\t\tif (!err.has_error) {\n\t\t\tZVAL_COPY_VALUE(zmsg, zres);\n\t\t} else {\n\t\t\terr_msg_dispose(&err);\n\t\t\tZVAL_FALSE(zmsg);\n\t\t\t/* no need to destroy/free zres -- it's NULL in this circumstance */\n\t\t\tassert(zres == NULL);\n\t\t}\n\t\tRETVAL_LONG((zend_long)res);\n\t} else {\n\t\tSOCKETS_G(last_error) = errno;\n\t\tphp_error_docref(NULL, E_WARNING, \"Error in recvmsg [%d]: %s\",\n\t\t\t\terrno, sockets_strerror(errno));\n\t\tRETVAL_FALSE;\n\t}\n\n\tallocations_dispose(&allocations);",
+    "semantic": "we don;t need msghdr anymore; free it",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_FALSE",
+            "ZVAL_COPY_VALUE",
+            "ZVAL_FALSE"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "zval_ptr_dtor",
+            "php_error_docref"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common socket_recvmsg inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 5,
+    "purpose": "we don;t need msghdr anymore; free it",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "socket_sendmsg",
+        "socket_cmsg_space"
+    ]
+}

@@ -1,0 +1,165 @@
+{
+    "php_function": "imagescale",
+    "zend_function": "imagescale",
+    "source_file": "",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "IM",
+            "macro": "Z_PARAM_OBJECT_OF_CLASS",
+            "arguments": [
+                "IM",
+                "gd_image_ce"
+            ],
+            "type": "zend_object",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_OBJECT_OF_CLASS(IM, gd_image_ce)"
+        },
+        {
+            "name": "tmp_w",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "tmp_w"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(tmp_w)"
+        },
+        {
+            "name": "tmp_h",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "tmp_h"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(tmp_h)"
+        },
+        {
+            "name": "tmp_m",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "tmp_m"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(tmp_m)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "ext/standard/head.h",
+        "math.h",
+        "SAPI.h",
+        "php_gd.h",
+        "ext/standard/php_image.h",
+        "ext/standard/info.h",
+        "php_open_temporary_file.h",
+        "php_memory_streams.h",
+        "zend_object_handlers.h",
+        "gd_compat.h",
+        "gd_arginfo.h"
+    ],
+    "body": "zval *IM;\n\tgdImagePtr im;\n\tgdImagePtr im_scaled = NULL;\n\tint new_width, new_height;\n\tzend_long tmp_w, tmp_h=-1, tmp_m = GD_BILINEAR_FIXED;\n\tgdInterpolationMethod method, old_method;\n\n\tZEND_PARSE_PARAMETERS_START(2, 4)\n\t\tZ_PARAM_OBJECT_OF_CLASS(IM, gd_image_ce)\n\t\tZ_PARAM_LONG(tmp_w)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_LONG(tmp_h)\n\t\tZ_PARAM_LONG(tmp_m)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (tmp_m < GD_DEFAULT || tmp_m >= GD_METHOD_COUNT) {\n\t\tzend_argument_value_error(4, \"must be one of the GD_* constants\");\n\t\tRETURN_THROWS();\n\t}\n\n\tmethod = tmp_m;\n\n\tim = php_gd_libgdimageptr_from_zval_p(IM);\n\n\tif (tmp_h < 0 || tmp_w < 0) {\n\t\t/* preserve ratio */\n\t\tlong src_x, src_y;\n\n\t\tsrc_x = gdImageSX(im);\n\t\tsrc_y = gdImageSY(im);\n\n\t\tif (src_x && tmp_h < 0) {\n\t\t\ttmp_h = tmp_w * src_y / src_x;\n\t\t}\n\t\tif (src_y && tmp_w < 0) {\n\t\t\ttmp_w = tmp_h * src_x / src_y;\n\t\t}\n\t}\n\n\tif (tmp_w <= 0 || ZEND_SIZE_T_INT_OVFL(tmp_w)) {\n\t\tzend_argument_value_error(2, \"must be between 1 and %d\", INT_MAX);\n\t\tRETURN_THROWS();\n\t}\n\n\tif (tmp_h <= 0 || ZEND_SIZE_T_INT_OVFL(tmp_h)) {\n\t\tzend_argument_value_error(3, \"must be between 1 and %d\", INT_MAX);\n\t\tRETURN_THROWS();\n\t}\n\n\n\tnew_width = tmp_w;\n\tnew_height = tmp_h;\n\n\t/* gdImageGetInterpolationMethod() is only available as of GD 2.1.1 */\n\told_method = im->interpolation_id;\n\tif (gdImageSetInterpolationMethod(im, method)) {\n\t\tim_scaled = gdImageScale(im, new_width, new_height);\n\t}\n\tgdImageSetInterpolationMethod(im, old_method);\n\n\tif (im_scaled == NULL) {\n\t\tRETURN_FALSE;\n\t}\n\n\tphp_gd_assign_libgdimageptr_as_extgdimage(return_value, im_scaled);",
+    "semantic": "preserve ratio",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_OBJECT_OF_CLASS",
+            "Z_PARAM_LONG",
+            "Z_PARAM_OPTIONAL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_THROWS",
+            "ZEND_SIZE_T_INT_OVFL",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_argument_value_error",
+            "php_gd_libgdimageptr_from_zval_p",
+            "php_gd_assign_libgdimageptr_as_extgdimage"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common imagescale inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 6,
+    "purpose": "preserve ratio",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "gd_info",
+        "imageloadfont",
+        "imagesetstyle",
+        "imagecreatetruecolor",
+        "imageistruecolor",
+        "imagetruecolortopalette",
+        "imagepalettetotruecolor",
+        "imagecolormatch",
+        "imagesetthickness",
+        "imagefilledellipse",
+        "imagefilledarc",
+        "imagealphablending"
+    ]
+}

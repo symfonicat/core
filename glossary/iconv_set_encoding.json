@@ -1,0 +1,105 @@
+{
+    "php_function": "iconv_set_encoding",
+    "zend_function": "iconv_set_encoding",
+    "source_file": ".c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "ext/standard/info.h",
+        "main/php_output.h",
+        "SAPI.h",
+        "php_ini.h",
+        "stdlib.h",
+        "errno.h",
+        "php_iconv.h",
+        "iconv.h",
+        "gnu/libc-version.h",
+        "zend_smart_str.h",
+        "ext/standard/base64.h",
+        "ext/standard/quot_print.h",
+        "iconv_arginfo.h"
+    ],
+    "body": "zend_string *type;\n\tzend_string *charset;\n\tzend_result retval;\n\tzend_string *name;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"SS\", &type, &charset) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tif (ZSTR_LEN(charset) >= ICONV_CSNMAXLEN) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Encoding parameter exceeds the maximum allowed length of %d characters\", ICONV_CSNMAXLEN);\n\t\tRETURN_FALSE;\n\t}\n\n\tif(zend_string_equals_literal_ci(type, \"input_encoding\")) {\n\t\tname = ZSTR_INIT_LITERAL(\"iconv.input_encoding\", 0);\n\t} else if(zend_string_equals_literal_ci(type, \"output_encoding\")) {\n\t\tname = ZSTR_INIT_LITERAL(\"iconv.output_encoding\", 0);\n\t} else if(zend_string_equals_literal_ci(type, \"internal_encoding\")) {\n\t\tname = ZSTR_INIT_LITERAL(\"iconv.internal_encoding\", 0);\n\t} else {\n\t\tRETURN_FALSE;\n\t}\n\n\tretval = zend_alter_ini_entry(name, charset, PHP_INI_USER, PHP_INI_STAGE_RUNTIME);\n\tzend_string_release_ex(name, 0);\n\n\tif (retval == SUCCESS) {\n\t\tRETURN_TRUE;\n\t} else {\n\t\tRETURN_FALSE;\n\t}",
+    "semantic": "Implements the PHP function iconv_set_encoding in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "ZSTR_LEN",
+            "RETURN_FALSE",
+            "ZSTR_INIT_LITERAL",
+            "RETURN_TRUE"
+        ],
+        "zend_types": [
+            "zend_string",
+            "zend_result"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "php_error_docref",
+            "zend_string_equals_literal_ci",
+            "zend_alter_ini_entry",
+            "zend_string_release_ex"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common iconv_set_encoding inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 4,
+    "purpose": "Implements the PHP function iconv_set_encoding in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "iconv_strlen",
+        "iconv_substr",
+        "iconv_strpos",
+        "iconv_strrpos",
+        "iconv_mime_encode",
+        "iconv_mime_decode",
+        "iconv_mime_decode_headers",
+        "iconv",
+        "iconv_get_encoding"
+    ]
+}

@@ -68,7 +68,6 @@ async function requestModule(moduleName, responseType, path = '', payload = {}) 
         credentials: 'same-origin',
         headers: {
             Accept: responseType === 'html' ? 'text/html' : 'application/json',
-            'Content-Encoding': 'br',
             'Content-Type': 'application/json',
             'X-Requested-With': 'XMLHttpRequest',
             ...getRequestHeaders(),

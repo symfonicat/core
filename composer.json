@@ -37,17 +37,16 @@
         "ext-zip": "*",
         "ext-zlib": "*",
         "bacon/bacon-qr-code": "^3.1.1",
-        "doctrine/doctrine-bundle": "^3.2.2",
+        "doctrine/doctrine-bundle": "^3.2.3",
         "doctrine/orm": "^3.6.7",
         "intervention/image": "^4.1.2",
-        "jeremykendall/php-domain-parser": "^6.4",
         "nikic/php-parser": "^5.7",
         "nyholm/psr7": "^1.8.2",
         "psr/http-server-handler": "^1.0.2",
         "psr/http-server-middleware": "^1.0.2",
         "scheb/2fa-bundle": "^8.5",
         "scheb/2fa-totp": "^8.5",
-        "symfonicat/analytics": "^3.4.0",
+        "symfonicat/analytics": "^3.6.0",
         "symfony/asset": "8.0.*",
         "symfony/console": "8.0.*",
         "symfony/dotenv": "8.0.*",
@@ -76,12 +75,9 @@
         "symfony/webpack-encore-bundle": "^2.4",
         "symfony/yaml": "8.0.*",
         "twig/extra-bundle": "^3.24.0",
-        "twig/twig": "^3.27.0"
+        "twig/twig": "^3.27.1"
     },
     "autoload": {
-        "files": [
-            "config/functions.php"
-        ],
         "psr-4": {
             "App\\": "src/",
             "App\\Module\\": "src/Module/",
@@ -111,15 +107,12 @@
             "cache:clear": "symfony-cmd",
             "assets:install %PUBLIC_DIR%": "symfony-cmd"
         },
-        "symfonicat:public-suffix-install": "@php bin/public-suffix",
         "post-install-cmd": [
             "@auto-scripts",
-            "@symfonicat:public-suffix-install",
             "@php bin/console symfonicat:purge --no-interaction"
         ],
         "post-update-cmd": [
-            "@auto-scripts",
-            "@symfonicat:public-suffix-install"
+            "@auto-scripts"
         ]
     },
     "extra": {
@@ -130,7 +123,7 @@
         }
     },
     "require-dev": {
-        "phpunit/phpunit": "^12.5.28",
+        "phpunit/phpunit": "^12.5.29",
         "symfony/browser-kit": "8.0.*",
         "symfony/css-selector": "8.0.*"
     }

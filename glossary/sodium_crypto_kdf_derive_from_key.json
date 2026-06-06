@@ -1,0 +1,98 @@
+{
+    "php_function": "sodium_crypto_kdf_derive_from_key",
+    "zend_function": "sodium_crypto_kdf_derive_from_key",
+    "source_file": "odium.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "php.h",
+        "ext/standard/info.h",
+        "php_libsodium.h",
+        "zend_attributes.h",
+        "zend_exceptions.h",
+        "sodium.h",
+        "stdint.h",
+        "string.h",
+        "libsodium_arginfo.h"
+    ],
+    "body": "unsigned char  ctx_padded[crypto_generichash_blake2b_PERSONALBYTES];\n#ifndef crypto_kdf_PRIMITIVE\n\tunsigned char  salt[crypto_generichash_blake2b_SALTBYTES];\n#endif\n\tchar          *ctx;\n\tchar          *key;\n\tzend_string   *subkey;\n\tzend_long      subkey_id;\n\tzend_long      subkey_len;\n\tsize_t         ctx_len;\n\tsize_t         key_len;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"llss\",\n\t\t\t\t\t\t\t\t\t&subkey_len,\n\t\t\t\t\t\t\t\t\t&subkey_id,\n\t\t\t\t\t\t\t\t\t&ctx, &ctx_len,\n\t\t\t\t\t\t\t\t\t&key, &key_len) == FAILURE) {\n\t\tsodium_remove_param_values_from_backtrace(EG(exception));\n\t\tRETURN_THROWS();\n\t}\n\tif (subkey_len < crypto_kdf_BYTES_MIN) {\n\t\tzend_argument_error(sodium_exception_ce, 1, \"must be greater than or equal to SODIUM_CRYPTO_KDF_BYTES_MIN\");\n\t\tRETURN_THROWS();\n\t}\n\tif (subkey_len > crypto_kdf_BYTES_MAX || subkey_len > SIZE_MAX) {\n\t\tzend_argument_error(sodium_exception_ce, 1, \"must be less than or equal to SODIUM_CRYPTO_KDF_BYTES_MAX\");\n\t\tRETURN_THROWS();\n\t}\n\tif (subkey_id < 0) {\n\t\tzend_argument_error(sodium_exception_ce, 2, \"must be greater than or equal to 0\");\n\t\tRETURN_THROWS();\n\t}\n\tif (ctx_len != crypto_kdf_CONTEXTBYTES) {\n\t\tzend_argument_error(sodium_exception_ce, 3, \"must be SODIUM_CRYPTO_KDF_CONTEXTBYTES bytes long\");\n\t\tRETURN_THROWS();\n\t}\n\tif (key_len != crypto_kdf_KEYBYTES) {\n\t\tzend_argument_error(sodium_exception_ce, 4, \"must be SODIUM_CRYPTO_KDF_BYTES_MIN bytes long\");\n\t\tRETURN_THROWS();\n\t}\n\tmemcpy(ctx_padded, ctx, crypto_kdf_CONTEXTBYTES);\n\tmemset(ctx_padded + crypto_kdf_CONTEXTBYTES, 0, sizeof ctx_padded - crypto_kdf_CONTEXTBYTES);\n\tsubkey = zend_string_alloc((size_t) subkey_len, 0);\n#ifdef crypto_kdf_PRIMITIVE\n\tcrypto_kdf_derive_from_key((unsigned char *) ZSTR_VAL(subkey),\n\t\t\t\t\t\t\t   (size_t) subkey_len, (uint64_t) subkey_id,\n\t\t\t\t\t\t\t   ctx, (const unsigned char *) key);\n#else\n\tsalt[0] = (unsigned char) (((uint64_t) subkey_id)      );\n\tsalt[1] = (unsigned char) (((uint64_t) subkey_id) >>  8);\n\tsalt[2] = (unsigned char) (((uint64_t) subkey_id) >> 16);\n\tsalt[3] = (unsigned char) (((uint64_t) subkey_id) >> 24);\n\tsalt[4] = (unsigned char) (((uint64_t) subkey_id) >> 32);\n\tsalt[5] = (unsigned char) (((uint64_t) subkey_id) >> 40);\n\tsalt[6] = (unsigned char) (((uint64_t) subkey_id) >> 48);\n\tsalt[7] = (unsigned char) (((uint64_t) subkey_id) >> 56);\n\tmemset(salt + 8, 0, (sizeof salt) - 8);\n\tcrypto_generichash_blake2b_salt_personal((unsigned char *) ZSTR_VAL(subkey),\n\t\t\t\t\t\t\t\t\t\t\t (size_t) subkey_len,\n\t\t\t\t\t\t\t\t\t\t\t NULL, 0,\n\t\t\t\t\t\t\t\t\t\t\t (const unsigned char *) key,\n\t\t\t\t\t\t\t\t\t\t\t crypto_kdf_KEYBYTES,\n\t\t\t\t\t\t\t\t\t\t\t salt, ctx_padded);\n#endif\n\tZSTR_VAL(subkey)[subkey_len] = 0;\n\n\tRETURN_STR(subkey);",
+    "semantic": "Implements the PHP function sodium_crypto_kdf_derive_from_key in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "ZSTR_VAL",
+            "RETURN_STR"
+        ],
+        "zend_types": [
+            "zend_string",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "zend_argument_error",
+            "zend_string_alloc"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common sodium_crypto_kdf_derive_from_key inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "Implements the PHP function sodium_crypto_kdf_derive_from_key in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "sodium_memzero",
+        "sodium_increment",
+        "sodium_add",
+        "sodium_memcmp",
+        "sodium_crypto_shorthash",
+        "sodium_crypto_secretbox",
+        "sodium_crypto_secretbox_open",
+        "sodium_crypto_generichash",
+        "sodium_crypto_generichash_init",
+        "sodium_crypto_generichash_update",
+        "sodium_crypto_generichash_final",
+        "sodium_crypto_box_keypair"
+    ]
+}

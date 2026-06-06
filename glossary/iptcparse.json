@@ -1,0 +1,98 @@
+{
+    "php_function": "iptcparse",
+    "zend_function": "iptcparse",
+    "source_file": "tc.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "str",
+            "macro": "Z_PARAM_STRING",
+            "arguments": [
+                "str",
+                "str_len"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING(str, str_len)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "ext/standard/head.h",
+        "sys/stat.h",
+        "stdint.h"
+    ],
+    "body": "size_t inx = 0, len;\n\tunsigned int tagsfound = 0;\n\tunsigned char *buffer, recnum, dataset;\n\tchar *str, key[16];\n\tsize_t str_len;\n\tzval values, *element;\n\n\tZEND_PARSE_PARAMETERS_START(1, 1)\n\t\tZ_PARAM_STRING(str, str_len)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tbuffer = (unsigned char *)str;\n\n\twhile (inx < str_len) { /* find 1st tag */\n\t\tif ((buffer[inx] == 0x1c) && ((buffer[inx+1] == 0x01) || (buffer[inx+1] == 0x02))){\n\t\t\tbreak;\n\t\t} else {\n\t\t\tinx++;\n\t\t}\n\t}\n\n\twhile (inx < str_len) {\n\t\tif (buffer[ inx++ ] != 0x1c) {\n\t\t\tbreak;   /* we ran against some data which does not conform to IPTC - stop parsing! */\n\t\t}\n\n\t\tif ((inx + 4) >= str_len)\n\t\t\tbreak;\n\n\t\tdataset = buffer[ inx++ ];\n\t\trecnum = buffer[ inx++ ];\n\n\t\tif (buffer[ inx ] & (unsigned char) 0x80) { /* long tag */\n\t\t\tif((inx+6) >= str_len) {\n\t\t\t\tbreak;\n\t\t\t}\n\t\t\tlen = (((zend_long) buffer[ inx + 2 ]) << 24) + (((zend_long) buffer[ inx + 3 ]) << 16) +\n\t\t\t\t  (((zend_long) buffer[ inx + 4 ]) <<  8) + (((zend_long) buffer[ inx + 5 ]));\n\t\t\tinx += 6;\n\t\t} else { /* short tag */\n\t\t\tlen = (((unsigned short) buffer[ inx ])<<8) | (unsigned short)buffer[ inx+1 ];\n\t\t\tinx += 2;\n\t\t}\n\n\t\tif ((len > str_len) || (inx + len) > str_len) {\n\t\t\tbreak;\n\t\t}\n\n\t\tsnprintf(key, sizeof(key), \"%d#%03d\", (unsigned int) dataset, (unsigned int) recnum);\n\n\t\tif (tagsfound == 0) { /* found the 1st tag - initialize the return array */\n\t\t\tarray_init(return_value);\n\t\t}\n\n\t\tif ((element = zend_hash_str_find(Z_ARRVAL_P(return_value), key, strlen(key))) == NULL) {\n\t\t\tarray_init(&values);\n\n\t\t\telement = zend_hash_str_update(Z_ARRVAL_P(return_value), key, strlen(key), &values);\n\t\t}\n\n\t\tadd_next_index_stringl(element, (char *) buffer+inx, len);\n\t\tinx += len;\n\t\ttagsfound++;\n\t}\n\n\tif (! tagsfound) {\n\t\tRETURN_FALSE;\n\t}",
+    "semantic": "find 1st tag",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STRING",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_hash_str_find",
+            "zend_hash_str_update"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common iptcparse inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 7,
+    "purpose": "find 1st tag",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "iptcembed"
+    ]
+}

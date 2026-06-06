@@ -9,7 +9,6 @@ final class ModuleRoute
 
     public function __construct(
         public ?string $path = null,
-        public array $methods = ['POST'],
     )
     {
         $this->package = $this->packageName();

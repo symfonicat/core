@@ -60,5 +60,109 @@ final class SymfonicatExtension extends Extension implements PrependExtensionInt
             $packageLoader = new YamlFileLoader($container, new FileLocator(dirname($serviceConfig)));
             $packageLoader->load(basename($serviceConfig));
         }
+
+        $this->publicizeModuleActionDependencies($container, $root);
+    }
+
+    private function publicizeModuleActionDependencies(ContainerBuilder $container, string $root): void
+    {
+        if (
+            !function_exists('module_routes_collect_packages')
+            || !function_exists('module_routes_collect_scan_targets')
+        ) {
+            return;
+        }
+
+        $packages = module_routes_collect_packages($root);
+        if (!is_array($packages)) {
+            return;
+        }
+
+        $scanTargets = module_routes_collect_scan_targets($packages);
+        if (!is_array($scanTargets)) {
+            return;
+        }
+
+        foreach ($scanTargets as $target) {
+            if (
+                !is_array($target)
+                || !isset($target['directory'], $target['classPrefix'])
+                || !is_string($target['directory'])
+                || !is_string($target['classPrefix'])
+            ) {
+                continue;
+            }
+
+            $directory = $target['directory'];
+            $classPrefix = $target['classPrefix'];
+            if (!is_dir($directory)) {
+                continue;
+            }
+
+            $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($directory));
+            foreach ($iterator as $fileInfo) {
+                if (!$fileInfo->isFile() || $fileInfo->getExtension() !== 'php') {
+                    continue;
+                }
+
+                $file = $fileInfo->getPathname();
+                $relativePath = substr($file, strlen($directory) + 1);
+                if ($relativePath === false) {
+                    continue;
+                }
+
+                $className = $classPrefix.str_replace(['/', '.php'], ['\\', ''], $relativePath);
+                if (!class_exists($className)) {
+                    continue;
+                }
+
+                $reflectionClass = new \ReflectionClass($className);
+                if ($reflectionClass->isAbstract()) {
+                    continue;
+                }
+
+                if (!$reflectionClass->getAttributes(\Symfonicat\Attribute\ModuleRoute::class)) {
+                    continue;
+                }
+
+                foreach ($reflectionClass->getMethods(\ReflectionMethod::IS_PUBLIC) as $method) {
+                    if ($method->isStatic() || !$method->getAttributes(\Symfonicat\Attribute\Module::class)) {
+                        continue;
+                    }
+
+                    foreach ($method->getParameters() as $parameter) {
+                        $this->publicizeParameterType($container, $parameter->getType());
+                    }
+                }
+            }
+        }
+    }
+
+    private function publicizeParameterType(ContainerBuilder $container, ?\ReflectionType $type): void
+    {
+        if ($type instanceof \ReflectionNamedType) {
+            if ($type->isBuiltin()) {
+                return;
+            }
+
+            $serviceId = ltrim($type->getName(), '\\');
+            if ($container->hasDefinition($serviceId)) {
+                $container->getDefinition($serviceId)->setPublic(true);
+
+                return;
+            }
+
+            if ($container->hasAlias($serviceId)) {
+                $container->getAlias($serviceId)->setPublic(true);
+            }
+
+            return;
+        }
+
+        if ($type instanceof \ReflectionUnionType) {
+            foreach ($type->getTypes() as $innerType) {
+                $this->publicizeParameterType($container, $innerType);
+            }
+        }
     }
 }

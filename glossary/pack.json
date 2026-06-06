@@ -1,0 +1,135 @@
+{
+    "php_function": "pack",
+    "zend_function": "pack",
+    "source_file": "ck.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "format",
+            "macro": "Z_PARAM_STRING",
+            "arguments": [
+                "format",
+                "formatlen"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING(format, formatlen)"
+        },
+        {
+            "name": "'*'",
+            "macro": "Z_PARAM_VARIADIC",
+            "arguments": [
+                "'*'",
+                "argv",
+                "num_args"
+            ],
+            "type": "mixed",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": true,
+            "by_reference": false,
+            "raw": "Z_PARAM_VARIADIC('*', argv, num_args)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "stdio.h",
+        "stdlib.h",
+        "errno.h",
+        "sys/types.h",
+        "sys/stat.h",
+        "fcntl.h",
+        "win32/param.h",
+        "sys/param.h",
+        "pack.h",
+        "win32/pwd.h",
+        "pwd.h",
+        "fsock.h",
+        "netinet/in.h"
+    ],
+    "body": "zval *argv = NULL;\n\tint num_args = 0;\n\tsize_t i;\n\tint currentarg;\n\tchar *format;\n\tsize_t formatlen;\n\tchar *formatcodes;\n\tint *formatargs;\n\tsize_t formatcount = 0;\n\tint outputpos = 0, outputsize = 0;\n\tzend_string *output;\n\n\tZEND_PARSE_PARAMETERS_START(1, -1)\n\t\tZ_PARAM_STRING(format, formatlen)\n\t\tZ_PARAM_VARIADIC('*', argv, num_args)\n\tZEND_PARSE_PARAMETERS_END();\n\n\t/* We have a maximum of <formatlen> format codes to deal with */\n\tformatcodes = safe_emalloc(formatlen, sizeof(*formatcodes), 0);\n\tformatargs = safe_emalloc(formatlen, sizeof(*formatargs), 0);\n\tcurrentarg = 0;\n\n\t/* Preprocess format into formatcodes and formatargs */\n\tfor (i = 0; i < formatlen; formatcount++) {\n\t\tchar code = format[i++];\n\t\tint arg = 1;\n\n\t\t/* Handle format arguments if any */\n\t\tif (i < formatlen) {\n\t\t\tchar c = format[i];\n\n\t\t\tif (c == '*') {\n\t\t\t\targ = -1;\n\t\t\t\ti++;\n\t\t\t}\n\t\t\telse if (c >= '0' && c <= '9') {\n\t\t\t\targ = atoi(&format[i]);\n\n\t\t\t\twhile (format[i] >= '0' && format[i] <= '9' && i < formatlen) {\n\t\t\t\t\ti++;\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\n\t\t/* Handle special arg '*' for all codes and check argv overflows */\n\t\tswitch ((int) code) {\n\t\t\t/* Never uses any args */\n\t\t\tcase 'x':\n\t\t\tcase 'X':\n\t\t\tcase '@':\n\t\t\t\tif (arg < 0) {\n\t\t\t\t\tphp_error_docref(NULL, E_WARNING, \"Type %c: '*' ignored\", code);\n\t\t\t\t\targ = 1;\n\t\t\t\t}\n\t\t\t\tbreak;\n\n\t\t\t/* Always uses one arg */\n\t\t\tcase 'a':\n\t\t\tcase 'A':\n\t\t\tcase 'Z':\n\t\t\tcase 'h':\n\t\t\tcase 'H':\n\t\t\t\tif (currentarg >= num_args) {\n\t\t\t\t\tefree(formatcodes);\n\t\t\t\t\tefree(formatargs);\n\t\t\t\t\tzend_value_error(\"Type %c: not enough arguments\", code);\n\t\t\t\t\tRETURN_THROWS();\n\t\t\t\t}\n\n\t\t\t\tif (arg < 0) {\n\t\t\t\t\tif (!try_convert_to_string(&argv[currentarg])) {\n\t\t\t\t\t\tefree(formatcodes);\n\t\t\t\t\t\tefree(formatargs);\n\t\t\t\t\t\tRETURN_THROWS();\n\t\t\t\t\t}\n\n\t\t\t\t\targ = Z_STRLEN(argv[currentarg]);\n\t\t\t\t\tif (code == 'Z') {\n\t\t\t\t\t\t/* add one because Z is always NUL-terminated:\n\t\t\t\t\t\t * pack(\"Z*\", \"aa\") === \"aa\\0\"\n\t\t\t\t\t\t * pack(\"Z2\", \"aa\") === \"a\\0\" */\n\t\t\t\t\t\targ++;\n\t\t\t\t\t}\n\t\t\t\t}\n\n\t\t\t\tcurrentarg++;\n\t\t\t\tbreak;\n\n\t\t\t/* Use as many args as specified */\n\t\t\tcase 'q':\n\t\t\tcase 'Q':\n\t\t\tcase 'J':\n\t\t\tcase 'P':\n#if SIZEOF_ZEND_LONG < 8\n\t\t\t\t\tefree(formatcodes);\n\t\t\t\t\tefree(formatargs);\n\t\t\t\t\tzend_value_error(\"64-bit format codes are not available for 32-bit versions of PHP\");\n\t\t\t\t\tRETURN_THROWS();\n#endif\n\t\t\tcase 'c':\n\t\t\tcase 'C':\n\t\t\tcase 's':\n\t\t\tcase 'S':\n\t\t\tcase 'i':\n\t\t\tcase 'I':\n\t\t\tcase 'l':\n\t\t\tcase 'L':\n\t\t\tcase 'n':\n\t\t\tcase 'N':\n\t\t\tcase 'v':\n\t\t\tcase 'V':\n\t\t\tcase 'f': /* float */\n\t\t\tcase 'g': /* little endian float */\n\t\t\tcase 'G': /* big endian float */\n\t\t\tcase 'd': /* double */\n\t\t\tcase 'e': /* little endian double */\n\t\t\tcase 'E': /* big endian double */\n\t\t\t\tif (arg < 0) {\n\t\t\t\t\targ = num_args - currentarg;\n\t\t\t\t}\n\t\t\t\tif (currentarg > INT_MAX - arg) {\n\t\t\t\t\tgoto too_few_args;\n\t\t\t\t}\n\t\t\t\tcurrentarg += arg;\n\n\t\t\t\tif (currentarg > num_args) {\ntoo_few_args:\n\t\t\t\t\tefree(formatcodes);\n\t\t\t\t\tefree(formatargs);\n\t\t\t\t\tzend_value_error(\"Type %c: too few arguments\", code);\n\t\t\t\t\tRETURN_THROWS();\n\t\t\t\t}\n\t\t\t\tbreak;\n\n\t\t\tdefault:\n\t\t\t\tefree(formatcodes);\n\t\t\t\tefree(formatargs);\n\t\t\t\tzend_value_error(\"Type %c: unknown format code\", code);\n\t\t\t\tRETURN_THROWS();\n\t\t}\n\n\t\tformatcodes[formatcount] = code;\n\t\tformatargs[formatcount] = arg;\n\t}\n\n\tif (currentarg < num_args) {\n\t\tphp_error_docref(NULL, E_WARNING, \"%d arguments unused\", (num_args - currentarg));\n\t}\n\n\t/* Calculate output length and upper bound while processing*/\n\tfor (i = 0; i < formatcount; i++) {\n\t    int code = (int) formatcodes[i];\n\t\tint arg = formatargs[i];\n\n\t\tswitch ((int) code) {\n\t\t\tcase 'h':\n\t\t\tcase 'H':\n\t\t\t\tINC_OUTPUTPOS((arg + (arg % 2)) / 2,1)\t/* 4 bit per arg */\n\t\t\t\tbreak;\n\n\t\t\tcase 'a':\n\t\t\tcase 'A':\n\t\t\tcase 'Z':\n\t\t\tcase 'c':\n\t\t\tcase 'C':\n\t\t\tcase 'x':\n\t\t\t\tINC_OUTPUTPOS(arg,1)\t\t/* 8 bit per arg */\n\t\t\t\tbreak;\n\n\t\t\tcase 's':\n\t\t\tcase 'S':\n\t\t\tcase 'n':\n\t\t\tcase 'v':\n\t\t\t\tINC_OUTPUTPOS(arg,2)\t\t/* 16 bit per arg */\n\t\t\t\tbreak;\n\n\t\t\tcase 'i':\n\t\t\tcase 'I':\n\t\t\t\tINC_OUTPUTPOS(arg,sizeof(int))\n\t\t\t\tbreak;\n\n\t\t\tcase 'l':\n\t\t\tcase 'L':\n\t\t\tcase 'N':\n\t\t\tcase 'V':\n\t\t\t\tINC_OUTPUTPOS(arg,4)\t\t/* 32 bit per arg */\n\t\t\t\tbreak;\n\n#if SIZEOF_ZEND_LONG > 4\n\t\t\tcase 'q':\n\t\t\tcase 'Q':\n\t\t\tcase 'J':\n\t\t\tcase 'P':\n\t\t\t\tINC_OUTPUTPOS(arg,8)\t\t/* 32 bit per arg */\n\t\t\t\tbreak;\n#endif\n\n\t\t\tcase 'f': /* float */\n\t\t\tcase 'g': /* little endian float */\n\t\t\tcase 'G': /* big endian float */\n\t\t\t\tINC_OUTPUTPOS(arg,sizeof(float))\n\t\t\t\tbreak;\n\n\t\t\tcase 'd': /* double */\n\t\t\tcase 'e': /* little endian double */\n\t\t\tcase 'E': /* big endian double */\n\t\t\t\tINC_OUTPUTPOS(arg,sizeof(double))\n\t\t\t\tbreak;\n\n\t\t\tcase 'X':\n\t\t\t\toutputpos -= arg;\n\n\t\t\t\tif (outputpos < 0) {\n\t\t\t\t\tphp_error_docref(NULL, E_WARNING, \"Type %c: outside of string\", code);\n\t\t\t\t\toutputpos = 0;\n\t\t\t\t}\n\t\t\t\tbreak;\n\n\t\t\tcase '@':\n\t\t\t\toutputpos = arg;\n\t\t\t\tbreak;\n\t\t}\n\n\t\tif (outputsize < outputpos) {\n\t\t\toutputsize = outputpos;\n\t\t}\n\t}\n\n\toutput = zend_string_alloc(outputsize, 0);\n\toutputpos = 0;\n\tcurrentarg = 0;\n\n\t/* Do actual packing */\n\tfor (i = 0; i < formatcount; i++) {\n\t    int code = (int) formatcodes[i];\n\t\tint arg = formatargs[i];\n\n\t\tswitch ((int) code) {\n\t\t\tcase 'a':\n\t\t\tcase 'A':\n\t\t\tcase 'Z': {\n\t\t\t\tsize_t arg_cp = (code != 'Z') ? arg : MAX(0, arg - 1);\n\t\t\t\tzend_string *tmp_str;\n\t\t\t\tzend_string *str = zval_get_tmp_string(&argv[currentarg++], &tmp_str);\n\n\t\t\t\tmemset(&ZSTR_VAL(output)[outputpos], (code == 'a' || code == 'Z') ? '\\0' : ' ', arg);\n\t\t\t\tmemcpy(&ZSTR_VAL(output)[outputpos], ZSTR_VAL(str),\n\t\t\t\t\t   (ZSTR_LEN(str) < arg_cp) ? ZSTR_LEN(str) : arg_cp);\n\n\t\t\t\toutputpos += arg;\n\t\t\t\tzend_tmp_string_release(tmp_str);\n\t\t\t\tbreak;\n\t\t\t}\n\n\t\t\tcase 'h':\n\t\t\tcase 'H': {\n\t\t\t\tint nibbleshift = (code == 'h') ? 0 : 4;\n\t\t\t\tint first = 1;\n\t\t\t\tzend_string *tmp_str;\n\t\t\t\tzend_string *str = zval_get_tmp_string(&argv[currentarg++], &tmp_str);\n\t\t\t\tchar *v = ZSTR_VAL(str);\n\n\t\t\t\toutputpos--;\n\t\t\t\tif ((size_t)arg > ZSTR_LEN(str)) {\n\t\t\t\t\tphp_error_docref(NULL, E_WARNING, \"Type %c: not enough characters in string\", code);\n\t\t\t\t\targ = ZSTR_LEN(str);\n\t\t\t\t}\n\n\t\t\t\twhile (arg-- > 0) {\n\t\t\t\t\tchar n = *v++;\n\n\t\t\t\t\tif (n >= '0' && n <= '9') {\n\t\t\t\t\t\tn -= '0';\n\t\t\t\t\t} else if (n >= 'A' && n <= 'F') {\n\t\t\t\t\t\tn -= ('A' - 10);\n\t\t\t\t\t} else if (n >= 'a' && n <= 'f') {\n\t\t\t\t\t\tn -= ('a' - 10);\n\t\t\t\t\t} else {\n\t\t\t\t\t\tphp_error_docref(NULL, E_WARNING, \"Type %c: illegal hex digit %c\", code, n);\n\t\t\t\t\t\tn = 0;\n\t\t\t\t\t}\n\n\t\t\t\t\tif (first--) {\n\t\t\t\t\t\tZSTR_VAL(output)[++outputpos] = 0;\n\t\t\t\t\t} else {\n\t\t\t\t\t  first = 1;\n\t\t\t\t\t}\n\n\t\t\t\t\tZSTR_VAL(output)[outputpos] |= (n << nibbleshift);\n\t\t\t\t\tnibbleshift = (nibbleshift + 4) & 7;\n\t\t\t\t}\n\n\t\t\t\toutputpos++;\n\t\t\t\tzend_tmp_string_release(tmp_str);\n\t\t\t\tbreak;\n\t\t\t}\n\n\t\t\tcase 'c':\n\t\t\tcase 'C':\n\t\t\t\twhile (arg-- > 0) {\n\t\t\t\t\tphp_pack(&argv[currentarg++], 1, byte_map, &ZSTR_VAL(output)[outputpos]);\n\t\t\t\t\toutputpos++;\n\t\t\t\t}\n\t\t\t\tbreak;\n\n\t\t\tcase 's':\n\t\t\tcase 'S':\n\t\t\tcase 'n':\n\t\t\tcase 'v': {\n\t\t\t\tint *map = machine_endian_short_map;\n\n\t\t\t\tif (code == 'n') {\n\t\t\t\t\tmap = big_endian_short_map;\n\t\t\t\t} else if (code == 'v') {\n\t\t\t\t\tmap = little_endian_short_map;\n\t\t\t\t}\n\n\t\t\t\twhile (arg-- > 0) {\n\t\t\t\t\tphp_pack(&argv[currentarg++], 2, map, &ZSTR_VAL(output)[outputpos]);\n\t\t\t\t\toutputpos += 2;\n\t\t\t\t}\n\t\t\t\tbreak;\n\t\t\t}\n\n\t\t\tcase 'i':\n\t\t\tcase 'I':\n\t\t\t\twhile (arg-- > 0) {\n\t\t\t\t\tphp_pack(&argv[currentarg++], sizeof(int), int_map, &ZSTR_VAL(output)[outputpos]);\n\t\t\t\t\toutputpos += sizeof(int);\n\t\t\t\t}\n\t\t\t\tbreak;\n\n\t\t\tcase 'l':\n\t\t\tcase 'L':\n\t\t\tcase 'N':\n\t\t\tcase 'V': {\n\t\t\t\tint *map = machine_endian_long_map;\n\n\t\t\t\tif (code == 'N') {\n\t\t\t\t\tmap = big_endian_long_map;\n\t\t\t\t} else if (code == 'V') {\n\t\t\t\t\tmap = little_endian_long_map;\n\t\t\t\t}\n\n\t\t\t\twhile (arg-- > 0) {\n\t\t\t\t\tphp_pack(&argv[currentarg++], 4, map, &ZSTR_VAL(output)[outputpos]);\n\t\t\t\t\toutputpos += 4;\n\t\t\t\t}\n\t\t\t\tbreak;\n\t\t\t}\n\n#if SIZEOF_ZEND_LONG > 4\n\t\t\tcase 'q':\n\t\t\tcase 'Q':\n\t\t\tcase 'J':\n\t\t\tcase 'P': {\n\t\t\t\tint *map = machine_endian_longlong_map;\n\n\t\t\t\tif (code == 'J') {\n\t\t\t\t\tmap = big_endian_longlong_map;\n\t\t\t\t} else if (code == 'P') {\n\t\t\t\t\tmap = little_endian_longlong_map;\n\t\t\t\t}\n\n\t\t\t\twhile (arg-- > 0) {\n\t\t\t\t\tphp_pack(&argv[currentarg++], 8, map, &ZSTR_VAL(output)[outputpos]);\n\t\t\t\t\toutputpos += 8;\n\t\t\t\t}\n\t\t\t\tbreak;\n\t\t\t}\n#endif\n\n\t\t\tcase 'f': {\n\t\t\t\twhile (arg-- > 0) {\n\t\t\t\t\tfloat v = (float) zval_get_double(&argv[currentarg++]);\n\t\t\t\t\tmemcpy(&ZSTR_VAL(output)[outputpos], &v, sizeof(v));\n\t\t\t\t\toutputpos += sizeof(v);\n\t\t\t\t}\n\t\t\t\tbreak;\n\t\t\t}\n\n\t\t\tcase 'g': {\n\t\t\t\t/* pack little endian float */\n\t\t\t\twhile (arg-- > 0) {\n\t\t\t\t\tfloat v = (float) zval_get_double(&argv[currentarg++]);\n\t\t\t\t\tphp_pack_copy_float(1, &ZSTR_VAL(output)[outputpos], v);\n\t\t\t\t\toutputpos += sizeof(v);\n\t\t\t\t}\n\n\t\t\t\tbreak;\n\t\t\t}\n\t\t\tcase 'G': {\n\t\t\t\t/* pack big endian float */\n\t\t\t\twhile (arg-- > 0) {\n\t\t\t\t\tfloat v = (float) zval_get_double(&argv[currentarg++]);\n\t\t\t\t\tphp_pack_copy_float(0, &ZSTR_VAL(output)[outputpos], v);\n\t\t\t\t\toutputpos += sizeof(v);\n\t\t\t\t}\n\t\t\t\tbreak;\n\t\t\t}\n\n\t\t\tcase 'd': {\n\t\t\t\twhile (arg-- > 0) {\n\t\t\t\t\tdouble v = (double) zval_get_double(&argv[currentarg++]);\n\t\t\t\t\tmemcpy(&ZSTR_VAL(output)[outputpos], &v, sizeof(v));\n\t\t\t\t\toutputpos += sizeof(v);\n\t\t\t\t}\n\t\t\t\tbreak;\n\t\t\t}\n\n\t\t\tcase 'e': {\n\t\t\t\t/* pack little endian double */\n\t\t\t\twhile (arg-- > 0) {\n\t\t\t\t\tdouble v = (double) zval_get_double(&argv[currentarg++]);\n\t\t\t\t\tphp_pack_copy_double(1, &ZSTR_VAL(output)[outputpos], v);\n\t\t\t\t\toutputpos += sizeof(v);\n\t\t\t\t}\n\t\t\t\tbreak;\n\t\t\t}\n\n\t\t\tcase 'E': {\n\t\t\t\t/* pack big endian double */\n\t\t\t\twhile (arg-- > 0) {\n\t\t\t\t\tdouble v = (double) zval_get_double(&argv[currentarg++]);\n\t\t\t\t\tphp_pack_copy_double(0, &ZSTR_VAL(output)[outputpos], v);\n\t\t\t\t\toutputpos += sizeof(v);\n\t\t\t\t}\n\t\t\t\tbreak;\n\t\t\t}\n\n\t\t\tcase 'x':\n\t\t\t\tmemset(&ZSTR_VAL(output)[outputpos], '\\0', arg);\n\t\t\t\toutputpos += arg;\n\t\t\t\tbreak;\n\n\t\t\tcase 'X':\n\t\t\t\toutputpos -= arg;\n\n\t\t\t\tif (outputpos < 0) {\n\t\t\t\t\toutputpos = 0;\n\t\t\t\t}\n\t\t\t\tbreak;\n\n\t\t\tcase '@':\n\t\t\t\tif (arg > outputpos) {\n\t\t\t\t\tmemset(&ZSTR_VAL(output)[outputpos], '\\0', arg - outputpos);\n\t\t\t\t}\n\t\t\t\toutputpos = arg;\n\t\t\t\tbreak;\n\t\t}\n\t}\n\n\tefree(formatcodes);\n\tefree(formatargs);\n\tZSTR_VAL(output)[outputpos] = '\\0';\n\tZSTR_LEN(output) = outputpos;\n\tRETURN_NEW_STR(output);",
+    "semantic": "We have a maximum of <formatlen> format codes to deal with",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STRING",
+            "Z_PARAM_VARIADIC",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_THROWS",
+            "ZSTR_VAL",
+            "ZSTR_LEN",
+            "RETURN_NEW_STR"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "php_error_docref",
+            "zend_value_error",
+            "zend_string_alloc",
+            "zval_get_tmp_string",
+            "zend_tmp_string_release",
+            "php_pack",
+            "zval_get_double",
+            "php_pack_copy_float",
+            "php_pack_copy_double"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common pack inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 10,
+    "purpose": "We have a maximum of <formatlen> format codes to deal with",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "unpack"
+    ]
+}

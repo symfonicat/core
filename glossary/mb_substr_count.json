@@ -1,0 +1,181 @@
+{
+    "php_function": "mb_substr_count",
+    "zend_function": "mb_substr_count",
+    "source_file": "string.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "haystack",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "haystack"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(haystack)"
+        },
+        {
+            "name": "needle",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "needle"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(needle)"
+        },
+        {
+            "name": "enc_name",
+            "macro": "Z_PARAM_STR_OR_NULL",
+            "arguments": [
+                "enc_name"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR_OR_NULL(enc_name)"
+        }
+    ],
+    "includes": [
+        "limits.h",
+        "libmbfl/config.h",
+        "php.h",
+        "php_ini.h",
+        "php_variables.h",
+        "mbstring.h",
+        "ext/standard/php_string.h",
+        "ext/standard/php_mail.h",
+        "ext/standard/exec.h",
+        "main/php_output.h",
+        "ext/standard/info.h",
+        "ext/pcre/php_pcre.h",
+        "libmbfl/mbfl/mbfilter_8bit.h",
+        "libmbfl/mbfl/mbfilter_pass.h",
+        "libmbfl/mbfl/eaw_table.h",
+        "libmbfl/filters/mbfilter_base64.h",
+        "libmbfl/filters/mbfilter_cjk.h",
+        "libmbfl/filters/mbfilter_qprint.h",
+        "libmbfl/filters/mbfilter_htmlent.h",
+        "libmbfl/filters/mbfilter_uuencode.h",
+        "libmbfl/filters/mbfilter_ucs4.h",
+        "libmbfl/filters/mbfilter_utf16.h",
+        "libmbfl/filters/mbfilter_singlebyte.h",
+        "libmbfl/filters/translit_kana_jisx0201_jisx0208.h",
+        "libmbfl/filters/unicode_prop.h",
+        "php_globals.h",
+        "rfc1867.h",
+        "php_content_types.h",
+        "SAPI.h",
+        "php_unicode.h",
+        "TSRM.h",
+        "mb_gpc.h",
+        "zend_smart_str.h",
+        "zend_multibyte.h",
+        "mbstring_arginfo.h",
+        "rare_cp_bitvec.h",
+        "emmintrin.h",
+        "immintrin.h",
+        "pmmintrin.h"
+    ],
+    "body": "zend_string *haystack, *needle, *enc_name = NULL, *haystack_u8 = NULL, *needle_u8 = NULL;\n\n\tZEND_PARSE_PARAMETERS_START(2, 3)\n\t\tZ_PARAM_STR(haystack)\n\t\tZ_PARAM_STR(needle)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_STR_OR_NULL(enc_name)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (ZSTR_LEN(needle) == 0) {\n\t\tzend_argument_must_not_be_empty_error(2);\n\t\tRETURN_THROWS();\n\t}\n\n\tconst mbfl_encoding *enc = php_mb_get_encoding(enc_name, 3);\n\tif (!enc) {\n\t\tRETURN_THROWS();\n\t}\n\n\tif (php_mb_is_no_encoding_utf8(enc->no_encoding)) {\n\t\t/* No need to do any conversion if haystack/needle are already known-valid UTF-8\n\t\t * (If they are not valid, then not passing them through conversion filters could affect output) */\n\t\tif (ZSTR_IS_VALID_UTF8(haystack)) {\n\t\t\thaystack_u8 = haystack;\n\t\t} else {\n\t\t\tunsigned int num_errors = 0;\n\t\t\thaystack_u8 = mb_fast_convert((unsigned char*)ZSTR_VAL(haystack), ZSTR_LEN(haystack), enc, &mbfl_encoding_utf8, 0, MBFL_OUTPUTFILTER_ILLEGAL_MODE_BADUTF8, &num_errors);\n\t\t\tif (!num_errors && !ZSTR_IS_INTERNED(haystack)) {\n\t\t\t\tGC_ADD_FLAGS(haystack, IS_STR_VALID_UTF8);\n\t\t\t}\n\t\t}\n\n\t\tif (ZSTR_IS_VALID_UTF8(needle)) {\n\t\t\tneedle_u8 = needle;\n\t\t} else {\n\t\t\tunsigned int num_errors = 0;\n\t\t\tneedle_u8 = mb_fast_convert((unsigned char*)ZSTR_VAL(needle), ZSTR_LEN(needle), enc, &mbfl_encoding_utf8, 0, MBFL_OUTPUTFILTER_ILLEGAL_MODE_BADUTF8, &num_errors);\n\t\t\tif (!num_errors && !ZSTR_IS_INTERNED(needle)) {\n\t\t\t\tGC_ADD_FLAGS(needle, IS_STR_VALID_UTF8);\n\t\t\t}\n\t\t}\n\t} else {\n\t\tunsigned int num_errors = 0;\n\t\thaystack_u8 = mb_fast_convert((unsigned char*)ZSTR_VAL(haystack), ZSTR_LEN(haystack), enc, &mbfl_encoding_utf8, 0, MBFL_OUTPUTFILTER_ILLEGAL_MODE_BADUTF8, &num_errors);\n\t\tneedle_u8 = mb_fast_convert((unsigned char*)ZSTR_VAL(needle), ZSTR_LEN(needle), enc, &mbfl_encoding_utf8, 0, MBFL_OUTPUTFILTER_ILLEGAL_MODE_BADUTF8, &num_errors);\n\t\t/* A string with >0 bytes may convert to 0 codepoints; for example, the contents\n\t\t * may be only escape sequences */\n\t\tif (ZSTR_LEN(needle_u8) == 0) {\n\t\t\tzend_string_free(haystack_u8);\n\t\t\tzend_string_free(needle_u8);\n\t\t\tzend_argument_must_not_be_empty_error(2);\n\t\t\tRETURN_THROWS();\n\t\t}\n\t}\n\n\tsize_t result = 0;\n\n\tif (ZSTR_LEN(haystack_u8) < ZSTR_LEN(needle_u8)) {\n\t\tgoto out;\n\t}\n\n\tconst char *p = ZSTR_VAL(haystack_u8), *e = p + ZSTR_LEN(haystack_u8);\n\twhile (true) {\n\t\tp = zend_memnstr(p, ZSTR_VAL(needle_u8), ZSTR_LEN(needle_u8), e);\n\t\tif (!p) {\n\t\t\tbreak;\n\t\t}\n\t\tp += ZSTR_LEN(needle_u8);\n\t\tresult++;\n\t}\n\nout:\n\tif (haystack_u8 != haystack) {\n\t\tzend_string_free(haystack_u8);\n\t}\n\tif (needle_u8 != needle) {\n\t\tzend_string_free(needle_u8);\n\t}\n\n\tRETVAL_LONG(result);",
+    "semantic": "No need to do any conversion if haystack/needle are already known-valid UTF-8 (If they are not valid, then not passing them through conversion filters could affect output)",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STR",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_STR_OR_NULL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZSTR_LEN",
+            "RETURN_THROWS",
+            "ZSTR_IS_VALID_UTF8",
+            "ZSTR_VAL",
+            "ZSTR_IS_INTERNED",
+            "GC_ADD_FLAGS"
+        ],
+        "zend_types": [
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "zend_argument_must_not_be_empty_error",
+            "php_mb_get_encoding",
+            "php_mb_is_no_encoding_utf8",
+            "mb_fast_convert",
+            "zend_string_free",
+            "zend_memnstr"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common mb_substr_count inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 7,
+    "purpose": "No need to do any conversion if haystack/needle are already known-valid UTF-8 (If they are not valid, then not passing them through conversion filters could affect output)",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "mb_language",
+        "mb_internal_encoding",
+        "mb_http_input",
+        "mb_http_output",
+        "mb_detect_order",
+        "mb_substitute_character",
+        "mb_preferred_mime_name",
+        "mb_parse_str",
+        "mb_output_handler",
+        "mb_str_split",
+        "mb_strlen",
+        "mb_strpos"
+    ]
+}
