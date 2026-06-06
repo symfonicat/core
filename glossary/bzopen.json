@@ -1,0 +1,96 @@
+{
+    "php_function": "bzopen",
+    "zend_function": "bzopen",
+    "source_file": "",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_bz2.h",
+        "bz2_arginfo.h",
+        "ext/standard/info.h",
+        "main/php_network.h",
+        "stdio.h"
+    ],
+    "body": "zval     *file;   /* The file to open */\n\tchar     *mode;   /* The mode to open the stream with */\n\tsize_t      mode_len;\n\n\tBZFILE   *bz;     /* The compressed file stream */\n\tphp_stream *stream = NULL;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"zs\", &file, &mode, &mode_len) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tif (mode_len != 1 || (mode[0] != 'r' && mode[0] != 'w')) {\n\t\tzend_argument_value_error(2, \"must be either \\\"r\\\" or \\\"w\\\"\");\n\t\tRETURN_THROWS();\n\t}\n\n\t/* If it's not a resource its a string containing the filename to open */\n\tif (Z_TYPE_P(file) == IS_STRING) {\n\t\tif (Z_STRLEN_P(file) == 0) {\n\t\t\tzend_argument_must_not_be_empty_error(1);\n\t\t\tRETURN_THROWS();\n\t\t}\n\n\t\tif (CHECK_ZVAL_NULL_PATH(file)) {\n\t\t\tzend_argument_type_error(1, \"must not contain null bytes\");\n\t\t\tRETURN_THROWS();\n\t\t}\n\n\t\tstream = php_stream_bz2open(NULL, Z_STRVAL_P(file), mode, REPORT_ERRORS, NULL);\n\t} else if (Z_TYPE_P(file) == IS_RESOURCE) {\n\t\t/* If it is a resource, than its a stream resource */\n\t\tphp_socket_t fd;\n\t\tsize_t stream_mode_len;\n\n\t\tphp_stream_from_zval(stream, file);\n\t\tstream_mode_len = strlen(stream->mode);\n\n\t\tif (stream_mode_len != 1 && !(stream_mode_len == 2 && memchr(stream->mode, 'b', 2))) {\n\t\t\tphp_error_docref(NULL, E_WARNING, \"Cannot use stream opened in mode '%s'\", stream->mode);\n\t\t\tRETURN_FALSE;\n\t\t} else if (stream_mode_len == 1 && stream->mode[0] != 'r' && stream->mode[0] != 'w' && stream->mode[0] != 'a' && stream->mode[0] != 'x') {\n\t\t\tphp_error_docref(NULL, E_WARNING, \"Cannot use stream opened in mode '%s'\", stream->mode);\n\t\t\tRETURN_FALSE;\n\t\t}\n\n\t\tswitch(mode[0]) {\n\t\t\tcase 'r':\n\t\t\t\t/* only \"r\" and \"rb\" are supported */\n\t\t\t\tif (stream->mode[0] != mode[0] && !(stream_mode_len == 2 && stream->mode[1] != mode[0])) {\n\t\t\t\t\tphp_error_docref(NULL, E_WARNING, \"Cannot read from a stream opened in write only mode\");\n\t\t\t\t\tRETURN_FALSE;\n\t\t\t\t}\n\t\t\t\tbreak;\n\t\t\tcase 'w':\n\t\t\t\t/* support only \"w\"(b), \"a\"(b), \"x\"(b) */\n\t\t\t\tif (stream->mode[0] != mode[0] && !(stream_mode_len == 2 && stream->mode[1] != mode[0])\n\t\t\t\t\t&& stream->mode[0] != 'a' && !(stream_mode_len == 2 && stream->mode[1] != 'a')\n\t\t\t\t\t&& stream->mode[0] != 'x' && !(stream_mode_len == 2 && stream->mode[1] != 'x')) {\n\t\t\t\t\tphp_error_docref(NULL, E_WARNING, \"cannot write to a stream opened in read only mode\");\n\t\t\t\t\tRETURN_FALSE;\n\t\t\t\t}\n\t\t\t\tbreak;\n\t\t\tEMPTY_SWITCH_DEFAULT_CASE();\n\t\t}\n\n\t\tif (FAILURE == php_stream_cast(stream, PHP_STREAM_AS_FD, (void *) &fd, REPORT_ERRORS)) {\n\t\t\tRETURN_FALSE;\n\t\t}\n\n\t\tbz = BZ2_bzdopen((int)fd, mode);\n\n\t\tstream = php_stream_bz2open_from_BZFILE(bz, mode, stream);\n\t} else {\n\t\tzend_argument_type_error(1, \"must be of type string or file-resource, %s given\", zend_zval_value_name(file));\n\t\tRETURN_THROWS();\n\t}\n\n\tif (stream) {\n\t\tphp_stream_to_zval(stream, return_value);\n\t} else {\n\t\tRETURN_FALSE;\n\t}",
+    "semantic": "The file to open",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zval"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "zend_argument_value_error",
+            "zend_argument_must_not_be_empty_error",
+            "zend_argument_type_error",
+            "php_stream_bz2open",
+            "php_stream_from_zval",
+            "php_error_docref",
+            "php_stream_cast",
+            "php_stream_bz2open_from_BZFILE",
+            "zend_zval_value_name",
+            "php_stream_to_zval"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common bzopen inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 6,
+    "purpose": "The file to open",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "bzread",
+        "bzerrno",
+        "bzerrstr",
+        "bzerror",
+        "bzcompress",
+        "bzdecompress"
+    ]
+}

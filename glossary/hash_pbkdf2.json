@@ -1,0 +1,110 @@
+{
+    "php_function": "hash_pbkdf2",
+    "zend_function": "hash_pbkdf2",
+    "source_file": "",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "math.h",
+        "php_hash.h",
+        "ext/standard/info.h",
+        "ext/standard/file.h",
+        "ext/standard/php_var.h",
+        "zend_attributes.h",
+        "zend_exceptions.h",
+        "zend_interfaces.h",
+        "zend_smart_str.h",
+        "hash_arginfo.h"
+    ],
+    "body": "zend_string *returnval, *algo;\n\tchar *salt, *pass = NULL;\n\tunsigned char *computed_salt, *digest, *temp, *result, *K1, *K2 = NULL;\n\tzend_long loops, i, j, iterations, digest_length = 0, length = 0;\n\tsize_t pass_len, salt_len = 0;\n\tbool raw_output = 0;\n\tconst php_hash_ops *ops;\n\tvoid *context;\n\tHashTable *args = NULL;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"Sssl|lbh\", &algo, &pass, &pass_len, &salt, &salt_len, &iterations, &length, &raw_output, &args) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tops = php_hash_fetch_ops(algo);\n\tif (!ops || !ops->is_crypto) {\n\t\tzend_argument_value_error(1, \"must be a valid cryptographic hashing algorithm\");\n\t\tRETURN_THROWS();\n\t}\n\n\tif (salt_len > INT_MAX - 4) {\n\t\tzend_argument_value_error(3, \"must be less than or equal to INT_MAX - 4 bytes\");\n\t\tRETURN_THROWS();\n\t}\n\n\tif (iterations <= 0) {\n\t\tzend_argument_value_error(4, \"must be greater than 0\");\n\t\tRETURN_THROWS();\n\t}\n\n\tif (length < 0) {\n\t\tzend_argument_value_error(5, \"must be greater than or equal to 0\");\n\t\tRETURN_THROWS();\n\t}\n\n\tcontext = php_hash_alloc_context(ops);\n\tops->hash_init(context, args);\n\n\tK1 = emalloc(ops->block_size);\n\tK2 = emalloc(ops->block_size);\n\tdigest = emalloc(ops->digest_size);\n\ttemp = emalloc(ops->digest_size);\n\n\t/* Setup Keys that will be used for all hmac rounds */\n\tphp_hash_hmac_prep_key(K1, ops, context, (unsigned char *) pass, pass_len);\n\t/* Convert K1 to opad -- 0x6A = 0x36 ^ 0x5C */\n\tphp_hash_string_xor_char(K2, K1, 0x6A, ops->block_size);\n\n\t/* Setup Main Loop to build a long enough result */\n\tif (length == 0) {\n\t\tlength = ops->digest_size;\n\t\tif (!raw_output) {\n\t\t\tlength = length * 2;\n\t\t}\n\t}\n\tdigest_length = length;\n\tif (!raw_output) {\n\t\tdigest_length = (zend_long) ceil((float) length / 2.0);\n\t}\n\n\tloops = (zend_long) ceil((float) digest_length / (float) ops->digest_size);\n\n\tresult = safe_emalloc(loops, ops->digest_size, 0);\n\n\tcomputed_salt = safe_emalloc(salt_len, 1, 4);\n\tmemcpy(computed_salt, (unsigned char *) salt, salt_len);\n\n\tfor (i = 1; i <= loops; i++) {\n\t\t/* digest = hash_hmac(salt + pack('N', i), password) { */\n\n\t\t/* pack(\"N\", i) */\n\t\tcomputed_salt[salt_len] = (unsigned char) (i >> 24);\n\t\tcomputed_salt[salt_len + 1] = (unsigned char) ((i & 0xFF0000) >> 16);\n\t\tcomputed_salt[salt_len + 2] = (unsigned char) ((i & 0xFF00) >> 8);\n\t\tcomputed_salt[salt_len + 3] = (unsigned char) (i & 0xFF);\n\n\t\tphp_hash_hmac_round(digest, ops, context, K1, computed_salt, (zend_long) salt_len + 4);\n\t\tphp_hash_hmac_round(digest, ops, context, K2, digest, ops->digest_size);\n\t\t/* } */\n\n\t\t/* temp = digest */\n\t\tmemcpy(temp, digest, ops->digest_size);\n\n\t\t/*\n\t\t * Note that the loop starting at 1 is intentional, since we've already done\n\t\t * the first round of the algorithm.\n\t\t */\n\t\tfor (j = 1; j < iterations; j++) {\n\t\t\t/* digest = hash_hmac(digest, password) { */\n\t\t\tphp_hash_hmac_round(digest, ops, context, K1, digest, ops->digest_size);\n\t\t\tphp_hash_hmac_round(digest, ops, context, K2, digest, ops->digest_size);\n\t\t\t/* } */\n\t\t\t/* temp ^= digest */\n\t\t\tphp_hash_string_xor(temp, temp, digest, ops->digest_size);\n\t\t}\n\t\t/* result += temp */\n\t\tmemcpy(result + ((i - 1) * ops->digest_size), temp, ops->digest_size);\n\t}\n\t/* Zero potentially sensitive variables */\n\tZEND_SECURE_ZERO(K1, ops->block_size);\n\tZEND_SECURE_ZERO(K2, ops->block_size);\n\tZEND_SECURE_ZERO(computed_salt, salt_len + 4);\n\tefree(K1);\n\tefree(K2);\n\tefree(computed_salt);\n\tefree(context);\n\tefree(digest);\n\tefree(temp);\n\n\treturnval = zend_string_alloc(length, 0);\n\tif (raw_output) {\n\t\tmemcpy(ZSTR_VAL(returnval), result, length);\n\t} else {\n\t\tphp_hash_bin2hex(ZSTR_VAL(returnval), result, digest_length);\n\t}\n\tZSTR_VAL(returnval)[length] = 0;\n\tefree(result);\n\tRETURN_NEW_STR(returnval);",
+    "semantic": "Setup Keys that will be used for all hmac rounds",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "ZEND_SECURE_ZERO",
+            "ZSTR_VAL",
+            "RETURN_NEW_STR"
+        ],
+        "zend_types": [
+            "zend_string",
+            "zend_long",
+            "HashTable"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "php_hash_fetch_ops",
+            "zend_argument_value_error",
+            "php_hash_alloc_context",
+            "php_hash_hmac_prep_key",
+            "php_hash_string_xor_char",
+            "php_hash_hmac_round",
+            "php_hash_string_xor",
+            "zend_string_alloc",
+            "php_hash_bin2hex"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common hash_pbkdf2 inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 9,
+    "purpose": "Setup Keys that will be used for all hmac rounds",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "hash",
+        "hash_file",
+        "hash_hmac",
+        "hash_hmac_file",
+        "hash_init",
+        "hash_update",
+        "hash_update_stream",
+        "hash_update_file",
+        "hash_final",
+        "hash_copy",
+        "hash_algos",
+        "hash_hmac_algos"
+    ]
+}

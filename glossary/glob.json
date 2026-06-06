@@ -1,0 +1,133 @@
+{
+    "php_function": "glob",
+    "zend_function": "glob",
+    "source_file": "r.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "pattern",
+            "macro": "Z_PARAM_PATH",
+            "arguments": [
+                "pattern",
+                "pattern_len"
+            ],
+            "type": "mixed",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_PATH(pattern, pattern_len)"
+        },
+        {
+            "name": "flags",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "flags"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(flags)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "fopen_wrappers.h",
+        "file.h",
+        "php_dir.h",
+        "php_dir_int.h",
+        "php_scandir.h",
+        "basic_functions.h",
+        "dir_arginfo.h",
+        "unistd.h",
+        "errno.h",
+        "win32/readdir.h"
+    ],
+    "body": "size_t cwd_skip = 0;\n#ifdef ZTS\n\tchar cwd[MAXPATHLEN];\n\tchar work_pattern[MAXPATHLEN];\n\tchar *result;\n#endif\n\tchar *pattern = NULL;\n\tsize_t pattern_len;\n\tzend_long flags = 0;\n\tglob_t globbuf;\n\tsize_t n;\n\tint ret;\n\tbool basedir_limit = 0;\n\tzval tmp;\n\n\tZEND_PARSE_PARAMETERS_START(1, 2)\n\t\tZ_PARAM_PATH(pattern, pattern_len)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_LONG(flags)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (pattern_len >= MAXPATHLEN) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Pattern exceeds the maximum allowed length of %d characters\", MAXPATHLEN);\n\t\tRETURN_FALSE;\n\t}\n\n\tif ((GLOB_AVAILABLE_FLAGS & flags) != flags) {\n\t\tphp_error_docref(NULL, E_WARNING, \"At least one of the passed flags is invalid or not supported on this platform\");\n\t\tRETURN_FALSE;\n\t}\n\n#ifdef ZTS\n\tif (!IS_ABSOLUTE_PATH(pattern, pattern_len)) {\n\t\tresult = VCWD_GETCWD(cwd, MAXPATHLEN);\n\t\tif (!result) {\n\t\t\tcwd[0] = '\\0';\n\t\t}\n#ifdef PHP_WIN32\n\t\tif (IS_SLASH(*pattern)) {\n\t\t\tcwd[2] = '\\0';\n\t\t}\n#endif\n\t\tcwd_skip = strlen(cwd)+1;\n\n\t\tsnprintf(work_pattern, MAXPATHLEN, \"%s%c%s\", cwd, DEFAULT_SLASH, pattern);\n\t\tpattern = work_pattern;\n\t}\n#endif\n\n\n\tmemset(&globbuf, 0, sizeof(glob_t));\n\tglobbuf.gl_offs = 0;\n\tif (0 != (ret = glob(pattern, flags & GLOB_FLAGMASK, NULL, &globbuf))) {\n#ifdef GLOB_NOMATCH\n\t\tif (GLOB_NOMATCH == ret) {\n\t\t\t/* Some glob implementation simply return no data if no matches\n\t\t\t   were found, others return the GLOB_NOMATCH error code.\n\t\t\t   We don't want to treat GLOB_NOMATCH as an error condition\n\t\t\t   so that PHP glob() behaves the same on both types of\n\t\t\t   implementations and so that 'foreach (glob() as ...'\n\t\t\t   can be used for simple glob() calls without further error\n\t\t\t   checking.\n\t\t\t*/\n\t\t\tgoto no_results;\n\t\t}\n#endif\n\t\tRETURN_FALSE;\n\t}\n\n\t/* now catch the FreeBSD style of \"no matches\" */\n\tif (!globbuf.gl_pathc || !globbuf.gl_pathv) {\n#ifdef GLOB_NOMATCH\nno_results:\n#endif\n\t\tarray_init(return_value);\n\t\treturn;\n\t}\n\n\tarray_init(return_value);\n\tfor (n = 0; n < (size_t)globbuf.gl_pathc; n++) {\n\t\tif (PG(open_basedir) && *PG(open_basedir)) {\n\t\t\tif (php_check_open_basedir_ex(globbuf.gl_pathv[n], 0)) {\n\t\t\t\tbasedir_limit = 1;\n\t\t\t\tcontinue;\n\t\t\t}\n\t\t}\n\t\t/* we need to do this every time since GLOB_ONLYDIR does not guarantee that\n\t\t * all directories will be filtered. GNU libc documentation states the\n\t\t * following:\n\t\t * If the information about the type of the file is easily available\n\t\t * non-directories will be rejected but no extra work will be done to\n\t\t * determine the information for each file. I.e., the caller must still be\n\t\t * able to filter directories out.\n\t\t */\n\t\tif (flags & GLOB_ONLYDIR) {\n\t\t\tzend_stat_t s = {0};\n\n\t\t\tif (0 != VCWD_STAT(globbuf.gl_pathv[n], &s)) {\n\t\t\t\tcontinue;\n\t\t\t}\n\n\t\t\tif (S_IFDIR != (s.st_mode & S_IFMT)) {\n\t\t\t\tcontinue;\n\t\t\t}\n\t\t}\n\t\tZVAL_STRING(&tmp, globbuf.gl_pathv[n]+cwd_skip);\n\t\tzend_hash_next_index_insert_new(Z_ARRVAL_P(return_value), &tmp);\n\t}\n\n\tglobfree(&globbuf);\n\n\tif (basedir_limit && !zend_hash_num_elements(Z_ARRVAL_P(return_value))) {\n\t\tzend_array_destroy(Z_ARR_P(return_value));\n\t\tRETURN_FALSE;\n\t}",
+    "semantic": "Some glob implementation simply return no data if no matches were found, others return the GLOB_NOMATCH error code.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_PATH",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_LONG",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_FALSE",
+            "ZVAL_STRING"
+        ],
+        "zend_types": [
+            "zend_long",
+            "zval"
+        ],
+        "internal_helpers": [
+            "php_error_docref",
+            "php_check_open_basedir_ex",
+            "zend_hash_next_index_insert_new",
+            "zend_hash_num_elements",
+            "zend_array_destroy"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common glob inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 9,
+    "purpose": "Some glob implementation simply return no data if no matches were found, others return the GLOB_NOMATCH error code.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "opendir",
+        "dir",
+        "closedir",
+        "chroot",
+        "chdir",
+        "getcwd",
+        "rewinddir",
+        "readdir",
+        "scandir"
+    ]
+}

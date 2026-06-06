@@ -1,6 +1,6 @@
 <tr id="subdomain_{{ subdomain.id }}" class="btn-row">
     <td class="fw-semibold">{{ subdomain.affix }}</td>
-    <td>{% if subdomain.domain %}<code>{{ subdomain.domain.id }}</code>{% else %}<i class="fa fa-fw fa-times"></i>{% endif %}</td>
+    <td>{% if subdomain.domain %}<code>{{ subdomain.domain.tld }}</code>{% else %}<i class="fa fa-fw fa-times"></i>{% endif %}</td>
     <td>{% if subdomain.catch %}<i class="fa fa-check"></i>{% else %}<i class="fa fa-fw fa-times"></i>{% endif %}</td>
     <td>{% if subdomain.parcel %}<code>{{ subdomain.parcel.id }}</code>{% else %}<i class="fa fa-fw fa-times"></i>{% endif %}</td>
     <td>

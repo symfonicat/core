@@ -25,7 +25,7 @@ class SubdomainType extends AbstractType
             ])
             ->add('domain', EntityType::class, [
                 'class' => Domain::class,
-                'choice_label' => static fn (Domain $domain): string => (string) $domain->getId(),
+                'choice_label' => static fn (Domain $domain): string => (string) $domain->getTld(),
                 'label' => 'domain',
                 'placeholder' => 'select domain',
                 'required' => false,

@@ -1,0 +1,123 @@
+{
+    "php_function": "msgfmt_parse_message",
+    "zend_function": "msgfmt_parse_message",
+    "source_file": "mat/msgformat_parse.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "slocale",
+            "macro": "Z_PARAM_STRING",
+            "arguments": [
+                "slocale",
+                "slocale_len"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING(slocale, slocale_len)"
+        },
+        {
+            "name": "pattern",
+            "macro": "Z_PARAM_STRING",
+            "arguments": [
+                "pattern",
+                "pattern_len"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING(pattern, pattern_len)"
+        },
+        {
+            "name": "source",
+            "macro": "Z_PARAM_STRING",
+            "arguments": [
+                "source",
+                "src_len"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING(source, src_len)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "unicode/ustring.h",
+        "php_intl.h",
+        "msgformat_class.h",
+        "msgformat_data.h",
+        "msgformat_helpers.h",
+        "intl_convert.h"
+    ],
+    "body": "UChar      *spattern = NULL;\n\tint         spattern_len = 0;\n\tchar       *pattern = NULL;\n\tsize_t      pattern_len = 0;\n\tchar       *slocale = NULL;\n\tsize_t      slocale_len = 0;\n\tchar       *source = NULL;\n\tsize_t      src_len = 0;\n\tMessageFormatter_object mf;\n\tMessageFormatter_object *mfo = &mf;\n\n\tZEND_PARSE_PARAMETERS_START(3, 3)\n\t\tZ_PARAM_STRING(slocale, slocale_len)\n\t\tZ_PARAM_STRING(pattern, pattern_len)\n\t\tZ_PARAM_STRING(source, src_len)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tINTL_CHECK_LOCALE_LEN(slocale_len);\n\tmemset(mfo, 0, sizeof(*mfo));\n\tmsgformat_data_init(&mfo->mf_data);\n\n\tif(pattern && pattern_len) {\n\t\tintl_convert_utf8_to_utf16(&spattern, &spattern_len, pattern, pattern_len, &INTL_DATA_ERROR_CODE(mfo));\n\t\tif( U_FAILURE(INTL_DATA_ERROR_CODE((mfo))) )\n\t\t{\n\t\t\tintl_error_set( NULL, U_ILLEGAL_ARGUMENT_ERROR,\n\t\t\t\t\"msgfmt_parse_message: error converting pattern to UTF-16\", 0 );\n\t\t\tRETURN_FALSE;\n\t\t}\n\t} else {\n\t\tspattern_len = 0;\n\t\tspattern = NULL;\n\t}\n\n\tif(slocale_len == 0) {\n\t\tslocale = (char *)intl_locale_get_default();\n\t}\n\n#ifdef MSG_FORMAT_QUOTE_APOS\n\tif(msgformat_fix_quotes(&spattern, &spattern_len, &INTL_DATA_ERROR_CODE(mfo)) != SUCCESS) {\n\t\tintl_error_set( NULL, U_INVALID_FORMAT_ERROR,\n\t\t\t\"msgfmt_parse_message: error converting pattern to quote-friendly format\", 0 );\n\t\tRETURN_FALSE;\n\t}\n#endif\n\n\t/* Create an ICU message formatter. */\n\tMSG_FORMAT_OBJECT(mfo) = umsg_open(spattern, spattern_len, slocale, NULL, &INTL_DATA_ERROR_CODE(mfo));\n\tif(spattern && spattern_len) {\n\t\tefree(spattern);\n\t}\n\tINTL_METHOD_CHECK_STATUS(mfo, \"Creating message formatter failed\");\n\n\tmsgfmt_do_parse(mfo, source, src_len, return_value);\n\n\t/* drop the temporary formatter */\n\tmsgformat_data_free(&mfo->mf_data);",
+    "semantic": "Create an ICU message formatter.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STRING",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [],
+        "internal_helpers": []
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common msgfmt_parse_message inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 3,
+    "purpose": "Create an ICU message formatter.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "msgfmt_parse"
+    ]
+}

@@ -1,0 +1,84 @@
+{
+    "php_function": "com_create_guid",
+    "zend_function": "com_create_guid",
+    "source_file": "com_com.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "ext/standard/info.h",
+        "php_com_dotnet.h",
+        "php_com_dotnet_internal.h",
+        "Zend/zend_exceptions.h"
+    ],
+    "body": "GUID retval;\n\tOLECHAR *guid_string;\n\n\tif (zend_parse_parameters_none() == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tphp_com_initialize();\n\tif (CoCreateGuid(&retval) == S_OK && StringFromCLSID(&retval, &guid_string) == S_OK) {\n\t\tRETVAL_STR(php_com_olestring_to_string(guid_string, CP_ACP));\n\n\t\tCoTaskMemFree(guid_string);\n\t} else {\n\t\tRETURN_FALSE;\n\t}",
+    "semantic": "Implements the PHP function com_create_guid in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "RETURN_THROWS",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [],
+        "internal_helpers": [
+            "zend_parse_parameters_none",
+            "php_com_initialize",
+            "php_com_olestring_to_string"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common com_create_guid inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 4,
+    "purpose": "Implements the PHP function com_create_guid in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "com_get_active_object",
+        "com_event_sink",
+        "com_print_typeinfo",
+        "com_message_pump",
+        "com_load_typelib"
+    ]
+}

@@ -5,14 +5,11 @@ namespace Symfonicat\Service;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfonicat\Entity\Domain as DomainEntity;
 use Symfonicat\Repository\DomainRepository;
-use Pdp\Domain;
-use Pdp\Rules;
 use Symfony\Component\HttpFoundation\RequestStack;
 
 class DomainService
 {
     public function __construct(
-        private readonly string $subdomainDir,
         private readonly RequestStack $requestStack,
         private readonly DomainRepository $domainRepository,
         private readonly EntityManagerInterface $entityManager,
@@ -27,7 +24,7 @@ class DomainService
             return null;
         }
 
-        if (($_SERVER['APP_ENV'] ?? null) === 'test') {
+        if ($this->isCoreRoute()) {
             return $this->domainRepository->findOneByHost($host);
         }
 
@@ -37,7 +34,7 @@ class DomainService
     public function host() : ?string
     {
         $host = $this->requestStack->getCurrentRequest()?->getHost();
-        if ($host === null) {
+        if (!is_string($host)) {
             return null;
         }
 
@@ -46,29 +43,16 @@ class DomainService
             return null;
         }
 
+        $domain = $this->matchConfiguredDomain($host);
+        if ($domain !== null) {
+            return $domain;
+        }
+
         if ($host === 'localhost' || str_ends_with($host, '.localhost')) {
             return 'localhost';
         }
 
-        $domain = Domain::fromIDNA2008($host);
-        $result = $this->getPublicSuffixList()->resolve($domain);
-
-        $registrable = $result->registrableDomain()->toString();
-        if ($registrable === '') {
-            return null;
-        }
-
-        return $registrable;
-    }
-
-    public function getPublicSuffixList(): Rules
-    {
-        static $list = null;
-        if ($list === null) {
-            $list = Rules::fromPath($this->subdomainDir . '/public_suffix_list.dat');
-        }
-
-        return $list;
+        return null;
     }
 
     /**
@@ -112,9 +96,39 @@ class DomainService
     private function discoverConfiguredDomains(): array
     {
         return array_map(
-            static fn (DomainEntity $domain): string => trim((string) $domain->getId()),
+            static fn (DomainEntity $domain): string => trim((string) $domain->getTld()),
             $this->runtimeConfig->domains(),
         );
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function configuredDomains(): array
+    {
+        $domains = [];
+
+        foreach ($this->runtimeConfig->domains() as $domain) {
+            $domainId = strtolower(trim((string) $domain->getTld()));
+            if ($domainId !== '') {
+                $domains[] = $domainId;
+            }
+        }
+
+        usort($domains, static fn (string $left, string $right): int => strlen($right) <=> strlen($left));
+
+        return $domains;
+    }
+
+    private function matchConfiguredDomain(string $host): ?string
+    {
+        foreach ($this->configuredDomains() as $domain) {
+            if ($host === $domain || str_ends_with($host, '.'.$domain)) {
+                return $domain;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -134,5 +148,15 @@ class DomainService
         }
 
         return $domains;
+    }
+
+    private function isCoreRoute(): bool
+    {
+        $path = $this->requestStack->getCurrentRequest()?->getPathInfo();
+        if (!is_string($path)) {
+            return false;
+        }
+
+        return $path === '/core' || str_starts_with($path, '/core/');
     }
 }

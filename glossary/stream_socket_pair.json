@@ -1,0 +1,147 @@
+{
+    "php_function": "stream_socket_pair",
+    "zend_function": "stream_socket_pair",
+    "source_file": "reamsfuncs.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "domain",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "domain"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(domain)"
+        },
+        {
+            "name": "type",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "type"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(type)"
+        },
+        {
+            "name": "protocol",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "protocol"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(protocol)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "ext/standard/flock_compat.h",
+        "ext/standard/file.h",
+        "ext/standard/basic_functions.h",
+        "php_ini.h",
+        "streamsfuncs.h",
+        "php_network.h",
+        "php_string.h",
+        "unistd.h",
+        "win32/select.h",
+        "win32/sockets.h",
+        "win32/console.h"
+    ],
+    "body": "zend_long domain, type, protocol;\n\tphp_stream *s1, *s2;\n\tphp_socket_t pair[2];\n\n\tZEND_PARSE_PARAMETERS_START(3, 3)\n\t\tZ_PARAM_LONG(domain)\n\t\tZ_PARAM_LONG(type)\n\t\tZ_PARAM_LONG(protocol)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (0 != socketpair((int)domain, (int)type, (int)protocol, pair)) {\n\t\tchar errbuf[256];\n\t\tphp_error_docref(NULL, E_WARNING, \"Failed to create sockets: [%d]: %s\",\n\t\t\tphp_socket_errno(), php_socket_strerror(php_socket_errno(), errbuf, sizeof(errbuf)));\n\t\tRETURN_FALSE;\n\t}\n\n    s1 = php_stream_sock_open_from_socket(pair[0], 0);\n    if (s1 == NULL) {\n        close(pair[0]);\n        close(pair[1]);\n        php_error_docref(NULL, E_WARNING, \"Failed to open stream from socketpair\");\n        RETURN_FALSE;\n    }\n    s2 = php_stream_sock_open_from_socket(pair[1], 0);\n    if (s2 == NULL) {\n        php_stream_free(s1, PHP_STREAM_FREE_CLOSE);\n        close(pair[1]);\n        php_error_docref(NULL, E_WARNING, \"Failed to open stream from socketpair\");\n        RETURN_FALSE;\n    }\n\n    array_init(return_value);\n\n\t/* set the __exposed flag.\n\t * php_stream_to_zval() does, add_next_index_resource() does not */\n\tphp_stream_auto_cleanup(s1);\n\tphp_stream_auto_cleanup(s2);\n\n\tadd_next_index_resource(return_value, s1->res);\n\tadd_next_index_resource(return_value, s2->res);",
+    "semantic": "set the __exposed flag.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_LONG",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "php_error_docref",
+            "php_socket_errno",
+            "php_socket_strerror",
+            "php_stream_sock_open_from_socket",
+            "php_stream_free",
+            "php_stream_to_zval",
+            "php_stream_auto_cleanup"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common stream_socket_pair inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "set the __exposed flag.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "stream_socket_client",
+        "stream_socket_server",
+        "stream_socket_accept",
+        "stream_socket_get_name",
+        "stream_socket_sendto",
+        "stream_socket_recvfrom",
+        "stream_get_contents",
+        "stream_copy_to_stream",
+        "stream_get_meta_data",
+        "stream_get_transports",
+        "stream_get_wrappers",
+        "stream_select"
+    ]
+}

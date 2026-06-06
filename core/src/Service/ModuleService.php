@@ -31,7 +31,7 @@ final class ModuleService
             return NULL;
         }
 
-        if (($_SERVER['APP_ENV'] ?? null) === 'test') {
+        if ($this->isCoreRoute()) {
             return $this->moduleRepository->findOneByFullOrCleanId($moduleId);
         }
 
@@ -292,6 +292,13 @@ final class ModuleService
         );
 
         return $references;
+    }
+
+    private function isCoreRoute(): bool
+    {
+        $path = $this->pathService->path();
+
+        return $path === '/core' || str_starts_with($path, '/core/');
     }
 
     /**

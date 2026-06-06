@@ -1,0 +1,194 @@
+{
+    "php_function": "mb_strcut",
+    "zend_function": "mb_strcut",
+    "source_file": "string.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "string_val",
+            "macro": "Z_PARAM_STRING",
+            "arguments": [
+                "string_val",
+                "string.len"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING(string_val, string.len)"
+        },
+        {
+            "name": "from",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "from"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(from)"
+        },
+        {
+            "name": "len",
+            "macro": "Z_PARAM_LONG_OR_NULL",
+            "arguments": [
+                "len",
+                "len_is_null"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG_OR_NULL(len, len_is_null)"
+        },
+        {
+            "name": "encoding",
+            "macro": "Z_PARAM_STR_OR_NULL",
+            "arguments": [
+                "encoding"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR_OR_NULL(encoding)"
+        }
+    ],
+    "includes": [
+        "limits.h",
+        "libmbfl/config.h",
+        "php.h",
+        "php_ini.h",
+        "php_variables.h",
+        "mbstring.h",
+        "ext/standard/php_string.h",
+        "ext/standard/php_mail.h",
+        "ext/standard/exec.h",
+        "main/php_output.h",
+        "ext/standard/info.h",
+        "ext/pcre/php_pcre.h",
+        "libmbfl/mbfl/mbfilter_8bit.h",
+        "libmbfl/mbfl/mbfilter_pass.h",
+        "libmbfl/mbfl/eaw_table.h",
+        "libmbfl/filters/mbfilter_base64.h",
+        "libmbfl/filters/mbfilter_cjk.h",
+        "libmbfl/filters/mbfilter_qprint.h",
+        "libmbfl/filters/mbfilter_htmlent.h",
+        "libmbfl/filters/mbfilter_uuencode.h",
+        "libmbfl/filters/mbfilter_ucs4.h",
+        "libmbfl/filters/mbfilter_utf16.h",
+        "libmbfl/filters/mbfilter_singlebyte.h",
+        "libmbfl/filters/translit_kana_jisx0201_jisx0208.h",
+        "libmbfl/filters/unicode_prop.h",
+        "php_globals.h",
+        "rfc1867.h",
+        "php_content_types.h",
+        "SAPI.h",
+        "php_unicode.h",
+        "TSRM.h",
+        "mb_gpc.h",
+        "zend_smart_str.h",
+        "zend_multibyte.h",
+        "mbstring_arginfo.h",
+        "rare_cp_bitvec.h",
+        "emmintrin.h",
+        "immintrin.h",
+        "pmmintrin.h"
+    ],
+    "body": "zend_string *encoding = NULL;\n\tchar *string_val;\n\tzend_long from, len;\n\tbool len_is_null = true;\n\tmbfl_string string, result, *ret;\n\n\tZEND_PARSE_PARAMETERS_START(2, 4)\n\t\tZ_PARAM_STRING(string_val, string.len)\n\t\tZ_PARAM_LONG(from)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_LONG_OR_NULL(len, len_is_null)\n\t\tZ_PARAM_STR_OR_NULL(encoding)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tconst mbfl_encoding *enc = php_mb_get_encoding(encoding, 4);\n\tif (!enc) {\n\t\tRETURN_THROWS();\n\t}\n\n\tstring.val = (unsigned char*)string_val;\n\tstring.encoding = enc;\n\n\tif (len_is_null) {\n\t\tlen = string.len;\n\t}\n\n\t/* if \"from\" position is negative, count start position from the end\n\t * of the string */\n\tif (from < 0) {\n\t\tfrom = string.len + from;\n\t\tif (from < 0) {\n\t\t\tfrom = 0;\n\t\t}\n\t}\n\n\t/* if \"length\" position is negative, set it to the length\n\t * needed to stop that many chars from the end of the string */\n\tif (len < 0) {\n\t\tlen = (string.len - from) + len;\n\t\tif (len < 0) {\n\t\t\tlen = 0;\n\t\t}\n\t}\n\n\tif (from > string.len || len == 0) {\n\t\tRETURN_EMPTY_STRING();\n\t}\n\n\tif (enc->cut) {\n\t\tRETURN_STR(enc->cut(string.val, from, len, string.val + string.len));\n\t}\n\n\tunsigned int char_len = string.encoding->flag & (MBFL_ENCTYPE_SBCS | MBFL_ENCTYPE_WCS2 | MBFL_ENCTYPE_WCS4);\n\tif (char_len) {\n\t\t/* Round `from` down to a multiple of `char_len`; works because `char_len` is a power of 2 */\n\t\tfrom &= -char_len;\n\t\tif (len > string.len - from) {\n\t\t\tlen = string.len - from;\n\t\t}\n\t\tRETURN_STR(zend_string_init_fast((const char*)(string.val + from), len & -char_len));\n\t}\n\n\tif (enc->mblen_table) {\n\t\tconst unsigned char *mbtab = enc->mblen_table;\n\t\tconst unsigned char *p, *q, *end;\n\t\tint m = 0;\n\t\t/* Search for start position */\n\t\tfor (p = (const unsigned char*)string.val, q = p + from; p < q; p += (m = mbtab[*p]));\n\t\tif (p > q) {\n\t\t\tp -= m;\n\t\t}\n\t\tconst unsigned char *start = p;\n\t\t/* Search for end position */\n\t\tif (len >= string.len - (start - (const unsigned char*)string.val)) {\n\t\t\tend = (const unsigned char*)(string.val + string.len);\n\t\t} else {\n\t\t\tfor (q = p + len; p < q; p += (m = mbtab[*p]));\n\t\t\tif (p > q) {\n\t\t\t\tp -= m;\n\t\t\t}\n\t\t\tend = p;\n\t\t}\n\t\tRETURN_STR(zend_string_init_fast((const char*)start, end - start));\n\t}\n\n\tret = mbfl_strcut(&string, &result, from, len);\n\tZEND_ASSERT(ret != NULL);\n\tRETVAL_STRINGL((char *)ret->val, ret->len); /* the string is already strdup()'ed */\n\tefree(ret->val);",
+    "semantic": "if \"from\" position is negative, count start position from the end of the string",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STRING",
+            "Z_PARAM_LONG",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_LONG_OR_NULL",
+            "Z_PARAM_STR_OR_NULL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_THROWS",
+            "RETURN_EMPTY_STRING",
+            "RETURN_STR",
+            "ZEND_ASSERT"
+        ],
+        "zend_types": [
+            "zend_string",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "php_mb_get_encoding",
+            "zend_string_init_fast"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common mb_strcut inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 7,
+    "purpose": "if \"from\" position is negative, count start position from the end of the string",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "mb_language",
+        "mb_internal_encoding",
+        "mb_http_input",
+        "mb_http_output",
+        "mb_detect_order",
+        "mb_substitute_character",
+        "mb_preferred_mime_name",
+        "mb_parse_str",
+        "mb_output_handler",
+        "mb_str_split",
+        "mb_strlen",
+        "mb_strpos"
+    ]
+}

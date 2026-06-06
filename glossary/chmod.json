@@ -1,0 +1,131 @@
+{
+    "php_function": "chmod",
+    "zend_function": "chmod",
+    "source_file": "lestat.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "filename",
+            "macro": "Z_PARAM_PATH",
+            "arguments": [
+                "filename",
+                "filename_len"
+            ],
+            "type": "mixed",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_PATH(filename, filename_len)"
+        },
+        {
+            "name": "mode",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "mode"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(mode)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "fopen_wrappers.h",
+        "php_globals.h",
+        "stdlib.h",
+        "sys/stat.h",
+        "string.h",
+        "errno.h",
+        "ctype.h",
+        "time.h",
+        "win32/winutil.h",
+        "basic_functions.h",
+        "php_filestat.h"
+    ],
+    "body": "char *filename;\n\tsize_t filename_len;\n\tzend_long mode;\n\tint ret;\n\tmode_t imode;\n\tphp_stream_wrapper *wrapper;\n\n\tZEND_PARSE_PARAMETERS_START(2, 2)\n\t\tZ_PARAM_PATH(filename, filename_len)\n\t\tZ_PARAM_LONG(mode)\n\tZEND_PARSE_PARAMETERS_END();\n\n\twrapper = php_stream_locate_url_wrapper(filename, NULL, 0);\n\tif(wrapper != &php_plain_files_wrapper || strncasecmp(\"file://\", filename, 7) == 0) {\n\t\tif(wrapper && wrapper->wops->stream_metadata) {\n\t\t\tif(wrapper->wops->stream_metadata(wrapper, filename, PHP_STREAM_META_ACCESS, &mode, NULL)) {\n\t\t\t\tRETURN_TRUE;\n\t\t\t} else {\n\t\t\t\tRETURN_FALSE;\n\t\t\t}\n\t\t} else {\n\t\t\tphp_error_docref(NULL, E_WARNING, \"Cannot call chmod() for a non-standard stream\");\n\t\t\tRETURN_FALSE;\n\t\t}\n\t}\n\n\t/* Check the basedir */\n\tif (php_check_open_basedir(filename)) {\n\t\tRETURN_FALSE;\n\t}\n\n\timode = (mode_t) mode;\n\n\tret = VCWD_CHMOD(filename, imode);\n\tif (ret == -1) {\n\t\tphp_error_docref(NULL, E_WARNING, \"%s\", strerror(errno));\n\t\tRETURN_FALSE;\n\t}\n\tRETURN_TRUE;",
+    "semantic": "Check the basedir",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_PATH",
+            "Z_PARAM_LONG",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_TRUE",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "php_stream_locate_url_wrapper",
+            "php_error_docref",
+            "php_check_open_basedir"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common chmod inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "Check the basedir",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "disk_total_space",
+        "disk_free_space",
+        "chgrp",
+        "lchgrp",
+        "chown",
+        "lchown",
+        "touch",
+        "clearstatcache",
+        "name",
+        "realpath_cache_size",
+        "realpath_cache_get"
+    ]
+}

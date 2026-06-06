@@ -1,0 +1,138 @@
+{
+    "php_function": "strtotime",
+    "zend_function": "strtotime",
+    "source_file": "te.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "times",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "times"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(times)"
+        },
+        {
+            "name": "preset_ts",
+            "macro": "Z_PARAM_LONG_OR_NULL",
+            "arguments": [
+                "preset_ts",
+                "preset_ts_is_null"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG_OR_NULL(preset_ts, preset_ts_is_null)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "php_main.h",
+        "php_ini.h",
+        "ext/standard/info.h",
+        "ext/standard/php_versioning.h",
+        "php_date.h",
+        "zend_attributes.h",
+        "zend_interfaces.h",
+        "zend_exceptions.h",
+        "lib/timelib.h",
+        "lib/timelib_private.h",
+        "time.h",
+        "win32/time.h",
+        "php_date_arginfo.h",
+        "zend_smart_str.h"
+    ],
+    "body": "zend_string *times;\n\tint parse_error, epoch_does_not_fit_in_zend_long;\n\ttimelib_error_container *error;\n\tzend_long preset_ts, ts;\n\tbool preset_ts_is_null = 1;\n\ttimelib_time *t, *now;\n\ttimelib_tzinfo *tzi;\n\n\tZEND_PARSE_PARAMETERS_START(1, 2)\n\t\tZ_PARAM_STR(times)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_LONG_OR_NULL(preset_ts, preset_ts_is_null)\n\tZEND_PARSE_PARAMETERS_END();\n\n\t/* timelib_strtotime() expects the string to not be empty */\n\tif (ZSTR_LEN(times) == 0) {\n\t\tRETURN_FALSE;\n\t}\n\n\ttzi = get_timezone_info();\n\tif (!tzi) {\n\t\treturn;\n\t}\n\n\tnow = timelib_time_ctor();\n\tnow->tz_info = tzi;\n\tnow->zone_type = TIMELIB_ZONETYPE_ID;\n\ttimelib_unixtime2local(now,\n\t\t!preset_ts_is_null ? (timelib_sll) preset_ts : (timelib_sll) php_time());\n\n\tt = timelib_strtotime(ZSTR_VAL(times), ZSTR_LEN(times), &error,\n\t\tDATE_TIMEZONEDB, php_date_parse_tzfile_wrapper);\n\tparse_error = error->error_count;\n\ttimelib_error_container_dtor(error);\n\tif (parse_error) {\n\t\ttimelib_time_dtor(now);\n\t\ttimelib_time_dtor(t);\n\t\tRETURN_FALSE;\n\t}\n\n\ttimelib_fill_holes(t, now, TIMELIB_NO_CLONE);\n\ttimelib_update_ts(t, tzi);\n\tts = timelib_date_to_int(t, &epoch_does_not_fit_in_zend_long);\n\n\ttimelib_time_dtor(now);\n\ttimelib_time_dtor(t);\n\n\tif (epoch_does_not_fit_in_zend_long) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Epoch doesn't fit in a PHP integer\");\n\t\tRETURN_FALSE;\n\t}\n\n\tRETURN_LONG(ts);",
+    "semantic": "timelib_strtotime() expects the string to not be empty",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STR",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_LONG_OR_NULL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZSTR_LEN",
+            "RETURN_FALSE",
+            "ZSTR_VAL",
+            "RETURN_LONG"
+        ],
+        "zend_types": [
+            "zend_string",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "php_time",
+            "php_error_docref"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common strtotime inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "timelib_strtotime() expects the string to not be empty",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "date",
+        "gmdate",
+        "idate",
+        "mktime",
+        "gmmktime",
+        "checkdate",
+        "strftime",
+        "gmstrftime",
+        "time",
+        "localtime",
+        "getdate",
+        "date_create"
+    ]
+}

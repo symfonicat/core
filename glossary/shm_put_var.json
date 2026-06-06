@@ -1,0 +1,96 @@
+{
+    "php_function": "shm_put_var",
+    "zend_function": "shm_put_var",
+    "source_file": "vshm.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "errno.h",
+        "php_sysvshm.h",
+        "sysvshm_arginfo.h",
+        "ext/standard/info.h",
+        "ext/standard/php_var.h",
+        "zend_smart_str.h"
+    ],
+    "body": "zval *shm_id, *arg_var;\n\tint ret;\n\tzend_long shm_key;\n\tsysvshm_shm *shm_list_ptr;\n\tsmart_str shm_var = {0};\n\tphp_serialize_data_t var_hash;\n\n\tif (SUCCESS != zend_parse_parameters(ZEND_NUM_ARGS(), \"Olz\", &shm_id, sysvshm_ce, &shm_key, &arg_var)) {\n\t\tRETURN_THROWS();\n\t}\n\n\tshm_list_ptr = Z_SYSVSHM_P(shm_id);\n\tif (!shm_list_ptr->ptr) {\n\t\tzend_throw_error(NULL, \"Shared memory block has already been destroyed\");\n\t\tRETURN_THROWS();\n\t}\n\n\t/* setup string-variable and serialize */\n\tPHP_VAR_SERIALIZE_INIT(var_hash);\n\tphp_var_serialize(&shm_var, arg_var, &var_hash);\n\tPHP_VAR_SERIALIZE_DESTROY(var_hash);\n\n\tif (UNEXPECTED(!shm_list_ptr->ptr)) {\n\t\tsmart_str_free(&shm_var);\n\t\tzend_throw_error(NULL, \"Shared memory block has been destroyed by the serialization function\");\n\t\tRETURN_THROWS();\n\t}\n\n\t/* insert serialized variable into shared memory */\n\tret = php_put_shm_data(shm_list_ptr->ptr, shm_key, shm_var.s? ZSTR_VAL(shm_var.s) : NULL, shm_var.s? ZSTR_LEN(shm_var.s) : 0);\n\n\t/* free string */\n\tsmart_str_free(&shm_var);\n\n\tif (ret == -1) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Not enough shared memory left\");\n\t\tRETURN_FALSE;\n\t}\n\tRETURN_TRUE;",
+    "semantic": "setup string-variable and serialize",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "ZSTR_VAL",
+            "ZSTR_LEN",
+            "RETURN_FALSE",
+            "RETURN_TRUE"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "zend_throw_error",
+            "php_var_serialize",
+            "smart_str_free",
+            "php_put_shm_data",
+            "php_error_docref"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common shm_put_var inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": true,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 4,
+    "purpose": "setup string-variable and serialize",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "shm_attach",
+        "shm_detach",
+        "shm_remove",
+        "shm_get_var",
+        "shm_has_var",
+        "shm_remove_var"
+    ]
+}

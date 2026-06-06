@@ -1,0 +1,255 @@
+{
+    "php_function": "openssl_cms_sign",
+    "zend_function": "openssl_cms_sign",
+    "source_file": "nssl.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "infilename",
+            "macro": "Z_PARAM_PATH",
+            "arguments": [
+                "infilename",
+                "infilename_len"
+            ],
+            "type": "mixed",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_PATH(infilename, infilename_len)"
+        },
+        {
+            "name": "outfilename",
+            "macro": "Z_PARAM_PATH",
+            "arguments": [
+                "outfilename",
+                "outfilename_len"
+            ],
+            "type": "mixed",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_PATH(outfilename, outfilename_len)"
+        },
+        {
+            "name": "cert_obj",
+            "macro": "Z_PARAM_OBJ_OF_CLASS_OR_STR",
+            "arguments": [
+                "cert_obj",
+                "php_openssl_certificate_ce",
+                "cert_str"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_OBJ_OF_CLASS_OR_STR(cert_obj, php_openssl_certificate_ce, cert_str)"
+        },
+        {
+            "name": "zprivkey",
+            "macro": "Z_PARAM_ZVAL",
+            "arguments": [
+                "zprivkey"
+            ],
+            "type": "zval",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": true,
+            "raw": "Z_PARAM_ZVAL(zprivkey)"
+        },
+        {
+            "name": "zheaders",
+            "macro": "Z_PARAM_ARRAY_OR_NULL",
+            "arguments": [
+                "zheaders"
+            ],
+            "type": "HashTable",
+            "required": true,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY_OR_NULL(zheaders)"
+        },
+        {
+            "name": "flags",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "flags"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(flags)"
+        },
+        {
+            "name": "encoding",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "encoding"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(encoding)"
+        },
+        {
+            "name": "extracertsfilename",
+            "macro": "Z_PARAM_PATH_OR_NULL",
+            "arguments": [
+                "extracertsfilename",
+                "extracertsfilename_len"
+            ],
+            "type": "mixed",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_PATH_OR_NULL(extracertsfilename, extracertsfilename_len)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "php_openssl.h",
+        "zend_attributes.h",
+        "zend_exceptions.h",
+        "ext/standard/file.h",
+        "ext/standard/info.h",
+        "ext/standard/php_fopen_wrappers.h",
+        "ext/standard/md5.h",
+        "ext/standard/base64.h",
+        "openssl/evp.h",
+        "openssl/bn.h",
+        "openssl/rsa.h",
+        "openssl/dsa.h",
+        "openssl/dh.h",
+        "openssl/x509.h",
+        "openssl/x509v3.h",
+        "openssl/crypto.h",
+        "openssl/pem.h",
+        "openssl/err.h",
+        "openssl/conf.h",
+        "openssl/rand.h",
+        "openssl/ssl.h",
+        "openssl/pkcs12.h",
+        "openssl/cms.h",
+        "openssl/core_names.h",
+        "openssl/param_build.h",
+        "openssl/provider.h",
+        "openssl/engine.h",
+        "time.h",
+        "openssl_arginfo.h"
+    ],
+    "body": "X509 *cert = NULL;\n\tzend_object *cert_obj;\n\tzend_string *cert_str;\n\tzval *zprivkey, *zheaders;\n\tzval * hval;\n\tEVP_PKEY * privkey = NULL;\n\tzend_long flags = 0;\n\tzend_long encoding = ENCODING_SMIME;\n\tCMS_ContentInfo * cms = NULL;\n\tBIO * infile = NULL, * outfile = NULL;\n\tSTACK_OF(X509) *others = NULL;\n\tzend_string * strindex;\n\tchar * infilename;\n\tsize_t infilename_len;\n\tchar * outfilename;\n\tsize_t outfilename_len;\n\tchar * extracertsfilename = NULL;\n\tsize_t extracertsfilename_len;\n\tint need_final = 0;\n\n\tZEND_PARSE_PARAMETERS_START(5, 8)\n\t\tZ_PARAM_PATH(infilename, infilename_len)\n\t\tZ_PARAM_PATH(outfilename, outfilename_len)\n\t\tZ_PARAM_OBJ_OF_CLASS_OR_STR(cert_obj, php_openssl_certificate_ce, cert_str)\n\t\tZ_PARAM_ZVAL(zprivkey)\n\t\tZ_PARAM_ARRAY_OR_NULL(zheaders)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_LONG(flags)\n\t\tZ_PARAM_LONG(encoding)\n\t\tZ_PARAM_PATH_OR_NULL(extracertsfilename, extracertsfilename_len)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tRETVAL_FALSE;\n\n\tif (extracertsfilename) {\n\t\tothers = php_openssl_load_all_certs_from_file(\n\t\t\t\textracertsfilename, extracertsfilename_len, 8);\n\t\tif (others == NULL) {\n\t\t\tgoto clean_exit;\n\t\t}\n\t}\n\n\tprivkey = php_openssl_pkey_from_zval(zprivkey, 0, \"\", 0, 4);\n\tif (privkey == NULL) {\n\t\tif (!EG(exception)) {\n\t\t\tphp_error_docref(NULL, E_WARNING, \"Error getting private key\");\n\t\t}\n\t\tgoto clean_exit;\n\t}\n\n\tcert = php_openssl_x509_from_param(cert_obj, cert_str, 3);\n\tif (cert == NULL) {\n\t\tphp_error_docref(NULL, E_WARNING, \"X.509 Certificate cannot be retrieved\");\n\t\tgoto clean_exit;\n\t}\n\n\tif ((encoding & ENCODING_SMIME) && (flags & CMS_DETACHED)) {\n\t\tphp_error_docref(NULL,\n\t\t\t\t E_WARNING, \"Detached signatures not possible with S/MIME encoding\");\n\t\tgoto clean_exit;\n\t}\n\n\t/* a CMS struct will not be complete if either CMS_PARTIAL or CMS_STREAM is set.\n\t * However, CMS_PARTIAL requires a CMS_final call whereas CMS_STREAM requires\n\t * a different write routine below.  There may be a more efficient way to do this\n\t * with function pointers, but the readability goes down.\n\t * References: CMS_sign(3SSL), CMS_final(3SSL)\n\t */\n\n\tif (flags & CMS_PARTIAL && !(flags & CMS_STREAM)) {\n\t\tneed_final=1;\n\t}\n\n\tinfile = php_openssl_bio_new_file(\n\t\t\tinfilename, infilename_len, 1, PHP_OPENSSL_BIO_MODE_R(flags));\n\tif (infile == NULL) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Error opening input file %s!\", infilename);\n\t\tgoto clean_exit;\n\t}\n\n\toutfile = php_openssl_bio_new_file(\n\t\t\toutfilename, outfilename_len, 2, PHP_OPENSSL_BIO_MODE_W(CMS_BINARY));\n\tif (outfile == NULL) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Error opening output file %s!\", outfilename);\n\t\tgoto clean_exit;\n\t}\n\n\tcms = CMS_sign(cert, privkey, others, infile, (unsigned int)flags);\n\tif (cms == NULL) {\n\t\tphp_openssl_store_errors();\n\t\tphp_error_docref(NULL, E_WARNING, \"Error creating CMS structure!\");\n\t\tgoto clean_exit;\n\t}\n\tif (BIO_reset(infile) != 0) {\n\t\tphp_openssl_store_errors();\n\t\tgoto clean_exit;\n\t}\n\n\t/* tack on extra headers */\n\tif (zheaders && encoding == ENCODING_SMIME) {\n\t\tint ret;\n\n\t\tZEND_HASH_FOREACH_STR_KEY_VAL(Z_ARRVAL_P(zheaders), strindex, hval) {\n\t\t\tzend_string *str = zval_try_get_string(hval);\n\t\t\tif (UNEXPECTED(!str)) {\n\t\t\t\tgoto clean_exit;\n\t\t\t}\n\t\t\tif (strindex) {\n\t\t\t\tret = BIO_printf(outfile, \"%s: %s\\n\", ZSTR_VAL(strindex), ZSTR_VAL(str));\n\t\t\t} else {\n\t\t\t\tret = BIO_printf(outfile, \"%s\\n\", ZSTR_VAL(str));\n\t\t\t}\n\t\t\tzend_string_release(str);\n\t\t\tif (ret < 0) {\n\t\t\t\tphp_openssl_store_errors();\n\t\t\t}\n\t\t} ZEND_HASH_FOREACH_END();\n\t}\n\t/* writing the signed data depends on the encoding */\n\tswitch (encoding) {\n\t\tcase ENCODING_SMIME:\n\t\t\tif (!SMIME_write_CMS(outfile, cms, infile, (int)flags)) {\n\t\t\t\tphp_openssl_store_errors();\n\t\t\t\t\tgoto clean_exit;\n\t\t\t}\n\t\t\tbreak;\n\t\tcase ENCODING_DER:\n\t\t\tif (need_final) {\n\t\t\t\tif (CMS_final(cms, infile, NULL, (unsigned int) flags) != 1) {\n\t\t\t\t\tphp_openssl_store_errors();\n\t\t\t\t\tgoto clean_exit;\n\t\t\t\t}\n\t\t\t}\n\t\t\tif (i2d_CMS_bio(outfile, cms) != 1) {\n\t\t\t\tphp_openssl_store_errors();\n\t\t\t\tgoto clean_exit;\n\t\t\t}\n\t\t\tbreak;\n\t\tcase ENCODING_PEM:\n\t\t\tif (need_final) {\n\t\t\t\tif (CMS_final(cms, infile, NULL, (unsigned int) flags) != 1) {\n\t\t\t\t\tphp_openssl_store_errors();\n\t\t\t\t\tgoto clean_exit;\n\t\t\t\t}\n\t\t\t}\n\t\t\tif (flags & CMS_STREAM) {\n\t\t\t\tif (PEM_write_bio_CMS_stream(outfile, cms, infile, flags) == 0) {\n\t\t\t\t\tphp_openssl_store_errors();\n\t\t\t\t\tgoto clean_exit;\n\t\t\t\t}\n\t\t\t} else {\n\t\t\t\tif (PEM_write_bio_CMS(outfile, cms) == 0) {\n\t\t\t\t\tphp_openssl_store_errors();\n\t\t\t\t\tgoto clean_exit;\n\t\t\t\t}\n\t\t\t}\n\t\t\tbreak;\n\t\tdefault:\n\t\t\tphp_error_docref(NULL, E_WARNING, \"Unknown OPENSSL encoding\");\n\t\t\tgoto clean_exit;\n\t}\n\tRETVAL_TRUE;\n\nclean_exit:\n\tif (cms) {\n\t\tCMS_ContentInfo_free(cms);\n\t}\n\tBIO_free(infile);\n\tBIO_free(outfile);\n\tif (others) {\n\t\tsk_X509_pop_free(others, X509_free);\n\t}\n\tEVP_PKEY_free(privkey);\n\tif (cert && cert_str) {\n\t\tX509_free(cert);\n\t}",
+    "semantic": "a CMS struct will not be complete if either CMS_PARTIAL or CMS_STREAM is set.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_PATH",
+            "Z_PARAM_OBJ_OF_CLASS_OR_STR",
+            "Z_PARAM_ZVAL",
+            "Z_PARAM_ARRAY_OR_NULL",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_LONG",
+            "Z_PARAM_PATH_OR_NULL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZEND_HASH_FOREACH_STR_KEY_VAL",
+            "ZSTR_VAL",
+            "ZEND_HASH_FOREACH_END"
+        ],
+        "zend_types": [
+            "zend_object",
+            "zend_string",
+            "zval",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "php_openssl_load_all_certs_from_file",
+            "php_openssl_pkey_from_zval",
+            "php_error_docref",
+            "php_openssl_x509_from_param",
+            "php_openssl_bio_new_file",
+            "php_openssl_store_errors",
+            "zval_try_get_string",
+            "zend_string_release"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common openssl_cms_sign inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 10,
+    "purpose": "a CMS struct will not be complete if either CMS_PARTIAL or CMS_STREAM is set.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "openssl_get_cert_locations",
+        "openssl_x509_export_to_file",
+        "openssl_spki_new",
+        "openssl_spki_verify",
+        "openssl_spki_export",
+        "openssl_spki_export_challenge",
+        "openssl_x509_export",
+        "openssl_x509_fingerprint",
+        "openssl_x509_check_private_key",
+        "openssl_x509_verify",
+        "openssl_x509_parse",
+        "openssl_x509_checkpurpose"
+    ]
+}

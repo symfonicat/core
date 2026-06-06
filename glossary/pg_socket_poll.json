@@ -1,0 +1,162 @@
+{
+    "php_function": "pg_socket_poll",
+    "zend_function": "pg_socket_poll",
+    "source_file": ".c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "z_socket",
+            "macro": "Z_PARAM_RESOURCE",
+            "arguments": [
+                "z_socket"
+            ],
+            "type": "zend_resource",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_RESOURCE(z_socket)"
+        },
+        {
+            "name": "read",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "read"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(read)"
+        },
+        {
+            "name": "write",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "write"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(write)"
+        },
+        {
+            "name": "ts",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "ts"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(ts)"
+        }
+    ],
+    "includes": [
+        "stdlib.h",
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "ext/standard/info.h",
+        "zend_smart_str.h",
+        "ext/pcre/php_pcre.h",
+        "php_pgsql.h",
+        "php_globals.h",
+        "zend_exceptions.h",
+        "zend_attributes.h",
+        "php_network.h",
+        "pgsql_arginfo.h"
+    ],
+    "body": "zval *z_socket;\n\tphp_stream *stream;\n\tphp_socket_t socket;\n\tzend_long read, write;\n\tzend_long ts = -1;\n\n\tZEND_PARSE_PARAMETERS_START(3, 4)\n\t\tZ_PARAM_RESOURCE(z_socket)\n\t\tZ_PARAM_LONG(read)\n\t\tZ_PARAM_LONG(write)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_LONG(ts)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tphp_stream_from_zval(stream, z_socket);\n\n\tif (php_stream_cast(stream, PHP_STREAM_AS_SOCKETD, (void **)&socket, 0)) {\n\t\tzend_argument_type_error(1, \"invalid resource socket\");\n\t\tRETURN_THROWS();\n\t}\n\n\tRETURN_LONG((zend_long)PQsocketPoll(socket, (int)read, (int)write, (int)ts));",
+    "semantic": "Implements the PHP function pg_socket_poll in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_RESOURCE",
+            "Z_PARAM_LONG",
+            "Z_PARAM_OPTIONAL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_THROWS",
+            "RETURN_LONG"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "php_stream_from_zval",
+            "php_stream_cast",
+            "zend_argument_type_error"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common pg_socket_poll inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 4,
+    "purpose": "Implements the PHP function pg_socket_poll in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "pg_connect",
+        "pg_connect_poll",
+        "pg_pconnect",
+        "pg_close",
+        "pg_dbname",
+        "pg_last_error",
+        "pg_options",
+        "pg_port",
+        "pg_tty",
+        "pg_host",
+        "pg_version",
+        "pg_jit"
+    ]
+}

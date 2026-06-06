@@ -1,0 +1,175 @@
+{
+    "php_function": "zend_call_method",
+    "zend_function": "zend_call_method",
+    "source_file": "est.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "class_or_object",
+            "macro": "Z_PARAM_ZVAL",
+            "arguments": [
+                "class_or_object"
+            ],
+            "type": "zval",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": true,
+            "raw": "Z_PARAM_ZVAL(class_or_object)"
+        },
+        {
+            "name": "method_name",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "method_name"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(method_name)"
+        },
+        {
+            "name": "arg1",
+            "macro": "Z_PARAM_ZVAL",
+            "arguments": [
+                "arg1"
+            ],
+            "type": "zval",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": true,
+            "raw": "Z_PARAM_ZVAL(arg1)"
+        },
+        {
+            "name": "arg2",
+            "macro": "Z_PARAM_ZVAL",
+            "arguments": [
+                "arg2"
+            ],
+            "type": "zval",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": true,
+            "raw": "Z_PARAM_ZVAL(arg2)"
+        }
+    ],
+    "includes": [
+        "zend_modules.h",
+        "php.h",
+        "php_ini.h",
+        "ext/standard/info.h",
+        "php_test.h",
+        "observer.h",
+        "fiber.h",
+        "iterators.h",
+        "object_handlers.h",
+        "zend_attributes.h",
+        "zend_enum.h",
+        "zend_interfaces.h",
+        "zend_weakrefs.h",
+        "Zend/Optimizer/zend_optimizer.h",
+        "Zend/zend_alloc.h",
+        "test_arginfo.h",
+        "zend_call_stack.h",
+        "zend_exceptions.h",
+        "zend_mm_custom_handlers.h",
+        "assert.h"
+    ],
+    "body": "zend_string *method_name;\n\tzval *class_or_object, *arg1 = NULL, *arg2 = NULL;\n\tzend_object *obj = NULL;\n\tzend_class_entry *ce = NULL;\n\tint argc = ZEND_NUM_ARGS();\n\n\tZEND_PARSE_PARAMETERS_START(2, 4)\n\t\tZ_PARAM_ZVAL(class_or_object)\n\t\tZ_PARAM_STR(method_name)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_ZVAL(arg1)\n\t\tZ_PARAM_ZVAL(arg2)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (Z_TYPE_P(class_or_object) == IS_OBJECT) {\n\t\tobj = Z_OBJ_P(class_or_object);\n\t\tce = obj->ce;\n\t} else if (Z_TYPE_P(class_or_object) == IS_STRING) {\n\t\tce = zend_lookup_class(Z_STR_P(class_or_object));\n\t\tif (!ce) {\n\t\t\tzend_error_noreturn(E_ERROR, \"Unknown class '%s'\", Z_STRVAL_P(class_or_object));\n\t\t\treturn;\n\t\t}\n\t} else {\n\t\tzend_argument_type_error(1, \"must be of type object|string, %s given\", zend_zval_value_name(class_or_object));\n\t\treturn;\n\t}\n\n\tZEND_ASSERT((argc >= 2) && (argc <= 4));\n\tzend_call_method(obj, ce, NULL, ZSTR_VAL(method_name), ZSTR_LEN(method_name), return_value, argc - 2, arg1, arg2);",
+    "semantic": "Implements the PHP function zend_call_method in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_ZVAL",
+            "Z_PARAM_STR",
+            "Z_PARAM_OPTIONAL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZEND_ASSERT",
+            "ZSTR_VAL",
+            "ZSTR_LEN"
+        ],
+        "zend_types": [
+            "zend_string",
+            "zval",
+            "zend_object",
+            "zend_class_entry"
+        ],
+        "internal_helpers": [
+            "zend_lookup_class",
+            "zend_error_noreturn",
+            "zend_argument_type_error",
+            "zend_zval_value_name",
+            "zend_call_method"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common zend_call_method inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": false,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "Implements the PHP function zend_call_method in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "zend_test_func",
+        "zend_test_array_return",
+        "zend_test_nullable_array_return",
+        "zend_test_void_return",
+        "zend_test_deprecated",
+        "zend_test_deprecated_attr",
+        "zend_create_unterminated_string",
+        "zend_terminate_string",
+        "zend_leak_bytes",
+        "zend_leak_variable",
+        "zend_string_or_object",
+        "zend_string_or_object_or_null"
+    ]
+}

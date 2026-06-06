@@ -39,7 +39,7 @@ final class RuntimeAssetExtension extends AbstractExtension
         }
 
         if ($context instanceof Domain) {
-            $domainId = trim((string) $context->getId(false));
+            $domainId = trim((string) $context->getTld());
             if ($domainId !== '') {
                 return sprintf('/domains/%s/', $this->encodePath($domainId));
             }
@@ -62,8 +62,8 @@ final class RuntimeAssetExtension extends AbstractExtension
         }
 
         $domain = $this->domainService->load();
-        if ($domain instanceof Domain && $this->assetFileExists('domains', (string) $domain->getId(false), $path)) {
-            return sprintf('/domains/%s/', $this->encodePath((string) $domain->getId(false)));
+        if ($domain instanceof Domain && $this->assetFileExists('domains', (string) $domain->getTld(), $path)) {
+            return sprintf('/domains/%s/', $this->encodePath((string) $domain->getTld()));
         }
 
         return $this->defaultAssetBase($path);

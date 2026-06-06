@@ -1,0 +1,125 @@
+{
+    "php_function": "openssl_pkey_get_details",
+    "zend_function": "openssl_pkey_get_details",
+    "source_file": "nssl.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "php_openssl.h",
+        "zend_attributes.h",
+        "zend_exceptions.h",
+        "ext/standard/file.h",
+        "ext/standard/info.h",
+        "ext/standard/php_fopen_wrappers.h",
+        "ext/standard/md5.h",
+        "ext/standard/base64.h",
+        "openssl/evp.h",
+        "openssl/bn.h",
+        "openssl/rsa.h",
+        "openssl/dsa.h",
+        "openssl/dh.h",
+        "openssl/x509.h",
+        "openssl/x509v3.h",
+        "openssl/crypto.h",
+        "openssl/pem.h",
+        "openssl/err.h",
+        "openssl/conf.h",
+        "openssl/rand.h",
+        "openssl/ssl.h",
+        "openssl/pkcs12.h",
+        "openssl/cms.h",
+        "openssl/core_names.h",
+        "openssl/param_build.h",
+        "openssl/provider.h",
+        "openssl/engine.h",
+        "time.h",
+        "openssl_arginfo.h"
+    ],
+    "body": "zval *key;\n\tunsigned int pbio_len;\n\tchar *pbio;\n\tzend_long ktype;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"O\", &key, php_openssl_pkey_ce) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tEVP_PKEY *pkey = Z_OPENSSL_PKEY_P(key)->pkey;\n\n\tBIO *out = BIO_new(BIO_s_mem());\n\tif (!PEM_write_bio_PUBKEY(out, pkey)) {\n\t\tBIO_free(out);\n\t\tphp_openssl_store_errors();\n\t\tRETURN_FALSE;\n\t}\n\tpbio_len = BIO_get_mem_data(out, &pbio);\n\n\tarray_init(return_value);\n\tadd_assoc_long(return_value, \"bits\", EVP_PKEY_bits(pkey));\n\tadd_assoc_stringl(return_value, \"key\", pbio, pbio_len);\n\t/*TODO: Use the real values once the openssl constants are used\n\t * See the enum at the top of this file\n\t */\n#if PHP_OPENSSL_API_VERSION >= 0x30000\n\tzval ary;\n\tint base_id = 0;\n\n\tif (EVP_PKEY_id(pkey) != EVP_PKEY_KEYMGMT) {\n\t\tbase_id = EVP_PKEY_base_id(pkey);\n\t} else {\n\t\tconst char *type_name = EVP_PKEY_get0_type_name(pkey);\n\t\tif (type_name) {\n\t\t\tint nid = OBJ_txt2nid(type_name);\n\t\t\tif (nid != NID_undef) {\n\t\t\t\tbase_id = EVP_PKEY_type(nid);\n\t\t\t}\n\t\t}\n\t}\n\n\tswitch (base_id) {\n\t\tcase EVP_PKEY_RSA:\n\t\t\tktype = OPENSSL_KEYTYPE_RSA;\n\t\t\tarray_init(&ary);\n\t\t\tadd_assoc_zval(return_value, \"rsa\", &ary);\n\t\t\tphp_openssl_copy_bn_param(&ary, pkey, OSSL_PKEY_PARAM_RSA_N, \"n\");\n\t\t\tphp_openssl_copy_bn_param(&ary, pkey, OSSL_PKEY_PARAM_RSA_E, \"e\");\n\t\t\tphp_openssl_copy_bn_param(&ary, pkey, OSSL_PKEY_PARAM_RSA_D, \"d\");\n\t\t\tphp_openssl_copy_bn_param(&ary, pkey, OSSL_PKEY_PARAM_RSA_FACTOR1, \"p\");\n\t\t\tphp_openssl_copy_bn_param(&ary, pkey, OSSL_PKEY_PARAM_RSA_FACTOR2, \"q\");\n\t\t\tphp_openssl_copy_bn_param(&ary, pkey, OSSL_PKEY_PARAM_RSA_EXPONENT1, \"dmp1\");\n\t\t\tphp_openssl_copy_bn_param(&ary, pkey, OSSL_PKEY_PARAM_RSA_EXPONENT2, \"dmq1\");\n\t\t\tphp_openssl_copy_bn_param(&ary, pkey, OSSL_PKEY_PARAM_RSA_COEFFICIENT1, \"iqmp\");\n\t\t\tbreak;\n\t\tcase EVP_PKEY_DSA:\n\t\t\tktype = OPENSSL_KEYTYPE_DSA;\n\t\t\tarray_init(&ary);\n\t\t\tadd_assoc_zval(return_value, \"dsa\", &ary);\n\t\t\tphp_openssl_copy_bn_param(&ary, pkey, OSSL_PKEY_PARAM_FFC_P, \"p\");\n\t\t\tphp_openssl_copy_bn_param(&ary, pkey, OSSL_PKEY_PARAM_FFC_Q, \"q\");\n\t\t\tphp_openssl_copy_bn_param(&ary, pkey, OSSL_PKEY_PARAM_FFC_G, \"g\");\n\t\t\tphp_openssl_copy_bn_param(&ary, pkey, OSSL_PKEY_PARAM_PRIV_KEY, \"priv_key\");\n\t\t\tphp_openssl_copy_bn_param(&ary, pkey, OSSL_PKEY_PARAM_PUB_KEY, \"pub_key\");\n\t\t\tbreak;\n\t\tcase EVP_PKEY_DH:\n\t\t\tktype = OPENSSL_KEYTYPE_DH;\n\t\t\tarray_init(&ary);\n\t\t\tadd_assoc_zval(return_value, \"dh\", &ary);\n\t\t\tphp_openssl_copy_bn_param(&ary, pkey, OSSL_PKEY_PARAM_FFC_P, \"p\");\n\t\t\tphp_openssl_copy_bn_param(&ary, pkey, OSSL_PKEY_PARAM_FFC_G, \"g\");\n\t\t\tphp_openssl_copy_bn_param(&ary, pkey, OSSL_PKEY_PARAM_PRIV_KEY, \"priv_key\");\n\t\t\tphp_openssl_copy_bn_param(&ary, pkey, OSSL_PKEY_PARAM_PUB_KEY, \"pub_key\");\n\t\t\tbreak;\n#ifdef HAVE_EVP_PKEY_EC\n\t\tcase EVP_PKEY_EC: {\n\t\t\tktype = OPENSSL_KEYTYPE_EC;\n\t\t\tarray_init(&ary);\n\t\t\tadd_assoc_zval(return_value, \"ec\", &ary);\n\n\t\t\tzend_string *curve_name = php_openssl_get_utf8_param(\n\t\t\t\tpkey, OSSL_PKEY_PARAM_GROUP_NAME, \"curve_name\");\n\t\t\tif (curve_name) {\n\t\t\t\tadd_assoc_str(&ary, \"curve_name\", curve_name);\n\n\t\t\t\tint nid = OBJ_sn2nid(ZSTR_VAL(curve_name));\n\t\t\t\tif (nid != NID_undef) {\n\t\t\t\t\tASN1_OBJECT *obj = OBJ_nid2obj(nid);\n\t\t\t\t\tif (obj) {\n\t\t\t\t\t\t// OpenSSL recommends a buffer length of 80.\n\t\t\t\t\t\tchar oir_buf[80];\n\t\t\t\t\t\tint oir_len = OBJ_obj2txt(oir_buf, sizeof(oir_buf), obj, 1);\n\t\t\t\t\t\tadd_assoc_stringl(&ary, \"curve_oid\", oir_buf, oir_len);\n\t\t\t\t\t\tASN1_OBJECT_free(obj);\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\n\t\t\tphp_openssl_copy_bn_param(&ary, pkey, OSSL_PKEY_PARAM_EC_PUB_X, \"x\");\n\t\t\tphp_openssl_copy_bn_param(&ary, pkey, OSSL_PKEY_PARAM_EC_PUB_Y, \"y\");\n\t\t\tphp_openssl_copy_bn_param(&ary, pkey, OSSL_PKEY_PARAM_PRIV_KEY, \"d\");\n\t\t\tbreak;\n\t\t}\n#endif\n#if PHP_OPENSSL_API_VERSION >= 0x30000\n\t\tcase EVP_PKEY_X25519: {\n\t\t\tktype = OPENSSL_KEYTYPE_X25519;\n\t\t\tphp_openssl_copy_curve_25519_448_params(return_value, \"x25519\", pkey);\n\t\t\tbreak;\n\t\t}\n\t\tcase EVP_PKEY_ED25519: {\n\t\t\tktype = OPENSSL_KEYTYPE_ED25519;\n\t\t\tphp_openssl_copy_curve_25519_448_params(return_value, \"ed25519\", pkey);\n\t\t\tbreak;\n\t\t}\n\t\tcase EVP_PKEY_X448: {\n\t\t\tktype = OPENSSL_KEYTYPE_X448;\n\t\t\tphp_openssl_copy_curve_25519_448_params(return_value, \"x448\", pkey);\n\t\t\tbreak;\n\t\t}\n\t\tcase EVP_PKEY_ED448: {\n\t\t\tktype = OPENSSL_KEYTYPE_ED448;\n\t\t\tphp_openssl_copy_curve_25519_448_params(return_value, \"ed448\", pkey);\n\t\t\tbreak;\n\t\t}\n#endif\n\t\tdefault:\n\t\t\tktype = -1;\n\t\t\tbreak;\n\t}\n#else\n\tswitch (EVP_PKEY_base_id(pkey)) {\n\t\tcase EVP_PKEY_RSA:\n\t\tcase EVP_PKEY_RSA2:\n\t\t\t{\n\t\t\t\tRSA *rsa = EVP_PKEY_get0_RSA(pkey);\n\t\t\t\tktype = OPENSSL_KEYTYPE_RSA;\n\n\t\t\t\tif (rsa != NULL) {\n\t\t\t\t\tzval z_rsa;\n\t\t\t\t\tconst BIGNUM *n, *e, *d, *p, *q, *dmp1, *dmq1, *iqmp;\n\n\t\t\t\t\tRSA_get0_key(rsa, &n, &e, &d);\n\t\t\t\t\tRSA_get0_factors(rsa, &p, &q);\n\t\t\t\t\tRSA_get0_crt_params(rsa, &dmp1, &dmq1, &iqmp);\n\n\t\t\t\t\tarray_init(&z_rsa);\n\t\t\t\t\tOPENSSL_PKEY_GET_BN(z_rsa, n);\n\t\t\t\t\tOPENSSL_PKEY_GET_BN(z_rsa, e);\n\t\t\t\t\tOPENSSL_PKEY_GET_BN(z_rsa, d);\n\t\t\t\t\tOPENSSL_PKEY_GET_BN(z_rsa, p);\n\t\t\t\t\tOPENSSL_PKEY_GET_BN(z_rsa, q);\n\t\t\t\t\tOPENSSL_PKEY_GET_BN(z_rsa, dmp1);\n\t\t\t\t\tOPENSSL_PKEY_GET_BN(z_rsa, dmq1);\n\t\t\t\t\tOPENSSL_PKEY_GET_BN(z_rsa, iqmp);\n\t\t\t\t\tadd_assoc_zval(return_value, \"rsa\", &z_rsa);\n\t\t\t\t}\n\t\t\t}\n\t\t\tbreak;\n\t\tcase EVP_PKEY_DSA:\n\t\tcase EVP_PKEY_DSA2:\n\t\tcase EVP_PKEY_DSA3:\n\t\tcase EVP_PKEY_DSA4:\n\t\t\t{\n\t\t\t\tDSA *dsa = EVP_PKEY_get0_DSA(pkey);\n\t\t\t\tktype = OPENSSL_KEYTYPE_DSA;\n\n\t\t\t\tif (dsa != NULL) {\n\t\t\t\t\tzval z_dsa;\n\t\t\t\t\tconst BIGNUM *p, *q, *g, *priv_key, *pub_key;\n\n\t\t\t\t\tDSA_get0_pqg(dsa, &p, &q, &g);\n\t\t\t\t\tDSA_get0_key(dsa, &pub_key, &priv_key);\n\n\t\t\t\t\tarray_init(&z_dsa);\n\t\t\t\t\tOPENSSL_PKEY_GET_BN(z_dsa, p);\n\t\t\t\t\tOPENSSL_PKEY_GET_BN(z_dsa, q);\n\t\t\t\t\tOPENSSL_PKEY_GET_BN(z_dsa, g);\n\t\t\t\t\tOPENSSL_PKEY_GET_BN(z_dsa, priv_key);\n\t\t\t\t\tOPENSSL_PKEY_GET_BN(z_dsa, pub_key);\n\t\t\t\t\tadd_assoc_zval(return_value, \"dsa\", &z_dsa);\n\t\t\t\t}\n\t\t\t}\n\t\t\tbreak;\n\t\tcase EVP_PKEY_DH:\n\t\t\t{\n\t\t\t\tDH *dh = EVP_PKEY_get0_DH(pkey);\n\t\t\t\tktype = OPENSSL_KEYTYPE_DH;\n\n\t\t\t\tif (dh != NULL) {\n\t\t\t\t\tzval z_dh;\n\t\t\t\t\tconst BIGNUM *p, *q, *g, *priv_key, *pub_key;\n\n\t\t\t\t\tDH_get0_pqg(dh, &p, &q, &g);\n\t\t\t\t\tDH_get0_key(dh, &pub_key, &priv_key);\n\n\t\t\t\t\tarray_init(&z_dh);\n\t\t\t\t\tOPENSSL_PKEY_GET_BN(z_dh, p);\n\t\t\t\t\tOPENSSL_PKEY_GET_BN(z_dh, g);\n\t\t\t\t\tOPENSSL_PKEY_GET_BN(z_dh, priv_key);\n\t\t\t\t\tOPENSSL_PKEY_GET_BN(z_dh, pub_key);\n\t\t\t\t\tadd_assoc_zval(return_value, \"dh\", &z_dh);\n\t\t\t\t}\n\t\t\t}\n\t\t\tbreak;\n#ifdef HAVE_EVP_PKEY_EC\n\t\tcase EVP_PKEY_EC:\n\t\t\tktype = OPENSSL_KEYTYPE_EC;\n\t\t\tif (EVP_PKEY_get0_EC_KEY(pkey) != NULL) {\n\t\t\t\tzval ec;\n\t\t\t\tconst EC_GROUP *ec_group;\n\t\t\t\tconst EC_POINT *pub;\n\t\t\t\tint nid;\n\t\t\t\tchar *crv_sn;\n\t\t\t\tASN1_OBJECT *obj;\n\t\t\t\t// openssl recommends a buffer length of 80\n\t\t\t\tchar oir_buf[80];\n\t\t\t\tconst EC_KEY *ec_key = EVP_PKEY_get0_EC_KEY(pkey);\n\t\t\t\tBIGNUM *x = BN_new();\n\t\t\t\tBIGNUM *y = BN_new();\n\t\t\t\tconst BIGNUM *d;\n\n\t\t\t\tec_group = EC_KEY_get0_group(ec_key);\n\n\t\t\t\tarray_init(&ec);\n\n\t\t\t\t/** Curve nid (numerical identifier) used for ASN1 mapping */\n\t\t\t\tnid = EC_GROUP_get_curve_name(ec_group);\n\t\t\t\tif (nid != NID_undef) {\n\t\t\t\t\tcrv_sn = (char*) OBJ_nid2sn(nid);\n\t\t\t\t\tif (crv_sn != NULL) {\n\t\t\t\t\t\tadd_assoc_string(&ec, \"curve_name\", crv_sn);\n\t\t\t\t\t}\n\n\t\t\t\t\tobj = OBJ_nid2obj(nid);\n\t\t\t\t\tif (obj != NULL) {\n\t\t\t\t\t\tint oir_len = OBJ_obj2txt(oir_buf, sizeof(oir_buf), obj, 1);\n\t\t\t\t\t\tadd_assoc_stringl(&ec, \"curve_oid\", (char*) oir_buf, oir_len);\n\t\t\t\t\t\tASN1_OBJECT_free(obj);\n\t\t\t\t\t}\n\t\t\t\t}\n\n\t\t\t\tpub = EC_KEY_get0_public_key(ec_key);\n\n\t\t\t\tif (EC_POINT_get_affine_coordinates_GFp(ec_group, pub, x, y, NULL)) {\n\t\t\t\t\tphp_openssl_add_bn_to_array(&ec, x, \"x\");\n\t\t\t\t\tphp_openssl_add_bn_to_array(&ec, y, \"y\");\n\t\t\t\t} else {\n\t\t\t\t\tphp_openssl_store_errors();\n\t\t\t\t}\n\n\t\t\t\tif ((d = EC_KEY_get0_private_key(EVP_PKEY_get0_EC_KEY(pkey))) != NULL) {\n\t\t\t\t\tphp_openssl_add_bn_to_array(&ec, d, \"d\");\n\t\t\t\t}\n\n\t\t\t\tadd_assoc_zval(return_value, \"ec\", &ec);\n\n\t\t\t\tBN_free(x);\n\t\t\t\tBN_free(y);\n\t\t\t}\n\t\t\tbreak;\n#endif\n\t\tdefault:\n\t\t\tktype = -1;\n\t\t\tbreak;\n\t}\n#endif\n\tadd_assoc_long(return_value, \"type\", ktype);\n\n\tBIO_free(out);",
+    "semantic": "TODO: Use the real values once the openssl constants are used See the enum at the top of this file",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_FALSE",
+            "ZSTR_VAL"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_long",
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "php_openssl_store_errors",
+            "php_openssl_copy_bn_param",
+            "php_openssl_get_utf8_param",
+            "php_openssl_copy_curve_25519_448_params",
+            "php_openssl_add_bn_to_array"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common openssl_pkey_get_details inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 9,
+    "purpose": "TODO: Use the real values once the openssl constants are used See the enum at the top of this file",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "openssl_get_cert_locations",
+        "openssl_x509_export_to_file",
+        "openssl_spki_new",
+        "openssl_spki_verify",
+        "openssl_spki_export",
+        "openssl_spki_export_challenge",
+        "openssl_x509_export",
+        "openssl_x509_fingerprint",
+        "openssl_x509_check_private_key",
+        "openssl_x509_verify",
+        "openssl_x509_parse",
+        "openssl_x509_checkpurpose"
+    ]
+}

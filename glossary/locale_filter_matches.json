@@ -1,0 +1,148 @@
+{
+    "php_function": "locale_filter_matches",
+    "zend_function": "locale_filter_matches",
+    "source_file": "/locale_methods.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "lang_tag",
+            "macro": "Z_PARAM_STRING",
+            "arguments": [
+                "lang_tag",
+                "lang_tag_len"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING(lang_tag, lang_tag_len)"
+        },
+        {
+            "name": "loc_range",
+            "macro": "Z_PARAM_STRING",
+            "arguments": [
+                "loc_range",
+                "loc_range_len"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING(loc_range,  loc_range_len)"
+        },
+        {
+            "name": "boolCanonical",
+            "macro": "Z_PARAM_BOOL",
+            "arguments": [
+                "boolCanonical"
+            ],
+            "type": "bool",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_BOOL(boolCanonical)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "unicode/ustring.h",
+        "unicode/udata.h",
+        "unicode/putil.h",
+        "unicode/ures.h",
+        "php_intl.h",
+        "locale.h",
+        "locale_class.h",
+        "intl_convert.h",
+        "intl_data.h",
+        "zend_API.h",
+        "zend.h",
+        "php.h",
+        "main/php_ini.h",
+        "zend_smart_str.h"
+    ],
+    "body": "char*       \tlang_tag        = NULL;\n\tsize_t         \tlang_tag_len    = 0;\n\tchar*           loc_range       = NULL;\n\tsize_t         \tloc_range_len   = 0;\n\n\tint\t\tresult\t\t= 0;\n\tchar*\t\ttoken\t\t= 0;\n\tchar*\t\tchrcheck\t= NULL;\n\n\tzend_string*   \tcan_lang_tag    = NULL;\n\tzend_string*   \tcan_loc_range   = NULL;\n\n\tchar*       \tcur_lang_tag    = NULL;\n\tchar*       \tcur_loc_range   = NULL;\n\n\tbool \tboolCanonical \t= 0;\n\tUErrorCode\tstatus\t\t= U_ZERO_ERROR;\n\n\tintl_error_reset( NULL );\n\n\tZEND_PARSE_PARAMETERS_START(2, 3)\n\t\tZ_PARAM_STRING(lang_tag, lang_tag_len)\n\t\tZ_PARAM_STRING(loc_range,  loc_range_len)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_BOOL(boolCanonical)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif(loc_range_len == 0) {\n\t\tloc_range = (char *)intl_locale_get_default();\n\t\tloc_range_len = strlen(loc_range);\n\t}\n\n\tif( strcmp(loc_range,\"*\")==0){\n\t\tRETURN_TRUE;\n\t}\n\n\tINTL_CHECK_LOCALE_LEN(loc_range_len);\n\tINTL_CHECK_LOCALE_LEN(lang_tag_len);\n\n\tif( boolCanonical ){\n\t\t/* canonicalize loc_range */\n\t\tcan_loc_range=get_icu_value_internal( loc_range , LOC_CANONICALIZE_TAG , &result , 0);\n\t\tif( result <=0) {\n\t\t\tintl_error_set( NULL, status,\n\t\t\t\t\"locale_filter_matches : unable to canonicalize loc_range\" , 0 );\n\t\t\tRETURN_FALSE;\n\t\t}\n\n\t\t/* canonicalize lang_tag */\n\t\tcan_lang_tag = get_icu_value_internal( lang_tag , LOC_CANONICALIZE_TAG , &result ,  0);\n\t\tif( result <=0) {\n\t\t\tintl_error_set( NULL, status,\n\t\t\t\t\"locale_filter_matches : unable to canonicalize lang_tag\" , 0 );\n\t\t\tRETURN_FALSE;\n\t\t}\n\n\t\t/* Convert to lower case for case-insensitive comparison */\n\t\tcur_lang_tag = ecalloc( 1, can_lang_tag->len + 1);\n\n\t\t/* Convert to lower case for case-insensitive comparison */\n\t\tresult = strToMatch( can_lang_tag->val , cur_lang_tag);\n\t\tif( result == 0) {\n\t\t\tefree( cur_lang_tag );\n\t\t\tzend_string_release_ex( can_lang_tag, 0 );\n\t\t\tRETURN_FALSE;\n\t\t}\n\n\t\tcur_loc_range = ecalloc( 1, can_loc_range->len + 1);\n\t\tresult = strToMatch( can_loc_range->val , cur_loc_range );\n\t\tif( result == 0) {\n\t\t\tefree( cur_lang_tag );\n\t\t\tzend_string_release_ex( can_lang_tag, 0 );\n\t\t\tefree( cur_loc_range );\n\t\t\tzend_string_release_ex( can_loc_range, 0 );\n\t\t\tRETURN_FALSE;\n\t\t}\n\n\t\t/* check if prefix */\n\t\ttoken \t= strstr( cur_lang_tag , cur_loc_range );\n\n\t\tif( token && (token==cur_lang_tag) ){\n\t\t\t/* check if the char. after match is SEPARATOR */\n\t\t\tchrcheck = token + (strlen(cur_loc_range));\n\t\t\tif( isIDSeparator(*chrcheck) || isKeywordSeparator(*chrcheck) || isEndOfTag(*chrcheck) ){\n\t\t\t\tefree( cur_lang_tag );\n\t\t\t\tefree( cur_loc_range );\n\t\t\t\tif( can_lang_tag){\n\t\t\t\t\tzend_string_release_ex( can_lang_tag, 0 );\n\t\t\t\t}\n\t\t\t\tif( can_loc_range){\n\t\t\t\t\tzend_string_release_ex( can_loc_range, 0 );\n\t\t\t\t}\n\t\t\t\tRETURN_TRUE;\n\t\t\t}\n\t\t}\n\n\t\t/* No prefix as loc_range */\n\t\tif( cur_lang_tag){\n\t\t\tefree( cur_lang_tag );\n\t\t}\n\t\tif( cur_loc_range){\n\t\t\tefree( cur_loc_range );\n\t\t}\n\t\tif( can_lang_tag){\n\t\t\tzend_string_release_ex( can_lang_tag, 0 );\n\t\t}\n\t\tif( can_loc_range){\n\t\t\tzend_string_release_ex( can_loc_range, 0 );\n\t\t}\n\t\tRETURN_FALSE;\n\n\t} /* end of if isCanonical */\n\telse{\n\t\t/* Convert to lower case for case-insensitive comparison */\n\t\tcur_lang_tag = ecalloc( 1, strlen(lang_tag ) + 1);\n\n\t\tresult = strToMatch( lang_tag , cur_lang_tag);\n\t\tif( result == 0) {\n\t\t\tefree( cur_lang_tag );\n\t\t\tRETURN_FALSE;\n\t\t}\n\t\tcur_loc_range = ecalloc( 1, strlen(loc_range ) + 1);\n\t\tresult = strToMatch( loc_range , cur_loc_range );\n\t\tif( result == 0) {\n\t\t\tefree( cur_lang_tag );\n\t\t\tefree( cur_loc_range );\n\t\t\tRETURN_FALSE;\n\t\t}\n\n\t\t/* check if prefix */\n\t\ttoken \t= strstr( cur_lang_tag , cur_loc_range );\n\n\t\tif( token && (token==cur_lang_tag) ){\n\t\t\t/* check if the char. after match is SEPARATOR */\n\t\t\tchrcheck = token + (strlen(cur_loc_range));\n\t\t\tif( isIDSeparator(*chrcheck) || isEndOfTag(*chrcheck) ){\n\t\t\t\tefree( cur_lang_tag );\n\t\t\t\tefree( cur_loc_range );\n\t\t\t\tRETURN_TRUE;\n\t\t\t}\n\t\t}\n\n\t\t/* No prefix as loc_range */\n\t\tif( cur_lang_tag){\n\t\t\tefree( cur_lang_tag );\n\t\t}\n\t\tif( cur_loc_range){\n\t\t\tefree( cur_loc_range );\n\t\t}\n\t\tRETURN_FALSE;\n\n\t}",
+    "semantic": "canonicalize loc_range",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STRING",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_BOOL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_TRUE",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "zend_string_release_ex"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common locale_filter_matches inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "canonicalize loc_range",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "zif_locale_get_default",
+        "zif_locale_set_default",
+        "locale_get_script",
+        "locale_get_region",
+        "locale_get_primary_language",
+        "locale_get_display_name",
+        "locale_get_display_language",
+        "locale_get_display_script",
+        "locale_get_display_region",
+        "locale_get_display_variant",
+        "locale_get_keywords",
+        "locale_canonicalize"
+    ]
+}

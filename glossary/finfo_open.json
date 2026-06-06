@@ -1,0 +1,98 @@
+{
+    "php_function": "finfo_open",
+    "zend_function": "finfo_open",
+    "source_file": "leinfo.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "libmagic/magic.h",
+        "php_ini.h",
+        "ext/standard/info.h",
+        "ext/standard/file.h",
+        "php_fileinfo.h",
+        "fileinfo_arginfo.h",
+        "fopen_wrappers.h",
+        "Zend/zend_exceptions.h"
+    ],
+    "body": "zend_long options = MAGIC_NONE;\n\tchar *file = NULL;\n\tsize_t file_len = 0;\n\tphp_fileinfo *finfo;\n\tzval *object = getThis();\n\tchar resolved_path[MAXPATHLEN];\n\tzend_error_handling zeh;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"|lp!\", &options, &file, &file_len) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tif (object) {\n\t\tfinfo_object *finfo_obj = Z_FINFO_P(object);\n\n\t\tzend_replace_error_handling(EH_THROW, NULL, &zeh);\n\n\t\tif (finfo_obj->ptr) {\n\t\t\tmagic_close(finfo_obj->ptr->magic);\n\t\t\tefree(finfo_obj->ptr);\n\t\t\tfinfo_obj->ptr = NULL;\n\t\t}\n\t}\n\n\tif (file_len == 0) {\n\t\tfile = NULL;\n\t} else if (file && *file) { /* user specified file, perform open_basedir checks */\n\n\t\tif (php_check_open_basedir(file)) {\n\t\t\tif (object) {\n\t\t\t\tzend_restore_error_handling(&zeh);\n\t\t\t\tif (!EG(exception)) {\n\t\t\t\t\tzend_throw_exception(NULL, \"Constructor failed\", 0);\n\t\t\t\t}\n\t\t\t}\n\t\t\tRETURN_FALSE;\n\t\t}\n\t\tif (!expand_filepath_with_mode(file, resolved_path, NULL, 0, CWD_EXPAND)) {\n\t\t\tif (object) {\n\t\t\t\tzend_restore_error_handling(&zeh);\n\t\t\t\tif (!EG(exception)) {\n\t\t\t\t\tzend_throw_exception(NULL, \"Constructor failed\", 0);\n\t\t\t\t}\n\t\t\t}\n\t\t\tRETURN_FALSE;\n\t\t}\n\t\tfile = resolved_path;\n\t}\n\n\tfinfo = emalloc(sizeof(php_fileinfo));\n\n\tfinfo->options = options;\n\tfinfo->magic = magic_open(options);\n\n\tif (finfo->magic == NULL) {\n\t\tefree(finfo);\n\t\tphp_error_docref(NULL, E_WARNING, \"Invalid mode '\" ZEND_LONG_FMT \"'.\", options);\n\t\tif (object) {\n\t\t\tzend_restore_error_handling(&zeh);\n\t\t\tif (!EG(exception)) {\n\t\t\t\tzend_throw_exception(NULL, \"Constructor failed\", 0);\n\t\t\t}\n\t\t}\n\t\tRETURN_FALSE;\n\t}\n\n\tif (magic_load(finfo->magic, file) == -1) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Failed to load magic database at \\\"%s\\\"\", file);\n\t\tmagic_close(finfo->magic);\n\t\tefree(finfo);\n\t\tif (object) {\n\t\t\tzend_restore_error_handling(&zeh);\n\t\t\tif (!EG(exception)) {\n\t\t\t\tzend_throw_exception(NULL, \"Constructor failed\", 0);\n\t\t\t}\n\t\t}\n\t\tRETURN_FALSE;\n\t}\n\n\tif (object) {\n\t\tfinfo_object *obj;\n\t\tzend_restore_error_handling(&zeh);\n\t\tobj = Z_FINFO_P(object);\n\t\tobj->ptr = finfo;\n\t} else {\n\t\tzend_object *zobj = finfo_objects_new(finfo_class_entry);\n\t\tfinfo_object *obj = php_finfo_fetch_object(zobj);\n\t\tobj->ptr = finfo;\n\t\tRETURN_OBJ(zobj);\n\t}",
+    "semantic": "user specified file, perform open_basedir checks",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_FALSE",
+            "ZEND_LONG_FMT",
+            "RETURN_OBJ"
+        ],
+        "zend_types": [
+            "zend_long",
+            "zval",
+            "zend_object"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "zend_replace_error_handling",
+            "php_check_open_basedir",
+            "zend_restore_error_handling",
+            "zend_throw_exception",
+            "php_error_docref",
+            "php_finfo_fetch_object"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common finfo_open inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "user specified file, perform open_basedir checks",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "finfo_close",
+        "finfo_set_flags",
+        "finfo_file",
+        "finfo_buffer",
+        "mime_content_type"
+    ]
+}

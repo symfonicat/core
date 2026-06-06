@@ -1,0 +1,92 @@
+{
+    "php_function": "sapi_windows_set_ctrl_handler",
+    "zend_function": "sapi_windows_set_ctrl_handler",
+    "source_file": "",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "php.h",
+        "SAPI.h",
+        "win32/console.h"
+    ],
+    "body": "zend_fcall_info fci;\n\tzend_fcall_info_cache fcc;\n\tbool add = 1;\n\n\n\t/* callable argument corresponds to the CTRL handler */\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"f!|b\", &fci, &fcc, &add) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n#ifdef ZTS\n\tif (!tsrm_is_main_thread()) {\n\t\tzend_throw_error(NULL, \"CTRL events can only be received on the main thread\");\n\t\tRETURN_THROWS();\n\t}\n#endif\n\n\tif (!php_win32_console_is_cli_sapi()) {\n\t\tzend_throw_error(NULL, \"CTRL events trapping is only supported on console\");\n\t\tRETURN_THROWS();\n\t}\n\n\tif (!ZEND_FCI_INITIALIZED(fci)) {\n\t\tzval_ptr_dtor(&ctrl_handler);\n\t\tZVAL_UNDEF(&ctrl_handler);\n\t\tif (!SetConsoleCtrlHandler(NULL, add)) {\n\t\t\tRETURN_FALSE;\n\t\t}\n\t\tRETURN_TRUE;\n\t}\n\n\tif (!SetConsoleCtrlHandler(NULL, FALSE) || !SetConsoleCtrlHandler(php_win32_signal_system_ctrl_handler, add)) {\n\t\tzend_string *func_name = zend_get_callable_name(&fci.function_name);\n\t\tphp_error_docref(NULL, E_WARNING, \"Unable to attach %s as a CTRL handler\", ZSTR_VAL(func_name));\n\t\tzend_string_release_ex(func_name, 0);\n\t\tRETURN_FALSE;\n\t}\n\n\tzval_ptr_dtor_nogc(&ctrl_handler);\n\tZVAL_COPY(&ctrl_handler, &fci.function_name);\n\n\tRETURN_TRUE;",
+    "semantic": "callable argument corresponds to the CTRL handler",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "ZEND_FCI_INITIALIZED",
+            "ZVAL_UNDEF",
+            "RETURN_FALSE",
+            "RETURN_TRUE",
+            "ZSTR_VAL",
+            "ZVAL_COPY"
+        ],
+        "zend_types": [
+            "zend_fcall_info",
+            "zend_fcall_info_cache",
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "zend_throw_error",
+            "php_win32_console_is_cli_sapi",
+            "zval_ptr_dtor",
+            "zend_get_callable_name",
+            "php_error_docref",
+            "zend_string_release_ex",
+            "zval_ptr_dtor_nogc"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common sapi_windows_set_ctrl_handler inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 5,
+    "purpose": "callable argument corresponds to the CTRL handler",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "sapi_windows_generate_ctrl_event"
+    ]
+}

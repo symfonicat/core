@@ -1,0 +1,98 @@
+{
+    "php_function": "readline_info",
+    "zend_function": "readline_info",
+    "source_file": "adline.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_readline.h",
+        "readline_cli.h",
+        "readline_arginfo.h",
+        "editline/readline.h",
+        "readline/readline.h",
+        "readline/history.h"
+    ],
+    "body": "zend_string *what = NULL;\n\tzval *value = NULL;\n\tsize_t oldval;\n\tchar *oldstr;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"|S!z!\", &what, &value) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tif (!what) {\n\t\tarray_init(return_value);\n\t\tadd_assoc_string(return_value,\"line_buffer\",SAFE_STRING(rl_line_buffer));\n\t\tadd_assoc_long(return_value,\"point\",rl_point);\n#ifndef PHP_WIN32\n\t\tadd_assoc_long(return_value,\"end\",rl_end);\n#endif\n#ifdef HAVE_LIBREADLINE\n\t\tadd_assoc_long(return_value,\"mark\",rl_mark);\n\t\tadd_assoc_long(return_value,\"done\",rl_done);\n\t\tadd_assoc_long(return_value,\"pending_input\",rl_pending_input);\n\t\tadd_assoc_string(return_value,\"prompt\",SAFE_STRING(rl_prompt));\n\t\tadd_assoc_string(return_value,\"terminal_name\",(char *)SAFE_STRING(rl_terminal_name));\n\t\tadd_assoc_str(return_value, \"completion_append_character\",\n\t\t\trl_completion_append_character == 0\n\t\t\t\t? ZSTR_EMPTY_ALLOC()\n\t\t\t\t: ZSTR_CHAR(rl_completion_append_character));\n\t\tadd_assoc_bool(return_value,\"completion_suppress_append\",rl_completion_suppress_append);\n#endif\n#ifdef HAVE_ERASE_EMPTY_LINE\n\t\tadd_assoc_long(return_value,\"erase_empty_line\",rl_erase_empty_line);\n#endif\n#ifndef PHP_WIN32\n\t\tadd_assoc_string(return_value,\"library_version\",(char *)SAFE_STRING(rl_library_version));\n#endif\n\t\tadd_assoc_string(return_value,\"readline_name\",(char *)SAFE_STRING(rl_readline_name));\n\t\tadd_assoc_long(return_value,\"attempted_completion_over\",rl_attempted_completion_over);\n\t} else {\n\t\tif (zend_string_equals_literal_ci(what,\"line_buffer\")) {\n\t\t\toldstr = strdup(rl_line_buffer ? rl_line_buffer : \"\");\n\t\t\tif (value) {\n\t\t\t\tif (!try_convert_to_string(value)) {\n\t\t\t\t\tRETURN_THROWS();\n\t\t\t\t}\n#if !defined(PHP_WIN32) && !defined(HAVE_LIBEDIT)\n\t\t\t\tif (!rl_line_buffer) {\n\t\t\t\t\trl_line_buffer = malloc(Z_STRLEN_P(value) + 1);\n\t\t\t\t} else if (strlen(oldstr) < Z_STRLEN_P(value)) {\n\t\t\t\t\trl_extend_line_buffer(Z_STRLEN_P(value) + 1);\n\t\t\t\t\tfree(oldstr);\n\t\t\t\t\toldstr = strdup(rl_line_buffer ? rl_line_buffer : \"\");\n\t\t\t\t}\n\t\t\t\tmemcpy(rl_line_buffer, Z_STRVAL_P(value), Z_STRLEN_P(value) + 1);\n#else\n\t\t\t\tchar *tmp = strdup(Z_STRVAL_P(value));\n\t\t\t\tif (tmp) {\n\t\t\t\t\tif (rl_line_buffer) {\n\t\t\t\t\t\tfree(rl_line_buffer);\n\t\t\t\t\t}\n\t\t\t\t\trl_line_buffer = tmp;\n\t\t\t\t}\n#endif\n#if !defined(PHP_WIN32)\n\t\t\t\trl_end = Z_STRLEN_P(value);\n#endif\n\t\t\t}\n\t\t\tRETVAL_STRING(SAFE_STRING(oldstr));\n\t\t\tfree(oldstr);\n\t\t} else if (zend_string_equals_literal_ci(what, \"point\")) {\n\t\t\tRETVAL_LONG(rl_point);\n#ifndef PHP_WIN32\n\t\t} else if (zend_string_equals_literal_ci(what, \"end\")) {\n\t\t\tRETVAL_LONG(rl_end);\n#endif\n#ifdef HAVE_LIBREADLINE\n\t\t} else if (zend_string_equals_literal_ci(what, \"mark\")) {\n\t\t\tRETVAL_LONG(rl_mark);\n\t\t} else if (zend_string_equals_literal_ci(what, \"done\")) {\n\t\t\toldval = rl_done;\n\t\t\tif (value) {\n\t\t\t\trl_done = zval_get_long(value);\n\t\t\t}\n\t\t\tRETVAL_LONG(oldval);\n\t\t} else if (zend_string_equals_literal_ci(what, \"pending_input\")) {\n\t\t\toldval = rl_pending_input;\n\t\t\tif (value) {\n\t\t\t\tif (!try_convert_to_string(value)) {\n\t\t\t\t\tRETURN_THROWS();\n\t\t\t\t}\n\t\t\t\trl_pending_input = Z_STRVAL_P(value)[0];\n\t\t\t}\n\t\t\tRETVAL_LONG(oldval);\n\t\t} else if (zend_string_equals_literal_ci(what, \"prompt\")) {\n\t\t\tRETVAL_STRING(SAFE_STRING(rl_prompt));\n\t\t} else if (zend_string_equals_literal_ci(what, \"terminal_name\")) {\n\t\t\tRETVAL_STRING((char *)SAFE_STRING(rl_terminal_name));\n\t\t} else if (zend_string_equals_literal_ci(what, \"completion_suppress_append\")) {\n\t\t\toldval = rl_completion_suppress_append;\n\t\t\tif (value) {\n\t\t\t\trl_completion_suppress_append = zend_is_true(value);\n\t\t\t}\n\t\t\tRETVAL_BOOL(oldval);\n\t\t} else if (zend_string_equals_literal_ci(what, \"completion_append_character\")) {\n\t\t\toldval = rl_completion_append_character;\n\t\t\tif (value) {\n\t\t\t\tif (!try_convert_to_string(value)) {\n\t\t\t\t\tRETURN_THROWS();\n\t\t\t\t}\n\t\t\t\trl_completion_append_character = (int)Z_STRVAL_P(value)[0];\n\t\t\t}\n\t\t\tRETVAL_INTERNED_STR(\n\t\t\t\toldval == 0 ? ZSTR_EMPTY_ALLOC() : ZSTR_CHAR(oldval));\n#endif\n#ifdef HAVE_ERASE_EMPTY_LINE\n\t\t} else if (zend_string_equals_literal_ci(what, \"erase_empty_line\")) {\n\t\t\toldval = rl_erase_empty_line;\n\t\t\tif (value) {\n\t\t\t\trl_erase_empty_line = zval_get_long(value);\n\t\t\t}\n\t\t\tRETVAL_LONG(oldval);\n#endif\n#ifndef PHP_WIN32\n\t\t} else if (zend_string_equals_literal_ci(what,\"library_version\")) {\n\t\t\tRETVAL_STRING((char *)SAFE_STRING(rl_library_version));\n#endif\n\t\t} else if (zend_string_equals_literal_ci(what, \"readline_name\")) {\n\t\t\toldstr = (char*)rl_readline_name;\n\t\t\tif (value) {\n\t\t\t\t/* XXX if (rl_readline_name) free(rl_readline_name); */\n\t\t\t\tif (!try_convert_to_string(value)) {\n\t\t\t\t\tRETURN_THROWS();\n\t\t\t\t}\n\t\t\t\trl_readline_name = strdup(Z_STRVAL_P(value));\n\t\t\t}\n\t\t\tRETVAL_STRING(SAFE_STRING(oldstr));\n\t\t} else if (zend_string_equals_literal_ci(what, \"attempted_completion_over\")) {\n\t\t\toldval = rl_attempted_completion_over;\n\t\t\tif (value) {\n\t\t\t\trl_attempted_completion_over = zval_get_long(value);\n\t\t\t}\n\t\t\tRETVAL_LONG(oldval);\n\t\t}\n\t}",
+    "semantic": "XXX if (rl_readline_name) free(rl_readline_name);",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "ZSTR_EMPTY_ALLOC",
+            "ZSTR_CHAR"
+        ],
+        "zend_types": [
+            "zend_string",
+            "zval"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "zend_string_equals_literal_ci",
+            "zval_get_long",
+            "zend_is_true"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common readline_info inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 6,
+    "purpose": "XXX if (rl_readline_name) free(rl_readline_name);",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "readline",
+        "readline_add_history",
+        "readline_clear_history",
+        "readline_list_history",
+        "readline_read_history",
+        "readline_write_history",
+        "readline_completion_function",
+        "readline_callback_handler_install",
+        "readline_callback_read_char",
+        "readline_callback_handler_remove",
+        "readline_redisplay",
+        "readline_on_new_line"
+    ]
+}

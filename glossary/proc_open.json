@@ -1,0 +1,210 @@
+{
+    "php_function": "proc_open",
+    "zend_function": "proc_open",
+    "source_file": "oc_open.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "command_ht",
+            "macro": "Z_PARAM_ARRAY_HT_OR_STR",
+            "arguments": [
+                "command_ht",
+                "command_str"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY_HT_OR_STR(command_ht, command_str)"
+        },
+        {
+            "name": "descriptorspec",
+            "macro": "Z_PARAM_ARRAY_HT",
+            "arguments": [
+                "descriptorspec"
+            ],
+            "type": "HashTable",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY_HT(descriptorspec)"
+        },
+        {
+            "name": "pipes",
+            "macro": "Z_PARAM_ZVAL",
+            "arguments": [
+                "pipes"
+            ],
+            "type": "zval",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": true,
+            "raw": "Z_PARAM_ZVAL(pipes)"
+        },
+        {
+            "name": "cwd",
+            "macro": "Z_PARAM_STRING_OR_NULL",
+            "arguments": [
+                "cwd",
+                "cwd_len"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING_OR_NULL(cwd, cwd_len)"
+        },
+        {
+            "name": "environment",
+            "macro": "Z_PARAM_ARRAY_OR_NULL",
+            "arguments": [
+                "environment"
+            ],
+            "type": "HashTable",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY_OR_NULL(environment)"
+        },
+        {
+            "name": "other_options",
+            "macro": "Z_PARAM_ARRAY_OR_NULL",
+            "arguments": [
+                "other_options"
+            ],
+            "type": "HashTable",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY_OR_NULL(other_options)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "ctype.h",
+        "signal.h",
+        "ext/standard/basic_functions.h",
+        "ext/standard/file.h",
+        "exec.h",
+        "SAPI.h",
+        "main/php_network.h",
+        "zend_smart_str.h",
+        "sys/wait.h",
+        "fcntl.h",
+        "spawn.h",
+        "proc_open.h"
+    ],
+    "body": "zend_string *command_str;\n\tHashTable *command_ht;\n\tHashTable *descriptorspec; /* Mandatory argument */\n\tzval *pipes;               /* Mandatory argument */\n\tchar *cwd = NULL;                                /* Optional argument */\n\tsize_t cwd_len = 0;                              /* Optional argument */\n\tzval *environment = NULL, *other_options = NULL; /* Optional arguments */\n\n\tphp_process_env env;\n\tint ndesc = 0;\n\tint i;\n\tzval *descitem = NULL;\n\tzend_string *str_index;\n\tzend_ulong nindex;\n\tdescriptorspec_item *descriptors = NULL;\n#ifdef PHP_WIN32\n\tPROCESS_INFORMATION pi;\n\tHANDLE childHandle;\n\tSTARTUPINFOW si;\n\tBOOL newprocok;\n\tDWORD dwCreateFlags = 0;\n\tUINT old_error_mode;\n\tchar cur_cwd[MAXPATHLEN];\n\twchar_t *cmdw = NULL, *cwdw = NULL, *envpw = NULL;\n\tsize_t cmdw_len;\n\tbool suppress_errors = 0;\n\tbool bypass_shell = 0;\n\tbool blocking_pipes = 0;\n\tbool create_process_group = 0;\n\tbool create_new_console = 0;\n#else\n\tchar **argv = NULL;\n#endif\n\tint pty_master_fd = -1, pty_slave_fd = -1;\n\tphp_process_id_t child;\n\tphp_process_handle *proc;\n\n\tZEND_PARSE_PARAMETERS_START(3, 6)\n\t\tZ_PARAM_ARRAY_HT_OR_STR(command_ht, command_str)\n\t\tZ_PARAM_ARRAY_HT(descriptorspec)\n\t\tZ_PARAM_ZVAL(pipes)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_STRING_OR_NULL(cwd, cwd_len)\n\t\tZ_PARAM_ARRAY_OR_NULL(environment)\n\t\tZ_PARAM_ARRAY_OR_NULL(other_options)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tmemset(&env, 0, sizeof(env));\n\n\tif (command_ht) {\n\t\tuint32_t num_elems = zend_hash_num_elements(command_ht);\n\t\tif (num_elems == 0) {\n\t\t\tzend_argument_value_error(1, \"must have at least one element\");\n\t\t\tRETURN_THROWS();\n\t\t}\n\n#ifdef PHP_WIN32\n\t\t/* Automatically bypass shell if command is given as an array */\n\t\tbypass_shell = 1;\n\t\tcommand_str = create_win_command_from_args(command_ht);\n#else\n\t\tcommand_str = get_command_from_array(command_ht, &argv, num_elems);\n#endif\n\n\t\tif (!command_str) {\n#ifndef PHP_WIN32\n\t\t\tefree_argv(argv);\n#endif\n\t\t\tRETURN_FALSE;\n\t\t}\n\t} else {\n\t\tzend_string_addref(command_str);\n\t}\n\n#ifdef PHP_WIN32\n\tif (other_options) {\n\t\tsuppress_errors      = get_option(other_options, \"suppress_errors\", strlen(\"suppress_errors\"));\n\t\t/* TODO: Deprecate in favor of array command? */\n\t\tbypass_shell         = bypass_shell || get_option(other_options, \"bypass_shell\", strlen(\"bypass_shell\"));\n\t\tblocking_pipes       = get_option(other_options, \"blocking_pipes\", strlen(\"blocking_pipes\"));\n\t\tcreate_process_group = get_option(other_options, \"create_process_group\", strlen(\"create_process_group\"));\n\t\tcreate_new_console   = get_option(other_options, \"create_new_console\", strlen(\"create_new_console\"));\n\t}\n#endif\n\n\tif (environment) {\n\t\tenv = _php_array_to_envp(environment);\n\t}\n\n\tdescriptors = alloc_descriptor_array(descriptorspec);\n\n\t/* Walk the descriptor spec and set up files/pipes */\n\tZEND_HASH_FOREACH_KEY_VAL(descriptorspec, nindex, str_index, descitem) {\n\t\tif (str_index) {\n\t\t\tzend_argument_value_error(2, \"must be an integer indexed array\");\n\t\t\tgoto exit_fail;\n\t\t}\n\n\t\tdescriptors[ndesc].index = (int)nindex;\n\n\t\tZVAL_DEREF(descitem);\n\t\tif (Z_TYPE_P(descitem) == IS_RESOURCE) {\n\t\t\tif (set_proc_descriptor_from_resource(descitem, &descriptors[ndesc], ndesc) == FAILURE) {\n\t\t\t\tgoto exit_fail;\n\t\t\t}\n\t\t} else if (Z_TYPE_P(descitem) == IS_ARRAY) {\n\t\t\tif (set_proc_descriptor_from_array(descitem, descriptors, ndesc, (int)nindex,\n\t\t\t\t&pty_master_fd, &pty_slave_fd) == FAILURE) {\n\t\t\t\tgoto exit_fail;\n\t\t\t}\n\t\t} else {\n\t\t\tzend_argument_value_error(2, \"must only contain arrays and streams\");\n\t\t\tgoto exit_fail;\n\t\t}\n\t\tndesc++;\n\t} ZEND_HASH_FOREACH_END();\n\n#ifdef PHP_WIN32\n\tif (cwd == NULL) {\n\t\tchar *getcwd_result = VCWD_GETCWD(cur_cwd, MAXPATHLEN);\n\t\tif (!getcwd_result) {\n\t\t\tphp_error_docref(NULL, E_WARNING, \"Cannot get current directory\");\n\t\t\tgoto exit_fail;\n\t\t}\n\t\tcwd = cur_cwd;\n\t}\n\tcwdw = php_win32_cp_any_to_w(cwd);\n\tif (!cwdw) {\n\t\tphp_error_docref(NULL, E_WARNING, \"CWD conversion failed\");\n\t\tgoto exit_fail;\n\t}\n\n\tinit_startup_info(&si, descriptors, ndesc);\n\tinit_process_info(&pi);\n\n\tif (suppress_errors) {\n\t\told_error_mode = SetErrorMode(SEM_FAILCRITICALERRORS|SEM_NOGPFAULTERRORBOX);\n\t}\n\n\tdwCreateFlags = NORMAL_PRIORITY_CLASS;\n\tif(strcmp(sapi_module.name, \"cli\") != 0) {\n\t\tdwCreateFlags |= CREATE_NO_WINDOW;\n\t}\n\tif (create_process_group) {\n\t\tdwCreateFlags |= CREATE_NEW_PROCESS_GROUP;\n\t}\n\tif (create_new_console) {\n\t\tdwCreateFlags |= CREATE_NEW_CONSOLE;\n\t}\n\tenvpw = php_win32_cp_env_any_to_w(env.envp);\n\tif (envpw) {\n\t\tdwCreateFlags |= CREATE_UNICODE_ENVIRONMENT;\n\t} else  {\n\t\tif (env.envp) {\n\t\t\tphp_error_docref(NULL, E_WARNING, \"ENV conversion failed\");\n\t\t\tgoto exit_fail;\n\t\t}\n\t}\n\n\tcmdw = php_win32_cp_conv_any_to_w(ZSTR_VAL(command_str), ZSTR_LEN(command_str), &cmdw_len);\n\tif (!cmdw) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Command conversion failed\");\n\t\tgoto exit_fail;\n\t}\n\n\tif (!bypass_shell) {\n\t\tif (convert_command_to_use_shell(&cmdw, cmdw_len) == FAILURE) {\n\t\t\tgoto exit_fail;\n\t\t}\n\t}\n\tnewprocok = CreateProcessW(NULL, cmdw, &php_proc_open_security,\n\t\t&php_proc_open_security, TRUE, dwCreateFlags, envpw, cwdw, &si, &pi);\n\n\tif (suppress_errors) {\n\t\tSetErrorMode(old_error_mode);\n\t}\n\n\tif (newprocok == FALSE) {\n\t\tDWORD dw = GetLastError();\n\t\tclose_all_descriptors(descriptors, ndesc);\n\t\tchar *msg = php_win32_error_to_msg(dw);\n\t\tphp_error_docref(NULL, E_WARNING, \"CreateProcess failed: %s\", msg);\n\t\tphp_win32_error_msg_free(msg);\n\t\tgoto exit_fail;\n\t}\n\n\tchildHandle = pi.hProcess;\n\tchild       = pi.dwProcessId;\n\tCloseHandle(pi.hThread);\n#elif defined(USE_POSIX_SPAWN)\n\tposix_spawn_file_actions_t factions;\n\tint r;\n\tposix_spawn_file_actions_init(&factions);\n\n\tif (close_parentends_of_pipes(&factions, descriptors, ndesc) == FAILURE) {\n\t\tposix_spawn_file_actions_destroy(&factions);\n\t\tclose_all_descriptors(descriptors, ndesc);\n\t\tgoto exit_fail;\n\t}\n\n\tif (cwd) {\n\t\tr = posix_spawn_file_actions_addchdir_np(&factions, cwd);\n\t\tif (r != 0) {\n\t\t\tphp_error_docref(NULL, E_WARNING, \"posix_spawn_file_actions_addchdir_np() failed: %s\", strerror(r));\n\t\t}\n\t}\n\n\tif (argv) {\n\t\tr = posix_spawnp(&child, ZSTR_VAL(command_str), &factions, NULL, argv, (env.envarray ? env.envarray : environ));\n\t} else {\n\t\tr = posix_spawn(&child, \"/bin/sh\" , &factions, NULL,\n\t\t\t\t(char * const[]) {\"sh\", \"-c\", ZSTR_VAL(command_str), NULL},\n\t\t\t\tenv.envarray ? env.envarray : environ);\n\t}\n\tposix_spawn_file_actions_destroy(&factions);\n\tif (r != 0) {\n\t\tclose_all_descriptors(descriptors, ndesc);\n\t\tphp_error_docref(NULL, E_WARNING, \"posix_spawn() failed: %s\", strerror(r));\n\t\tgoto exit_fail;\n\t}\n#elif defined(HAVE_FORK)\n\t/* the Unix way */\n\tchild = fork();\n\n\tif (child == 0) {\n\t\t/* This is the child process */\n\n\t\tif (close_parentends_of_pipes(descriptors, ndesc) == FAILURE) {\n\t\t\t/* We are already in child process and can't do anything to make\n\t\t\t * `proc_open` return an error in the parent\n\t\t\t * All we can do is exit with a non-zero (error) exit code */\n\t\t\t_exit(127);\n\t\t}\n\n\t\tif (cwd) {\n\t\t\tphp_ignore_value(chdir(cwd));\n\t\t}\n\n\t\tif (argv) {\n\t\t\t/* execvpe() is non-portable, use environ instead. */\n\t\t\tif (env.envarray) {\n\t\t\t\tenviron = env.envarray;\n\t\t\t}\n\t\t\texecvp(ZSTR_VAL(command_str), argv);\n\t\t} else {\n\t\t\tif (env.envarray) {\n\t\t\t\texecle(\"/bin/sh\", \"sh\", \"-c\", ZSTR_VAL(command_str), NULL, env.envarray);\n\t\t\t} else {\n\t\t\t\texecl(\"/bin/sh\", \"sh\", \"-c\", ZSTR_VAL(command_str), NULL);\n\t\t\t}\n\t\t}\n\n\t\t/* If execvp/execle/execl are successful, we will never reach here\n\t\t * Display error and exit with non-zero (error) status code */\n\t\tphp_error_docref(NULL, E_WARNING, \"Exec failed: %s\", strerror(errno));\n\t\t_exit(127);\n\t} else if (child < 0) {\n\t\t/* Failed to fork() */\n\t\tclose_all_descriptors(descriptors, ndesc);\n\t\tphp_error_docref(NULL, E_WARNING, \"Fork failed: %s\", strerror(errno));\n\t\tgoto exit_fail;\n\t}\n#else\n# error You lose (configure should not have let you get here)\n#endif\n\n\t/* We forked/spawned and this is the parent */\n\n\tpipes = zend_try_array_init(pipes);\n\tif (!pipes) {\n\t\tgoto exit_fail;\n\t}\n\n\tproc = (php_process_handle*) emalloc(sizeof(php_process_handle));\n\tproc->command = zend_string_copy(command_str);\n\tproc->pipes = emalloc(sizeof(zend_resource *) * ndesc);\n\tproc->npipes = ndesc;\n\tproc->child = child;\n#ifdef PHP_WIN32\n\tproc->childHandle = childHandle;\n#endif\n\tproc->env = env;\n#ifdef HAVE_SYS_WAIT_H\n\tproc->has_cached_exit_wait_status = false;\n#endif\n\n\t/* Clean up all the child ends and then open streams on the parent\n\t *   ends, where appropriate */\n\tfor (i = 0; i < ndesc; i++) {\n\t\tphp_stream *stream = NULL;\n\n\t\tclose_descriptor(descriptors[i].childend);\n\n\t\tif (descriptors[i].type == DESCRIPTOR_TYPE_PIPE) {\n\t\t\tchar *mode_string = NULL;\n\n\t\t\tswitch (descriptors[i].mode_flags) {\n#ifdef PHP_WIN32\n\t\t\t\tcase O_WRONLY|O_BINARY:\n\t\t\t\t\tmode_string = \"wb\";\n\t\t\t\t\tbreak;\n\t\t\t\tcase O_RDONLY|O_BINARY:\n\t\t\t\t\tmode_string = \"rb\";\n\t\t\t\t\tbreak;\n#endif\n\t\t\t\tcase O_WRONLY:\n\t\t\t\t\tmode_string = \"w\";\n\t\t\t\t\tbreak;\n\t\t\t\tcase O_RDONLY:\n\t\t\t\t\tmode_string = \"r\";\n\t\t\t\t\tbreak;\n\t\t\t\tcase O_RDWR:\n\t\t\t\t\tmode_string = \"r+\";\n\t\t\t\t\tbreak;\n\t\t\t}\n\n#ifdef PHP_WIN32\n\t\t\tstream = php_stream_fopen_from_fd(_open_osfhandle((intptr_t)descriptors[i].parentend,\n\t\t\t\t\t\tdescriptors[i].mode_flags), mode_string, NULL);\n\t\t\tphp_stream_set_option(stream, PHP_STREAM_OPTION_PIPE_BLOCKING, blocking_pipes, NULL);\n#else\n\t\t\tstream = php_stream_fopen_from_fd(descriptors[i].parentend, mode_string, NULL);\n#endif\n\t\t} else if (descriptors[i].type == DESCRIPTOR_TYPE_SOCKET) {\n\t\t\tstream = php_stream_sock_open_from_socket((php_socket_t) descriptors[i].parentend, NULL);\n\t\t} else {\n\t\t\tproc->pipes[i] = NULL;\n\t\t}\n\n\t\tif (stream) {\n\t\t\tzval retfp;\n\n\t\t\t/* nasty hack; don't copy it */\n\t\t\tstream->flags |= PHP_STREAM_FLAG_NO_SEEK;\n\n\t\t\tphp_stream_to_zval(stream, &retfp);\n\t\t\tadd_index_zval(pipes, descriptors[i].index, &retfp);\n\n\t\t\tproc->pipes[i] = Z_RES(retfp);\n\t\t\tZ_ADDREF(retfp);\n\t\t}\n\t}\n\n\tif (1) {\n\t\tRETVAL_RES(zend_register_resource(proc, le_proc_open));\n\t} else {\nexit_fail:\n\t\t_php_free_envp(env);\n\t\tRETVAL_FALSE;\n\t}\n\n\tzend_string_release_ex(command_str, false);\n#ifdef PHP_WIN32\n\tfree(cwdw);\n\tfree(cmdw);\n\tfree(envpw);\n#else\n\tefree_argv(argv);\n#endif\n#ifdef HAVE_OPENPTY\n\tif (pty_master_fd != -1) {\n\t\tclose(pty_master_fd);\n\t}\n\tif (pty_slave_fd != -1) {\n\t\tclose(pty_slave_fd);\n\t}\n#endif\n\tif (descriptors) {\n\t\tefree(descriptors);\n\t}",
+    "semantic": "Mandatory argument",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_ARRAY_HT_OR_STR",
+            "Z_PARAM_ARRAY_HT",
+            "Z_PARAM_ZVAL",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_STRING_OR_NULL",
+            "Z_PARAM_ARRAY_OR_NULL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_THROWS",
+            "RETURN_FALSE",
+            "ZEND_HASH_FOREACH_KEY_VAL",
+            "ZVAL_DEREF",
+            "ZEND_HASH_FOREACH_END",
+            "ZSTR_VAL",
+            "ZSTR_LEN"
+        ],
+        "zend_types": [
+            "zend_string",
+            "HashTable",
+            "zval",
+            "zend_resource"
+        ],
+        "internal_helpers": [
+            "zend_hash_num_elements",
+            "zend_argument_value_error",
+            "zend_string_addref",
+            "php_error_docref",
+            "php_win32_cp_any_to_w",
+            "php_win32_cp_env_any_to_w",
+            "php_win32_cp_conv_any_to_w",
+            "php_win32_error_to_msg",
+            "php_win32_error_msg_free",
+            "php_ignore_value",
+            "zend_try_array_init",
+            "zend_string_copy",
+            "php_stream_fopen_from_fd",
+            "php_stream_set_option",
+            "php_stream_sock_open_from_socket",
+            "php_stream_to_zval",
+            "zend_register_resource",
+            "zend_string_release_ex"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common proc_open inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 10,
+    "purpose": "Mandatory argument",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "proc_terminate",
+        "proc_close",
+        "proc_get_status"
+    ]
+}

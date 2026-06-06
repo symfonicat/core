@@ -1,0 +1,148 @@
+{
+    "php_function": "method_exists",
+    "zend_function": "method_exists",
+    "source_file": "in_functions.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "klass",
+            "macro": "Z_PARAM_ZVAL",
+            "arguments": [
+                "klass"
+            ],
+            "type": "zval",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": true,
+            "raw": "Z_PARAM_ZVAL(klass)"
+        },
+        {
+            "name": "method_name",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "method_name"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(method_name)"
+        }
+    ],
+    "includes": [
+        "zend.h",
+        "zend_API.h",
+        "zend_attributes.h",
+        "zend_gc.h",
+        "zend_builtin_functions.h",
+        "zend_constants.h",
+        "zend_ini.h",
+        "zend_interfaces.h",
+        "zend_exceptions.h",
+        "zend_extensions.h",
+        "zend_closures.h",
+        "zend_generators.h",
+        "zend_builtin_functions_arginfo.h",
+        "zend_smart_str.h"
+    ],
+    "body": "zval *klass;\n\tzend_string *method_name;\n\tzend_string *lcname;\n\tzend_class_entry *ce;\n\tzend_function *func;\n\n\t/* We do not use Z_PARAM_OBJ_OR_STR here to be able to exclude int, float, and bool which are bogus class names */\n\tZEND_PARSE_PARAMETERS_START(2, 2)\n\t\tZ_PARAM_ZVAL(klass)\n\t\tZ_PARAM_STR(method_name)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (Z_TYPE_P(klass) == IS_OBJECT) {\n\t\tce = Z_OBJCE_P(klass);\n\t} else if (Z_TYPE_P(klass) == IS_STRING) {\n\t\tif ((ce = zend_lookup_class(Z_STR_P(klass))) == NULL) {\n\t\t\tRETURN_FALSE;\n\t\t}\n\t} else {\n\t\tzend_argument_type_error(1, \"must be of type object|string, %s given\", zend_zval_value_name(klass));\n\t\tRETURN_THROWS();\n\t}\n\n\tlcname = zend_string_tolower(method_name);\n\tfunc = zend_hash_find_ptr(&ce->function_table, lcname);\n\tzend_string_release_ex(lcname, 0);\n\n\tif (func) {\n\t\t/* Exclude shadow properties when checking a method on a specific class. Include\n\t\t * them when checking an object, as method_exists() generally ignores visibility.\n\t\t * TODO: Should we use EG(scope) for the object case instead? */\n\t\tRETURN_BOOL(Z_TYPE_P(klass) == IS_OBJECT\n\t\t\t|| !(func->common.fn_flags & ZEND_ACC_PRIVATE) || func->common.scope == ce);\n\t}\n\n\tif (Z_TYPE_P(klass) == IS_OBJECT) {\n\t\tzend_object *obj = Z_OBJ_P(klass);\n\t\tfunc = Z_OBJ_HT_P(klass)->get_method(&obj, method_name, NULL);\n\t\tif (func != NULL) {\n\t\t\tif (func->common.fn_flags & ZEND_ACC_CALL_VIA_TRAMPOLINE) {\n\t\t\t\t/* Returns true for the fake Closure's __invoke */\n\t\t\t\tRETVAL_BOOL(func->common.scope == zend_ce_closure\n\t\t\t\t\t&& zend_string_equals_literal_ci(method_name, ZEND_INVOKE_FUNC_NAME));\n\n\t\t\t\tzend_string_release_ex(func->common.function_name, 0);\n\t\t\t\tzend_free_trampoline(func);\n\t\t\t\treturn;\n\t\t\t}\n\t\t\tRETURN_TRUE;\n\t\t}\n\t} else {\n\t    /* Returns true for fake Closure::__invoke */\n\t    if (ce == zend_ce_closure\n\t        && zend_string_equals_literal_ci(method_name, ZEND_INVOKE_FUNC_NAME)) {\n\t        RETURN_TRUE;\n\t    }\n\t}\n\tRETURN_FALSE;",
+    "semantic": "We do not use Z_PARAM_OBJ_OR_STR here to be able to exclude int, float, and bool which are bogus class names",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "Z_PARAM_OBJ_OR_STR",
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_ZVAL",
+            "Z_PARAM_STR",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_FALSE",
+            "RETURN_THROWS",
+            "RETURN_BOOL",
+            "ZEND_ACC_PRIVATE",
+            "ZEND_ACC_CALL_VIA_TRAMPOLINE",
+            "ZEND_INVOKE_FUNC_NAME",
+            "RETURN_TRUE"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_string",
+            "zend_class_entry",
+            "zend_function",
+            "zend_object"
+        ],
+        "internal_helpers": [
+            "zend_lookup_class",
+            "zend_argument_type_error",
+            "zend_zval_value_name",
+            "zend_string_tolower",
+            "zend_hash_find_ptr",
+            "zend_string_release_ex",
+            "zend_string_equals_literal_ci",
+            "zend_free_trampoline"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common method_exists inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 7,
+    "purpose": "We do not use Z_PARAM_OBJ_OR_STR here to be able to exclude int, float, and bool which are bogus class names",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "exit",
+        "zend_version",
+        "gc_mem_caches",
+        "gc_collect_cycles",
+        "gc_enabled",
+        "gc_enable",
+        "gc_disable",
+        "gc_status",
+        "func_num_args",
+        "func_get_arg",
+        "func_get_args",
+        "strlen"
+    ]
+}

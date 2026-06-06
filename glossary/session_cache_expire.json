@@ -1,0 +1,116 @@
+{
+    "php_function": "session_cache_expire",
+    "zend_function": "session_cache_expire",
+    "source_file": "sion.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "sys/stat.h",
+        "fcntl.h",
+        "php_ini.h",
+        "rfc1867.h",
+        "php_variables.h",
+        "php_session.h",
+        "session_arginfo.h",
+        "ext/standard/php_var.h",
+        "ext/date/php_date.h",
+        "ext/standard/url_scanner_ex.h",
+        "ext/standard/info.h",
+        "zend_smart_str.h",
+        "ext/standard/url.h",
+        "ext/standard/basic_functions.h",
+        "ext/standard/head.h",
+        "ext/random/php_random.h",
+        "ext/random/php_random_csprng.h",
+        "mod_files.h",
+        "mod_user.h",
+        "mod_mm.h"
+    ],
+    "body": "zend_long expires;\n\tbool expires_is_null = 1;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"|l!\", &expires, &expires_is_null) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tif (!expires_is_null && PS(session_status) == php_session_active) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Session cache expiration cannot be changed when a session is active\");\n\t\tRETURN_LONG(PS(cache_expire));\n\t}\n\n\tif (!expires_is_null && SG(headers_sent)) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Session cache expiration cannot be changed after headers have already been sent\");\n\t\tRETURN_FALSE;\n\t}\n\n\tRETVAL_LONG(PS(cache_expire));\n\n\tif (!expires_is_null) {\n\t\tzend_string *ini_name = ZSTR_INIT_LITERAL(\"session.cache_expire\", 0);\n\t\tzend_string *ini_value = zend_long_to_str(expires);\n\t\tzend_alter_ini_entry(ini_name, ini_value, ZEND_INI_USER, ZEND_INI_STAGE_RUNTIME);\n\t\tzend_string_release_ex(ini_name, 0);\n\t\tzend_string_release_ex(ini_value, 0);\n\t}",
+    "semantic": "Implements the PHP function session_cache_expire in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_LONG",
+            "RETURN_FALSE",
+            "ZSTR_INIT_LITERAL",
+            "ZEND_INI_USER",
+            "ZEND_INI_STAGE_RUNTIME"
+        ],
+        "zend_types": [
+            "zend_long",
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "php_error_docref",
+            "zend_long_to_str",
+            "zend_alter_ini_entry",
+            "zend_string_release_ex"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common session_cache_expire inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 4,
+    "purpose": "Implements the PHP function session_cache_expire in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "session_set_cookie_params",
+        "session_get_cookie_params",
+        "session_name",
+        "session_module_name",
+        "session_set_save_handler",
+        "session_save_path",
+        "session_id",
+        "session_regenerate_id",
+        "session_create_id",
+        "session_cache_limiter",
+        "session_encode",
+        "session_decode"
+    ]
+}

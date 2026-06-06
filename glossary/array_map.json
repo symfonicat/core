@@ -1,0 +1,157 @@
+{
+    "php_function": "array_map",
+    "zend_function": "array_map",
+    "source_file": "ray.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "fci",
+            "macro": "Z_PARAM_FUNC_OR_NULL",
+            "arguments": [
+                "fci",
+                "fci_cache"
+            ],
+            "type": "zend_fcall_info",
+            "required": true,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_FUNC_OR_NULL(fci, fci_cache)"
+        },
+        {
+            "name": "'+'",
+            "macro": "Z_PARAM_VARIADIC",
+            "arguments": [
+                "'+'",
+                "arrays",
+                "n_arrays"
+            ],
+            "type": "mixed",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": true,
+            "by_reference": false,
+            "raw": "Z_PARAM_VARIADIC('+', arrays, n_arrays)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "php_ini.h",
+        "stdarg.h",
+        "stdlib.h",
+        "math.h",
+        "time.h",
+        "string.h",
+        "zend_globals.h",
+        "zend_interfaces.h",
+        "php_array.h",
+        "basic_functions.h",
+        "php_string.h",
+        "php_math.h",
+        "zend_smart_str.h",
+        "zend_bitset.h",
+        "zend_exceptions.h",
+        "ext/random/php_random.h",
+        "zend_frameless_function.h"
+    ],
+    "body": "zval *arrays = NULL;\n\tint n_arrays = 0;\n\tzval result;\n\tzend_fcall_info fci = empty_fcall_info;\n\tzend_fcall_info_cache fci_cache = empty_fcall_info_cache;\n\tint i;\n\tuint32_t k, maxlen = 0;\n\n\tZEND_PARSE_PARAMETERS_START(2, -1)\n\t\tZ_PARAM_FUNC_OR_NULL(fci, fci_cache)\n\t\tZ_PARAM_VARIADIC('+', arrays, n_arrays)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (n_arrays == 1) {\n\t\tzend_ulong num_key;\n\t\tzend_string *str_key;\n\t\tzval *zv, arg;\n\t\tint ret;\n\n\t\tif (Z_TYPE(arrays[0]) != IS_ARRAY) {\n\t\t\tzend_argument_type_error(2, \"must be of type array, %s given\", zend_zval_value_name(&arrays[0]));\n\t\t\tRETURN_THROWS();\n\t\t}\n\t\tmaxlen = zend_hash_num_elements(Z_ARRVAL(arrays[0]));\n\n\t\t/* Short-circuit: if no callback and only one array, just return it. */\n\t\tif (!ZEND_FCI_INITIALIZED(fci) || !maxlen) {\n\t\t\tZVAL_COPY(return_value, &arrays[0]);\n\t\t\treturn;\n\t\t}\n\n\t\tarray_init_size(return_value, maxlen);\n\t\tzend_hash_real_init(Z_ARRVAL_P(return_value), HT_IS_PACKED(Z_ARRVAL(arrays[0])));\n\n\t\tZEND_HASH_FOREACH_KEY_VAL(Z_ARRVAL(arrays[0]), num_key, str_key, zv) {\n\t\t\tfci.retval = &result;\n\t\t\tfci.param_count = 1;\n\t\t\tfci.params = &arg;\n\n\t\t\tZVAL_COPY(&arg, zv);\n\t\t\tret = zend_call_function(&fci, &fci_cache);\n\t\t\ti_zval_ptr_dtor(&arg);\n\t\t\tif (ret != SUCCESS || Z_TYPE(result) == IS_UNDEF) {\n\t\t\t\tzend_array_destroy(Z_ARR_P(return_value));\n\t\t\t\tRETURN_NULL();\n\t\t\t}\n\t\t\tif (str_key) {\n\t\t\t\t_zend_hash_append(Z_ARRVAL_P(return_value), str_key, &result);\n\t\t\t} else {\n\t\t\t\tzend_hash_index_add_new(Z_ARRVAL_P(return_value), num_key, &result);\n\t\t\t}\n\t\t} ZEND_HASH_FOREACH_END();\n\t} else {\n\t\tuint32_t *array_pos = (HashPosition *)ecalloc(n_arrays, sizeof(HashPosition));\n\n\t\tfor (i = 0; i < n_arrays; i++) {\n\t\t\tif (Z_TYPE(arrays[i]) != IS_ARRAY) {\n\t\t\t\tzend_argument_type_error(i + 2, \"must be of type array, %s given\", zend_zval_value_name(&arrays[i]));\n\t\t\t\tefree(array_pos);\n\t\t\t\tRETURN_THROWS();\n\t\t\t}\n\t\t\tif (zend_hash_num_elements(Z_ARRVAL(arrays[i])) > maxlen) {\n\t\t\t\tmaxlen = zend_hash_num_elements(Z_ARRVAL(arrays[i]));\n\t\t\t}\n\t\t}\n\n\t\tarray_init_size(return_value, maxlen);\n\n\t\tif (!ZEND_FCI_INITIALIZED(fci)) {\n\t\t\tzval zv;\n\n\t\t\t/* We iterate through all the arrays at once. */\n\t\t\tfor (k = 0; k < maxlen; k++) {\n\n\t\t\t\t/* If no callback, the result will be an array, consisting of current\n\t\t\t\t * entries from all arrays. */\n\t\t\t\tarray_init_size(&result, n_arrays);\n\n\t\t\t\tfor (i = 0; i < n_arrays; i++) {\n\t\t\t\t\t/* If this array still has elements, add the current one to the\n\t\t\t\t\t * parameter list, otherwise use null value. */\n\t\t\t\t\tuint32_t pos = array_pos[i];\n\t\t\t\t\tif (HT_IS_PACKED(Z_ARRVAL(arrays[i]))) {\n\t\t\t\t\t\twhile (1) {\n\t\t\t\t\t\t\tif (pos >= Z_ARRVAL(arrays[i])->nNumUsed) {\n\t\t\t\t\t\t\t\tZVAL_NULL(&zv);\n\t\t\t\t\t\t\t\tbreak;\n\t\t\t\t\t\t\t} else if (Z_TYPE(Z_ARRVAL(arrays[i])->arPacked[pos]) != IS_UNDEF) {\n\t\t\t\t\t\t\t\tZVAL_COPY(&zv, &Z_ARRVAL(arrays[i])->arPacked[pos]);\n\t\t\t\t\t\t\t\tarray_pos[i] = pos + 1;\n\t\t\t\t\t\t\t\tbreak;\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\tpos++;\n\t\t\t\t\t\t}\n\t\t\t\t\t} else {\n\t\t\t\t\t\twhile (1) {\n\t\t\t\t\t\t\tif (pos >= Z_ARRVAL(arrays[i])->nNumUsed) {\n\t\t\t\t\t\t\t\tZVAL_NULL(&zv);\n\t\t\t\t\t\t\t\tbreak;\n\t\t\t\t\t\t\t} else if (Z_TYPE(Z_ARRVAL(arrays[i])->arData[pos].val) != IS_UNDEF) {\n\t\t\t\t\t\t\t\tZVAL_COPY(&zv, &Z_ARRVAL(arrays[i])->arData[pos].val);\n\t\t\t\t\t\t\t\tarray_pos[i] = pos + 1;\n\t\t\t\t\t\t\t\tbreak;\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\tpos++;\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t\tzend_hash_next_index_insert_new(Z_ARRVAL(result), &zv);\n\t\t\t\t}\n\n\t\t\t\tzend_hash_next_index_insert_new(Z_ARRVAL_P(return_value), &result);\n\t\t\t}\n\t\t} else {\n\t\t\tzval *params = (zval *)safe_emalloc(n_arrays, sizeof(zval), 0);\n\n\t\t\t/* We iterate through all the arrays at once. */\n\t\t\tfor (k = 0; k < maxlen; k++) {\n\t\t\t\tfor (i = 0; i < n_arrays; i++) {\n\t\t\t\t\t/* If this array still has elements, add the current one to the\n\t\t\t\t\t * parameter list, otherwise use null value. */\n\t\t\t\t\tuint32_t pos = array_pos[i];\n\t\t\t\t\tif (HT_IS_PACKED(Z_ARRVAL(arrays[i]))) {\n\t\t\t\t\t\twhile (1) {\n\t\t\t\t\t\t\tif (pos >= Z_ARRVAL(arrays[i])->nNumUsed) {\n\t\t\t\t\t\t\t\tZVAL_NULL(&params[i]);\n\t\t\t\t\t\t\t\tbreak;\n\t\t\t\t\t\t\t} else if (Z_TYPE(Z_ARRVAL(arrays[i])->arPacked[pos]) != IS_UNDEF) {\n\t\t\t\t\t\t\t\tZVAL_COPY(&params[i], &Z_ARRVAL(arrays[i])->arPacked[pos]);\n\t\t\t\t\t\t\t\tarray_pos[i] = pos + 1;\n\t\t\t\t\t\t\t\tbreak;\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\tpos++;\n\t\t\t\t\t\t}\n\t\t\t\t\t} else {\n\t\t\t\t\t\twhile (1) {\n\t\t\t\t\t\t\tif (pos >= Z_ARRVAL(arrays[i])->nNumUsed) {\n\t\t\t\t\t\t\t\tZVAL_NULL(&params[i]);\n\t\t\t\t\t\t\t\tbreak;\n\t\t\t\t\t\t\t} else if (Z_TYPE(Z_ARRVAL(arrays[i])->arData[pos].val) != IS_UNDEF) {\n\t\t\t\t\t\t\t\tZVAL_COPY(&params[i], &Z_ARRVAL(arrays[i])->arData[pos].val);\n\t\t\t\t\t\t\t\tarray_pos[i] = pos + 1;\n\t\t\t\t\t\t\t\tbreak;\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\tpos++;\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t}\n\n\t\t\t\tfci.retval = &result;\n\t\t\t\tfci.param_count = n_arrays;\n\t\t\t\tfci.params = params;\n\n\t\t\t\tif (zend_call_function(&fci, &fci_cache) != SUCCESS || Z_TYPE(result) == IS_UNDEF) {\n\t\t\t\t\tefree(array_pos);\n\t\t\t\t\tzend_array_destroy(Z_ARR_P(return_value));\n\t\t\t\t\tfor (i = 0; i < n_arrays; i++) {\n\t\t\t\t\t\tzval_ptr_dtor(&params[i]);\n\t\t\t\t\t}\n\t\t\t\t\tefree(params);\n\t\t\t\t\tRETURN_NULL();\n\t\t\t\t} else {\n\t\t\t\t\tfor (i = 0; i < n_arrays; i++) {\n\t\t\t\t\t\tzval_ptr_dtor(&params[i]);\n\t\t\t\t\t}\n\t\t\t\t}\n\n\t\t\t\tzend_hash_next_index_insert_new(Z_ARRVAL_P(return_value), &result);\n\t\t\t}\n\n\t\t\tefree(params);\n\t\t}\n\t\tefree(array_pos);\n\t}",
+    "semantic": "Short-circuit: if no callback and only one array, just return it.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_FUNC_OR_NULL",
+            "Z_PARAM_VARIADIC",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_THROWS",
+            "ZEND_FCI_INITIALIZED",
+            "ZVAL_COPY",
+            "ZEND_HASH_FOREACH_KEY_VAL",
+            "RETURN_NULL",
+            "ZEND_HASH_FOREACH_END",
+            "ZVAL_NULL"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_fcall_info",
+            "zend_fcall_info_cache",
+            "zend_string",
+            "HashPosition"
+        ],
+        "internal_helpers": [
+            "zend_argument_type_error",
+            "zend_zval_value_name",
+            "zend_hash_num_elements",
+            "zend_hash_real_init",
+            "zend_call_function",
+            "zend_array_destroy",
+            "zend_hash_index_add_new",
+            "zend_hash_next_index_insert_new",
+            "zval_ptr_dtor"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common array_map inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 10,
+    "purpose": "Short-circuit: if no callback and only one array, just return it.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "krsort",
+        "ksort",
+        "count",
+        "natsort",
+        "natcasesort",
+        "asort",
+        "arsort",
+        "sort",
+        "rsort",
+        "usort",
+        "uasort",
+        "uksort"
+    ]
+}

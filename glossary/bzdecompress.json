@@ -1,0 +1,94 @@
+{
+    "php_function": "bzdecompress",
+    "zend_function": "bzdecompress",
+    "source_file": "",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_bz2.h",
+        "bz2_arginfo.h",
+        "ext/standard/info.h",
+        "main/php_network.h",
+        "stdio.h"
+    ],
+    "body": "char *source;\n\tzend_string *dest;\n\tsize_t source_len;\n\tint error;\n\tbool small = 0;\n#ifdef PHP_WIN32\n\tunsigned __int64 size = 0;\n#else\n\tunsigned long long size = 0;\n#endif\n\tbz_stream bzs;\n\n\tif (FAILURE == zend_parse_parameters(ZEND_NUM_ARGS(), \"s|b\", &source, &source_len, &small)) {\n\t\tRETURN_THROWS();\n\t}\n\n\tbzs.bzalloc = NULL;\n\tbzs.bzfree = NULL;\n\n\tif (BZ2_bzDecompressInit(&bzs, 0, (int)small) != BZ_OK) {\n\t\tRETURN_FALSE;\n\t}\n\n\tbzs.next_in = source;\n\tbzs.avail_in = source_len;\n\n\t/* in most cases bz2 offers at least 2:1 compression, so we use that as our base */\n\tdest = zend_string_safe_alloc(source_len, 2, 1, 0);\n\tbzs.avail_out = source_len * 2;\n\tbzs.next_out = ZSTR_VAL(dest);\n\n\twhile ((error = BZ2_bzDecompress(&bzs)) == BZ_OK && bzs.avail_in > 0) {\n\t\t/* compression is better then 2:1, need to allocate more memory */\n\t\tbzs.avail_out = source_len;\n\t\tsize = (bzs.total_out_hi32 * (unsigned int) -1) + bzs.total_out_lo32;\n#ifndef ZEND_ENABLE_ZVAL_LONG64\n\t\tif (size > SIZE_MAX) {\n\t\t\t/* no reason to continue if we're going to drop it anyway */\n\t\t\tbreak;\n\t\t}\n#endif\n\t\tdest = zend_string_safe_realloc(dest, 1, bzs.avail_out+1, (size_t) size, 0);\n\t\tbzs.next_out = ZSTR_VAL(dest) + size;\n\t}\n\n\tif (error == BZ_STREAM_END || error == BZ_OK) {\n\t\tsize = (bzs.total_out_hi32 * (unsigned int) -1) + bzs.total_out_lo32;\n#ifndef ZEND_ENABLE_ZVAL_LONG64\n\t\tif (UNEXPECTED(size > SIZE_MAX)) {\n\t\t\tphp_error_docref(NULL, E_WARNING, \"Decompressed size too big, max is %zd\", SIZE_MAX);\n\t\t\tzend_string_efree(dest);\n\t\t\tRETVAL_LONG(BZ_MEM_ERROR);\n\t\t} else\n#endif\n\t\t{\n\t\t\tdest = zend_string_safe_realloc(dest, 1, (size_t)size, 1, 0);\n\t\t\tZSTR_LEN(dest) = (size_t)size;\n\t\t\tZSTR_VAL(dest)[(size_t)size] = '\\0';\n\t\t\tRETVAL_STR(dest);\n\t\t}\n\t} else { /* real error */\n\t\tzend_string_efree(dest);\n\t\tRETVAL_LONG(error);\n\t}\n\n\tBZ2_bzDecompressEnd(&bzs);",
+    "semantic": "in most cases bz2 offers at least 2:1 compression, so we use that as our base",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_FALSE",
+            "ZSTR_VAL",
+            "ZEND_ENABLE_ZVAL_LONG64",
+            "ZSTR_LEN"
+        ],
+        "zend_types": [
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "zend_string_safe_alloc",
+            "zend_string_safe_realloc",
+            "php_error_docref",
+            "zend_string_efree"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common bzdecompress inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 6,
+    "purpose": "in most cases bz2 offers at least 2:1 compression, so we use that as our base",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "bzread",
+        "bzopen",
+        "bzerrno",
+        "bzerrstr",
+        "bzerror",
+        "bzcompress"
+    ]
+}

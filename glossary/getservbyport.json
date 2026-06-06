@@ -1,0 +1,165 @@
+{
+    "php_function": "getservbyport",
+    "zend_function": "getservbyport",
+    "source_file": "sic_functions.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "port",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "port"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(port)"
+        },
+        {
+            "name": "proto",
+            "macro": "Z_PARAM_STRING",
+            "arguments": [
+                "proto",
+                "proto_len"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING(proto, proto_len)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "php_assert.h",
+        "php_crypt.h",
+        "php_streams.h",
+        "php_main.h",
+        "php_globals.h",
+        "php_variables.h",
+        "php_ini.h",
+        "php_image.h",
+        "php_standard.h",
+        "php_math.h",
+        "php_http.h",
+        "php_incomplete_class.h",
+        "php_getopt.h",
+        "php_ext_syslog.h",
+        "ext/standard/info.h",
+        "ext/session/php_session.h",
+        "zend_exceptions.h",
+        "zend_attributes.h",
+        "zend_enum.h",
+        "zend_ini.h",
+        "zend_operators.h",
+        "ext/standard/php_dns.h",
+        "ext/standard/php_uuencode.h",
+        "ext/standard/crc32_x86.h",
+        "win32/php_win32_globals.h",
+        "win32/time.h",
+        "win32/ioutil.h",
+        "zend.h",
+        "zend_ini_scanner.h",
+        "zend_language_scanner.h",
+        "zend_language_parser.h",
+        "zend_portability.h",
+        "stdarg.h",
+        "stdlib.h",
+        "math.h",
+        "time.h",
+        "stdio.h",
+        "sys/types.h",
+        "sys/stat.h",
+        "string.h",
+        "locale.h",
+        "zend_globals.h",
+        "SAPI.h",
+        "php_ticks.h",
+        "php_fopen_wrappers.h",
+        "streamsfuncs.h",
+        "zend_frameless_function.h",
+        "basic_functions_arginfo.h"
+    ],
+    "body": "char *proto;\n\tsize_t proto_len;\n\tzend_long port;\n\tstruct servent *serv;\n\n\tZEND_PARSE_PARAMETERS_START(2, 2)\n\t\tZ_PARAM_LONG(port)\n\t\tZ_PARAM_STRING(proto, proto_len)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tserv = getservbyport(htons((unsigned short) port), proto);\n\n\tif (serv == NULL) {\n\t\tRETURN_FALSE;\n\t}\n\n\t/* MSAN false positive, getservbyport() is not properly intercepted. */\n#if __has_feature(memory_sanitizer)\n\t__msan_unpoison_string(serv->s_name);\n#endif\n\tRETURN_STRING(serv->s_name);",
+    "semantic": "MSAN false positive, getservbyport() is not properly intercepted.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_LONG",
+            "Z_PARAM_STRING",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_FALSE",
+            "RETURN_STRING"
+        ],
+        "zend_types": [
+            "zend_long"
+        ],
+        "internal_helpers": []
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common getservbyport inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 3,
+    "purpose": "MSAN false positive, getservbyport() is not properly intercepted.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "constant",
+        "inet_ntop",
+        "inet_pton",
+        "ip2long",
+        "long2ip",
+        "getenv",
+        "getopt",
+        "flush",
+        "sleep",
+        "usleep",
+        "time_nanosleep",
+        "time_sleep_until"
+    ]
+}

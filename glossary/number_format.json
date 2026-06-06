@@ -1,0 +1,161 @@
+{
+    "php_function": "number_format",
+    "zend_function": "number_format",
+    "source_file": "th.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "num",
+            "macro": "Z_PARAM_NUMBER",
+            "arguments": [
+                "num"
+            ],
+            "type": "mixed",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_NUMBER(num)"
+        },
+        {
+            "name": "dec",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "dec"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(dec)"
+        },
+        {
+            "name": "dec_point",
+            "macro": "Z_PARAM_STRING_OR_NULL",
+            "arguments": [
+                "dec_point",
+                "dec_point_len"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING_OR_NULL(dec_point, dec_point_len)"
+        },
+        {
+            "name": "thousand_sep",
+            "macro": "Z_PARAM_STRING_OR_NULL",
+            "arguments": [
+                "thousand_sep",
+                "thousand_sep_len"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING_OR_NULL(thousand_sep, thousand_sep_len)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "php_math.h",
+        "zend_bitset.h",
+        "zend_enum.h",
+        "zend_exceptions.h",
+        "zend_multiply.h",
+        "zend_portability.h",
+        "float.h",
+        "math.h",
+        "stdlib.h",
+        "basic_functions.h"
+    ],
+    "body": "zval* num;\n\tzend_long dec = 0;\n\tint dec_int;\n\tchar *thousand_sep = NULL, *dec_point = NULL;\n\tsize_t thousand_sep_len = 0, dec_point_len = 0;\n\n\tZEND_PARSE_PARAMETERS_START(1, 4)\n\t\tZ_PARAM_NUMBER(num)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_LONG(dec)\n\t\tZ_PARAM_STRING_OR_NULL(dec_point, dec_point_len)\n\t\tZ_PARAM_STRING_OR_NULL(thousand_sep, thousand_sep_len)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (dec_point == NULL) {\n\t\tdec_point = \".\";\n\t\tdec_point_len = 1;\n\t}\n\tif (thousand_sep == NULL) {\n\t\tthousand_sep = \",\";\n\t\tthousand_sep_len = 1;\n\t}\n\n\tswitch (Z_TYPE_P(num)) {\n\t\tcase IS_LONG:\n\t\t\tRETURN_STR(_php_math_number_format_long(Z_LVAL_P(num), dec, dec_point, dec_point_len, thousand_sep, thousand_sep_len));\n\t\t\tbreak;\n\n\t\tcase IS_DOUBLE:\n\t\t\t// double values of >= 2^52 can not have fractional digits anymore\n\t\t\t// Casting to long on 64bit will not loose precision on rounding\n\t\t\tif (UNEXPECTED(\n\t\t\t\t(Z_DVAL_P(num) >= 4503599627370496.0 || Z_DVAL_P(num) <= -4503599627370496.0)\n\t\t\t\t&& ZEND_DOUBLE_FITS_LONG(Z_DVAL_P(num))\n\t\t\t)) {\n\t\t\t\tRETURN_STR(_php_math_number_format_long((zend_long)Z_DVAL_P(num), dec, dec_point, dec_point_len, thousand_sep, thousand_sep_len));\n                break;\n\t\t\t}\n\n\t\t\tif (dec >= 0) {\n\t\t\t\tdec_int = ZEND_LONG_INT_OVFL(dec) ? INT_MAX : (int)dec;\n\t\t\t} else {\n\t\t\t\tdec_int = ZEND_LONG_INT_UDFL(dec) ? INT_MIN : (int)dec;\n\t\t\t}\n\t\t\tRETURN_STR(_php_math_number_format_ex(Z_DVAL_P(num), dec_int, dec_point, dec_point_len, thousand_sep, thousand_sep_len));\n\t\t\tbreak;\n\n\t\tEMPTY_SWITCH_DEFAULT_CASE()\n\t}",
+    "semantic": "Implements the PHP function number_format in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_NUMBER",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_LONG",
+            "Z_PARAM_STRING_OR_NULL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_STR",
+            "ZEND_DOUBLE_FITS_LONG",
+            "ZEND_LONG_INT_OVFL",
+            "ZEND_LONG_INT_UDFL"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_long"
+        ],
+        "internal_helpers": []
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common number_format inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "Implements the PHP function number_format in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "abs",
+        "ceil",
+        "floor",
+        "round",
+        "sin",
+        "cos",
+        "tan",
+        "asin",
+        "acos",
+        "atan",
+        "atan2",
+        "sinh"
+    ]
+}

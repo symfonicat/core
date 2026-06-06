@@ -1,0 +1,171 @@
+{
+    "php_function": "array_splice",
+    "zend_function": "array_splice",
+    "source_file": "ray.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "array",
+            "macro": "Z_PARAM_ARRAY_EX",
+            "arguments": [
+                "array",
+                "0",
+                "1"
+            ],
+            "type": "HashTable",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY_EX(array, 0, 1)"
+        },
+        {
+            "name": "offset",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "offset"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(offset)"
+        },
+        {
+            "name": "length",
+            "macro": "Z_PARAM_LONG_OR_NULL",
+            "arguments": [
+                "length",
+                "length_is_null"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG_OR_NULL(length, length_is_null)"
+        },
+        {
+            "name": "repl_array",
+            "macro": "Z_PARAM_ZVAL",
+            "arguments": [
+                "repl_array"
+            ],
+            "type": "zval",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": true,
+            "raw": "Z_PARAM_ZVAL(repl_array)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "php_ini.h",
+        "stdarg.h",
+        "stdlib.h",
+        "math.h",
+        "time.h",
+        "string.h",
+        "zend_globals.h",
+        "zend_interfaces.h",
+        "php_array.h",
+        "basic_functions.h",
+        "php_string.h",
+        "php_math.h",
+        "zend_smart_str.h",
+        "zend_bitset.h",
+        "zend_exceptions.h",
+        "ext/random/php_random.h",
+        "zend_frameless_function.h"
+    ],
+    "body": "zval *array,\t\t\t\t/* Input array */\n\t\t *repl_array = NULL;\t/* Replacement array */\n\tHashTable  *rem_hash = NULL;\n\tzend_long offset,\n\t\t\tlength = 0;\n\tbool length_is_null = 1;\n\tint\t\tnum_in;\t\t\t\t/* Number of elements in the input array */\n\n\tZEND_PARSE_PARAMETERS_START(2, 4)\n\t\tZ_PARAM_ARRAY_EX(array, 0, 1)\n\t\tZ_PARAM_LONG(offset)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_LONG_OR_NULL(length, length_is_null)\n\t\tZ_PARAM_ZVAL(repl_array)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tnum_in = zend_hash_num_elements(Z_ARRVAL_P(array));\n\n\tif (length_is_null) {\n\t\tlength = num_in;\n\t}\n\n\tif (ZEND_NUM_ARGS() == 4) {\n\t\t/* Make sure the last argument, if passed, is an array */\n\t\tconvert_to_array(repl_array);\n\t}\n\n\t/* Don't create the array of removed elements if it's not going\n\t * to be used; e.g. only removing and/or replacing elements */\n\tif (USED_RET()) {\n\t\tzend_long size = length;\n\n\t\t/* Clamp the offset.. */\n\t\tif (offset > num_in) {\n\t\t\toffset = num_in;\n\t\t} else if (offset < 0 && (offset = (num_in + offset)) < 0) {\n\t\t\toffset = 0;\n\t\t}\n\n\t\t/* ..and the length */\n\t\tif (length < 0) {\n\t\t\tsize = num_in - offset + length;\n\t\t} else if (((zend_ulong) offset + (zend_ulong) length) > (uint32_t) num_in) {\n\t\t\tsize = num_in - offset;\n\t\t}\n\n\t\t/* Initialize return value */\n\t\tarray_init_size(return_value, size > 0 ? (uint32_t)size : 0);\n\t\trem_hash = Z_ARRVAL_P(return_value);\n\t} else {\n\t\t/* The return value will not be used, but make sure it still has the correct type. */\n\t\tRETVAL_EMPTY_ARRAY();\n\t}\n\n\t/* Perform splice */\n\tphp_splice(Z_ARRVAL_P(array), offset, length, repl_array ? Z_ARRVAL_P(repl_array) : NULL, rem_hash);",
+    "semantic": "Input array",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_ARRAY_EX",
+            "Z_PARAM_LONG",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_LONG_OR_NULL",
+            "Z_PARAM_ZVAL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZEND_NUM_ARGS"
+        ],
+        "zend_types": [
+            "zval",
+            "HashTable",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_hash_num_elements",
+            "php_splice"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common array_splice inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "Input array",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "krsort",
+        "ksort",
+        "count",
+        "natsort",
+        "natcasesort",
+        "asort",
+        "arsort",
+        "sort",
+        "rsort",
+        "usort",
+        "uasort",
+        "uksort"
+    ]
+}

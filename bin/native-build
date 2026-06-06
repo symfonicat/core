@@ -1,0 +1,116 @@
+#!/bin/sh
+
+set -eu
+
+log() {
+    printf '[symfonicat-native-build] %s\n' "$*"
+}
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+project_dir=$(CDPATH= cd -- "$script_dir/.." && pwd)
+
+ext_root=${EXT:-/usr/src/php/ext}
+frankenphp_src=${FRANKENPHP_SRC:-/usr/local/src/frankenphp-src}
+frankenphp_bin=${FRANKENPHP_BIN:-/usr/local/bin/frankenphp}
+gen_stub_script=${GEN_STUB_SCRIPT:-/usr/local/lib/php/build/gen_stub.php}
+
+discover_ext_paths() {
+    cd "$project_dir"
+    {
+        php bin/console symfonicat:discover:ext:paths './'
+        php bin/console symfonicat:discover:ext:paths 'core/'
+        php bin/console symfonicat:discover:ext:paths 'vendor/**/**/'
+    } | sort -u
+}
+
+discover_ext_names() {
+    cd "$project_dir"
+    {
+        php bin/console symfonicat:discover:ext:names './'
+        php bin/console symfonicat:discover:ext:names 'core/'
+        php bin/console symfonicat:discover:ext:names 'vendor/**/**/'
+    } | sort -u
+}
+
+discover_go_paths() {
+    cd "$project_dir"
+    {
+        php bin/console symfonicat:discover:go:paths './'
+        php bin/console symfonicat:discover:go:paths 'core/'
+        php bin/console symfonicat:discover:go:paths 'vendor/**/**/'
+    } | sort -u
+}
+
+build_php_extensions() {
+    ext_paths=$(discover_ext_paths)
+    ext_names=$(discover_ext_names)
+
+    mkdir -p "$ext_root"
+
+    printf '%s\n' "$ext_paths" | while IFS= read -r directory; do
+        [ -n "$directory" ] || continue
+
+        ext_name=$(basename "$directory")
+        ext_flag=$(printf '%s' "$ext_name" | tr '_' '-')
+        rm -rf "$ext_root/$ext_name"
+        cp -R "$project_dir/$directory" "$ext_root/$ext_name"
+
+        if grep -q '^PHP_ARG_ENABLE(' "$ext_root/$ext_name/config.m4"; then
+            docker-php-ext-configure "$ext_name" --enable-"$ext_flag"
+        elif grep -q '^PHP_ARG_WITH(' "$ext_root/$ext_name/config.m4"; then
+            docker-php-ext-configure "$ext_name" --with-"$ext_flag"
+        fi
+    done
+
+    if [ -n "$ext_names" ]; then
+        docker-php-ext-install $ext_names
+    fi
+}
+
+build_frankenphp() {
+    go_paths=$(discover_go_paths)
+    go_flags_file=$(mktemp)
+    : > "$go_flags_file"
+
+    printf '%s\n' "$go_paths" | while IFS= read -r directory; do
+        [ -n "$directory" ] || continue
+
+        set -- "$project_dir/$directory"/*.go
+        if [ ! -e "$1" ]; then
+            continue
+        fi
+
+        if grep -qs 'export_php:function' "$@"; then
+            GEN_STUB_SCRIPT="$gen_stub_script" frankenphp extension-init "$@"
+        fi
+
+        if [ -f "$project_dir/$directory/go.mod" ]; then
+            (cd "$project_dir/$directory" && go mod tidy)
+
+            module_path=$(sed -n 's/^module //p' "$project_dir/$directory/go.mod" | head -n 1)
+            if [ -n "$module_path" ]; then
+                printf '%s\n' "$(cat "$go_flags_file") --with $module_path=$project_dir/$directory" > "$go_flags_file"
+            fi
+        fi
+    done
+
+    go_flags=$(cat "$go_flags_file")
+    rm -f "$go_flags_file"
+
+    cd "$frankenphp_src"
+    CGO_ENABLED=1 \
+        XCADDY_GO_BUILD_FLAGS="-ldflags='-w -s' -tags=nobadger,nomysql,nopgx" \
+        CGO_CFLAGS="-D_GNU_SOURCE $(php-config --includes)" \
+        CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs)" \
+        xcaddy build \
+            --output "$frankenphp_bin" \
+            --with github.com/dunglas/frankenphp="$frankenphp_src" \
+            --with github.com/dunglas/frankenphp/caddy="$frankenphp_src/caddy" \
+            --with github.com/dunglas/mercure/caddy \
+            --with github.com/dunglas/vulcain/caddy \
+            --with github.com/dunglas/caddy-cbrotli \
+            $go_flags
+}
+
+build_php_extensions
+build_frankenphp

@@ -1,0 +1,152 @@
+{
+    "php_function": "preg_split",
+    "zend_function": "preg_split",
+    "source_file": "re.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "regex",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "regex"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(regex)"
+        },
+        {
+            "name": "subject",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "subject"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(subject)"
+        },
+        {
+            "name": "limit_val",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "limit_val"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(limit_val)"
+        },
+        {
+            "name": "flags",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "flags"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(flags)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "php_ini.h",
+        "php_pcre.h",
+        "ext/standard/info.h",
+        "ext/standard/basic_functions.h",
+        "zend_smart_str.h",
+        "SAPI.h",
+        "php_pcre_arginfo.h"
+    ],
+    "body": "zend_string\t\t\t*regex;\t\t\t/* Regular expression */\n\tzend_string\t\t\t*subject;\t\t/* String to match against */\n\tzend_long\t\t\t limit_val = -1;/* Integer value of limit */\n\tzend_long\t\t\t flags = 0;\t\t/* Match control flags */\n\tpcre_cache_entry\t*pce;\t\t\t/* Compiled regular expression */\n\n\t/* Get function parameters and do error checking */\n\tZEND_PARSE_PARAMETERS_START(2, 4)\n\t\tZ_PARAM_STR(regex)\n\t\tZ_PARAM_STR(subject)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_LONG(limit_val)\n\t\tZ_PARAM_LONG(flags)\n\tZEND_PARSE_PARAMETERS_END();\n\n\t/* Compile regex or get it from cache. */\n\tif ((pce = pcre_get_compiled_regex_cache(regex)) == NULL) {\n\t\tRETURN_FALSE;\n\t}\n\n\tpce->refcount++;\n\tphp_pcre_split_impl(pce, subject, return_value, limit_val, flags);\n\tpce->refcount--;",
+    "semantic": "Regular expression",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STR",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_LONG",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zend_string",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "php_pcre_split_impl"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common preg_split inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 3,
+    "purpose": "Regular expression",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "preg_match",
+        "preg_match_all",
+        "preg_replace",
+        "preg_replace_callback",
+        "preg_replace_callback_array",
+        "preg_filter",
+        "preg_quote",
+        "preg_grep",
+        "preg_last_error",
+        "preg_last_error_msg"
+    ]
+}

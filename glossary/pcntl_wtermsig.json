@@ -1,0 +1,121 @@
+{
+    "php_function": "pcntl_wtermsig",
+    "zend_function": "pcntl_wtermsig",
+    "source_file": ".c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "status_word",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "status_word"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(status_word)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "ext/standard/info.h",
+        "php_signal.h",
+        "php_ticks.h",
+        "zend_fibers.h",
+        "sys/wait.h",
+        "sys/time.h",
+        "sys/resource.h",
+        "php_pcntl.h",
+        "errno.h",
+        "sched.h",
+        "sys/types.h",
+        "sys/cpuset.h",
+        "sys/syscall.h",
+        "sys/pset.h",
+        "sys/processor.h",
+        "pthread/qos.h",
+        "sys/fork.h",
+        "Zend/zend_enum.h",
+        "Zend/zend_max_execution_timer.h",
+        "pcntl_arginfo.h"
+    ],
+    "body": "zend_long status_word;\n\n\tZEND_PARSE_PARAMETERS_START(1, 1)\n\t\tZ_PARAM_LONG(status_word)\n\tZEND_PARSE_PARAMETERS_END();\n\n#ifdef WTERMSIG\n\tint int_status_word = (int) status_word;\n\tRETURN_LONG(WTERMSIG(int_status_word));\n#else\n\tRETURN_FALSE;\n#endif",
+    "semantic": "Implements the PHP function pcntl_wtermsig in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_LONG",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_LONG",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zend_long"
+        ],
+        "internal_helpers": []
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common pcntl_wtermsig inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 2,
+    "purpose": "Implements the PHP function pcntl_wtermsig in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "pcntl_fork",
+        "pcntl_alarm",
+        "pcntl_waitpid",
+        "pcntl_waitid",
+        "pcntl_wait",
+        "pcntl_wifexited",
+        "pcntl_wifstopped",
+        "pcntl_wifsignaled",
+        "pcntl_wifcontinued",
+        "pcntl_wexitstatus",
+        "pcntl_wstopsig",
+        "pcntl_exec"
+    ]
+}

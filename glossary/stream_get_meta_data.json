@@ -1,0 +1,115 @@
+{
+    "php_function": "stream_get_meta_data",
+    "zend_function": "stream_get_meta_data",
+    "source_file": "reamsfuncs.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "zstream",
+            "macro": "Z_PARAM_RESOURCE",
+            "arguments": [
+                "zstream"
+            ],
+            "type": "zend_resource",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_RESOURCE(zstream)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "ext/standard/flock_compat.h",
+        "ext/standard/file.h",
+        "ext/standard/basic_functions.h",
+        "php_ini.h",
+        "streamsfuncs.h",
+        "php_network.h",
+        "php_string.h",
+        "unistd.h",
+        "win32/select.h",
+        "win32/sockets.h",
+        "win32/console.h"
+    ],
+    "body": "zval *zstream;\n\tphp_stream *stream;\n\n\tZEND_PARSE_PARAMETERS_START(1, 1)\n\t\tZ_PARAM_RESOURCE(zstream)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tphp_stream_from_zval(stream, zstream);\n\n\tarray_init(return_value);\n\n\tif (!php_stream_populate_meta_data(stream, return_value)) {\n\t\tadd_assoc_bool(return_value, \"timed_out\", 0);\n\t\tadd_assoc_bool(return_value, \"blocked\", 1);\n\t\tadd_assoc_bool(return_value, \"eof\", php_stream_eof(stream));\n\t}\n\n\tif (!Z_ISUNDEF(stream->wrapperdata)) {\n\t\tZ_ADDREF_P(&stream->wrapperdata);\n\t\tadd_assoc_zval(return_value, \"wrapper_data\", &stream->wrapperdata);\n\t}\n\tif (stream->wrapper) {\n\t\tadd_assoc_string(return_value, \"wrapper_type\", (char *)stream->wrapper->wops->label);\n\t}\n\tadd_assoc_string(return_value, \"stream_type\", (char *)stream->ops->label);\n\n\tadd_assoc_string(return_value, \"mode\", stream->mode);\n\n#if 0\t/* TODO: needs updating for new filter API */\n\tif (stream->filterhead) {\n\t\tphp_stream_filter *filter;\n\n\t\tMAKE_STD_ZVAL(newval);\n\t\tarray_init(newval);\n\n\t\tfor (filter = stream->filterhead; filter != NULL; filter = filter->next) {\n\t\t\tadd_next_index_string(newval, (char *)filter->fops->label);\n\t\t}\n\n\t\tadd_assoc_zval(return_value, \"filters\", newval);\n\t}\n#endif\n\n\tadd_assoc_long(return_value, \"unread_bytes\", stream->writepos - stream->readpos);\n\n\tadd_assoc_bool(return_value, \"seekable\", (stream->ops->seek) && (stream->flags & PHP_STREAM_FLAG_NO_SEEK) == 0);\n\tif (stream->orig_path) {\n\t\tadd_assoc_string(return_value, \"uri\", stream->orig_path);\n\t}",
+    "semantic": "TODO: needs updating for new filter API",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_RESOURCE",
+            "ZEND_PARSE_PARAMETERS_END"
+        ],
+        "zend_types": [
+            "zval"
+        ],
+        "internal_helpers": [
+            "php_stream_from_zval",
+            "php_stream_populate_meta_data",
+            "php_stream_eof"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common stream_get_meta_data inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 6,
+    "purpose": "TODO: needs updating for new filter API",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "stream_socket_pair",
+        "stream_socket_client",
+        "stream_socket_server",
+        "stream_socket_accept",
+        "stream_socket_get_name",
+        "stream_socket_sendto",
+        "stream_socket_recvfrom",
+        "stream_get_contents",
+        "stream_copy_to_stream",
+        "stream_get_transports",
+        "stream_get_wrappers",
+        "stream_select"
+    ]
+}

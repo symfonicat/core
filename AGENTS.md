@@ -70,7 +70,30 @@ Core asset stack lives under `core/assets/`.
 
 Canonical runtime uses Docker/FrankenPHP. Redis is provided by the dedicated Compose service and backs cache, sessions, locks, core throttling, and Messenger `async` transport.
 
+- Flush caches through `docker exec` only; do not use local PHP for cache-clearing commands.
+- Run PHPUnit inside the container only; local PHP is not the supported test runtime because this app depends on FrankenPHP and custom Go/C extensions.
+- If Docker is not already running, do not start it. If it cannot run in the current environment, skip Docker-based commands instead of trying to work around it locally.
+
 ## Documentation
 
-Every change must update both `README.md` and `README_PROFILE.md` as clean current-state snapshots.
-When one readme changes, mirror the same factual edits into the other in the same turn. Use `README.md` as the source of truth for runtime behavior, keep section names and ordering aligned where practical, and write terse notes that name the exact commands, paths, or boot/runtime effects that changed. Avoid speculative prose and avoid leaving one readme with a stale command, path, or startup note.
+Every change must update `README.md` as a clean current-state snapshot.
+Use `README.md` as the source of truth for runtime behavior, keep section names and ordering aligned where practical, and write terse notes that name the exact commands, paths, or boot/runtime effects that changed. Avoid speculative prose and avoid leaving `README.md` with a stale command, path, or startup note.
+
+## Native C
+
+- Do not place new native PHP extension code under `./core/native/ext`; the `core/` tree is for the Symfony application and the existing core-native build glue, not for reusable extension projects.
+- Put new extension sources under `./native/ext/<ext>/<ext>.c` and pair them with a matching `config.m4` so the build discovery commands can copy and compile them without custom path handling.
+- Prefix extension names with `symfonicat_` when defining the extension identity so the native build output stays stable, avoids collisions with upstream PHP extensions, and keeps runtime logs obvious.
+- Group related PHP functions into the same extension when they share a domain, buffer type, or dependency surface so the extension boundary matches the specialization boundary and reduces cross-extension indirection.
+- Use `./glossary` when implementing or optimizing native PHP functions.
+- The JSON files expose `php_function`, `zend_function`, `source_file`, `extension`, `parameters`, `includes`, `body`, `semantic`, `control_flow`, `dependencies`, `specialization_candidates`, `strategies`, `memory_model`, `avoid`, `complexity`, `purpose`, `php_version`, and `related`.
+- Use those entries for specialization choices, memory handling, and hot-path design.
+
+## Native Build
+
+- Use `bin/native-build` inside the container.
+- It configures `native/ext/**`, `core/native/ext/**`, and `vendor/**/**/native/ext/**`.
+- It rebuilds FrankenPHP from `native/go/**`, `core/native/go/**`, and `vendor/**/**/native/go/**`.
+- Set `SYMFONICAT_NATIVE_WATCH=1` on `php` to restart FrankenPHP after native source changes.
+- The watch loop writes `/run/symfonicat/native-watch.sentinel`.
+- It prefers `inotifywait`, then verifies file-content snapshots if needed.

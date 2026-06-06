@@ -1,0 +1,99 @@
+{
+    "php_function": "phpdbg_break_file",
+    "zend_function": "phpdbg_break_file",
+    "source_file": "dbg.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "phpdbg.h",
+        "phpdbg_prompt.h",
+        "phpdbg_bp.h",
+        "phpdbg_break.h",
+        "phpdbg_list.h",
+        "phpdbg_utils.h",
+        "phpdbg_set.h",
+        "phpdbg_io.h",
+        "zend_alloc.h",
+        "phpdbg_print.h",
+        "phpdbg_help.h",
+        "phpdbg_arginfo.h",
+        "zend_vm.h",
+        "php_ini_builder.h",
+        "php_main.h",
+        "ext/standard/basic_functions.h"
+    ],
+    "body": "char *file;\n\tsize_t flen;\n\tzend_long line;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"sl\", &file, &flen, &line) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tphpdbg_set_breakpoint_file(file, 0, line);",
+    "semantic": "Implements the PHP function phpdbg_break_file in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS"
+        ],
+        "zend_types": [
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "phpdbg_set_breakpoint_file"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common phpdbg_break_file inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 2,
+    "purpose": "Implements the PHP function phpdbg_break_file in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "phpdbg_exec",
+        "phpdbg_break_next",
+        "phpdbg_break_method",
+        "phpdbg_break_function",
+        "phpdbg_clear",
+        "phpdbg_color",
+        "phpdbg_prompt",
+        "phpdbg_start_oplog",
+        "phpdbg_get_executable",
+        "phpdbg_end_oplog"
+    ]
+}

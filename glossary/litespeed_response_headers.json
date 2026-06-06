@@ -1,0 +1,102 @@
+{
+    "php_function": "litespeed_response_headers",
+    "zend_function": "litespeed_response_headers",
+    "source_file": "lsapi_main.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "php.h",
+        "SAPI.h",
+        "php_main.h",
+        "php_ini.h",
+        "php_variables.h",
+        "zend_highlight.h",
+        "zend_portability.h",
+        "zend.h",
+        "ext/standard/basic_functions.h",
+        "ext/standard/info.h",
+        "ext/standard/head.h",
+        "lsapilib.h",
+        "lsapi_main_arginfo.h",
+        "stdio.h",
+        "stdlib.h",
+        "unistd.h",
+        "sys/wait.h",
+        "sys/stat.h",
+        "sys/types.h",
+        "signal.h",
+        "sys/socket.h",
+        "arpa/inet.h",
+        "netinet/in.h",
+        "sys/time.h",
+        "lscriu.c",
+        "fcntl.h"
+    ],
+    "body": "sapi_header_struct  *h;\n    zend_llist_position pos;\n    char *       p;\n    int          len;\n    char         headerBuf[SAPI_LSAPI_MAX_HEADER_LENGTH];\n\n    if (zend_parse_parameters_none() == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n    if (!&SG(sapi_headers).headers) {\n        RETURN_FALSE;\n    }\n    array_init(return_value);\n\n    h = zend_llist_get_first_ex(&SG(sapi_headers).headers, &pos);\n    while (h) {\n        if ( h->header_len > 0 ) {\n            p = strchr( h->header, ':' );\n            len = p - h->header;\n            if (p && len > 0 && len < LSAPI_RESP_HTTP_HEADER_MAX) {\n                memmove( headerBuf, h->header, len );\n                while( len > 0 && (isspace( headerBuf[len-1])) ) {\n                    --len;\n                }\n                headerBuf[len] = 0;\n                if ( len ) {\n                    while( isspace(*++p));\n                    add_assoc_string_ex(return_value, headerBuf, len, p);\n                }\n            }\n        }\n        h = zend_llist_get_next_ex(&SG(sapi_headers).headers, &pos);\n    }",
+    "semantic": "Implements the PHP function litespeed_response_headers in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "RETURN_THROWS",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [],
+        "internal_helpers": [
+            "zend_parse_parameters_none",
+            "zend_llist_get_first_ex",
+            "zend_llist_get_next_ex"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common litespeed_response_headers inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "Implements the PHP function litespeed_response_headers in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "litespeed_request_headers",
+        "apache_get_modules",
+        "litespeed_finish_request"
+    ]
+}

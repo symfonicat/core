@@ -1,0 +1,104 @@
+{
+    "php_function": "timezone_transitions_get",
+    "zend_function": "timezone_transitions_get",
+    "source_file": "te.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "php.h",
+        "php_main.h",
+        "php_ini.h",
+        "ext/standard/info.h",
+        "ext/standard/php_versioning.h",
+        "php_date.h",
+        "zend_attributes.h",
+        "zend_interfaces.h",
+        "zend_exceptions.h",
+        "lib/timelib.h",
+        "lib/timelib_private.h",
+        "time.h",
+        "win32/time.h",
+        "php_date_arginfo.h",
+        "zend_smart_str.h"
+    ],
+    "body": "zval                *object, element;\n\tphp_timezone_obj    *tzobj;\n\tuint64_t             begin = 0;\n\tbool                 found;\n\tzend_long            timestamp_begin = ZEND_LONG_MIN, timestamp_end = INT32_MAX;\n\n\tif (zend_parse_method_parameters(ZEND_NUM_ARGS(), getThis(), \"O|ll\", &object, date_ce_timezone, &timestamp_begin, &timestamp_end) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\ttzobj = Z_PHPTIMEZONE_P(object);\n\tDATE_CHECK_INITIALIZED(tzobj->initialized, Z_OBJCE_P(object));\n\tif (tzobj->type != TIMELIB_ZONETYPE_ID) {\n\t\tRETURN_FALSE;\n\t}\n\n#define add_nominal() \\\n\t\tarray_init(&element); \\\n\t\tadd_assoc_long(&element, \"ts\",     timestamp_begin); \\\n\t\tadd_assoc_str(&element, \"time\", php_format_date(DATE_FORMAT_ISO8601_LARGE_YEAR, 13, timestamp_begin, 0)); \\\n\t\tadd_assoc_long(&element, \"offset\", tzobj->tzi.tz->type[0].offset); \\\n\t\tadd_assoc_bool(&element, \"isdst\",  tzobj->tzi.tz->type[0].isdst); \\\n\t\tadd_assoc_string(&element, \"abbr\", &tzobj->tzi.tz->timezone_abbr[tzobj->tzi.tz->type[0].abbr_idx]); \\\n\t\tadd_next_index_zval(return_value, &element);\n\n#define add(i,ts) \\\n\t\tarray_init(&element); \\\n\t\tadd_assoc_long(&element, \"ts\",     ts); \\\n\t\tadd_assoc_str(&element, \"time\", php_format_date(DATE_FORMAT_ISO8601_LARGE_YEAR, 13, ts, 0)); \\\n\t\tadd_assoc_long(&element, \"offset\", tzobj->tzi.tz->type[tzobj->tzi.tz->trans_idx[i]].offset); \\\n\t\tadd_assoc_bool(&element, \"isdst\",  tzobj->tzi.tz->type[tzobj->tzi.tz->trans_idx[i]].isdst); \\\n\t\tadd_assoc_string(&element, \"abbr\", &tzobj->tzi.tz->timezone_abbr[tzobj->tzi.tz->type[tzobj->tzi.tz->trans_idx[i]].abbr_idx]); \\\n\t\tadd_next_index_zval(return_value, &element);\n\n#define add_by_index(i,ts) \\\n\t\tarray_init(&element); \\\n\t\tadd_assoc_long(&element, \"ts\",     ts); \\\n\t\tadd_assoc_str(&element, \"time\", php_format_date(DATE_FORMAT_ISO8601_LARGE_YEAR, 13, ts, 0)); \\\n\t\tadd_assoc_long(&element, \"offset\", tzobj->tzi.tz->type[i].offset); \\\n\t\tadd_assoc_bool(&element, \"isdst\",  tzobj->tzi.tz->type[i].isdst); \\\n\t\tadd_assoc_string(&element, \"abbr\", &tzobj->tzi.tz->timezone_abbr[tzobj->tzi.tz->type[i].abbr_idx]); \\\n\t\tadd_next_index_zval(return_value, &element);\n\n#define add_from_tto(to,ts) \\\n\t\tarray_init(&element); \\\n\t\tadd_assoc_long(&element, \"ts\",     ts); \\\n\t\tadd_assoc_str(&element, \"time\", php_format_date(DATE_FORMAT_ISO8601_LARGE_YEAR, 13, ts, 0)); \\\n\t\tadd_assoc_long(&element, \"offset\", (to)->offset); \\\n\t\tadd_assoc_bool(&element, \"isdst\",  (to)->is_dst); \\\n\t\tadd_assoc_string(&element, \"abbr\", (to)->abbr); \\\n\t\tadd_next_index_zval(return_value, &element);\n\n#define add_last() add(tzobj->tzi.tz->bit64.timecnt - 1, timestamp_begin)\n\n\tarray_init(return_value);\n\n\tif (timestamp_begin == ZEND_LONG_MIN) {\n\t\tadd_nominal();\n\t\tbegin = 0;\n\t\tfound = 1;\n\t} else {\n\t\tbegin = 0;\n\t\tfound = 0;\n\t\tif (tzobj->tzi.tz->bit64.timecnt > 0) {\n\t\t\tdo {\n\t\t\t\tif (tzobj->tzi.tz->trans[begin] > timestamp_begin) {\n\t\t\t\t\tif (begin > 0) {\n\t\t\t\t\t\tadd(begin - 1, timestamp_begin);\n\t\t\t\t\t} else {\n\t\t\t\t\t\tadd_nominal();\n\t\t\t\t\t}\n\t\t\t\t\tfound = 1;\n\t\t\t\t\tbreak;\n\t\t\t\t}\n\t\t\t\tbegin++;\n\t\t\t} while (begin < tzobj->tzi.tz->bit64.timecnt);\n\t\t}\n\t}\n\n\tif (!found) {\n\t\tif (tzobj->tzi.tz->bit64.timecnt > 0) {\n\t\t\tif (tzobj->tzi.tz->posix_info && tzobj->tzi.tz->posix_info->dst_end) {\n\t\t\t\ttimelib_time_offset *tto = timelib_get_time_zone_info(timestamp_begin, tzobj->tzi.tz);\n\t\t\t\tadd_from_tto(tto, timestamp_begin);\n\t\t\t\ttimelib_time_offset_dtor(tto);\n\t\t\t} else {\n\t\t\t\tadd_last();\n\t\t\t}\n\t\t} else {\n\t\t\tadd_nominal();\n\t\t}\n\t} else {\n\t\tfor (uint64_t i = begin; i < tzobj->tzi.tz->bit64.timecnt; ++i) {\n\t\t\tif (tzobj->tzi.tz->trans[i] < timestamp_end) {\n\t\t\t\tadd(i, tzobj->tzi.tz->trans[i]);\n\t\t\t} else {\n\t\t\t\treturn;\n\t\t\t}\n\t\t}\n\t}\n\tif (tzobj->tzi.tz->posix_info && tzobj->tzi.tz->posix_info->dst_end) {\n\t\ttimelib_sll start_y, end_y, dummy_m, dummy_d;\n\t\ttimelib_sll last_transition_ts = tzobj->tzi.tz->trans[tzobj->tzi.tz->bit64.timecnt - 1];\n\n\t\t/* Find out year for last transition */\n\t\ttimelib_unixtime2date(last_transition_ts, &start_y, &dummy_m, &dummy_d);\n\n\t\t/* Find out year for final boundary timestamp */\n\t\ttimelib_unixtime2date(timestamp_end, &end_y, &dummy_m, &dummy_d);\n\n\t\tfor (timelib_sll i = start_y; i <= end_y; i++) {\n\t\t\ttimelib_posix_transitions transitions = { 0 };\n\n\t\t\ttimelib_get_transitions_for_year(tzobj->tzi.tz, i, &transitions);\n\n\t\t\tfor (size_t j = 0; j < transitions.count; j++) {\n\t\t\t\tif (transitions.times[j] <= last_transition_ts) {\n\t\t\t\t\tcontinue;\n\t\t\t\t}\n\t\t\t\tif (transitions.times[j] < timestamp_begin) {\n\t\t\t\t\tcontinue;\n\t\t\t\t}\n\t\t\t\tif (transitions.times[j] > timestamp_end) {\n\t\t\t\t\treturn;\n\t\t\t\t}\n\t\t\t\tadd_by_index(transitions.types[j], transitions.times[j]);\n\t\t\t}\n\t\t}\n\t}",
+    "semantic": "Find out year for last transition",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_LONG_MIN",
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_parse_method_parameters",
+            "php_format_date"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common timezone_transitions_get inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 7,
+    "purpose": "Find out year for last transition",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "date",
+        "gmdate",
+        "idate",
+        "strtotime",
+        "mktime",
+        "gmmktime",
+        "checkdate",
+        "strftime",
+        "gmstrftime",
+        "time",
+        "localtime",
+        "getdate"
+    ]
+}

@@ -31,6 +31,12 @@ log "using internal TLS certificate"
 tls internal
 EOF
 fi
+
+if [ "${SYMFONICAT_NATIVE_WATCH:-0}" = "1" ]; then
+    log "starting native watch loop; sentinel will be written to /run/symfonicat/native-watch.sentinel"
+    exec /symfonicat/bin/native-watch
+fi
+
 php_pid=""
 
 cleanup() {

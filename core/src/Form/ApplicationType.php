@@ -38,7 +38,7 @@ final class ApplicationType extends AbstractType
                 'class' => Subdomain::class,
                 'choice_label' => static function (Subdomain $subdomain): string {
                     $affix = trim((string) $subdomain->getAffix());
-                    $domain = trim((string) $subdomain->getDomain()?->getId());
+                    $domain = trim((string) $subdomain->getDomain()?->getTld());
 
                     return $domain === '' ? $affix : sprintf('%s (%s)', $affix, $domain);
                 },

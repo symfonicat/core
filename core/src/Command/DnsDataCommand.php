@@ -25,7 +25,7 @@ final class DnsDataCommand extends Command
         $subdomains = [];
         foreach ($this->runtimeConfig->subdomains() as $subdomain) {
             $affix = trim((string) $subdomain->getAffix());
-            $domainId = trim((string) $subdomain->getDomain()?->getId());
+            $domainId = trim((string) $subdomain->getDomain()?->getTld());
 
             if ($affix === '') {
                 continue;
@@ -40,7 +40,7 @@ final class DnsDataCommand extends Command
 
         $domains = [];
         foreach ($this->runtimeConfig->domains() as $domain) {
-            $id = $domain->getId(false);
+            $id = $domain->getTld();
             if ($id !== null && $id !== '') {
                 $domains[] = $id;
             }

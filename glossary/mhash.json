@@ -1,0 +1,102 @@
+{
+    "php_function": "mhash",
+    "zend_function": "mhash",
+    "source_file": "",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "math.h",
+        "php_hash.h",
+        "ext/standard/info.h",
+        "ext/standard/file.h",
+        "ext/standard/php_var.h",
+        "zend_attributes.h",
+        "zend_exceptions.h",
+        "zend_interfaces.h",
+        "zend_smart_str.h",
+        "hash_arginfo.h"
+    ],
+    "body": "zend_long algorithm;\n\tzend_string *algo = NULL;\n\tchar *data, *key = NULL;\n\tsize_t data_len, key_len = 0;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"ls|s!\", &algorithm, &data, &data_len, &key, &key_len) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\t/* need to convert the first parameter from int constant to string algorithm name */\n\tif (algorithm >= 0 && algorithm < MHASH_NUM_ALGOS) {\n\t\tstruct mhash_bc_entry algorithm_lookup = mhash_to_hash[algorithm];\n\t\tif (algorithm_lookup.hash_name) {\n\t\t\talgo = zend_string_init(algorithm_lookup.hash_name, strlen(algorithm_lookup.hash_name), 0);\n\t\t} else {\n\t\t\tRETURN_FALSE;\n\t\t}\n\t} else {\n\t\tRETURN_FALSE;\n\t}\n\n\tif (key) {\n\t\tphp_hash_do_hash_hmac(return_value, algo, data, data_len, key, key_len, 1, 0);\n\t} else {\n\t\tphp_hash_do_hash(return_value, algo, data, data_len, 1, 0, NULL);\n\t}\n\n\tif (algo) {\n\t\tzend_string_release(algo);\n\t}",
+    "semantic": "need to convert the first parameter from int constant to string algorithm name",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zend_long",
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "zend_string_init",
+            "php_hash_do_hash_hmac",
+            "php_hash_do_hash",
+            "zend_string_release"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common mhash inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 4,
+    "purpose": "need to convert the first parameter from int constant to string algorithm name",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "hash",
+        "hash_file",
+        "hash_hmac",
+        "hash_hmac_file",
+        "hash_init",
+        "hash_update",
+        "hash_update_stream",
+        "hash_update_file",
+        "hash_final",
+        "hash_copy",
+        "hash_algos",
+        "hash_hmac_algos"
+    ]
+}

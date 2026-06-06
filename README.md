@@ -2,7 +2,10 @@
 
 Symfonicat is a Symfony 8 multi-tenant frontend runtime. It resolves public requests to domains, subdomains, and endpoints, renders the matching parcel-backed template, and exposes modules, middleware, env data, and build-application context where present.
 
-Symfonicat supports the ability for Composer packages to ship with PHP extensions and Go modules. PHP extensions go in `native/ext/**` or `core/native/ext/**`, and Go modules go in `native/go/**` or `core/native/go/**`. Composer packages under `vendor/**/**/` use `vendor/**/**/native/ext/**` and `vendor/**/**/native/go/**`. When the Docker container builds, it discovers those directories and compiles the PHP extensions and Go modules into the FrankenPHP/Caddy setup so that they are available in your application.
+Symfonicat supports the ability for Composer packages to ship with PHP extensions and Go modules. Relative to the project root, and composer packages, modules/extensions are located here:
+
+- PHP extensions: `native/ext/**`, `core/native/ext/**`, and `vendor/**/**/native/ext/**`
+- Go modules: `native/go/**`, `core/native/go/**`, and `vendor/**/**/native/go/**`
 
 Edit `/etc/hosts` for local public routing:
 
@@ -32,15 +35,14 @@ The runtime subscriber resolves the active `Domain`, `Subdomain`, and matching `
 - endpoints match their repeatable `arguments`; `*` matches one path segment
 - endpoint `catch` allows extra path after the matched arguments; with no arguments configured it acts as a wildcard for the current path
 - `/core/*` and `/m/*` are reserved from the public catch-all
+- public runtime reads from `config/packages/symfonicat.yaml` only; database-backed lookups are reserved for `/core/*`
 
 Templates resolve in this order:
 
 - `templates/{domain,subdomain,endpoint}/overrides/{id}.html.twig`
-- fallback to `templates/{domain,subdomain,endpoint}/main.html.twig`
+- `templates/{domain,subdomain,endpoint}/main.html.twig`
 
 ## Ids
-
-Id rules:
 
 - `Domain` ids are bare hostnames, for example `example.com`
 - `Subdomain` ids are internal auto-increment integers; the public label is `subdomain.affix`, for example `subdomain1`
@@ -48,7 +50,7 @@ Id rules:
 - `Endpoint` ids are string ids and may be package-scoped, for example `core/test`
 
 ```twig
-{{ domain.id }}      {# example.com #}
+{{ domain.tld }}     {# example.com #}
 {{ subdomain.affix }} {# subdomain1 #}
 {{ endpoint.id }}    {# core/test #}
 {{ application.id }} {# example-test #}
@@ -57,8 +59,6 @@ Id rules:
 ## Applications
 
 `Application` is the application-scaffold target in this branch. It replaces the old separate Electron row concept: an application selects a URL context, and that selected target is what the generated Electron skeleton will launch once it is built later.
-
-The application target is inferred from the populated relation fields: `endpoint` wins when present, otherwise `subdomain`, otherwise `domain`. `Subdomain` lookup is domain-scoped and uses `affix` plus `domain` when a domain is attached; standalone subdomain rows can still exist without a domain relation.
 
 Build-application requests expose `application` through Twig and `window.application` when the request context provides it.
 
@@ -80,7 +80,9 @@ Modules can be attached to domains, subdomains, or endpoints.
 
 Backend module controllers should extend `Symfonicat\Controller\AbstractModuleController`. They only execute when the module is attached to the active domain, subdomain, or endpoint context.
 
-Module routes are declared with `#[ModuleRoute]` on the controller class and `#[Module]` on the action method. The module loader reads the root `composer.json` package name, turns `symfonicat/core` into `symfonicat_core`, and generates `POST /m/symfonicat/core/{method}` with the route name `symfonicat_module_symfonicat_core_{method}`.
+`AbstractModuleController` exposes `json()` for `JsonResponse` and `html()` for `Response`; both run through the same module guard as the lower-level `module()` helper, which remains available for callers that want to pass an existing response object through the guard. `json()` delegates to Symfony's built-in controller JSON handling so serializer context behaves the same way as a normal `AbstractController` response.
+
+Module routes are declared with `#[ModuleRoute]` on the controller class and `#[Module]` on the action method. `ModuleRoute` defines the `/m/<package>` base, `Module` only carries `permission` and defaults it to `PUBLIC_ACCESS`, and every module route is always `POST`. The module loader reads the scanned package's `composer.json` name, turns `symfonicat/core` into `symfonicat_core`, and generates `POST /m/symfonicat/core/{method}` with the route name `symfonicat_module_symfonicat_core_{method}`. If no package name is available, the route base falls back to `symfonicat/core`.
 
 The root Composer autoload maps `App\\Module\\` to `src/Module/`, so controllers under `src/Module/` are discovered as module routes when they use the `App\Module\` namespace. Installed Symfonicat packages can expose their own `Module` subtree through PSR-4 autoloading, and those classes continue to use the `Symfonicat\Module\` namespace.
 
@@ -94,8 +96,6 @@ const mod = 'symfonicat/analytics/main'
 const result = await mod.json({ test: true })
       mod.log('/m/symfonicat/analytics/main result:', result)
 ```
-
-Module requests Brotli-compress their JSON body in `assets/app/module.js` with a vendored browser Brotli codec, send the request token back in `X-Symfonicat-Module-Context` plus `X-CSRF-Token` when request context is available, and the server validates that signed token before restoring endpoint scope for backend module checks. On `/m` requests with Brotli JSON bodies, `SymfonicatModuleSubscriber` sets `module_json` from `symfonicat_json_decode()`.
 
 ## Env
 
@@ -147,7 +147,7 @@ extra:
     symfonicat: true
 ```
 
-`composer install` runs `symfonicat:purge` so deployments start with a clean `symfonicat_*` schema; runtime still reads `config/packages/symfonicat.yaml`.
+`composer install` runs `symfonicat:purge` so deployments start with a clean `symfonicat_*` schema; public runtime still reads `config/packages/symfonicat.yaml`, and only `/core/*` routes use the database-backed CRUD/sync flow.
 
 ## Sync
 
@@ -242,6 +242,21 @@ Optional cert settings:
 - `AWS_CERT_REGION`: the ACM region, defaulting to the ECS region, then the Route 53 region, then `us-east-1`
 
 `bin/cert` writes `/.env.certificate.local` with `AWS_ECS_TLS_FULLCHAIN_B64` and `AWS_ECS_TLS_PRIVATE_KEY_B64`, then runs `bin/ecs` and `bin/route53` so the new cert is applied and DNS is refreshed.
+
+## Native Build
+
+- Use `bin/native-build` inside the container.
+- It configures `native/ext/**`, `core/native/ext/**`, and `vendor/**/**/native/ext/**`.
+- It rebuilds FrankenPHP from `native/go/**`, `core/native/go/**`, and `vendor/**/**/native/go/**`.
+- Set `SYMFONICAT_NATIVE_WATCH=1` on `php` to restart FrankenPHP after native source changes.
+- The watch loop writes `/run/symfonicat/native-watch.sentinel`.
+- It prefers `inotifywait`, then verifies file-content snapshots if needed.
+
+## Native C
+
+- Use `native/ext/<ext>/<ext>.c` plus `config.m4` for native PHP extensions.
+- `./glossary/*.json` captures `php_function`, `zend_function`, `source_file`, `extension`, `parameters`, `includes`, `body`, `semantic`, `control_flow`, `dependencies`, `specialization_candidates`, `strategies`, `memory_model`, `avoid`, `complexity`, `purpose`, `php_version`, and `related`.
+- Use those entries for specialization choices, memory handling, and hot-path design.
 
 ## PHPUnit
 

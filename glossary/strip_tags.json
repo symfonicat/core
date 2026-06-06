@@ -1,0 +1,151 @@
+{
+    "php_function": "strip_tags",
+    "zend_function": "strip_tags",
+    "source_file": "ring.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "str",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "str"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(str)"
+        },
+        {
+            "name": "allow_ht",
+            "macro": "Z_PARAM_ARRAY_HT_OR_STR_OR_NULL",
+            "arguments": [
+                "allow_ht",
+                "allow_str"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY_HT_OR_STR_OR_NULL(allow_ht, allow_str)"
+        }
+    ],
+    "includes": [
+        "stdio.h",
+        "php.h",
+        "php_string.h",
+        "php_variables.h",
+        "locale.h",
+        "scanf.h",
+        "zend_API.h",
+        "zend_execute.h",
+        "basic_functions.h",
+        "zend_smart_str.h",
+        "Zend/zend_exceptions.h",
+        "TSRM.h",
+        "ext/standard/file.h",
+        "ext/standard/html.h",
+        "ext/random/php_random.h",
+        "emmintrin.h",
+        "Zend/zend_bitset.h",
+        "tmmintrin.h",
+        "arm_neon.h"
+    ],
+    "body": "zend_string *buf;\n\tzend_string *str;\n\tzend_string *allow_str = NULL;\n\tHashTable *allow_ht = NULL;\n\tconst char *allowed_tags=NULL;\n\tsize_t allowed_tags_len=0;\n\tsmart_str tags_ss = {0};\n\n\tZEND_PARSE_PARAMETERS_START(1, 2)\n\t\tZ_PARAM_STR(str)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_ARRAY_HT_OR_STR_OR_NULL(allow_ht, allow_str)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (allow_ht) {\n\t\tzval *tmp;\n\t\tzend_string *tag;\n\n\t\tZEND_HASH_FOREACH_VAL(allow_ht, tmp) {\n\t\t\ttag = zval_get_string(tmp);\n\t\t\tsmart_str_appendc(&tags_ss, '<');\n\t\t\tsmart_str_append(&tags_ss, tag);\n\t\t\tsmart_str_appendc(&tags_ss, '>');\n\t\t\tzend_string_release(tag);\n\t\t} ZEND_HASH_FOREACH_END();\n\t\tif (tags_ss.s) {\n\t\t\tsmart_str_0(&tags_ss);\n\t\t\tallowed_tags = ZSTR_VAL(tags_ss.s);\n\t\t\tallowed_tags_len = ZSTR_LEN(tags_ss.s);\n\t\t}\n\t} else if (allow_str) {\n\t\tallowed_tags = ZSTR_VAL(allow_str);\n\t\tallowed_tags_len = ZSTR_LEN(allow_str);\n\t}\n\n\tbuf = zend_string_init(ZSTR_VAL(str), ZSTR_LEN(str), 0);\n\tZSTR_LEN(buf) = php_strip_tags_ex(ZSTR_VAL(buf), ZSTR_LEN(str), allowed_tags, allowed_tags_len, 0);\n\tsmart_str_free(&tags_ss);\n\tRETURN_NEW_STR(buf);",
+    "semantic": "Implements the PHP function strip_tags in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STR",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_ARRAY_HT_OR_STR_OR_NULL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZEND_HASH_FOREACH_VAL",
+            "ZEND_HASH_FOREACH_END",
+            "ZSTR_VAL",
+            "ZSTR_LEN",
+            "RETURN_NEW_STR"
+        ],
+        "zend_types": [
+            "zend_string",
+            "HashTable",
+            "zval"
+        ],
+        "internal_helpers": [
+            "zval_get_string",
+            "smart_str_appendc",
+            "smart_str_append",
+            "zend_string_release",
+            "smart_str_0",
+            "zend_string_init",
+            "php_strip_tags_ex",
+            "smart_str_free"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common strip_tags inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": true,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 6,
+    "purpose": "Implements the PHP function strip_tags in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "bin2hex",
+        "hex2bin",
+        "strspn",
+        "strcspn",
+        "nl_langinfo",
+        "strcoll",
+        "trim",
+        "rtrim",
+        "ltrim",
+        "wordwrap",
+        "explode",
+        "implode"
+    ]
+}

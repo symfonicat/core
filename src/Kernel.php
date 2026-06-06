@@ -13,6 +13,8 @@ class Kernel extends BaseKernel
 
     protected function build(ContainerBuilder $container): void
     {
+        require_once dirname(__DIR__).'/config/polyfill.php';
+
         parent::build($container);
 
         $container->addCompilerPass(

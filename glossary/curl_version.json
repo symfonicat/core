@@ -1,0 +1,100 @@
+{
+    "php_function": "curl_version",
+    "zend_function": "curl_version",
+    "source_file": "ace.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "Zend/zend_exceptions.h",
+        "stdio.h",
+        "string.h",
+        "winsock2.h",
+        "sys/types.h",
+        "curl/curl.h",
+        "curl/easy.h",
+        "zend_smart_str.h",
+        "ext/standard/info.h",
+        "ext/standard/file.h",
+        "ext/standard/url.h",
+        "curl_private.h",
+        "curl_arginfo.h"
+    ],
+    "body": "curl_version_info_data *d;\n\n\tZEND_PARSE_PARAMETERS_NONE();\n\n\td = curl_version_info(CURLVERSION_NOW);\n\tif (d == NULL) {\n\t\tRETURN_FALSE;\n\t}\n\n\tarray_init(return_value);\n\n\tCAAL(\"version_number\", d->version_num);\n\tCAAL(\"age\", d->age);\n\tCAAL(\"features\", d->features);\n\t/* Add an array of features */\n\t{\n\t\tstruct feat {\n\t\t\tconst char *name;\n\t\t\tint bitmask;\n\t\t};\n\n\t\tunsigned int i;\n\t\tzval feature_list;\n\t\tarray_init(&feature_list);\n\n\t\t/* Sync this list with PHP_MINFO_FUNCTION(curl) as well */\n\t\tstatic const struct feat feats[] = {\n\t\t\t{\"AsynchDNS\", CURL_VERSION_ASYNCHDNS},\n\t\t\t{\"CharConv\", CURL_VERSION_CONV},\n\t\t\t{\"Debug\", CURL_VERSION_DEBUG},\n\t\t\t{\"GSS-Negotiate\", CURL_VERSION_GSSNEGOTIATE},\n\t\t\t{\"IDN\", CURL_VERSION_IDN},\n\t\t\t{\"IPv6\", CURL_VERSION_IPV6},\n\t\t\t{\"krb4\", CURL_VERSION_KERBEROS4},\n\t\t\t{\"Largefile\", CURL_VERSION_LARGEFILE},\n\t\t\t{\"libz\", CURL_VERSION_LIBZ},\n\t\t\t{\"NTLM\", CURL_VERSION_NTLM},\n\t\t\t{\"NTLMWB\", CURL_VERSION_NTLM_WB},\n\t\t\t{\"SPNEGO\", CURL_VERSION_SPNEGO},\n\t\t\t{\"SSL\",  CURL_VERSION_SSL},\n\t\t\t{\"SSPI\",  CURL_VERSION_SSPI},\n\t\t\t{\"TLS-SRP\", CURL_VERSION_TLSAUTH_SRP},\n\t\t\t{\"HTTP2\", CURL_VERSION_HTTP2},\n\t\t\t{\"GSSAPI\", CURL_VERSION_GSSAPI},\n\t\t\t{\"KERBEROS5\", CURL_VERSION_KERBEROS5},\n\t\t\t{\"UNIX_SOCKETS\", CURL_VERSION_UNIX_SOCKETS},\n\t\t\t{\"PSL\", CURL_VERSION_PSL},\n\t\t\t{\"HTTPS_PROXY\", CURL_VERSION_HTTPS_PROXY},\n\t\t\t{\"MULTI_SSL\", CURL_VERSION_MULTI_SSL},\n\t\t\t{\"BROTLI\", CURL_VERSION_BROTLI},\n#if LIBCURL_VERSION_NUM >= 0x074001 /* Available since 7.64.1 */\n\t\t\t{\"ALTSVC\", CURL_VERSION_ALTSVC},\n#endif\n#if LIBCURL_VERSION_NUM >= 0x074200 /* Available since 7.66.0 */\n\t\t\t{\"HTTP3\", CURL_VERSION_HTTP3},\n#endif\n#if LIBCURL_VERSION_NUM >= 0x074800 /* Available since 7.72.0 */\n\t\t\t{\"UNICODE\", CURL_VERSION_UNICODE},\n\t\t\t{\"ZSTD\", CURL_VERSION_ZSTD},\n#endif\n#if LIBCURL_VERSION_NUM >= 0x074a00 /* Available since 7.74.0 */\n\t\t\t{\"HSTS\", CURL_VERSION_HSTS},\n#endif\n#if LIBCURL_VERSION_NUM >= 0x074c00 /* Available since 7.76.0 */\n\t\t\t{\"GSASL\", CURL_VERSION_GSASL},\n#endif\n\t\t};\n\n\t\tfor(i = 0; i < sizeof(feats) / sizeof(feats[0]); i++) {\n\t\t\tif (feats[i].name) {\n\t\t\t\tadd_assoc_bool(&feature_list, feats[i].name, d->features & feats[i].bitmask ? true : false);\n\t\t\t}\n\t\t}\n\n\t\tCAAZ(\"feature_list\", &feature_list);\n\t}\n\tCAAL(\"ssl_version_number\", d->ssl_version_num);\n\tCAAS(\"version\", d->version);\n\tCAAS(\"host\", d->host);\n\tCAAS(\"ssl_version\", d->ssl_version);\n\tCAAS(\"libz_version\", d->libz_version);\n\t/* Add an array of protocols */\n\t{\n\t\tchar **p = (char **) d->protocols;\n\t\tzval protocol_list;\n\n\t\tarray_init(&protocol_list);\n\n\t\twhile (*p != NULL) {\n\t\t\tadd_next_index_string(&protocol_list, *p);\n\t\t\tp++;\n\t\t}\n\t\tCAAZ(\"protocols\", &protocol_list);\n\t}\n\tif (d->age >= 1) {\n\t\tCAAS(\"ares\", d->ares);\n\t\tCAAL(\"ares_num\", d->ares_num);\n\t}\n\tif (d->age >= 2) {\n\t\tCAAS(\"libidn\", d->libidn);\n\t}\n\tif (d->age >= 3) {\n\t\tCAAL(\"iconv_ver_num\", d->iconv_ver_num);\n\t\tCAAS(\"libssh_version\", d->libssh_version);\n\t}\n\tif (d->age >= 4) {\n\t\tCAAL(\"brotli_ver_num\", d->brotli_ver_num);\n\t\tCAAS(\"brotli_version\", d->brotli_version);\n\t}",
+    "semantic": "Add an array of features",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_NONE",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zval"
+        ],
+        "internal_helpers": [
+            "curl_version_info"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common curl_version inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 6,
+    "purpose": "Add an array of features",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "curl_init",
+        "curl_copy_handle",
+        "curl_setopt",
+        "curl_setopt_array",
+        "curl_exec",
+        "curl_getinfo",
+        "curl_error",
+        "curl_errno",
+        "curl_close",
+        "curl_strerror",
+        "curl_reset",
+        "curl_escape"
+    ]
+}

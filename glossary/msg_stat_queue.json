@@ -1,0 +1,88 @@
+{
+    "php_function": "msg_stat_queue",
+    "zend_function": "msg_stat_queue",
+    "source_file": "vmsg.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "ext/standard/info.h",
+        "php_sysvmsg.h",
+        "sysvmsg_arginfo.h",
+        "ext/standard/php_var.h",
+        "zend_smart_str.h",
+        "sys/types.h",
+        "sys/ipc.h",
+        "sys/msg.h"
+    ],
+    "body": "zval *queue;\n\tsysvmsg_queue_t *mq = NULL;\n\tstruct msqid_ds stat;\n\n\tRETVAL_FALSE;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"O\", &queue, sysvmsg_queue_ce) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tmq = Z_SYSVMSG_QUEUE_P(queue);\n\n\tif (msgctl(mq->id, IPC_STAT, &stat) == 0) {\n\t\tarray_init(return_value);\n\n\t\tadd_assoc_long(return_value, \"msg_perm.uid\", stat.msg_perm.uid);\n\t\tadd_assoc_long(return_value, \"msg_perm.gid\", stat.msg_perm.gid);\n\t\tadd_assoc_long(return_value, \"msg_perm.mode\", stat.msg_perm.mode);\n\t\tadd_assoc_long(return_value, \"msg_stime\",  stat.msg_stime);\n\t\tadd_assoc_long(return_value, \"msg_rtime\",  stat.msg_rtime);\n\t\tadd_assoc_long(return_value, \"msg_ctime\",  stat.msg_ctime);\n\t\tadd_assoc_long(return_value, \"msg_qnum\",   stat.msg_qnum);\n\t\tadd_assoc_long(return_value, \"msg_qbytes\", stat.msg_qbytes);\n\t\tadd_assoc_long(return_value, \"msg_lspid\",  stat.msg_lspid);\n\t\tadd_assoc_long(return_value, \"msg_lrpid\",  stat.msg_lrpid);\n\t}",
+    "semantic": "Implements the PHP function msg_stat_queue in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS"
+        ],
+        "zend_types": [
+            "zval"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common msg_stat_queue inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 3,
+    "purpose": "Implements the PHP function msg_stat_queue in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "msg_set_queue",
+        "msg_queue_exists",
+        "msg_get_queue",
+        "msg_remove_queue",
+        "msg_receive",
+        "msg_send"
+    ]
+}

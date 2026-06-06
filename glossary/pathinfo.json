@@ -1,0 +1,148 @@
+{
+    "php_function": "pathinfo",
+    "zend_function": "pathinfo",
+    "source_file": "ring.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "path",
+            "macro": "Z_PARAM_STRING",
+            "arguments": [
+                "path",
+                "path_len"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING(path, path_len)"
+        },
+        {
+            "name": "opt",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "opt"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(opt)"
+        }
+    ],
+    "includes": [
+        "stdio.h",
+        "php.h",
+        "php_string.h",
+        "php_variables.h",
+        "locale.h",
+        "scanf.h",
+        "zend_API.h",
+        "zend_execute.h",
+        "basic_functions.h",
+        "zend_smart_str.h",
+        "Zend/zend_exceptions.h",
+        "TSRM.h",
+        "ext/standard/file.h",
+        "ext/standard/html.h",
+        "ext/random/php_random.h",
+        "emmintrin.h",
+        "Zend/zend_bitset.h",
+        "tmmintrin.h",
+        "arm_neon.h"
+    ],
+    "body": "zval tmp;\n\tchar *path, *dirname;\n\tsize_t path_len;\n\tbool have_basename;\n\tzend_long opt = PHP_PATHINFO_ALL;\n\tzend_string *ret = NULL;\n\n\tZEND_PARSE_PARAMETERS_START(1, 2)\n\t\tZ_PARAM_STRING(path, path_len)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_LONG(opt)\n\tZEND_PARSE_PARAMETERS_END();\n\n\thave_basename = ((opt & PHP_PATHINFO_BASENAME) == PHP_PATHINFO_BASENAME);\n\n\tarray_init(&tmp);\n\n\tif ((opt & PHP_PATHINFO_DIRNAME) == PHP_PATHINFO_DIRNAME) {\n\t\tdirname = estrndup(path, path_len);\n\t\tphp_dirname(dirname, path_len);\n\t\tif (*dirname) {\n\t\t\tadd_assoc_string(&tmp, \"dirname\", dirname);\n\t\t}\n\t\tefree(dirname);\n\t}\n\n\tif (have_basename) {\n\t\tret = php_basename(path, path_len, NULL, 0);\n\t\tadd_assoc_str(&tmp, \"basename\", zend_string_copy(ret));\n\t}\n\n\tif ((opt & PHP_PATHINFO_EXTENSION) == PHP_PATHINFO_EXTENSION) {\n\t\tconst char *p;\n\t\tptrdiff_t idx;\n\n\t\tif (!have_basename) {\n\t\t\tret = php_basename(path, path_len, NULL, 0);\n\t\t}\n\n\t\tp = zend_memrchr(ZSTR_VAL(ret), '.', ZSTR_LEN(ret));\n\n\t\tif (p) {\n\t\t\tidx = p - ZSTR_VAL(ret);\n\t\t\tadd_assoc_stringl(&tmp, \"extension\", ZSTR_VAL(ret) + idx + 1, ZSTR_LEN(ret) - idx - 1);\n\t\t}\n\t}\n\n\tif ((opt & PHP_PATHINFO_FILENAME) == PHP_PATHINFO_FILENAME) {\n\t\tconst char *p;\n\t\tptrdiff_t idx;\n\n\t\t/* Have we already looked up the basename? */\n\t\tif (!have_basename && !ret) {\n\t\t\tret = php_basename(path, path_len, NULL, 0);\n\t\t}\n\n\t\tp = zend_memrchr(ZSTR_VAL(ret), '.', ZSTR_LEN(ret));\n\n\t\tidx = p ? (p - ZSTR_VAL(ret)) : (ptrdiff_t)ZSTR_LEN(ret);\n\t\tadd_assoc_stringl(&tmp, \"filename\", ZSTR_VAL(ret), idx);\n\t}\n\n\tif (ret) {\n\t\tzend_string_release_ex(ret, 0);\n\t}\n\n\tif (opt == PHP_PATHINFO_ALL) {\n\t\tRETURN_COPY_VALUE(&tmp);\n\t} else {\n\t\tzval *element;\n\t\tif ((element = zend_hash_get_current_data(Z_ARRVAL(tmp))) != NULL) {\n\t\t\tRETVAL_COPY_DEREF(element);\n\t\t} else {\n\t\t\tRETVAL_EMPTY_STRING();\n\t\t}\n\t\tzval_ptr_dtor(&tmp);\n\t}",
+    "semantic": "Have we already looked up the basename?",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STRING",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_LONG",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZSTR_VAL",
+            "ZSTR_LEN",
+            "RETURN_COPY_VALUE"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_long",
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "php_dirname",
+            "php_basename",
+            "zend_string_copy",
+            "zend_memrchr",
+            "zend_string_release_ex",
+            "zend_hash_get_current_data",
+            "zval_ptr_dtor"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common pathinfo inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 6,
+    "purpose": "Have we already looked up the basename?",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "bin2hex",
+        "hex2bin",
+        "strspn",
+        "strcspn",
+        "nl_langinfo",
+        "strcoll",
+        "trim",
+        "rtrim",
+        "ltrim",
+        "wordwrap",
+        "explode",
+        "implode"
+    ]
+}

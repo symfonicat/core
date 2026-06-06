@@ -79,7 +79,10 @@ final class ModuleRequestContextStore
      */
     private function signPayload(array $payload): string
     {
-        return symfonicat_module_request_token_sign($payload, $this->secret);
+        $encodedPayload = $this->base64UrlEncode(json_encode($payload, JSON_THROW_ON_ERROR));
+        $signature = hash_hmac('sha256', $encodedPayload, $this->secret, true);
+
+        return $encodedPayload.self::TOKEN_SEPARATOR.$this->base64UrlEncode($signature);
     }
 
     /**
@@ -87,8 +90,51 @@ final class ModuleRequestContextStore
      */
     private function verifyPayload(string $token): ?array
     {
-        $payload = symfonicat_module_request_token_verify($token, $this->secret);
+        $parts = explode(self::TOKEN_SEPARATOR, $token, 2);
+        if (count($parts) !== 2) {
+            return null;
+        }
+
+        [$encodedPayload, $encodedSignature] = $parts;
+        $signature = $this->base64UrlDecode($encodedSignature);
+        if ($signature === null) {
+            return null;
+        }
+
+        $expectedSignature = hash_hmac('sha256', $encodedPayload, $this->secret, true);
+        if (!hash_equals($expectedSignature, $signature)) {
+            return null;
+        }
+
+        $payloadJson = $this->base64UrlDecode($encodedPayload);
+        if ($payloadJson === null) {
+            return null;
+        }
+
+        try {
+            $payload = json_decode($payloadJson, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return null;
+        }
 
         return is_array($payload) ? $payload : null;
+    }
+
+    private function base64UrlEncode(string $value): string
+    {
+        return rtrim(strtr(base64_encode($value), '+/', '-_'), '=');
+    }
+
+    private function base64UrlDecode(string $value): ?string
+    {
+        $padded = strtr($value, '-_', '+/');
+        $padding = strlen($padded) % 4;
+        if ($padding !== 0) {
+            $padded .= str_repeat('=', 4 - $padding);
+        }
+
+        $decoded = base64_decode($padded, true);
+
+        return $decoded === false ? null : $decoded;
     }
 }

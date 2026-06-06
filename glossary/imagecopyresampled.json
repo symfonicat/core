@@ -1,0 +1,244 @@
+{
+    "php_function": "imagecopyresampled",
+    "zend_function": "imagecopyresampled",
+    "source_file": "",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "DIM",
+            "macro": "Z_PARAM_OBJECT_OF_CLASS",
+            "arguments": [
+                "DIM",
+                "gd_image_ce"
+            ],
+            "type": "zend_object",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_OBJECT_OF_CLASS(DIM, gd_image_ce)"
+        },
+        {
+            "name": "SIM",
+            "macro": "Z_PARAM_OBJECT_OF_CLASS",
+            "arguments": [
+                "SIM",
+                "gd_image_ce"
+            ],
+            "type": "zend_object",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_OBJECT_OF_CLASS(SIM, gd_image_ce)"
+        },
+        {
+            "name": "DX",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "DX"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(DX)"
+        },
+        {
+            "name": "DY",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "DY"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(DY)"
+        },
+        {
+            "name": "SX",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "SX"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(SX)"
+        },
+        {
+            "name": "SY",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "SY"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(SY)"
+        },
+        {
+            "name": "DW",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "DW"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(DW)"
+        },
+        {
+            "name": "DH",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "DH"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(DH)"
+        },
+        {
+            "name": "SW",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "SW"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(SW)"
+        },
+        {
+            "name": "SH",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "SH"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(SH)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "ext/standard/head.h",
+        "math.h",
+        "SAPI.h",
+        "php_gd.h",
+        "ext/standard/php_image.h",
+        "ext/standard/info.h",
+        "php_open_temporary_file.h",
+        "php_memory_streams.h",
+        "zend_object_handlers.h",
+        "gd_compat.h",
+        "gd_arginfo.h"
+    ],
+    "body": "zval *SIM, *DIM;\n\tzend_long SX, SY, SW, SH, DX, DY, DW, DH;\n\tgdImagePtr im_dst, im_src;\n\tint srcH, srcW, dstH, dstW, srcY, srcX, dstY, dstX;\n\n\tZEND_PARSE_PARAMETERS_START(10, 10)\n\t\tZ_PARAM_OBJECT_OF_CLASS(DIM, gd_image_ce)\n\t\tZ_PARAM_OBJECT_OF_CLASS(SIM, gd_image_ce)\n\t\tZ_PARAM_LONG(DX)\n\t\tZ_PARAM_LONG(DY)\n\t\tZ_PARAM_LONG(SX)\n\t\tZ_PARAM_LONG(SY)\n\t\tZ_PARAM_LONG(DW)\n\t\tZ_PARAM_LONG(DH)\n\t\tZ_PARAM_LONG(SW)\n\t\tZ_PARAM_LONG(SH)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tim_src = php_gd_libgdimageptr_from_zval_p(SIM);\n\tim_dst = php_gd_libgdimageptr_from_zval_p(DIM);\n\n\tsrcX = SX;\n\tsrcY = SY;\n\tsrcH = SH;\n\tsrcW = SW;\n\tdstX = DX;\n\tdstY = DY;\n\tdstH = DH;\n\tdstW = DW;\n\n\tgdImageCopyResampled(im_dst, im_src, dstX, dstY, srcX, srcY, dstW, dstH, srcW, srcH);\n\n\tRETURN_TRUE;",
+    "semantic": "Implements the PHP function imagecopyresampled in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_OBJECT_OF_CLASS",
+            "Z_PARAM_LONG",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_TRUE"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "php_gd_libgdimageptr_from_zval_p"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common imagecopyresampled inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 2,
+    "purpose": "Implements the PHP function imagecopyresampled in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "gd_info",
+        "imageloadfont",
+        "imagesetstyle",
+        "imagecreatetruecolor",
+        "imageistruecolor",
+        "imagetruecolortopalette",
+        "imagepalettetotruecolor",
+        "imagecolormatch",
+        "imagesetthickness",
+        "imagefilledellipse",
+        "imagefilledarc",
+        "imagealphablending"
+    ]
+}

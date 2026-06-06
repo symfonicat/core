@@ -4,6 +4,7 @@ namespace Symfonicat\Controller;
 
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfonicat\Entity\Endpoint;
 use Symfonicat\Service\DomainService;
@@ -80,5 +81,28 @@ abstract class AbstractModuleController extends AbstractController
             throw $this->createNotFoundException();
 
         }
+    }
+
+    public function json(
+        mixed $data = null,
+        int $status = 200,
+        array $headers = [],
+        array $context = [],
+    ): JsonResponse {
+        if (!isset($this->container)) {
+            return $this->module(new JsonResponse($data, $status, $headers));
+        }
+
+        return $this->module(parent::json($data, $status, $headers, $context));
+    }
+
+    public function html(
+        string $content = '',
+        int $status = 200,
+        array $headers = [],
+    ): Response {
+        return $this->module(
+            new Response($content, $status, $headers),
+        );
     }
 }

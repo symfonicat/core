@@ -1,0 +1,170 @@
+{
+    "php_function": "move_uploaded_file",
+    "zend_function": "move_uploaded_file",
+    "source_file": "sic_functions.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "path",
+            "macro": "Z_PARAM_STRING",
+            "arguments": [
+                "path",
+                "path_len"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING(path, path_len)"
+        },
+        {
+            "name": "new_path",
+            "macro": "Z_PARAM_PATH",
+            "arguments": [
+                "new_path",
+                "new_path_len"
+            ],
+            "type": "mixed",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_PATH(new_path, new_path_len)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "php_assert.h",
+        "php_crypt.h",
+        "php_streams.h",
+        "php_main.h",
+        "php_globals.h",
+        "php_variables.h",
+        "php_ini.h",
+        "php_image.h",
+        "php_standard.h",
+        "php_math.h",
+        "php_http.h",
+        "php_incomplete_class.h",
+        "php_getopt.h",
+        "php_ext_syslog.h",
+        "ext/standard/info.h",
+        "ext/session/php_session.h",
+        "zend_exceptions.h",
+        "zend_attributes.h",
+        "zend_enum.h",
+        "zend_ini.h",
+        "zend_operators.h",
+        "ext/standard/php_dns.h",
+        "ext/standard/php_uuencode.h",
+        "ext/standard/crc32_x86.h",
+        "win32/php_win32_globals.h",
+        "win32/time.h",
+        "win32/ioutil.h",
+        "zend.h",
+        "zend_ini_scanner.h",
+        "zend_language_scanner.h",
+        "zend_language_parser.h",
+        "zend_portability.h",
+        "stdarg.h",
+        "stdlib.h",
+        "math.h",
+        "time.h",
+        "stdio.h",
+        "sys/types.h",
+        "sys/stat.h",
+        "string.h",
+        "locale.h",
+        "zend_globals.h",
+        "SAPI.h",
+        "php_ticks.h",
+        "php_fopen_wrappers.h",
+        "streamsfuncs.h",
+        "zend_frameless_function.h",
+        "basic_functions_arginfo.h"
+    ],
+    "body": "char *path, *new_path;\n\tsize_t path_len, new_path_len;\n\tbool successful = 0;\n\n#ifndef PHP_WIN32\n\tint oldmask; int ret;\n#endif\n\n\tZEND_PARSE_PARAMETERS_START(2, 2)\n\t\tZ_PARAM_STRING(path, path_len)\n\t\tZ_PARAM_PATH(new_path, new_path_len)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (!SG(rfc1867_uploaded_files)) {\n\t\tRETURN_FALSE;\n\t}\n\n\tif (!zend_hash_str_exists(SG(rfc1867_uploaded_files), path, path_len)) {\n\t\tRETURN_FALSE;\n\t}\n\n\tif (php_check_open_basedir(new_path)) {\n\t\tRETURN_FALSE;\n\t}\n\n\tif (VCWD_RENAME(path, new_path) == 0) {\n\t\tsuccessful = 1;\n#ifndef PHP_WIN32\n\t\toldmask = umask(077);\n\t\tumask(oldmask);\n\n\t\tret = VCWD_CHMOD(new_path, 0666 & ~oldmask);\n\n\t\tif (ret == -1) {\n\t\t\tphp_error_docref(NULL, E_WARNING, \"%s\", strerror(errno));\n\t\t}\n#endif\n\t} else if (php_copy_file_ex(path, new_path, STREAM_DISABLE_OPEN_BASEDIR) == SUCCESS) {\n\t\tVCWD_UNLINK(path);\n\t\tsuccessful = 1;\n\t}\n\n\tif (successful) {\n\t\tzend_hash_str_del(SG(rfc1867_uploaded_files), path, path_len);\n\t} else {\n\t\tphp_error_docref(NULL, E_WARNING, \"Unable to move \\\"%s\\\" to \\\"%s\\\"\", path, new_path);\n\t}\n\n\tRETURN_BOOL(successful);",
+    "semantic": "Implements the PHP function move_uploaded_file in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STRING",
+            "Z_PARAM_PATH",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_FALSE",
+            "RETURN_BOOL"
+        ],
+        "zend_types": [],
+        "internal_helpers": [
+            "zend_hash_str_exists",
+            "php_check_open_basedir",
+            "php_error_docref",
+            "php_copy_file_ex",
+            "zend_hash_str_del"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common move_uploaded_file inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "Implements the PHP function move_uploaded_file in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "constant",
+        "inet_ntop",
+        "inet_pton",
+        "ip2long",
+        "long2ip",
+        "getenv",
+        "getopt",
+        "flush",
+        "sleep",
+        "usleep",
+        "time_nanosleep",
+        "time_sleep_until"
+    ]
+}

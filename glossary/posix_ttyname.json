@@ -1,0 +1,124 @@
+{
+    "php_function": "posix_ttyname",
+    "zend_function": "posix_ttyname",
+    "source_file": ".c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "z_fd",
+            "macro": "Z_PARAM_ZVAL",
+            "arguments": [
+                "z_fd"
+            ],
+            "type": "zval",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": true,
+            "raw": "Z_PARAM_ZVAL(z_fd)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "unistd.h",
+        "ext/standard/info.h",
+        "php_posix.h",
+        "sys/time.h",
+        "sys/resource.h",
+        "sys/utsname.h",
+        "sys/types.h",
+        "sys/stat.h",
+        "signal.h",
+        "sys/times.h",
+        "errno.h",
+        "grp.h",
+        "pwd.h",
+        "posix_arginfo.h"
+    ],
+    "body": "zval *z_fd;\n\tchar *p;\n\tzend_long fd = 0;\n#if defined(ZTS) && defined(HAVE_TTYNAME_R) && defined(_SC_TTY_NAME_MAX)\n\tzend_long buflen;\n\tint err;\n#endif\n\n\tZEND_PARSE_PARAMETERS_START(1, 1)\n\t\tZ_PARAM_ZVAL(z_fd)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (Z_TYPE_P(z_fd) == IS_RESOURCE) {\n\t\tif (php_posix_stream_get_fd(z_fd, &fd) == FAILURE) {\n\t\t\tRETURN_FALSE;\n\t\t}\n\t} else {\n\t\tif (!zend_parse_arg_long(z_fd, &fd, /* is_null */ NULL, /* check_null */ false, /* arg_num */ 1)) {\n\t\t\tphp_error_docref(NULL, E_WARNING, \"Argument #1 ($file_descriptor) must be of type int|resource, %s given\",\n\t\t\t\tzend_zval_value_name(z_fd));\n\t\t\tfd = zval_get_long(z_fd);\n\t\t}\n\t\t/* fd must fit in an int and be positive */\n\t\tif (fd < 0 || fd > INT_MAX) {\n\t\t\tphp_error_docref(NULL, E_WARNING, \"Argument #1 ($file_descriptor) must be between 0 and %d\", INT_MAX);\n\t\t\tRETURN_FALSE;\n\t\t}\n\t}\n#if defined(ZTS) && defined(HAVE_TTYNAME_R) && defined(_SC_TTY_NAME_MAX)\n\tbuflen = sysconf(_SC_TTY_NAME_MAX);\n\tif (buflen < 1) {\n\t\tbuflen = 32;\n\t}\n#if ZEND_DEBUG\n\t/* Test retry logic */\n\tbuflen = 1;\n#endif\n\tp = emalloc(buflen);\n\ntry_again:\n\terr = ttyname_r(fd, p, buflen);\n\tif (err) {\n\t\tif (err == ERANGE) {\n\t\t\tbuflen *= 2;\n\t\t\tp = erealloc(p, buflen);\n\t\t\tgoto try_again;\n\t\t}\n\t\tPOSIX_G(last_error) = err;\n\t\tefree(p);\n\t\tRETURN_FALSE;\n\t}\n\tRETVAL_STRING(p);\n\tefree(p);\n#else\n\tif (NULL == (p = ttyname(fd))) {\n\t\tPOSIX_G(last_error) = errno;\n\t\tRETURN_FALSE;\n\t}\n\tRETURN_STRING(p);\n#endif",
+    "semantic": "is_null",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_ZVAL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_FALSE",
+            "ZEND_DEBUG",
+            "RETURN_STRING"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "php_posix_stream_get_fd",
+            "zend_parse_arg_long",
+            "php_error_docref",
+            "zend_zval_value_name",
+            "zval_get_long"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common posix_ttyname inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 6,
+    "purpose": "is_null",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "posix_kill",
+        "posix_getpid",
+        "posix_getppid",
+        "posix_getuid",
+        "posix_getgid",
+        "posix_geteuid",
+        "posix_getegid",
+        "posix_setuid",
+        "posix_setgid",
+        "posix_seteuid",
+        "posix_setegid",
+        "posix_getgroups"
+    ]
+}

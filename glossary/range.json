@@ -1,0 +1,172 @@
+{
+    "php_function": "range",
+    "zend_function": "range",
+    "source_file": "ray.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "user_start",
+            "macro": "Z_PARAM_NUMBER_OR_STR",
+            "arguments": [
+                "user_start"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_NUMBER_OR_STR(user_start)"
+        },
+        {
+            "name": "user_end",
+            "macro": "Z_PARAM_NUMBER_OR_STR",
+            "arguments": [
+                "user_end"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_NUMBER_OR_STR(user_end)"
+        },
+        {
+            "name": "user_step",
+            "macro": "Z_PARAM_NUMBER",
+            "arguments": [
+                "user_step"
+            ],
+            "type": "mixed",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_NUMBER(user_step)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "php_ini.h",
+        "stdarg.h",
+        "stdlib.h",
+        "math.h",
+        "time.h",
+        "string.h",
+        "zend_globals.h",
+        "zend_interfaces.h",
+        "php_array.h",
+        "basic_functions.h",
+        "php_string.h",
+        "php_math.h",
+        "zend_smart_str.h",
+        "zend_bitset.h",
+        "zend_exceptions.h",
+        "ext/random/php_random.h",
+        "zend_frameless_function.h"
+    ],
+    "body": "zval *user_start, *user_end, *user_step = NULL, tmp;\n\tbool is_step_double = false;\n\tbool is_step_negative = false;\n\tdouble step_double = 1.0;\n\tzend_long step = 1;\n\n\tZEND_PARSE_PARAMETERS_START(2, 3)\n\t\tZ_PARAM_NUMBER_OR_STR(user_start)\n\t\tZ_PARAM_NUMBER_OR_STR(user_end)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_NUMBER(user_step)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (user_step) {\n\t\tif (UNEXPECTED(Z_TYPE_P(user_step) == IS_DOUBLE)) {\n\t\t\tstep_double = Z_DVAL_P(user_step);\n\n\t\t\tif (zend_isinf(step_double)) {\n\t\t\t\tzend_argument_value_error(3, \"must be a finite number, INF provided\");\n\t\t\t\tRETURN_THROWS();\n\t\t\t}\n\t\t\tif (zend_isnan(step_double)) {\n\t\t\t\tzend_argument_value_error(3, \"must be a finite number, NAN provided\");\n\t\t\t\tRETURN_THROWS();\n\t\t\t}\n\n\t\t\t/* We only want positive step values. */\n\t\t\tif (step_double < 0.0) {\n\t\t\t\tis_step_negative = true;\n\t\t\t\tstep_double *= -1;\n\t\t\t}\n\t\t\tstep = zend_dval_to_lval(step_double);\n\t\t\tif (!zend_is_long_compatible(step_double, step)) {\n\t\t\t\tis_step_double = true;\n\t\t\t}\n\t\t} else {\n\t\t\tstep = Z_LVAL_P(user_step);\n\t\t\t/* We only want positive step values. */\n\t\t\tif (step < 0) {\n\t\t\t\tif (UNEXPECTED(step == ZEND_LONG_MIN)) {\n\t\t\t\t\tzend_argument_value_error(3, \"must be greater than \" ZEND_LONG_FMT, step);\n\t\t\t\t\tRETURN_THROWS();\n\t\t\t\t}\n\t\t\t\tis_step_negative = true;\n\t\t\t\tstep *= -1;\n\t\t\t}\n\t\t\tstep_double = (double) step;\n\t\t}\n\t\tif (step_double == 0.0) {\n\t\t\tzend_argument_value_error(3, \"cannot be 0\");\n\t\t\tRETURN_THROWS();\n\t\t}\n\t}\n\n\tuint8_t start_type;\n\tdouble start_double;\n\tzend_long start_long;\n\tuint8_t end_type;\n\tdouble end_double;\n\tzend_long end_long;\n\n\tstart_type = php_range_process_input(user_start, 1, &start_long, &start_double);\n\tif (start_type == 0) {\n\t\tRETURN_THROWS();\n\t}\n\tend_type = php_range_process_input(user_end, 2, &end_long, &end_double);\n\tif (end_type == 0) {\n\t\tRETURN_THROWS();\n\t}\n\n\t/* If the range is given as strings, generate an array of characters. */\n\tif (start_type >= IS_STRING || end_type >= IS_STRING) {\n\t\t/* If one of the inputs is NOT a string nor single-byte string */\n\t\tif (UNEXPECTED(start_type < IS_STRING || end_type < IS_STRING)) {\n\t\t\tif (start_type < IS_STRING) {\n\t\t\t\tif (end_type != IS_ARRAY) {\n\t\t\t\t\tphp_error_docref(NULL, E_WARNING, \"Argument #1 ($start) must be a single byte string if\"\n\t\t\t\t\t\t\" argument #2 ($end) is a single byte string, argument #2 ($end) converted to 0\");\n\t\t\t\t}\n\t\t\t\tend_type = IS_LONG;\n\t\t\t} else if (end_type < IS_STRING) {\n\t\t\t\tif (start_type != IS_ARRAY) {\n\t\t\t\t\tphp_error_docref(NULL, E_WARNING, \"Argument #2 ($end) must be a single byte string if\"\n\t\t\t\t\t\t\" argument #1 ($start) is a single byte string, argument #1 ($start) converted to 0\");\n\t\t\t\t}\n\t\t\t\tstart_type = IS_LONG;\n\t\t\t}\n\t\t\tif (UNEXPECTED(EG(exception))) {\n\t\t\t\tRETURN_THROWS();\n\t\t\t}\n\t\t\tgoto handle_numeric_inputs;\n\t\t}\n\n\t\tif (is_step_double) {\n\t\t\t/* Only emit warning if one of the input is not a numeric digit */\n\t\t\tif (start_type == IS_STRING || end_type == IS_STRING) {\n\t\t\t\tphp_error_docref(NULL, E_WARNING, \"Argument #3 ($step) must be of type int when generating an array\"\n\t\t\t\t\t\" of characters, inputs converted to 0\");\n\t\t\t}\n\t\t\tif (UNEXPECTED(EG(exception))) {\n\t\t\t\tRETURN_THROWS();\n\t\t\t}\n\t\t\tend_type = IS_LONG;\n\t\t\tstart_type = IS_LONG;\n\t\t\tgoto handle_numeric_inputs;\n\t\t}\n\n\t\t/* Generate array of characters */\n\t\tunsigned char low = (unsigned char)Z_STRVAL_P(user_start)[0];\n\t\tunsigned char high = (unsigned char)Z_STRVAL_P(user_end)[0];\n\n\t\t/* Decreasing char range */\n\t\tif (low > high) {\n\t\t\tif (low - high < step) {\n\t\t\t\tgoto boundary_error;\n\t\t\t}\n\t\t\t/* Initialize the return_value as an array. */\n\t\t\tarray_init_size(return_value, (uint32_t)(((low - high) / step) + 1));\n\t\t\tzend_hash_real_init_packed(Z_ARRVAL_P(return_value));\n\t\t\tZEND_HASH_FILL_PACKED(Z_ARRVAL_P(return_value)) {\n\t\t\t\tfor (; low >= high; low -= (unsigned int)step) {\n\t\t\t\t\tZEND_HASH_FILL_SET_INTERNED_STR(ZSTR_CHAR(low));\n\t\t\t\t\tZEND_HASH_FILL_NEXT();\n\t\t\t\t\tif (((signed int)low - step) < 0) {\n\t\t\t\t\t\tbreak;\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t} ZEND_HASH_FILL_END();\n\t\t} else if (high > low) { /* Increasing char range */\n\t\t\tif (is_step_negative) {\n\t\t\t\tgoto negative_step_error;\n\t\t\t}\n\t\t\tif (high - low < step) {\n\t\t\t\tgoto boundary_error;\n\t\t\t}\n\t\t\tarray_init_size(return_value, (uint32_t)(((high - low) / step) + 1));\n\t\t\tzend_hash_real_init_packed(Z_ARRVAL_P(return_value));\n\t\t\tZEND_HASH_FILL_PACKED(Z_ARRVAL_P(return_value)) {\n\t\t\t\tfor (; low <= high; low += (unsigned int)step) {\n\t\t\t\t\tZEND_HASH_FILL_SET_INTERNED_STR(ZSTR_CHAR(low));\n\t\t\t\t\tZEND_HASH_FILL_NEXT();\n\t\t\t\t\tif (((signed int)low + step) > 255) {\n\t\t\t\t\t\tbreak;\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t} ZEND_HASH_FILL_END();\n\t\t} else {\n\t\t\tarray_init(return_value);\n\t\t\tZVAL_CHAR(&tmp, low);\n\t\t\tzend_hash_next_index_insert_new(Z_ARRVAL_P(return_value), &tmp);\n\t\t}\n\t\treturn;\n\t}\n\n\thandle_numeric_inputs:\n\tif (start_type == IS_DOUBLE || end_type == IS_DOUBLE || is_step_double) {\n\t\tdouble element;\n\t\tuint32_t i, size;\n\n\t\t/* Decreasing float range */\n\t\tif (start_double > end_double) {\n\t\t\tif (start_double - end_double < step_double) {\n\t\t\t\tgoto boundary_error;\n\t\t\t}\n\n\t\t\tRANGE_CHECK_DOUBLE_INIT_ARRAY(start_double, end_double, step_double);\n\n\t\t\tZEND_HASH_FILL_PACKED(Z_ARRVAL_P(return_value)) {\n\t\t\t\tfor (i = 0, element = start_double; i < size && element >= end_double; ++i, element = start_double - (i * step_double)) {\n\t\t\t\t\tZEND_HASH_FILL_SET_DOUBLE(element);\n\t\t\t\t\tZEND_HASH_FILL_NEXT();\n\t\t\t\t}\n\t\t\t} ZEND_HASH_FILL_END();\n\t\t} else if (end_double > start_double) { /* Increasing float range */\n\t\t\tif (is_step_negative) {\n\t\t\t\tgoto negative_step_error;\n\t\t\t}\n\t\t\tif (end_double - start_double < step_double) {\n\t\t\t\tgoto boundary_error;\n\t\t\t}\n\n\t\t\tRANGE_CHECK_DOUBLE_INIT_ARRAY(end_double, start_double, step_double);\n\n\t\t\tZEND_HASH_FILL_PACKED(Z_ARRVAL_P(return_value)) {\n\t\t\t\tfor (i = 0, element = start_double; i < size && element <= end_double; ++i, element = start_double + (i * step_double)) {\n\t\t\t\t\tZEND_HASH_FILL_SET_DOUBLE(element);\n\t\t\t\t\tZEND_HASH_FILL_NEXT();\n\t\t\t\t}\n\t\t\t} ZEND_HASH_FILL_END();\n\t\t} else {\n\t\t\tarray_init(return_value);\n\t\t\tZVAL_DOUBLE(&tmp, start_double);\n\t\t\tzend_hash_next_index_insert_new(Z_ARRVAL_P(return_value), &tmp);\n\t\t}\n\t} else {\n\t\tZEND_ASSERT(start_type == IS_LONG && end_type == IS_LONG && !is_step_double);\n\t\t/* unsigned_step is a zend_ulong so that comparisons to it don't overflow, i.e. low - high < lstep */\n\t\tzend_ulong unsigned_step= (zend_ulong)step;\n\t\tuint32_t i, size;\n\n\t\t/* Decreasing int range */\n\t\tif (start_long > end_long) {\n\t\t\tif ((zend_ulong)start_long - end_long < unsigned_step) {\n\t\t\t\tgoto boundary_error;\n\t\t\t}\n\n\t\t\tRANGE_CHECK_LONG_INIT_ARRAY(start_long, end_long, unsigned_step);\n\n\t\t\tZEND_HASH_FILL_PACKED(Z_ARRVAL_P(return_value)) {\n\t\t\t\tfor (i = 0; i < size; ++i) {\n\t\t\t\t\tZEND_HASH_FILL_SET_LONG(start_long - (i * unsigned_step));\n\t\t\t\t\tZEND_HASH_FILL_NEXT();\n\t\t\t\t}\n\t\t\t} ZEND_HASH_FILL_END();\n\t\t} else if (end_long > start_long) { /* Increasing int range */\n\t\t\tif (is_step_negative) {\n\t\t\t\tgoto negative_step_error;\n\t\t\t}\n\t\t\tif ((zend_ulong)end_long - start_long < unsigned_step) {\n\t\t\t\tgoto boundary_error;\n\t\t\t}\n\n\t\t\tRANGE_CHECK_LONG_INIT_ARRAY(end_long, start_long, unsigned_step);\n\n\t\t\tZEND_HASH_FILL_PACKED(Z_ARRVAL_P(return_value)) {\n\t\t\t\tfor (i = 0; i < size; ++i) {\n\t\t\t\t\tZEND_HASH_FILL_SET_LONG(start_long + (i * unsigned_step));\n\t\t\t\t\tZEND_HASH_FILL_NEXT();\n\t\t\t\t}\n\t\t\t} ZEND_HASH_FILL_END();\n\t\t} else {\n\t\t\tarray_init(return_value);\n\t\t\tZVAL_LONG(&tmp, start_long);\n\t\t\tzend_hash_next_index_insert_new(Z_ARRVAL_P(return_value), &tmp);\n\t\t}\n\t}\n\treturn;\n\nnegative_step_error:\n\tzend_argument_value_error(3, \"must be greater than 0 for increasing ranges\");\n\tRETURN_THROWS();\n\nboundary_error:\n\tzend_argument_value_error(3, \"must be less than the range spanned by argument #1 ($start) and argument #2 ($end)\");\n\tRETURN_THROWS();",
+    "semantic": "We only want positive step values.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_NUMBER_OR_STR",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_NUMBER",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_THROWS",
+            "ZEND_LONG_MIN",
+            "ZEND_LONG_FMT",
+            "ZEND_HASH_FILL_PACKED",
+            "ZEND_HASH_FILL_SET_INTERNED_STR",
+            "ZSTR_CHAR",
+            "ZEND_HASH_FILL_NEXT",
+            "ZEND_HASH_FILL_END",
+            "ZVAL_CHAR",
+            "ZEND_HASH_FILL_SET_DOUBLE",
+            "ZVAL_DOUBLE",
+            "ZEND_ASSERT",
+            "ZEND_HASH_FILL_SET_LONG",
+            "ZVAL_LONG"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_isinf",
+            "zend_argument_value_error",
+            "zend_isnan",
+            "zend_dval_to_lval",
+            "zend_is_long_compatible",
+            "php_range_process_input",
+            "php_error_docref",
+            "zend_hash_real_init_packed",
+            "zend_hash_next_index_insert_new"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common range inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 10,
+    "purpose": "We only want positive step values.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "krsort",
+        "ksort",
+        "count",
+        "natsort",
+        "natcasesort",
+        "asort",
+        "arsort",
+        "sort",
+        "rsort",
+        "usort",
+        "uasort",
+        "uksort"
+    ]
+}

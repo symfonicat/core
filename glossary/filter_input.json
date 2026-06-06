@@ -1,0 +1,162 @@
+{
+    "php_function": "filter_input",
+    "zend_function": "filter_input",
+    "source_file": "er.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "fetch_from",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "fetch_from"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(fetch_from)"
+        },
+        {
+            "name": "var",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "var"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(var)"
+        },
+        {
+            "name": "filter",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "filter"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(filter)"
+        },
+        {
+            "name": "filter_args_ht",
+            "macro": "Z_PARAM_ARRAY_HT_OR_LONG",
+            "arguments": [
+                "filter_args_ht",
+                "filter_args_long"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY_HT_OR_LONG(filter_args_ht, filter_args_long)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php_filter.h",
+        "main/php_variables.h",
+        "ext/standard/info.h",
+        "filter_private.h",
+        "filter_arginfo.h"
+    ],
+    "body": "zend_long fetch_from, filter = FILTER_DEFAULT;\n\tzval *input = NULL, *tmp;\n\tzend_string *var;\n\tHashTable *filter_args_ht = NULL;\n\tzend_long filter_args_long = 0;\n\n\tZEND_PARSE_PARAMETERS_START(2, 4)\n\t\tZ_PARAM_LONG(fetch_from)\n\t\tZ_PARAM_STR(var)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_LONG(filter)\n\t\tZ_PARAM_ARRAY_HT_OR_LONG(filter_args_ht, filter_args_long)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (!PHP_FILTER_ID_EXISTS(filter)) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Unknown filter with ID \" ZEND_LONG_FMT, filter);\n\t\tRETURN_FALSE;\n\t}\n\n\tinput = php_filter_get_storage(fetch_from);\n\tif (EG(exception)) {\n\t\tRETURN_THROWS();\n\t}\n\n\tif (!input || (tmp = zend_hash_find(Z_ARRVAL_P(input), var)) == NULL) {\n\t\tzend_long filter_flags = 0;\n\t\tzval *option, *opt, *def;\n\t\tif (!filter_args_ht) {\n\t\t\tfilter_flags = filter_args_long;\n\t\t} else {\n\t\t\tif ((option = zend_hash_str_find(filter_args_ht, \"flags\", sizeof(\"flags\") - 1)) != NULL) {\n\t\t\t\tfilter_flags = zval_get_long(option);\n\t\t\t}\n\n\t\t\tif ((opt = zend_hash_str_find_deref(filter_args_ht, \"options\", sizeof(\"options\") - 1)) != NULL &&\n\t\t\t\tZ_TYPE_P(opt) == IS_ARRAY &&\n\t\t\t\t(def = zend_hash_str_find_deref(Z_ARRVAL_P(opt), \"default\", sizeof(\"default\") - 1)) != NULL\n\t\t\t) {\n\t\t\t\tZVAL_COPY(return_value, def);\n\t\t\t\treturn;\n\t\t\t}\n\t\t}\n\n\t\t/* The FILTER_NULL_ON_FAILURE flag inverts the usual return values of\n\t\t * the function: normally when validation fails false is returned, and\n\t\t * when the input value doesn't exist NULL is returned. With the flag\n\t\t * set, NULL and false should be returned, respectively. Ergo, although\n\t\t * the code below looks incorrect, it's actually right. */\n\t\tif (filter_flags & FILTER_NULL_ON_FAILURE) {\n\t\t\tRETURN_FALSE;\n\t\t} else {\n\t\t\tRETURN_NULL();\n\t\t}\n\t}\n\n\tZVAL_DUP(return_value, tmp);\n\n\tphp_filter_call(return_value, filter, filter_args_ht, filter_args_long, 1, FILTER_REQUIRE_SCALAR);",
+    "semantic": "The FILTER_NULL_ON_FAILURE flag inverts the usual return values of the function: normally when validation fails false is returned, and when the input value doesn't exist NULL is returned.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_LONG",
+            "Z_PARAM_STR",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_ARRAY_HT_OR_LONG",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZEND_LONG_FMT",
+            "RETURN_FALSE",
+            "RETURN_THROWS",
+            "ZVAL_COPY",
+            "RETURN_NULL",
+            "ZVAL_DUP"
+        ],
+        "zend_types": [
+            "zend_long",
+            "zval",
+            "zend_string",
+            "HashTable"
+        ],
+        "internal_helpers": [
+            "php_error_docref",
+            "php_filter_get_storage",
+            "zend_hash_find",
+            "zend_hash_str_find",
+            "zval_get_long",
+            "zend_hash_str_find_deref",
+            "php_filter_call"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common filter_input inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 6,
+    "purpose": "The FILTER_NULL_ON_FAILURE flag inverts the usual return values of the function: normally when validation fails false is returned, and when the input value doesn't exist NULL is returned.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "filter_has_var",
+        "filter_var",
+        "filter_input_array",
+        "filter_var_array",
+        "filter_list",
+        "filter_id"
+    ]
+}

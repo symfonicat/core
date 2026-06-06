@@ -1,0 +1,130 @@
+{
+    "php_function": "openssl_pkcs7_encrypt",
+    "zend_function": "openssl_pkcs7_encrypt",
+    "source_file": "nssl.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "php_openssl.h",
+        "zend_attributes.h",
+        "zend_exceptions.h",
+        "ext/standard/file.h",
+        "ext/standard/info.h",
+        "ext/standard/php_fopen_wrappers.h",
+        "ext/standard/md5.h",
+        "ext/standard/base64.h",
+        "openssl/evp.h",
+        "openssl/bn.h",
+        "openssl/rsa.h",
+        "openssl/dsa.h",
+        "openssl/dh.h",
+        "openssl/x509.h",
+        "openssl/x509v3.h",
+        "openssl/crypto.h",
+        "openssl/pem.h",
+        "openssl/err.h",
+        "openssl/conf.h",
+        "openssl/rand.h",
+        "openssl/ssl.h",
+        "openssl/pkcs12.h",
+        "openssl/cms.h",
+        "openssl/core_names.h",
+        "openssl/param_build.h",
+        "openssl/provider.h",
+        "openssl/engine.h",
+        "time.h",
+        "openssl_arginfo.h"
+    ],
+    "body": "zval * zrecipcerts, * zheaders = NULL;\n\tSTACK_OF(X509) * recipcerts = NULL;\n\tBIO * infile = NULL, * outfile = NULL;\n\tzend_long flags = 0;\n\tPKCS7 * p7 = NULL;\n\tzval * zcertval;\n\tX509 * cert;\n\tconst EVP_CIPHER *cipher = NULL;\n\tzend_long cipherid = PHP_OPENSSL_CIPHER_DEFAULT;\n\tzend_string * strindex;\n\tchar * infilename = NULL;\n\tsize_t infilename_len;\n\tchar * outfilename = NULL;\n\tsize_t outfilename_len;\n\n\tRETVAL_FALSE;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"ppza!|ll\", &infilename, &infilename_len,\n\t\t\t\t&outfilename, &outfilename_len, &zrecipcerts, &zheaders, &flags, &cipherid) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tinfile = php_openssl_bio_new_file(infilename, infilename_len, 1, PHP_OPENSSL_BIO_MODE_R(flags));\n\tif (infile == NULL) {\n\t\tgoto clean_exit;\n\t}\n\n\toutfile = php_openssl_bio_new_file(outfilename, outfilename_len, 2, PHP_OPENSSL_BIO_MODE_W(flags));\n\tif (outfile == NULL) {\n\t\tgoto clean_exit;\n\t}\n\n\trecipcerts = sk_X509_new_null();\n\n\t/* get certs */\n\tif (Z_TYPE_P(zrecipcerts) == IS_ARRAY) {\n\t\tZEND_HASH_FOREACH_VAL(Z_ARRVAL_P(zrecipcerts), zcertval) {\n\t\t\tbool free_cert;\n\n\t\t\tcert = php_openssl_x509_from_zval(zcertval, &free_cert, 3, true, NULL);\n\t\t\tif (cert == NULL) {\n\t\t\t\t// TODO Add warning?\n\t\t\t\tgoto clean_exit;\n\t\t\t}\n\n\t\t\tif (!free_cert) {\n\t\t\t\t/* we shouldn't free this particular cert, as it is a resource.\n\t\t\t\t\tmake a copy and push that on the stack instead */\n\t\t\t\tcert = X509_dup(cert);\n\t\t\t\tif (cert == NULL) {\n\t\t\t\t\tphp_openssl_store_errors();\n\t\t\t\t\tgoto clean_exit;\n\t\t\t\t}\n\t\t\t}\n\t\t\tsk_X509_push(recipcerts, cert);\n\t\t} ZEND_HASH_FOREACH_END();\n\t} else {\n\t\t/* a single certificate */\n\t\tbool free_cert;\n\n\t\tcert = php_openssl_x509_from_zval(zrecipcerts, &free_cert, 3, false, NULL);\n\t\tif (cert == NULL) {\n\t\t\t// TODO Add warning?\n\t\t\tgoto clean_exit;\n\t\t}\n\n\t\tif (!free_cert) {\n\t\t\t/* we shouldn't free this particular cert, as it is a resource.\n\t\t\t\tmake a copy and push that on the stack instead */\n\t\t\tcert = X509_dup(cert);\n\t\t\tif (cert == NULL) {\n\t\t\t\tphp_openssl_store_errors();\n\t\t\t\tgoto clean_exit;\n\t\t\t}\n\t\t}\n\t\tsk_X509_push(recipcerts, cert);\n\t}\n\n\t/* sanity check the cipher */\n\tcipher = php_openssl_get_evp_cipher_from_algo(cipherid);\n\tif (cipher == NULL) {\n\t\t/* shouldn't happen */\n\t\tphp_error_docref(NULL, E_WARNING, \"Failed to get cipher\");\n\t\tgoto clean_exit;\n\t}\n\n\tp7 = PKCS7_encrypt(recipcerts, infile, (EVP_CIPHER*)cipher, (int)flags);\n\n\tif (p7 == NULL) {\n\t\tphp_openssl_store_errors();\n\t\tgoto clean_exit;\n\t}\n\n\t/* tack on extra headers */\n\tif (zheaders) {\n\t\tZEND_HASH_FOREACH_STR_KEY_VAL(Z_ARRVAL_P(zheaders), strindex, zcertval) {\n\t\t\tzend_string *str = zval_try_get_string(zcertval);\n\t\t\tif (UNEXPECTED(!str)) {\n\t\t\t\tgoto clean_exit;\n\t\t\t}\n\t\t\tif (strindex) {\n\t\t\t\tBIO_printf(outfile, \"%s: %s\\n\", ZSTR_VAL(strindex), ZSTR_VAL(str));\n\t\t\t} else {\n\t\t\t\tBIO_printf(outfile, \"%s\\n\", ZSTR_VAL(str));\n\t\t\t}\n\t\t\tzend_string_release(str);\n\t\t} ZEND_HASH_FOREACH_END();\n\t}\n\n\t(void)BIO_reset(infile);\n\n\t/* write the encrypted data */\n\tif (!SMIME_write_PKCS7(outfile, p7, infile, (int)flags)) {\n\t\tphp_openssl_store_errors();\n\t\tgoto clean_exit;\n\t}\n\n\tRETVAL_TRUE;\n\nclean_exit:\n\tPKCS7_free(p7);\n\tBIO_free(infile);\n\tBIO_free(outfile);\n\tif (recipcerts) {\n\t\tsk_X509_pop_free(recipcerts, X509_free);\n\t}",
+    "semantic": "get certs",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "ZEND_HASH_FOREACH_VAL",
+            "ZEND_HASH_FOREACH_END",
+            "ZEND_HASH_FOREACH_STR_KEY_VAL",
+            "ZSTR_VAL"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_long",
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "php_openssl_bio_new_file",
+            "php_openssl_x509_from_zval",
+            "php_openssl_store_errors",
+            "php_openssl_get_evp_cipher_from_algo",
+            "php_error_docref",
+            "zval_try_get_string",
+            "zend_string_release"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common openssl_pkcs7_encrypt inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 7,
+    "purpose": "get certs",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "openssl_get_cert_locations",
+        "openssl_x509_export_to_file",
+        "openssl_spki_new",
+        "openssl_spki_verify",
+        "openssl_spki_export",
+        "openssl_spki_export_challenge",
+        "openssl_x509_export",
+        "openssl_x509_fingerprint",
+        "openssl_x509_check_private_key",
+        "openssl_x509_verify",
+        "openssl_x509_parse",
+        "openssl_x509_checkpurpose"
+    ]
+}

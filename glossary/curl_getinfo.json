@@ -1,0 +1,143 @@
+{
+    "php_function": "curl_getinfo",
+    "zend_function": "curl_getinfo",
+    "source_file": "ace.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "zid",
+            "macro": "Z_PARAM_OBJECT_OF_CLASS",
+            "arguments": [
+                "zid",
+                "curl_ce"
+            ],
+            "type": "zend_object",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_OBJECT_OF_CLASS(zid, curl_ce)"
+        },
+        {
+            "name": "option",
+            "macro": "Z_PARAM_LONG_OR_NULL",
+            "arguments": [
+                "option",
+                "option_is_null"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG_OR_NULL(option, option_is_null)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "Zend/zend_exceptions.h",
+        "stdio.h",
+        "string.h",
+        "winsock2.h",
+        "sys/types.h",
+        "curl/curl.h",
+        "curl/easy.h",
+        "zend_smart_str.h",
+        "ext/standard/info.h",
+        "ext/standard/file.h",
+        "ext/standard/url.h",
+        "curl_private.h",
+        "curl_arginfo.h"
+    ],
+    "body": "zval\t\t*zid;\n\tphp_curl\t*ch;\n\tzend_long\toption;\n\tbool option_is_null = 1;\n\n\tZEND_PARSE_PARAMETERS_START(1, 2)\n\t\tZ_PARAM_OBJECT_OF_CLASS(zid, curl_ce)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_LONG_OR_NULL(option, option_is_null)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tch = Z_CURL_P(zid);\n\n\tif (option_is_null) {\n\t\tchar *s_code;\n\t\t/* libcurl expects long datatype. So far no cases are known where\n\t\t   it would be an issue. Using zend_long would truncate a 64-bit\n\t\t   var on Win64, so the exact long datatype fits everywhere, as\n\t\t   long as there's no 32-bit int overflow. */\n\t\tlong l_code;\n\t\tdouble d_code;\n\t\tstruct curl_certinfo *ci = NULL;\n\t\tzval listcode;\n\t\tcurl_off_t co;\n\n\t\tarray_init(return_value);\n\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_EFFECTIVE_URL, &s_code) == CURLE_OK) {\n\t\t\tCAAS(\"url\", s_code);\n\t\t}\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_CONTENT_TYPE, &s_code) == CURLE_OK) {\n\t\t\tif (s_code != NULL) {\n\t\t\t\tCAAS(\"content_type\", s_code);\n\t\t\t} else {\n\t\t\t\tzval retnull;\n\t\t\t\tZVAL_NULL(&retnull);\n\t\t\t\tCAAZ(\"content_type\", &retnull);\n\t\t\t}\n\t\t}\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_HTTP_CODE, &l_code) == CURLE_OK) {\n\t\t\tCAAL(\"http_code\", l_code);\n\t\t}\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_HEADER_SIZE, &l_code) == CURLE_OK) {\n\t\t\tCAAL(\"header_size\", l_code);\n\t\t}\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_REQUEST_SIZE, &l_code) == CURLE_OK) {\n\t\t\tCAAL(\"request_size\", l_code);\n\t\t}\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_FILETIME, &l_code) == CURLE_OK) {\n\t\t\tCAAL(\"filetime\", l_code);\n\t\t}\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_SSL_VERIFYRESULT, &l_code) == CURLE_OK) {\n\t\t\tCAAL(\"ssl_verify_result\", l_code);\n\t\t}\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_REDIRECT_COUNT, &l_code) == CURLE_OK) {\n\t\t\tCAAL(\"redirect_count\", l_code);\n\t\t}\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_TOTAL_TIME, &d_code) == CURLE_OK) {\n\t\t\tCAAD(\"total_time\", d_code);\n\t\t}\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_NAMELOOKUP_TIME, &d_code) == CURLE_OK) {\n\t\t\tCAAD(\"namelookup_time\", d_code);\n\t\t}\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_CONNECT_TIME, &d_code) == CURLE_OK) {\n\t\t\tCAAD(\"connect_time\", d_code);\n\t\t}\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_PRETRANSFER_TIME, &d_code) == CURLE_OK) {\n\t\t\tCAAD(\"pretransfer_time\", d_code);\n\t\t}\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_SIZE_UPLOAD, &d_code) == CURLE_OK) {\n\t\t\tCAAD(\"size_upload\", d_code);\n\t\t}\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_SIZE_DOWNLOAD, &d_code) == CURLE_OK) {\n\t\t\tCAAD(\"size_download\", d_code);\n\t\t}\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_SPEED_DOWNLOAD, &d_code) == CURLE_OK) {\n\t\t\tCAAD(\"speed_download\", d_code);\n\t\t}\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_SPEED_UPLOAD, &d_code) == CURLE_OK) {\n\t\t\tCAAD(\"speed_upload\", d_code);\n\t\t}\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_CONTENT_LENGTH_DOWNLOAD, &d_code) == CURLE_OK) {\n\t\t\tCAAD(\"download_content_length\", d_code);\n\t\t}\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_CONTENT_LENGTH_UPLOAD, &d_code) == CURLE_OK) {\n\t\t\tCAAD(\"upload_content_length\", d_code);\n\t\t}\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_STARTTRANSFER_TIME, &d_code) == CURLE_OK) {\n\t\t\tCAAD(\"starttransfer_time\", d_code);\n\t\t}\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_REDIRECT_TIME, &d_code) == CURLE_OK) {\n\t\t\tCAAD(\"redirect_time\", d_code);\n\t\t}\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_REDIRECT_URL, &s_code) == CURLE_OK) {\n\t\t\tCAAS(\"redirect_url\", s_code);\n\t\t}\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_PRIMARY_IP, &s_code) == CURLE_OK) {\n\t\t\tCAAS(\"primary_ip\", s_code);\n\t\t}\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_CERTINFO, &ci) == CURLE_OK) {\n\t\t\tarray_init(&listcode);\n\t\t\tcreate_certinfo(ci, &listcode);\n\t\t\tCAAZ(\"certinfo\", &listcode);\n\t\t}\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_PRIMARY_PORT, &l_code) == CURLE_OK) {\n\t\t\tCAAL(\"primary_port\", l_code);\n\t\t}\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_LOCAL_IP, &s_code) == CURLE_OK) {\n\t\t\tCAAS(\"local_ip\", s_code);\n\t\t}\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_LOCAL_PORT, &l_code) == CURLE_OK) {\n\t\t\tCAAL(\"local_port\", l_code);\n\t\t}\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_HTTP_VERSION, &l_code) == CURLE_OK) {\n\t\t\tCAAL(\"http_version\", l_code);\n\t\t}\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_PROTOCOL, &l_code) == CURLE_OK) {\n\t\t\tCAAL(\"protocol\", l_code);\n\t\t}\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_PROXY_SSL_VERIFYRESULT, &l_code) == CURLE_OK) {\n\t\t\tCAAL(\"ssl_verifyresult\", l_code);\n\t\t}\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_SCHEME, &s_code) == CURLE_OK) {\n\t\t\tCAAS(\"scheme\", s_code);\n\t\t}\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_APPCONNECT_TIME_T, &co) == CURLE_OK) {\n\t\t\tCAAL(\"appconnect_time_us\", co);\n\t\t}\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_CONNECT_TIME_T, &co) == CURLE_OK) {\n\t\t\tCAAL(\"connect_time_us\", co);\n\t\t}\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_NAMELOOKUP_TIME_T, &co) == CURLE_OK) {\n\t\t\tCAAL(\"namelookup_time_us\", co);\n\t\t}\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_PRETRANSFER_TIME_T, &co) == CURLE_OK) {\n\t\t\tCAAL(\"pretransfer_time_us\", co);\n\t\t}\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_REDIRECT_TIME_T, &co) == CURLE_OK) {\n\t\t\tCAAL(\"redirect_time_us\", co);\n\t\t}\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_STARTTRANSFER_TIME_T, &co) == CURLE_OK) {\n\t\t\tCAAL(\"starttransfer_time_us\", co);\n\t\t}\n#if LIBCURL_VERSION_NUM >= 0x080a00 /* Available since 8.10.0 */\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_POSTTRANSFER_TIME_T, &co) == CURLE_OK) {\n\t\t\tCAAL(\"posttransfer_time_us\", co);\n\t\t}\n#endif\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_TOTAL_TIME_T, &co) == CURLE_OK) {\n\t\t\tCAAL(\"total_time_us\", co);\n\t\t}\n\t\tif (ch->header.str) {\n\t\t\tCAASTR(\"request_header\", ch->header.str);\n\t\t}\n#if LIBCURL_VERSION_NUM >= 0x074800 /* Available since 7.72.0 */\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_EFFECTIVE_METHOD, &s_code) == CURLE_OK) {\n\t\t\tCAAS(\"effective_method\", s_code);\n\t\t}\n#endif\n#if LIBCURL_VERSION_NUM >= 0x075400 /* Available since 7.84.0 */\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_CAPATH, &s_code) == CURLE_OK) {\n\t\t\tCAAS(\"capath\", s_code);\n\t\t}\n\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_CAINFO, &s_code) == CURLE_OK) {\n\t\t\tCAAS(\"cainfo\", s_code);\n\t\t}\n#endif\n\t} else {\n\t\tswitch (option) {\n\t\t\tcase CURLINFO_HEADER_OUT:\n\t\t\t\tif (ch->header.str) {\n\t\t\t\t\tRETURN_STR_COPY(ch->header.str);\n\t\t\t\t} else {\n\t\t\t\t\tRETURN_FALSE;\n\t\t\t\t}\n\t\t\tcase CURLINFO_CERTINFO: {\n\t\t\t\tstruct curl_certinfo *ci = NULL;\n\n\t\t\t\tarray_init(return_value);\n\n\t\t\t\tif (curl_easy_getinfo(ch->cp, CURLINFO_CERTINFO, &ci) == CURLE_OK) {\n\t\t\t\t\tcreate_certinfo(ci, return_value);\n\t\t\t\t} else {\n\t\t\t\t\tRETURN_FALSE;\n\t\t\t\t}\n\t\t\t\tbreak;\n\t\t\t}\n\t\t\tcase CURLINFO_PRIVATE:\n\t\t\t\tif (!Z_ISUNDEF(ch->private_data)) {\n\t\t\t\t\tRETURN_COPY(&ch->private_data);\n\t\t\t\t} else {\n\t\t\t\t\tRETURN_FALSE;\n\t\t\t\t}\n\t\t\t\tbreak;\n\t\t\tdefault: {\n\t\t\t\tint type = CURLINFO_TYPEMASK & option;\n\t\t\t\tswitch (type) {\n\t\t\t\t\tcase CURLINFO_STRING:\n\t\t\t\t\t{\n\t\t\t\t\t\tchar *s_code = NULL;\n\n\t\t\t\t\t\tif (curl_easy_getinfo(ch->cp, option, &s_code) == CURLE_OK && s_code) {\n\t\t\t\t\t\t\tRETURN_STRING(s_code);\n\t\t\t\t\t\t} else {\n\t\t\t\t\t\t\tRETURN_FALSE;\n\t\t\t\t\t\t}\n\t\t\t\t\t\tbreak;\n\t\t\t\t\t}\n\t\t\t\t\tcase CURLINFO_LONG:\n\t\t\t\t\t{\n\t\t\t\t\t\tzend_long code = 0;\n\n\t\t\t\t\t\tif (curl_easy_getinfo(ch->cp, option, &code) == CURLE_OK) {\n\t\t\t\t\t\t\tRETURN_LONG(code);\n\t\t\t\t\t\t} else {\n\t\t\t\t\t\t\tRETURN_FALSE;\n\t\t\t\t\t\t}\n\t\t\t\t\t\tbreak;\n\t\t\t\t\t}\n\t\t\t\t\tcase CURLINFO_DOUBLE:\n\t\t\t\t\t{\n\t\t\t\t\t\tdouble code = 0.0;\n\n\t\t\t\t\t\tif (curl_easy_getinfo(ch->cp, option, &code) == CURLE_OK) {\n\t\t\t\t\t\t\tRETURN_DOUBLE(code);\n\t\t\t\t\t\t} else {\n\t\t\t\t\t\t\tRETURN_FALSE;\n\t\t\t\t\t\t}\n\t\t\t\t\t\tbreak;\n\t\t\t\t\t}\n\t\t\t\t\tcase CURLINFO_SLIST:\n\t\t\t\t\t{\n\t\t\t\t\t\tstruct curl_slist *slist;\n\t\t\t\t\t\tif (curl_easy_getinfo(ch->cp, option, &slist) == CURLE_OK) {\n\t\t\t\t\t\t\tstruct curl_slist *current = slist;\n\t\t\t\t\t\t\tarray_init(return_value);\n\t\t\t\t\t\t\twhile (current) {\n\t\t\t\t\t\t\t\tadd_next_index_string(return_value, current->data);\n\t\t\t\t\t\t\t\tcurrent = current->next;\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\tcurl_slist_free_all(slist);\n\t\t\t\t\t\t} else {\n\t\t\t\t\t\t\tRETURN_FALSE;\n\t\t\t\t\t\t}\n\t\t\t\t\t\tbreak;\n\t\t\t\t\t}\n\t\t\t\t\tcase CURLINFO_OFF_T:\n\t\t\t\t\t{\n\t\t\t\t\t\tcurl_off_t c_off;\n\t\t\t\t\t\tif (curl_easy_getinfo(ch->cp, option, &c_off) == CURLE_OK) {\n\t\t\t\t\t\t\tRETURN_LONG((long) c_off);\n\t\t\t\t\t\t} else {\n\t\t\t\t\t\t\tRETURN_FALSE;\n\t\t\t\t\t\t}\n\t\t\t\t\t\tbreak;\n\t\t\t\t\t}\n\t\t\t\t\tdefault:\n\t\t\t\t\t\tRETURN_FALSE;\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t}",
+    "semantic": "libcurl expects long datatype.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_OBJECT_OF_CLASS",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_LONG_OR_NULL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZVAL_NULL",
+            "RETURN_STR_COPY",
+            "RETURN_FALSE",
+            "RETURN_COPY",
+            "RETURN_STRING",
+            "RETURN_LONG",
+            "RETURN_DOUBLE"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "curl_easy_getinfo",
+            "curl_slist_free_all"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common curl_getinfo inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 10,
+    "purpose": "libcurl expects long datatype.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "curl_version",
+        "curl_init",
+        "curl_copy_handle",
+        "curl_setopt",
+        "curl_setopt_array",
+        "curl_exec",
+        "curl_error",
+        "curl_errno",
+        "curl_close",
+        "curl_strerror",
+        "curl_reset",
+        "curl_escape"
+    ]
+}

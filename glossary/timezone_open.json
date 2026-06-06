@@ -1,0 +1,106 @@
+{
+    "php_function": "timezone_open",
+    "zend_function": "timezone_open",
+    "source_file": "te.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "php.h",
+        "php_main.h",
+        "php_ini.h",
+        "ext/standard/info.h",
+        "ext/standard/php_versioning.h",
+        "php_date.h",
+        "zend_attributes.h",
+        "zend_interfaces.h",
+        "zend_exceptions.h",
+        "lib/timelib.h",
+        "lib/timelib_private.h",
+        "time.h",
+        "win32/time.h",
+        "php_date_arginfo.h",
+        "zend_smart_str.h"
+    ],
+    "body": "zend_string *tz;\n\tphp_timezone_obj *tzobj;\n\tchar *warning_message;\n\n\tZEND_PARSE_PARAMETERS_START(1, 1)\n\t\tZ_PARAM_PATH_STR(tz) /* To prevent null bytes */\n\tZEND_PARSE_PARAMETERS_END();\n\n\ttzobj = Z_PHPTIMEZONE_P(php_date_instantiate(date_ce_timezone, return_value));\n\tif (!timezone_initialize(tzobj, ZSTR_VAL(tz), ZSTR_LEN(tz), &warning_message)) {\n\t\tphp_error_docref(NULL, E_WARNING, \"%s\", warning_message);\n\t\tefree(warning_message);\n\t\tzval_ptr_dtor(return_value);\n\t\tRETURN_FALSE;\n\t}",
+    "semantic": "To prevent null bytes",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_PATH_STR",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZSTR_VAL",
+            "ZSTR_LEN",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "php_date_instantiate",
+            "php_error_docref",
+            "zval_ptr_dtor"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common timezone_open inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 3,
+    "purpose": "To prevent null bytes",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "date",
+        "gmdate",
+        "idate",
+        "strtotime",
+        "mktime",
+        "gmmktime",
+        "checkdate",
+        "strftime",
+        "gmstrftime",
+        "time",
+        "localtime",
+        "getdate"
+    ]
+}

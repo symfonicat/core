@@ -1,0 +1,156 @@
+{
+    "php_function": "constant",
+    "zend_function": "constant",
+    "source_file": "sic_functions.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "const_name",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "const_name"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(const_name)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "php_assert.h",
+        "php_crypt.h",
+        "php_streams.h",
+        "php_main.h",
+        "php_globals.h",
+        "php_variables.h",
+        "php_ini.h",
+        "php_image.h",
+        "php_standard.h",
+        "php_math.h",
+        "php_http.h",
+        "php_incomplete_class.h",
+        "php_getopt.h",
+        "php_ext_syslog.h",
+        "ext/standard/info.h",
+        "ext/session/php_session.h",
+        "zend_exceptions.h",
+        "zend_attributes.h",
+        "zend_enum.h",
+        "zend_ini.h",
+        "zend_operators.h",
+        "ext/standard/php_dns.h",
+        "ext/standard/php_uuencode.h",
+        "ext/standard/crc32_x86.h",
+        "win32/php_win32_globals.h",
+        "win32/time.h",
+        "win32/ioutil.h",
+        "zend.h",
+        "zend_ini_scanner.h",
+        "zend_language_scanner.h",
+        "zend_language_parser.h",
+        "zend_portability.h",
+        "stdarg.h",
+        "stdlib.h",
+        "math.h",
+        "time.h",
+        "stdio.h",
+        "sys/types.h",
+        "sys/stat.h",
+        "string.h",
+        "locale.h",
+        "zend_globals.h",
+        "SAPI.h",
+        "php_ticks.h",
+        "php_fopen_wrappers.h",
+        "streamsfuncs.h",
+        "zend_frameless_function.h",
+        "basic_functions_arginfo.h"
+    ],
+    "body": "zend_string *const_name;\n\tzval *c;\n\tzend_class_entry *scope;\n\n\tZEND_PARSE_PARAMETERS_START(1, 1)\n\t\tZ_PARAM_STR(const_name)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tscope = zend_get_executed_scope();\n\tc = zend_get_constant_ex(const_name, scope, ZEND_FETCH_CLASS_EXCEPTION);\n\tif (!c) {\n\t\tRETURN_THROWS();\n\t}\n\n\tZVAL_COPY_OR_DUP(return_value, c);\n\tif (Z_TYPE_P(return_value) == IS_CONSTANT_AST) {\n\t\tif (UNEXPECTED(zval_update_constant_ex(return_value, scope) != SUCCESS)) {\n\t\t\tRETURN_THROWS();\n\t\t}\n\t}",
+    "semantic": "Implements the PHP function constant in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STR",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZEND_FETCH_CLASS_EXCEPTION",
+            "RETURN_THROWS",
+            "ZVAL_COPY_OR_DUP"
+        ],
+        "zend_types": [
+            "zend_string",
+            "zval",
+            "zend_class_entry"
+        ],
+        "internal_helpers": [
+            "zend_get_executed_scope",
+            "zend_get_constant_ex",
+            "zval_update_constant_ex"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common constant inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "Implements the PHP function constant in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "inet_ntop",
+        "inet_pton",
+        "ip2long",
+        "long2ip",
+        "getenv",
+        "getopt",
+        "flush",
+        "sleep",
+        "usleep",
+        "time_nanosleep",
+        "time_sleep_until",
+        "get_current_user"
+    ]
+}

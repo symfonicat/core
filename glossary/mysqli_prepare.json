@@ -1,0 +1,93 @@
+{
+    "php_function": "mysqli_prepare",
+    "zend_function": "mysqli_prepare",
+    "source_file": "li_api.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "signal.h",
+        "php.h",
+        "zend_smart_str.h",
+        "php_mysqli_structs.h",
+        "mysqli_priv.h",
+        "ext/mysqlnd/mysql_float_to_double.h"
+    ],
+    "body": "MY_MYSQL\t\t*mysql;\n\tMY_STMT\t\t\t*stmt;\n\tchar\t\t\t*query = NULL;\n\tsize_t\t\t\t\tquery_len;\n\tzval\t\t\t*mysql_link;\n\tMYSQLI_RESOURCE\t*mysqli_resource;\n\n\tif (zend_parse_method_parameters(ZEND_NUM_ARGS(), getThis(), \"Os\",&mysql_link, mysqli_link_class_entry, &query, &query_len) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\tMYSQLI_FETCH_RESOURCE_CONN(mysql, mysql_link, MYSQLI_STATUS_VALID);\n\n\tstmt = (MY_STMT *)ecalloc(1,sizeof(MY_STMT));\n\n\tif ((stmt->stmt = mysql_stmt_init(mysql->mysql))) {\n\t\tif (mysql_stmt_prepare(stmt->stmt, query, query_len)) {\n\t\t\t/* mysql_stmt_close() clears errors, so we have to store them temporarily */\n\t\t\tMYSQLND_ERROR_INFO error_info = *mysql->mysql->data->error_info;\n\t\t\tmysql->mysql->data->error_info->error_list.head = NULL;\n\t\t\tmysql->mysql->data->error_info->error_list.tail = NULL;\n\t\t\tmysql->mysql->data->error_info->error_list.count = 0;\n\t\t\tmysqli_stmt_close(stmt->stmt, false);\n\t\t\tstmt->stmt = NULL;\n\n\t\t\t/* restore error messages */\n\t\t\tzend_llist_clean(&mysql->mysql->data->error_info->error_list);\n\t\t\t*mysql->mysql->data->error_info = error_info;\n\t\t}\n\t}\n\n\t/* don't initialize stmt->query with NULL, we ecalloc()-ed the memory */\n\t/* Get performance boost if reporting is switched off */\n\tif (stmt->stmt && query_len && (MyG(report_mode) & MYSQLI_REPORT_INDEX)) {\n\t\tstmt->query = estrdup(query);\n\t}\n\n\t/* don't join to the previous if because it won't work if mysql_stmt_prepare_fails */\n\tif (!stmt->stmt) {\n\t\tMYSQLI_REPORT_MYSQL_ERROR(mysql->mysql);\n\t\tefree(stmt);\n\t\tRETURN_FALSE;\n\t}\n\n\tmysqli_resource = (MYSQLI_RESOURCE *)ecalloc (1, sizeof(MYSQLI_RESOURCE));\n\tmysqli_resource->ptr = (void *)stmt;\n\n\t/* change status */\n\tmysqli_resource->status = MYSQLI_STATUS_VALID;\n\tMYSQLI_RETVAL_RESOURCE(mysqli_resource, mysqli_stmt_class_entry);",
+    "semantic": "mysql_stmt_close() clears errors, so we have to store them temporarily",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zval"
+        ],
+        "internal_helpers": [
+            "zend_parse_method_parameters",
+            "zend_llist_clean"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common mysqli_prepare inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 3,
+    "purpose": "mysql_stmt_close() clears errors, so we have to store them temporarily",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "mysqli_affected_rows",
+        "mysqli_autocommit",
+        "mysqli_stmt_bind_param",
+        "mysqli_stmt_bind_result",
+        "mysqli_change_user",
+        "mysqli_character_set_name",
+        "mysqli_close",
+        "mysqli_commit",
+        "mysqli_data_seek",
+        "mysqli_debug",
+        "mysqli_dump_debug_info",
+        "mysqli_errno"
+    ]
+}

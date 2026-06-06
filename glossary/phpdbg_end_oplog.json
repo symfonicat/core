@@ -1,0 +1,119 @@
+{
+    "php_function": "phpdbg_end_oplog",
+    "zend_function": "phpdbg_end_oplog",
+    "source_file": "dbg.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "phpdbg.h",
+        "phpdbg_prompt.h",
+        "phpdbg_bp.h",
+        "phpdbg_break.h",
+        "phpdbg_list.h",
+        "phpdbg_utils.h",
+        "phpdbg_set.h",
+        "phpdbg_io.h",
+        "zend_alloc.h",
+        "phpdbg_print.h",
+        "phpdbg_help.h",
+        "phpdbg_arginfo.h",
+        "zend_vm.h",
+        "php_ini_builder.h",
+        "php_main.h",
+        "ext/standard/basic_functions.h"
+    ],
+    "body": "phpdbg_oplog_entry *cur;\n\tphpdbg_oplog_list *prev;\n\n\tHashTable *options = NULL;\n\tzval *option_buffer;\n\tbool by_function = false;\n\tbool by_opcode = false;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"|H\", &options) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tif (!PHPDBG_G(oplog_list)) {\n\t\tzend_error(E_WARNING, \"Cannot end an oplog without starting it\");\n\t\treturn;\n\t}\n\n\tcur = PHPDBG_G(oplog_list)->start.next;\n\tprev = PHPDBG_G(oplog_list)->prev;\n\n\tefree(PHPDBG_G(oplog_list));\n\tPHPDBG_G(oplog_list) = prev;\n\n\tif (options && (option_buffer = zend_hash_str_find(options, ZEND_STRL(\"functions\")))) {\n\t\tby_function = zend_is_true(option_buffer);\n\t}\n\n\tif (options && (option_buffer = zend_hash_str_find(options, ZEND_STRL(\"opcodes\")))) {\n\t\tif (by_function) {\n\t\t\tby_opcode = zend_is_true(option_buffer);\n\t\t}\n\t}\n\n\tarray_init(return_value);\n\n\t{\n\t\tzend_string *last_file = NULL;\n\t\tHashTable *file_ht = NULL;\n\t\tzend_string *last_function = (void *)~(uintptr_t)0;\n\t\tzend_class_entry *last_scope = NULL;\n\n\t\tHashTable *insert_ht = NULL;\n\t\tzend_long insert_idx;\n\n\t\tdo {\n\t\t\tzval zero;\n\t\t\tZVAL_LONG(&zero, 0);\n\n\t\t\tif (cur->filename != last_file) {\n\t\t\t\tlast_file = cur->filename;\n\t\t\t\tfile_ht = insert_ht = phpdbg_add_empty_array(Z_ARR_P(return_value), last_file);\n\t\t\t}\n\n\t\t\tif (by_function) {\n\t\t\t\tif (cur->function_name == NULL) {\n\t\t\t\t\tif (last_function != NULL) {\n\t\t\t\t\t\tinsert_ht = file_ht;\n\t\t\t\t\t}\n\t\t\t\t\tlast_function = NULL;\n\t\t\t\t} else if (cur->function_name != last_function || cur->scope != last_scope) {\n\t\t\t\t\tzend_string *fn_name;\n\t\t\t\t\tlast_function = cur->function_name;\n\t\t\t\t\tlast_scope = cur->scope;\n\t\t\t\t\tif (last_scope == NULL) {\n\t\t\t\t\t\tfn_name = zend_string_copy(last_function);\n\t\t\t\t\t} else {\n\t\t\t\t\t\tfn_name = strpprintf(ZSTR_LEN(last_function) + ZSTR_LEN(last_scope->name) + 2, \"%.*s::%.*s\", (int) ZSTR_LEN(last_scope->name), ZSTR_VAL(last_scope->name), (int) ZSTR_LEN(last_function), ZSTR_VAL(last_function));\n\t\t\t\t\t}\n\t\t\t\t\tinsert_ht = phpdbg_add_empty_array(Z_ARR_P(return_value), fn_name);\n\t\t\t\t\tzend_string_release(fn_name);\n\t\t\t\t}\n\t\t\t}\n\n\t\t\tif (by_opcode) {\n\t\t\t\tinsert_idx = cur->op - cur->opcodes;\n\t\t\t} else {\n\t\t\t\tif (phpdbg_is_ignored_opcode(cur->op->opcode)) {\n\t\t\t\t\tcontinue;\n\t\t\t\t}\n\n\t\t\t\tinsert_idx = cur->op->lineno;\n\t\t\t}\n\n\t\t\tZEND_ASSERT(insert_ht && file_ht);\n\t\t\t{\n\t\t\t\tzval *num = zend_hash_index_find(insert_ht, insert_idx);\n\t\t\t\tif (!num) {\n\t\t\t\t\tnum = zend_hash_index_add_new(insert_ht, insert_idx, &zero);\n\t\t\t\t}\n\t\t\t\tZ_LVAL_P(num)++;\n\t\t\t}\n\n\t\t} while ((cur = cur->next));\n\t}\n\n\tif (!prev) {\n\t\tzend_arena_destroy(PHPDBG_G(oplog_arena));\n\t}",
+    "semantic": "Implements the PHP function phpdbg_end_oplog in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "ZEND_STRL",
+            "ZVAL_LONG",
+            "ZSTR_LEN",
+            "ZSTR_VAL",
+            "ZEND_ASSERT"
+        ],
+        "zend_types": [
+            "HashTable",
+            "zval",
+            "zend_string",
+            "zend_class_entry",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "zend_error",
+            "zend_hash_str_find",
+            "zend_is_true",
+            "phpdbg_add_empty_array",
+            "zend_string_copy",
+            "zend_string_release",
+            "phpdbg_is_ignored_opcode",
+            "zend_hash_index_find",
+            "zend_hash_index_add_new",
+            "zend_arena_destroy"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common phpdbg_end_oplog inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 7,
+    "purpose": "Implements the PHP function phpdbg_end_oplog in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "phpdbg_exec",
+        "phpdbg_break_next",
+        "phpdbg_break_file",
+        "phpdbg_break_method",
+        "phpdbg_break_function",
+        "phpdbg_clear",
+        "phpdbg_color",
+        "phpdbg_prompt",
+        "phpdbg_start_oplog",
+        "phpdbg_get_executable"
+    ]
+}

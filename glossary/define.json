@@ -1,0 +1,160 @@
+{
+    "php_function": "define",
+    "zend_function": "define",
+    "source_file": "in_functions.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "name",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "name"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(name)"
+        },
+        {
+            "name": "val",
+            "macro": "Z_PARAM_ZVAL",
+            "arguments": [
+                "val"
+            ],
+            "type": "zval",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": true,
+            "raw": "Z_PARAM_ZVAL(val)"
+        },
+        {
+            "name": "non_cs",
+            "macro": "Z_PARAM_BOOL",
+            "arguments": [
+                "non_cs"
+            ],
+            "type": "bool",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_BOOL(non_cs)"
+        }
+    ],
+    "includes": [
+        "zend.h",
+        "zend_API.h",
+        "zend_attributes.h",
+        "zend_gc.h",
+        "zend_builtin_functions.h",
+        "zend_constants.h",
+        "zend_ini.h",
+        "zend_interfaces.h",
+        "zend_exceptions.h",
+        "zend_extensions.h",
+        "zend_closures.h",
+        "zend_generators.h",
+        "zend_builtin_functions_arginfo.h",
+        "zend_smart_str.h"
+    ],
+    "body": "zend_string *name;\n\tzval *val, val_free;\n\tbool non_cs = 0;\n\tzend_constant c;\n\n\tZEND_PARSE_PARAMETERS_START(2, 3)\n\t\tZ_PARAM_STR(name)\n\t\tZ_PARAM_ZVAL(val)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_BOOL(non_cs)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (zend_memnstr(ZSTR_VAL(name), \"::\", sizeof(\"::\") - 1, ZSTR_VAL(name) + ZSTR_LEN(name))) {\n\t\tzend_argument_value_error(1, \"cannot be a class constant\");\n\t\tRETURN_THROWS();\n\t}\n\n\tif (non_cs) {\n\t\tzend_error(E_WARNING, \"define(): Argument #3 ($case_insensitive) is ignored since declaration of case-insensitive constants is no longer supported\");\n\t}\n\n\tZVAL_UNDEF(&val_free);\n\n\tif (Z_TYPE_P(val) == IS_ARRAY) {\n\t\tif (Z_REFCOUNTED_P(val)) {\n\t\t\tif (!validate_constant_array_argument(Z_ARRVAL_P(val), 2)) {\n\t\t\t\tRETURN_THROWS();\n\t\t\t} else {\n\t\t\t\tcopy_constant_array(&c.value, val);\n\t\t\t\tgoto register_constant;\n\t\t\t}\n\t\t}\n\t}\n\n\tZVAL_COPY(&c.value, val);\n\tzval_ptr_dtor(&val_free);\n\nregister_constant:\n\t/* non persistent */\n\tZEND_CONSTANT_SET_FLAGS(&c, 0, PHP_USER_CONSTANT);\n\tc.name = zend_string_copy(name);\n\tif (zend_register_constant(&c) == SUCCESS) {\n\t\tRETURN_TRUE;\n\t} else {\n\t\tRETURN_FALSE;\n\t}",
+    "semantic": "non persistent",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STR",
+            "Z_PARAM_ZVAL",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_BOOL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZSTR_VAL",
+            "ZSTR_LEN",
+            "RETURN_THROWS",
+            "ZVAL_UNDEF",
+            "ZVAL_COPY",
+            "ZEND_CONSTANT_SET_FLAGS",
+            "RETURN_TRUE",
+            "RETURN_FALSE"
+        ],
+        "zend_types": [
+            "zend_string",
+            "zval"
+        ],
+        "internal_helpers": [
+            "zend_memnstr",
+            "zend_argument_value_error",
+            "zend_error",
+            "zval_ptr_dtor",
+            "zend_string_copy",
+            "zend_register_constant"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common define inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 5,
+    "purpose": "non persistent",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "exit",
+        "zend_version",
+        "gc_mem_caches",
+        "gc_collect_cycles",
+        "gc_enabled",
+        "gc_enable",
+        "gc_disable",
+        "gc_status",
+        "func_num_args",
+        "func_get_arg",
+        "func_get_args",
+        "strlen"
+    ]
+}

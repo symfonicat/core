@@ -1,0 +1,119 @@
+{
+    "php_function": "zif_locale_set_default",
+    "zend_function": "zif_locale_set_default",
+    "source_file": "/locale_methods.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "locale_name",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "locale_name"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(locale_name)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "unicode/ustring.h",
+        "unicode/udata.h",
+        "unicode/putil.h",
+        "unicode/ures.h",
+        "php_intl.h",
+        "locale.h",
+        "locale_class.h",
+        "intl_convert.h",
+        "intl_data.h",
+        "zend_API.h",
+        "zend.h",
+        "php.h",
+        "main/php_ini.h",
+        "zend_smart_str.h"
+    ],
+    "body": "zend_string* locale_name;\n\tzend_string *ini_name;\n\tchar *default_locale = NULL;\n\n\tZEND_PARSE_PARAMETERS_START(1, 1)\n\t\tZ_PARAM_STR(locale_name)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (ZSTR_LEN(locale_name) == 0) {\n\t\tdefault_locale = (char *)uloc_getDefault();\n\t\tlocale_name = zend_string_init(default_locale, strlen(default_locale), 0);\n\t}\n\n\tini_name = zend_string_init(LOCALE_INI_NAME, sizeof(LOCALE_INI_NAME) - 1, 0);\n\tzend_alter_ini_entry(ini_name, locale_name, PHP_INI_USER, PHP_INI_STAGE_RUNTIME);\n\tzend_string_release_ex(ini_name, 0);\n\tif (default_locale != NULL) {\n\t\tzend_string_release_ex(locale_name, 0);\n\t}\n\n\tRETURN_TRUE;",
+    "semantic": "Implements the PHP function zif_locale_set_default in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STR",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZSTR_LEN",
+            "RETURN_TRUE"
+        ],
+        "zend_types": [
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "zend_string_init",
+            "zend_alter_ini_entry",
+            "zend_string_release_ex"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common zif_locale_set_default inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "Implements the PHP function zif_locale_set_default in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "zif_locale_get_default",
+        "locale_get_script",
+        "locale_get_region",
+        "locale_get_primary_language",
+        "locale_get_display_name",
+        "locale_get_display_language",
+        "locale_get_display_script",
+        "locale_get_display_region",
+        "locale_get_display_variant",
+        "locale_get_keywords",
+        "locale_canonicalize",
+        "locale_compose"
+    ]
+}

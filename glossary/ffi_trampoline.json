@@ -1,0 +1,107 @@
+{
+    "php_function": "ffi_trampoline",
+    "zend_function": "ffi_trampoline",
+    "source_file": "",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "php.h",
+        "php_ffi.h",
+        "ext/standard/info.h",
+        "php_scandir.h",
+        "zend_exceptions.h",
+        "zend_closures.h",
+        "zend_weakrefs.h",
+        "main/SAPI.h",
+        "zend_observer.h",
+        "ffi.h",
+        "sys/types.h",
+        "sys/stat.h",
+        "fcntl.h",
+        "win32/param.h",
+        "win32/winutil.h",
+        "sys/param.h",
+        "win32/glob.h",
+        "glob.h",
+        "ffi_arginfo.h"
+    ],
+    "body": "zend_ffi_type *type = EX(func)->internal_function.reserved[0];\n\tvoid *addr = EX(func)->internal_function.reserved[1];\n\tffi_cif cif;\n\tffi_type *ret_type = NULL;\n\tffi_type **arg_types = NULL;\n\tvoid **arg_values = NULL;\n\tuint32_t n, arg_count;\n\tvoid *ret;\n\tzend_ffi_type *arg_type;\n\tALLOCA_FLAG(arg_types_use_heap = 0)\n\tALLOCA_FLAG(arg_values_use_heap = 0)\n\tALLOCA_FLAG(ret_use_heap = 0)\n\n\tZEND_ASSERT(type->kind == ZEND_FFI_TYPE_FUNC);\n\targ_count = type->func.args ? zend_hash_num_elements(type->func.args) : 0;\n\tif (type->attr & ZEND_FFI_ATTR_VARIADIC) {\n\t\tif (arg_count > EX_NUM_ARGS()) {\n\t\t\tzend_throw_error(zend_ffi_exception_ce, \"Incorrect number of arguments for C function '%s', expecting at least %d parameter%s\", ZSTR_VAL(EX(func)->internal_function.function_name), arg_count, (arg_count != 1) ? \"s\" : \"\");\n\t\t\tgoto exit;\n\t\t}\n\t\tif (EX_NUM_ARGS()) {\n\t\t\targ_types = do_alloca(\n\t\t\t\tsizeof(ffi_type*) * EX_NUM_ARGS(), arg_types_use_heap);\n\t\t\targ_values = do_alloca(\n\t\t\t\t(sizeof(void*) + ZEND_FFI_SIZEOF_ARG) * EX_NUM_ARGS(), arg_values_use_heap);\n\t\t\tn = 0;\n\t\t\tif (type->func.args) {\n\t\t\t\tZEND_HASH_PACKED_FOREACH_PTR(type->func.args, arg_type) {\n\t\t\t\t\targ_type = ZEND_FFI_TYPE(arg_type);\n\t\t\t\t\targ_values[n] = ((char*)arg_values) + (sizeof(void*) * EX_NUM_ARGS()) + (ZEND_FFI_SIZEOF_ARG * n);\n\t\t\t\t\tif (zend_ffi_pass_arg(EX_VAR_NUM(n), arg_type, &arg_types[n], arg_values, n, execute_data) == FAILURE) {\n\t\t\t\t\t\tfree_alloca(arg_types, arg_types_use_heap);\n\t\t\t\t\t\tfree_alloca(arg_values, arg_values_use_heap);\n\t\t\t\t\t\tgoto exit;\n\t\t\t\t\t}\n\t\t\t\t\tn++;\n\t\t\t\t} ZEND_HASH_FOREACH_END();\n\t\t\t}\n\t\t\tfor (; n < EX_NUM_ARGS(); n++) {\n\t\t\t\targ_values[n] = ((char*)arg_values) + (sizeof(void*) * EX_NUM_ARGS()) + (ZEND_FFI_SIZEOF_ARG * n);\n\t\t\t\tif (zend_ffi_pass_var_arg(EX_VAR_NUM(n), &arg_types[n], arg_values, n, execute_data) == FAILURE) {\n\t\t\t\t\tfree_alloca(arg_types, arg_types_use_heap);\n\t\t\t\t\tfree_alloca(arg_values, arg_values_use_heap);\n\t\t\t\t\tgoto exit;\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\tret_type = zend_ffi_get_type(ZEND_FFI_TYPE(type->func.ret_type));\n\t\tif (!ret_type) {\n\t\t\tzend_ffi_return_unsupported(type->func.ret_type);\n\t\t\tfree_alloca(arg_types, arg_types_use_heap);\n\t\t\tfree_alloca(arg_values, arg_values_use_heap);\n\t\t\tgoto exit;\n\t\t}\n\t\tif (ffi_prep_cif_var(&cif, type->func.abi, arg_count, EX_NUM_ARGS(), ret_type, arg_types) != FFI_OK) {\n\t\t\tzend_throw_error(zend_ffi_exception_ce, \"Cannot prepare callback CIF\");\n\t\t\tfree_alloca(arg_types, arg_types_use_heap);\n\t\t\tfree_alloca(arg_values, arg_values_use_heap);\n\t\t\tgoto exit;\n\t\t}\n\t} else {\n\t\tif (arg_count != EX_NUM_ARGS()) {\n\t\t\tzend_throw_error(zend_ffi_exception_ce, \"Incorrect number of arguments for C function '%s', expecting exactly %d parameter%s\", ZSTR_VAL(EX(func)->internal_function.function_name), arg_count, (arg_count != 1) ? \"s\" : \"\");\n\t\t\tgoto exit;\n\t\t}\n\t\tif (EX_NUM_ARGS()) {\n\t\t\targ_types = do_alloca(\n\t\t\t\t(sizeof(ffi_type*) + sizeof(ffi_type)) * EX_NUM_ARGS(), arg_types_use_heap);\n\t\t\targ_values = do_alloca(\n\t\t\t\t(sizeof(void*) + ZEND_FFI_SIZEOF_ARG) * EX_NUM_ARGS(), arg_values_use_heap);\n\t\t\tn = 0;\n\t\t\tif (type->func.args) {\n\t\t\t\tZEND_HASH_PACKED_FOREACH_PTR(type->func.args, arg_type) {\n\t\t\t\t\targ_type = ZEND_FFI_TYPE(arg_type);\n\t\t\t\t\targ_values[n] = ((char*)arg_values) + (sizeof(void*) * EX_NUM_ARGS()) + (ZEND_FFI_SIZEOF_ARG * n);\n\t\t\t\t\tif (zend_ffi_pass_arg(EX_VAR_NUM(n), arg_type, &arg_types[n], arg_values, n, execute_data) == FAILURE) {\n\t\t\t\t\t\tfree_alloca(arg_types, arg_types_use_heap);\n\t\t\t\t\t\tfree_alloca(arg_values, arg_values_use_heap);\n\t\t\t\t\t\tgoto exit;\n\t\t\t\t\t}\n\t\t\t\t\tn++;\n\t\t\t\t} ZEND_HASH_FOREACH_END();\n\t\t\t}\n\t\t}\n\t\tret_type = zend_ffi_get_type(ZEND_FFI_TYPE(type->func.ret_type));\n\t\tif (!ret_type) {\n\t\t\tzend_ffi_return_unsupported(type->func.ret_type);\n\t\t\tfree_alloca(arg_types, arg_types_use_heap);\n\t\t\tfree_alloca(arg_values, arg_values_use_heap);\n\t\t\tgoto exit;\n\t\t}\n\t\tif (ffi_prep_cif(&cif, type->func.abi, arg_count, ret_type, arg_types) != FFI_OK) {\n\t\t\tzend_throw_error(zend_ffi_exception_ce, \"Cannot prepare callback CIF\");\n\t\t\tfree_alloca(arg_types, arg_types_use_heap);\n\t\t\tfree_alloca(arg_values, arg_values_use_heap);\n\t\t\tgoto exit;\n\t\t}\n\t}\n\n\tret = do_alloca(MAX(ret_type->size, sizeof(ffi_arg)), ret_use_heap);\n\tffi_call(&cif, addr, ret, arg_values);\n\n\tfor (n = 0; n < arg_count; n++) {\n\t\tif (arg_types[n]->type == FFI_TYPE_STRUCT) {\n\t\t\tefree(arg_types[n]);\n\t\t}\n\t}\n\tif (ret_type->type == FFI_TYPE_STRUCT) {\n\t\tefree(ret_type);\n\t}\n\n\tif (EX_NUM_ARGS()) {\n\t\tfree_alloca(arg_types, arg_types_use_heap);\n\t\tfree_alloca(arg_values, arg_values_use_heap);\n\t}\n\n\tif (ZEND_FFI_TYPE(type->func.ret_type)->kind != ZEND_FFI_TYPE_VOID) {\n\t\tzend_ffi_cdata_to_zval(NULL, ret, ZEND_FFI_TYPE(type->func.ret_type), BP_VAR_R, return_value, 0, 1, 0);\n\t} else {\n\t\tZVAL_NULL(return_value);\n\t}\n\tfree_alloca(ret, ret_use_heap);\n\nexit:\n\tzend_string_release(EX(func)->common.function_name);\n\tif (EX(func)->common.fn_flags & ZEND_ACC_CALL_VIA_TRAMPOLINE) {\n\t\tzend_free_trampoline(EX(func));\n\t\tEX(func) = NULL;\n\t}",
+    "semantic": "Implements the PHP function ffi_trampoline in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_ASSERT",
+            "ZEND_FFI_TYPE_FUNC",
+            "ZEND_FFI_ATTR_VARIADIC",
+            "ZSTR_VAL",
+            "ZEND_FFI_SIZEOF_ARG",
+            "ZEND_HASH_PACKED_FOREACH_PTR",
+            "ZEND_FFI_TYPE",
+            "ZEND_HASH_FOREACH_END",
+            "ZEND_FFI_TYPE_VOID",
+            "ZVAL_NULL",
+            "ZEND_ACC_CALL_VIA_TRAMPOLINE"
+        ],
+        "zend_types": [],
+        "internal_helpers": [
+            "zend_hash_num_elements",
+            "zend_throw_error",
+            "zend_ffi_pass_arg",
+            "zend_ffi_pass_var_arg",
+            "zend_ffi_get_type",
+            "zend_ffi_return_unsupported",
+            "zend_ffi_cdata_to_zval",
+            "zend_string_release",
+            "zend_free_trampoline"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common ffi_trampoline inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": false,
+        "uses_zend_string": true,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 9,
+    "purpose": "Implements the PHP function ffi_trampoline in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": []
+}

@@ -1,0 +1,146 @@
+{
+    "php_function": "array_combine",
+    "zend_function": "array_combine",
+    "source_file": "ray.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "keys",
+            "macro": "Z_PARAM_ARRAY_HT",
+            "arguments": [
+                "keys"
+            ],
+            "type": "HashTable",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY_HT(keys)"
+        },
+        {
+            "name": "values",
+            "macro": "Z_PARAM_ARRAY_HT",
+            "arguments": [
+                "values"
+            ],
+            "type": "HashTable",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY_HT(values)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "php_ini.h",
+        "stdarg.h",
+        "stdlib.h",
+        "math.h",
+        "time.h",
+        "string.h",
+        "zend_globals.h",
+        "zend_interfaces.h",
+        "php_array.h",
+        "basic_functions.h",
+        "php_string.h",
+        "php_math.h",
+        "zend_smart_str.h",
+        "zend_bitset.h",
+        "zend_exceptions.h",
+        "ext/random/php_random.h",
+        "zend_frameless_function.h"
+    ],
+    "body": "HashTable *values, *keys;\n\tuint32_t pos_values = 0;\n\tzval *entry_keys, *entry_values;\n\tint num_keys, num_values;\n\n\tZEND_PARSE_PARAMETERS_START(2, 2)\n\t\tZ_PARAM_ARRAY_HT(keys)\n\t\tZ_PARAM_ARRAY_HT(values)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tnum_keys = zend_hash_num_elements(keys);\n\tnum_values = zend_hash_num_elements(values);\n\n\tif (num_keys != num_values) {\n\t\tzend_argument_value_error(1, \"and argument #2 ($values) must have the same number of elements\");\n\t\tRETURN_THROWS();\n\t}\n\n\tif (!num_keys) {\n\t\tRETURN_EMPTY_ARRAY();\n\t}\n\n\tarray_init_size(return_value, num_keys);\n\tZEND_HASH_FOREACH_VAL(keys, entry_keys) {\n\t\twhile (1) {\n\t\t\tif (pos_values >= values->nNumUsed) {\n\t\t\t\tbreak;\n\t\t\t}\n\t\t\tentry_values = ZEND_HASH_ELEMENT(values, pos_values);\n\t\t\tif (Z_TYPE_P(entry_values) != IS_UNDEF) {\n\t\t\t\tif (Z_TYPE_P(entry_keys) == IS_LONG) {\n\t\t\t\t\tentry_values = zend_hash_index_update(Z_ARRVAL_P(return_value),\n\t\t\t\t\t\tZ_LVAL_P(entry_keys), entry_values);\n\t\t\t\t} else {\n\t\t\t\t\tzend_string *tmp_key;\n\t\t\t\t\tzend_string *key = zval_get_tmp_string(entry_keys, &tmp_key);\n\t\t\t\t\tentry_values = zend_symtable_update(Z_ARRVAL_P(return_value),\n\t\t\t\t\t\tkey, entry_values);\n\t\t\t\t\tzend_tmp_string_release(tmp_key);\n\t\t\t\t}\n\t\t\t\tzval_add_ref(entry_values);\n\t\t\t\tpos_values++;\n\t\t\t\tbreak;\n\t\t\t}\n\t\t\tpos_values++;\n\t\t}\n\t} ZEND_HASH_FOREACH_END();",
+    "semantic": "Implements the PHP function array_combine in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_ARRAY_HT",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_THROWS",
+            "RETURN_EMPTY_ARRAY",
+            "ZEND_HASH_FOREACH_VAL",
+            "ZEND_HASH_ELEMENT",
+            "ZEND_HASH_FOREACH_END"
+        ],
+        "zend_types": [
+            "HashTable",
+            "zval",
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "zend_hash_num_elements",
+            "zend_argument_value_error",
+            "zend_hash_index_update",
+            "zval_get_tmp_string",
+            "zend_symtable_update",
+            "zend_tmp_string_release",
+            "zval_add_ref"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common array_combine inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 6,
+    "purpose": "Implements the PHP function array_combine in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "krsort",
+        "ksort",
+        "count",
+        "natsort",
+        "natcasesort",
+        "asort",
+        "arsort",
+        "sort",
+        "rsort",
+        "usort",
+        "uasort",
+        "uksort"
+    ]
+}

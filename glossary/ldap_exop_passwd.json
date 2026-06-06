@@ -1,0 +1,97 @@
+{
+    "php_function": "ldap_exop_passwd",
+    "zend_function": "ldap_exop_passwd",
+    "source_file": "",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "Zend/zend_attributes.h",
+        "stddef.h",
+        "ext/standard/dl.h",
+        "php_ldap.h",
+        "string.h",
+        "config.w32.h",
+        "ext/standard/info.h",
+        "sasl/sasl.h",
+        "ldap_arginfo.h"
+    ],
+    "body": "zval *link, *serverctrls;\n\tstruct berval luser = { 0L, NULL };\n\tstruct berval loldpw = { 0L, NULL };\n\tstruct berval lnewpw = { 0L, NULL };\n\tstruct berval lgenpasswd = { 0L, NULL };\n\tLDAPControl *ctrl, **lserverctrls = NULL, *requestctrls[2] = { NULL, NULL };\n\tLDAPMessage* ldap_res = NULL;\n\tldap_linkdata *ld;\n\tint rc, myargcount = ZEND_NUM_ARGS(), msgid, err;\n\tchar* errmsg = NULL;\n\n\tif (zend_parse_parameters(myargcount, \"O|sssz/\", &link, ldap_link_ce, &luser.bv_val, &luser.bv_len, &loldpw.bv_val, &loldpw.bv_len, &lnewpw.bv_val, &lnewpw.bv_len, &serverctrls) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tld = Z_LDAP_LINK_P(link);\n\tVERIFY_LDAP_LINK_CONNECTED(ld);\n\n\tswitch (myargcount) {\n\t\tcase 5:\n\t\t\t/* ldap_create_passwordpolicy_control() allocates ctrl */\n\t\t\tif (ldap_create_passwordpolicy_control(ld->link, &ctrl) == LDAP_SUCCESS) {\n\t\t\t\trequestctrls[0] = ctrl;\n\t\t\t}\n\t}\n\n\t/* asynchronous call to get result and controls */\n\trc = ldap_passwd(ld->link, &luser,\n\t\tloldpw.bv_len > 0 ? &loldpw : NULL,\n\t\tlnewpw.bv_len > 0 ? &lnewpw : NULL,\n\t\trequestctrls,\n\t\tNULL, &msgid);\n\n\tif (requestctrls[0] != NULL) {\n\t\tldap_control_free(requestctrls[0]);\n\t}\n\n\tif (rc != LDAP_SUCCESS ) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Passwd modify extended operation failed: %s (%d)\", ldap_err2string(rc), rc);\n\t\tRETVAL_FALSE;\n\t\tgoto cleanup;\n\t}\n\n\trc = ldap_result(ld->link, msgid, 1 /* LDAP_MSG_ALL */, NULL, &ldap_res);\n\tif ((rc < 0) || !ldap_res) {\n\t\trc = _get_lderrno(ld->link);\n\t\tphp_error_docref(NULL, E_WARNING, \"Passwd modify extended operation failed: %s (%d)\", ldap_err2string(rc), rc);\n\t\tRETVAL_FALSE;\n\t\tgoto cleanup;\n\t}\n\n\trc = ldap_parse_passwd(ld->link, ldap_res, &lgenpasswd);\n\tif( rc != LDAP_SUCCESS ) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Passwd modify extended operation failed: %s (%d)\", ldap_err2string(rc), rc);\n\t\tRETVAL_FALSE;\n\t\tgoto cleanup;\n\t}\n\n\trc = ldap_parse_result(ld->link, ldap_res, &err, NULL, &errmsg, NULL, (myargcount > 4 ? &lserverctrls : NULL), 0);\n\tif( rc != LDAP_SUCCESS ) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Passwd modify extended operation failed: %s (%d)\", ldap_err2string(rc), rc);\n\t\tRETVAL_FALSE;\n\t\tgoto cleanup;\n\t}\n\n\tif (myargcount > 4) {\n\t\t_php_ldap_controls_to_array(ld->link, lserverctrls, serverctrls, 0);\n\t}\n\n\t/* return */\n\tif (lnewpw.bv_len == 0) {\n\t\tif (lgenpasswd.bv_len == 0) {\n\t\t\tRETVAL_EMPTY_STRING();\n\t\t} else {\n\t\t\tRETVAL_STRINGL(lgenpasswd.bv_val, lgenpasswd.bv_len);\n\t\t}\n\t} else if (err == LDAP_SUCCESS) {\n\t\tRETVAL_TRUE;\n\t} else {\n\t\tphp_error_docref(NULL, E_WARNING, \"Passwd modify extended operation failed: %s (%d)\", (errmsg ? errmsg : ldap_err2string(err)), err);\n\t\tRETVAL_FALSE;\n\t}\n\ncleanup:\n\tif (lgenpasswd.bv_val != NULL) {\n\t\tldap_memfree(lgenpasswd.bv_val);\n\t}\n\tif (ldap_res != NULL) {\n\t\tldap_msgfree(ldap_res);\n\t}\n\tif (errmsg != NULL) {\n\t\tldap_memfree(errmsg);\n\t}",
+    "semantic": "ldap_create_passwordpolicy_control() allocates ctrl",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS"
+        ],
+        "zend_types": [
+            "zval"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "php_error_docref"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common ldap_exop_passwd inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "ldap_create_passwordpolicy_control() allocates ctrl",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "ldap_connect",
+        "ldap_connect_wallet",
+        "ldap_bind",
+        "ldap_bind_ext",
+        "ldap_sasl_bind",
+        "ldap_unbind",
+        "ldap_read",
+        "ldap_list",
+        "ldap_search",
+        "ldap_free_result",
+        "ldap_count_entries",
+        "ldap_first_entry"
+    ]
+}

@@ -1,0 +1,181 @@
+#!/bin/sh
+
+set -eu
+
+log() {
+    printf '[symfonicat-native-watch] %s\n' "$*"
+}
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+project_dir=$(CDPATH= cd -- "$script_dir/.." && pwd)
+sentinel_dir=/run/symfonicat
+sentinel_file=$sentinel_dir/native-watch.sentinel
+watch_timeout=${SYMFONICAT_NATIVE_WATCH_TIMEOUT:-1}
+watch_backend=poll
+php_pid=""
+last_snapshot=""
+last_change=""
+
+watch_paths() {
+    printf '%s\n' \
+        /symfonicat/core/native/ext \
+        /symfonicat/core/native/go \
+        /symfonicat/native/ext \
+        /symfonicat/native/go
+
+    for path in /symfonicat/vendor/*/*/native/ext /symfonicat/vendor/*/*/native/go; do
+        [ -d "$path" ] || continue
+        printf '%s\n' "$path"
+    done
+}
+
+matches_native_path() {
+    case "$1" in
+        /symfonicat/core/native/ext/*)
+            return 0
+            ;;
+        /symfonicat/core/native/go/*)
+            return 0
+            ;;
+        /symfonicat/native/ext/*)
+            return 0
+            ;;
+        /symfonicat/native/go/*)
+            return 0
+            ;;
+        /symfonicat/vendor/*/*/native/ext/*)
+            return 0
+            ;;
+        /symfonicat/vendor/*/*/native/go/*)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+native_snapshot() {
+    {
+        watch_paths | while IFS= read -r path; do
+            [ -d "$path" ] || continue
+            find "$path" -type f -print
+        done
+    } | LC_ALL=C sort | while IFS= read -r file; do
+        [ -n "$file" ] || continue
+        sha256sum "$file"
+    done | sha256sum | awk '{print $1}'
+}
+
+write_sentinel() {
+    snapshot=$1
+    mkdir -p "$sentinel_dir"
+    printf 'backend=%s\npid=%s\nsnapshot=%s\nupdated_at=%s\n' \
+        "$watch_backend" \
+        "${php_pid:-}" \
+        "$snapshot" \
+        "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$sentinel_file"
+    if [ -n "$last_change" ]; then
+        printf 'last_change=%s\n' "$last_change" >> "$sentinel_file"
+    fi
+}
+
+start_server() {
+    frankenphp run --config /etc/frankenphp/Caddyfile &
+    php_pid=$!
+    printf '%s\n' "$php_pid" > "$sentinel_dir/frankenphp.pid"
+    log "started frankenphp with pid $php_pid"
+}
+
+stop_server() {
+    if [ -n "${php_pid:-}" ] && kill -0 "$php_pid" 2>/dev/null; then
+        kill "$php_pid" 2>/dev/null || true
+        wait "$php_pid" 2>/dev/null || true
+    fi
+}
+
+rebuild_native_stack() {
+    log "rebuilding native extensions and frankenphp"
+    "$project_dir/bin/native-build"
+}
+
+mkdir -p "$sentinel_dir"
+
+if command -v inotifywait >/dev/null 2>&1; then
+    watch_backend=notify
+fi
+
+log "native watch enabled: backend=$watch_backend timeout=$watch_timeout sentinel=$sentinel_file"
+log "watch roots: $(watch_paths | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
+
+start_server
+last_snapshot=$(native_snapshot)
+write_sentinel "$last_snapshot"
+
+while :; do
+    if ! kill -0 "$php_pid" 2>/dev/null; then
+        wait "$php_pid" 2>/dev/null || exit 0
+        exit 0
+    fi
+
+    current_snapshot=$(native_snapshot)
+    if [ "$current_snapshot" != "$last_snapshot" ]; then
+        last_snapshot=$current_snapshot
+        last_change="filesystem snapshot changed"
+        log "native change detected via filesystem snapshot"
+
+        if rebuild_native_stack; then
+            stop_server
+            start_server
+            last_snapshot=$(native_snapshot)
+            write_sentinel "$last_snapshot"
+        else
+            log "native rebuild failed; leaving current server running"
+            write_sentinel "$last_snapshot"
+        fi
+
+        continue
+    fi
+
+    if [ "$watch_backend" = "notify" ]; then
+        set +e
+        changed_path=$(inotifywait -qq -t "$watch_timeout" -r -e close_write,create,delete,move \
+            --format '%w%f' $(watch_paths) 2>/dev/null)
+        notify_status=$?
+        set -e
+
+        case "$notify_status" in
+            0)
+                ;;
+            2)
+                continue
+                ;;
+            *)
+                log "inotifywait failed with status $notify_status; switching to polling"
+                watch_backend=poll
+                write_sentinel "$last_snapshot"
+                continue
+                ;;
+        esac
+
+        if [ -z "$changed_path" ] || ! matches_native_path "$changed_path"; then
+            continue
+        fi
+
+        last_change=$changed_path
+        log "native change detected at $changed_path"
+    else
+        sleep "$watch_timeout"
+        continue
+    fi
+
+    if rebuild_native_stack; then
+        stop_server
+        start_server
+        last_snapshot=$(native_snapshot)
+        write_sentinel "$last_snapshot"
+    else
+        log "native rebuild failed; leaving current server running"
+        write_sentinel "$last_snapshot"
+    fi
+done

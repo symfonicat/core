@@ -1,0 +1,160 @@
+{
+    "php_function": "array_fill",
+    "zend_function": "array_fill",
+    "source_file": "ray.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "start_key",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "start_key"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(start_key)"
+        },
+        {
+            "name": "num",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "num"
+            ],
+            "type": "zend_long",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(num)"
+        },
+        {
+            "name": "val",
+            "macro": "Z_PARAM_ZVAL",
+            "arguments": [
+                "val"
+            ],
+            "type": "zval",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": true,
+            "raw": "Z_PARAM_ZVAL(val)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "php_ini.h",
+        "stdarg.h",
+        "stdlib.h",
+        "math.h",
+        "time.h",
+        "string.h",
+        "zend_globals.h",
+        "zend_interfaces.h",
+        "php_array.h",
+        "basic_functions.h",
+        "php_string.h",
+        "php_math.h",
+        "zend_smart_str.h",
+        "zend_bitset.h",
+        "zend_exceptions.h",
+        "ext/random/php_random.h",
+        "zend_frameless_function.h"
+    ],
+    "body": "zval *val;\n\tzend_long start_key, num;\n\n\tZEND_PARSE_PARAMETERS_START(3, 3)\n\t\tZ_PARAM_LONG(start_key)\n\t\tZ_PARAM_LONG(num)\n\t\tZ_PARAM_ZVAL(val)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (EXPECTED(num > 0)) {\n\t\tif (sizeof(num) > 4 && UNEXPECTED(num > INT_MAX)) {\n\t\t\tzend_argument_value_error(2, \"is too large\");\n\t\t\tRETURN_THROWS();\n\t\t} else if (UNEXPECTED(start_key > ZEND_LONG_MAX - num + 1)) {\n\t\t\tzend_throw_error(NULL, \"Cannot add element to the array as the next element is already occupied\");\n\t\t\tRETURN_THROWS();\n\t\t} else if (EXPECTED(start_key >= 0) && EXPECTED(start_key < num)) {\n\t\t\t/* create packed array */\n\t\t\tzval *zv;\n\n\t\t\tarray_init_size(return_value, (uint32_t)(start_key + num));\n\t\t\tzend_hash_real_init_packed(Z_ARRVAL_P(return_value));\n\t\t\tZ_ARRVAL_P(return_value)->nNumUsed = (uint32_t)(start_key + num);\n\t\t\tZ_ARRVAL_P(return_value)->nNumOfElements = (uint32_t)num;\n\t\t\tZ_ARRVAL_P(return_value)->nNextFreeElement = (zend_long)(start_key + num);\n\n\t\t\tif (Z_REFCOUNTED_P(val)) {\n\t\t\t\tGC_ADDREF_EX(Z_COUNTED_P(val), (uint32_t)num);\n\t\t\t}\n\n\t\t\tzv = Z_ARRVAL_P(return_value)->arPacked;\n\n\t\t\twhile (start_key--) {\n\t\t\t\tZVAL_UNDEF(zv);\n\t\t\t\tzv++;\n\t\t\t}\n\t\t\twhile (num--) {\n\t\t\t\tZVAL_COPY_VALUE(zv, val);\n\t\t\t\tzv++;\n\t\t\t}\n\t\t} else {\n\t\t\t/* create hash */\n\t\t\tarray_init_size(return_value, (uint32_t)num);\n\t\t\tzend_hash_real_init_mixed(Z_ARRVAL_P(return_value));\n\t\t\tif (Z_REFCOUNTED_P(val)) {\n\t\t\t\tGC_ADDREF_EX(Z_COUNTED_P(val), (uint32_t)num);\n\t\t\t}\n\t\t\tzend_hash_index_add_new(Z_ARRVAL_P(return_value), start_key, val);\n\t\t\twhile (--num) {\n\t\t\t\tzend_hash_next_index_insert_new(Z_ARRVAL_P(return_value), val);\n\t\t\t\tstart_key++;\n\t\t\t}\n\t\t}\n\t} else if (EXPECTED(num == 0)) {\n\t\tRETURN_EMPTY_ARRAY();\n\t} else {\n\t\tzend_argument_value_error(2, \"must be greater than or equal to 0\");\n\t\tRETURN_THROWS();\n\t}",
+    "semantic": "create packed array",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_LONG",
+            "Z_PARAM_ZVAL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_THROWS",
+            "ZEND_LONG_MAX",
+            "GC_ADDREF_EX",
+            "ZVAL_UNDEF",
+            "ZVAL_COPY_VALUE",
+            "RETURN_EMPTY_ARRAY"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_argument_value_error",
+            "zend_throw_error",
+            "zend_hash_real_init_packed",
+            "zend_hash_real_init_mixed",
+            "zend_hash_index_add_new",
+            "zend_hash_next_index_insert_new"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common array_fill inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 8,
+    "purpose": "create packed array",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "krsort",
+        "ksort",
+        "count",
+        "natsort",
+        "natcasesort",
+        "asort",
+        "arsort",
+        "sort",
+        "rsort",
+        "usort",
+        "uasort",
+        "uksort"
+    ]
+}

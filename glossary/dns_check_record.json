@@ -1,0 +1,85 @@
+{
+    "php_function": "dns_check_record",
+    "zend_function": "dns_check_record",
+    "source_file": "s_win32.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "php.h",
+        "windows.h",
+        "Winbase.h ",
+        "Windns.h",
+        "Ws2tcpip.h",
+        "php_dns.h"
+    ],
+    "body": "char *hostname;\n\tsize_t hostname_len;\n\tzend_string *rectype = NULL;\n\tint type = DNS_TYPE_MX;\n\n\tDNS_STATUS      status;                 /* Return value of DnsQuery_A() function */\n\tPDNS_RECORD     pResult;          /* Pointer to DNS_RECORD structure */\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"s|S\", &hostname, &hostname_len, &rectype) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tif (hostname_len == 0) {\n\t\tzend_argument_must_not_be_empty_error(1);\n\t\tRETURN_THROWS();\n\t}\n\n\tif (rectype) {\n\t\t     if (zend_string_equals_literal_ci(rectype,     \"A\")) type = DNS_TYPE_A;\n\t\telse if (zend_string_equals_literal_ci(rectype,    \"NS\")) type = DNS_TYPE_NS;\n\t\telse if (zend_string_equals_literal_ci(rectype,    \"MX\")) type = DNS_TYPE_MX;\n\t\telse if (zend_string_equals_literal_ci(rectype,   \"PTR\")) type = DNS_TYPE_PTR;\n\t\telse if (zend_string_equals_literal_ci(rectype,   \"ANY\")) type = DNS_TYPE_ANY;\n\t\telse if (zend_string_equals_literal_ci(rectype,   \"SOA\")) type = DNS_TYPE_SOA;\n\t\telse if (zend_string_equals_literal_ci(rectype,   \"TXT\")) type = DNS_TYPE_TEXT;\n\t\telse if (zend_string_equals_literal_ci(rectype, \"CNAME\")) type = DNS_TYPE_CNAME;\n\t\telse if (zend_string_equals_literal_ci(rectype,  \"AAAA\")) type = DNS_TYPE_AAAA;\n\t\telse if (zend_string_equals_literal_ci(rectype,   \"SRV\")) type = DNS_TYPE_SRV;\n\t\telse if (zend_string_equals_literal_ci(rectype, \"NAPTR\")) type = DNS_TYPE_NAPTR;\n\t\telse if (zend_string_equals_literal_ci(rectype,    \"A6\")) type = DNS_TYPE_A6;\n\t\telse {\n\t\t\tzend_argument_value_error(2, \"must be a valid DNS record type\");\n\t\t\tRETURN_THROWS();\n\t\t}\n\t}\n\n\tstatus = DnsQuery_A(hostname, type, DNS_QUERY_STANDARD, NULL, &pResult, NULL);\n\n\tif (status) {\n\t\tRETURN_FALSE;\n\t}\n\n\tRETURN_TRUE;",
+    "semantic": "Return value of DnsQuery_A() function",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_FALSE",
+            "RETURN_TRUE"
+        ],
+        "zend_types": [
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "zend_argument_must_not_be_empty_error",
+            "zend_string_equals_literal_ci",
+            "zend_argument_value_error"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common dns_check_record inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 4,
+    "purpose": "Return value of DnsQuery_A() function",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "dns_get_mx",
+        "dns_get_record"
+    ]
+}

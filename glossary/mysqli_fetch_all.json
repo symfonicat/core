@@ -1,0 +1,96 @@
+{
+    "php_function": "mysqli_fetch_all",
+    "zend_function": "mysqli_fetch_all",
+    "source_file": "li_nonapi.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "signal.h",
+        "php.h",
+        "zend_smart_str.h",
+        "php_mysqli_structs.h",
+        "mysqli_priv.h",
+        "php_network.h"
+    ],
+    "body": "MYSQL_RES\t*result;\n\tzval\t\t*mysql_result;\n\tzend_long\t\tmode = MYSQLI_NUM;\n\n\tif (zend_parse_method_parameters(ZEND_NUM_ARGS(), getThis(), \"O|l\", &mysql_result, mysqli_result_class_entry, &mode) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\tMYSQLI_FETCH_RESOURCE(result, MYSQL_RES *, mysql_result, \"mysqli_result\", MYSQLI_STATUS_VALID);\n\n\tif (!mode || (mode & ~MYSQLI_BOTH)) {\n\t\tzend_argument_value_error(ERROR_ARG_POS(2), \"must be one of MYSQLI_NUM, MYSQLI_ASSOC, or MYSQLI_BOTH\");\n\t\tRETURN_THROWS();\n\t}\n\n\tarray_init_size(return_value, mysql_num_rows(result));\n\n\tzend_ulong i = 0;\n\tdo {\n\t\tzval row;\n\t\tphp_mysqli_fetch_into_hash_aux(&row, result, mode);\n\t\tif (Z_TYPE(row) != IS_ARRAY) {\n\t\t\tzval_ptr_dtor_nogc(&row);\n\t\t\tbreak;\n\t\t}\n\t\tadd_index_zval(return_value, i++, &row);\n\t} while (1);",
+    "semantic": "Implements the PHP function mysqli_fetch_all in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_parse_method_parameters",
+            "zend_argument_value_error",
+            "php_mysqli_fetch_into_hash_aux",
+            "zval_ptr_dtor_nogc"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common mysqli_fetch_all inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "Implements the PHP function mysqli_fetch_all in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "mysqli_connect",
+        "mysqli_connect_errno",
+        "mysqli_connect_error",
+        "mysqli_fetch_array",
+        "mysqli_fetch_assoc",
+        "mysqli_fetch_column",
+        "mysqli_get_client_stats",
+        "mysqli_get_connection_stats",
+        "mysqli_error_list",
+        "mysqli_stmt_error_list",
+        "mysqli_fetch_object",
+        "mysqli_multi_query"
+    ]
+}

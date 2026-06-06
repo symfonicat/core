@@ -139,14 +139,14 @@ final class RuntimeConfig
     public function applicationForDomain(Domain $domain): ?Application
     {
         return $this->firstApplication(static fn (Application $application): bool => $application->isDomainType()
-            && $application->getDomain()?->getId() === $domain->getId());
+            && $application->getDomain()?->getTld() === $domain->getTld());
     }
 
     public function applicationForSubdomain(Subdomain $subdomain, ?Domain $domain = null): ?Application
     {
         return $this->firstApplication(static fn (Application $application): bool => $application->isSubdomainType()
             && $this->sameSubdomain($application->getSubdomain(), $subdomain)
-            && (!$domain instanceof Domain || $application->getDomain()?->getId() === $domain->getId()));
+            && (!$domain instanceof Domain || $application->getDomain()?->getTld() === $domain->getTld()));
     }
 
     public function applicationForEndpoint(Endpoint $endpoint): ?Application
@@ -495,7 +495,7 @@ final class RuntimeConfig
             return false;
         }
 
-        return $left->getDomain()?->getId() === $right->getDomain()?->getId();
+        return $left->getDomain()?->getTld() === $right->getDomain()?->getTld();
     }
 
     private function firstApplication(callable $predicate): ?Application

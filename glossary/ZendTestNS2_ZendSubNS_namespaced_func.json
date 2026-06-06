@@ -1,0 +1,99 @@
+{
+    "php_function": "ZendTestNS2_ZendSubNS_namespaced_func",
+    "zend_function": "ZendTestNS2_ZendSubNS_namespaced_func",
+    "source_file": "est.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "zend_modules.h",
+        "php.h",
+        "php_ini.h",
+        "ext/standard/info.h",
+        "php_test.h",
+        "observer.h",
+        "fiber.h",
+        "iterators.h",
+        "object_handlers.h",
+        "zend_attributes.h",
+        "zend_enum.h",
+        "zend_interfaces.h",
+        "zend_weakrefs.h",
+        "Zend/Optimizer/zend_optimizer.h",
+        "Zend/zend_alloc.h",
+        "test_arginfo.h",
+        "zend_call_stack.h",
+        "zend_exceptions.h",
+        "zend_mm_custom_handlers.h",
+        "assert.h"
+    ],
+    "body": "ZEND_PARSE_PARAMETERS_NONE();\n\tRETURN_TRUE;",
+    "semantic": "Implements the PHP function ZendTestNS2_ZendSubNS_namespaced_func in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_NONE",
+            "RETURN_TRUE"
+        ],
+        "zend_types": [],
+        "internal_helpers": []
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common ZendTestNS2_ZendSubNS_namespaced_func inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 1,
+    "purpose": "Implements the PHP function ZendTestNS2_ZendSubNS_namespaced_func in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "zend_test_func",
+        "zend_test_array_return",
+        "zend_test_nullable_array_return",
+        "zend_test_void_return",
+        "zend_test_deprecated",
+        "zend_test_deprecated_attr",
+        "zend_create_unterminated_string",
+        "zend_terminate_string",
+        "zend_leak_bytes",
+        "zend_leak_variable",
+        "zend_string_or_object",
+        "zend_string_or_object_or_null"
+    ]
+}

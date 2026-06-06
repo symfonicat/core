@@ -173,7 +173,7 @@ class Module
                 $existingSubdomain->getAffix() !== null
                 && $subdomain->getAffix() !== null
                 && $existingSubdomain->getAffix() === $subdomain->getAffix()
-                && $existingSubdomain->getDomain()?->getId() === $subdomain->getDomain()?->getId()
+                && $existingSubdomain->getDomain()?->getTld() === $subdomain->getDomain()?->getTld()
             ) {
                 return true;
             }
@@ -189,7 +189,7 @@ class Module
                 return true;
             }
 
-            if ($existingDomain->getId() !== null && $domain->getId() !== null && $existingDomain->getId() === $domain->getId()) {
+            if ($existingDomain->getTld() !== null && $domain->getTld() !== null && $existingDomain->getTld() === $domain->getTld()) {
                 return true;
             }
         }

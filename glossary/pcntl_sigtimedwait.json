@@ -1,0 +1,175 @@
+{
+    "php_function": "pcntl_sigtimedwait",
+    "zend_function": "pcntl_sigtimedwait",
+    "source_file": ".c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "user_set",
+            "macro": "Z_PARAM_ARRAY_HT",
+            "arguments": [
+                "user_set"
+            ],
+            "type": "HashTable",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY_HT(user_set)"
+        },
+        {
+            "name": "user_siginfo",
+            "macro": "Z_PARAM_ZVAL",
+            "arguments": [
+                "user_siginfo"
+            ],
+            "type": "zval",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": true,
+            "raw": "Z_PARAM_ZVAL(user_siginfo)"
+        },
+        {
+            "name": "tv_sec",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "tv_sec"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(tv_sec)"
+        },
+        {
+            "name": "tv_nsec",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "tv_nsec"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(tv_nsec)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "php.h",
+        "ext/standard/info.h",
+        "php_signal.h",
+        "php_ticks.h",
+        "zend_fibers.h",
+        "sys/wait.h",
+        "sys/time.h",
+        "sys/resource.h",
+        "php_pcntl.h",
+        "errno.h",
+        "sched.h",
+        "sys/types.h",
+        "sys/cpuset.h",
+        "sys/syscall.h",
+        "sys/pset.h",
+        "sys/processor.h",
+        "pthread/qos.h",
+        "sys/fork.h",
+        "Zend/zend_enum.h",
+        "Zend/zend_max_execution_timer.h",
+        "pcntl_arginfo.h"
+    ],
+    "body": "HashTable *user_set;\n\t/* Optional by-ref array of ints */\n\tzval *user_siginfo = NULL;\n\tzend_long tv_sec = 0;\n\tzend_long tv_nsec = 0;\n\n\tZEND_PARSE_PARAMETERS_START(1, 4)\n\t\tZ_PARAM_ARRAY_HT(user_set)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_ZVAL(user_siginfo)\n\t\tZ_PARAM_LONG(tv_sec)\n\t\tZ_PARAM_LONG(tv_nsec)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tsigset_t set;\n\tbool status = php_pcntl_set_user_signal_infos(user_set, &set, 1, /* allow_empty_signal_array */ false);\n\t/* Some error occurred */\n\tif (!status) {\n\t\tRETURN_FALSE;\n\t}\n\tif (tv_sec < 0) {\n\t\tzend_argument_value_error(3, \"must be greater than or equal to 0\");\n\t\tRETURN_THROWS();\n\t}\n\t/* Nanosecond between 0 and 1e9 */\n\tif (tv_nsec < 0 || tv_nsec >= 1000000000) {\n\t\tzend_argument_value_error(4, \"must be between 0 and 1e9\");\n\t\tRETURN_THROWS();\n\t}\n\tif (UNEXPECTED(tv_sec == 0 && tv_nsec == 0)) {\n\t\tzend_value_error(\"pcntl_sigtimedwait(): At least one of argument #3 ($seconds) or argument #4 ($nanoseconds) must be greater than 0\");\n\t\tRETURN_THROWS();\n\t}\n\n\terrno = 0;\n\tsiginfo_t siginfo;\n\tstruct timespec timeout;\n\ttimeout.tv_sec  = (time_t) tv_sec;\n\ttimeout.tv_nsec = tv_nsec;\n\tint signal_no = sigtimedwait(&set, &siginfo, &timeout);\n\tif (signal_no == -1) {\n\t\tif (errno != EAGAIN) {\n\t\t\tPCNTL_G(last_error) = errno;\n\t\t\tphp_error_docref(NULL, E_WARNING, \"%s\", strerror(errno));\n\t\t}\n\t\tRETURN_FALSE;\n\t}\n\n\t/* sigtimedwait can return 0 on success on some platforms, e.g. NetBSD */\n\tif (!signal_no && siginfo.si_signo) {\n\t\tsignal_no = siginfo.si_signo;\n\t}\n\n\tpcntl_siginfo_to_zval(signal_no, &siginfo, user_siginfo);\n\n\tRETURN_LONG(signal_no);",
+    "semantic": "Optional by-ref array of ints",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_ARRAY_HT",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_ZVAL",
+            "Z_PARAM_LONG",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_FALSE",
+            "RETURN_THROWS",
+            "RETURN_LONG"
+        ],
+        "zend_types": [
+            "HashTable",
+            "zval",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "php_pcntl_set_user_signal_infos",
+            "zend_argument_value_error",
+            "zend_value_error",
+            "php_error_docref"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common pcntl_sigtimedwait inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 6,
+    "purpose": "Optional by-ref array of ints",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "pcntl_fork",
+        "pcntl_alarm",
+        "pcntl_waitpid",
+        "pcntl_waitid",
+        "pcntl_wait",
+        "pcntl_wifexited",
+        "pcntl_wifstopped",
+        "pcntl_wifsignaled",
+        "pcntl_wifcontinued",
+        "pcntl_wexitstatus",
+        "pcntl_wtermsig",
+        "pcntl_wstopsig"
+    ]
+}

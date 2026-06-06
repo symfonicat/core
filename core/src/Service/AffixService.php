@@ -2,9 +2,6 @@
 
 namespace Symfonicat\Service;
 
-use Symfonicat\Service\DomainService;
-use Pdp\Domain;
-use Pdp\Rules;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 
@@ -12,12 +9,9 @@ final class AffixService
 {
 
     public function __construct(
-
-        private readonly string $subdomainDir,
         private readonly RequestStack $requestStack,
         private readonly LoggerInterface $logger,
         private readonly DomainService $domainService
-
     ) {
     }
 
@@ -28,7 +22,7 @@ final class AffixService
     {
         try {
             $host = $this->requestStack->getCurrentRequest()?->getHost();
-            if ( $host === NULL) {
+            if (!is_string($host)) {
                 return [];
             }
 
@@ -37,19 +31,36 @@ final class AffixService
                 return [];
             }
 
-            if ( str_ends_with($host, 'localhost')) {
-                $host = str_replace ('localhost', '', $host) . 'localhost.com';
-            }
-
-            $domain = Domain::fromIDNA2008($host);
-            $result = $this->domainService->getPublicSuffixList()->resolve($domain);
-
-            $affix = trim ( $result->subDomain()->toString(), '.');
-            if ( $affix === '') {
+            $domain = $this->domainService->host();
+            if (!is_string($domain) || $domain === '') {
                 return [];
             }
 
-            return array_values ( array_reverse ( explode ('.', $affix)));
+            $domain = strtolower(trim($domain));
+            if ($domain === '' || $host === $domain) {
+                return [];
+            }
+
+            if (!str_ends_with($host, '.'.$domain)) {
+                return [];
+            }
+
+            $affix = substr($host, 0, -strlen($domain) - 1);
+            if (!is_string($affix)) {
+                return [];
+            }
+
+            $affix = trim($affix, '.');
+            if ($affix === '') {
+                return [];
+            }
+
+            $segments = array_values(array_filter(explode('.', $affix), static fn (string $label): bool => $label !== ''));
+            if ($segments === []) {
+                return [];
+            }
+
+            return array_values(array_reverse($segments));
         } catch (\Throwable $exception) {
             $this->logger->error($exception->getMessage());
 

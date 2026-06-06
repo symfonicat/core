@@ -35,13 +35,25 @@ final class SymfonicatModuleSubscriberTest extends TestCase
         self::assertFalse($event->getRequest()->attributes->has('module_json'));
     }
 
-    public function testIgnoresNonBrotliRequests(): void
+    public function testDecodesPlainModuleRequests(): void
     {
         $event = $this->requestEvent('/m/symfonicat/analytics/main', [], '{"hello":"world"}');
 
         (new SymfonicatModuleSubscriber())->onKernelRequest($event);
 
-        self::assertFalse($event->getRequest()->attributes->has('module_json'));
+        self::assertSame([
+            'hello' => 'world',
+        ], $event->getRequest()->attributes->get('module_json'));
+    }
+
+    public function testInvalidModuleJsonThrows(): void
+    {
+        $event = $this->requestEvent('/m/symfonicat/analytics/main', [
+            'HTTP_CONTENT_ENCODING' => 'br',
+        ], "\x00\x01\x02not-json");
+
+        $this->expectException(\JsonException::class);
+        (new SymfonicatModuleSubscriber())->onKernelRequest($event);
     }
 
     /**

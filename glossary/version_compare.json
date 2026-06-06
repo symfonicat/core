@@ -1,0 +1,130 @@
+{
+    "php_function": "version_compare",
+    "zend_function": "version_compare",
+    "source_file": "rsioning.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "v1",
+            "macro": "Z_PARAM_STRING",
+            "arguments": [
+                "v1",
+                "v1_len"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING(v1, v1_len)"
+        },
+        {
+            "name": "v2",
+            "macro": "Z_PARAM_STRING",
+            "arguments": [
+                "v2",
+                "v2_len"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING(v2, v2_len)"
+        },
+        {
+            "name": "op",
+            "macro": "Z_PARAM_STR_OR_NULL",
+            "arguments": [
+                "op"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR_OR_NULL(op)"
+        }
+    ],
+    "includes": [
+        "stdio.h",
+        "sys/types.h",
+        "ctype.h",
+        "stdlib.h",
+        "string.h",
+        "php.h",
+        "php_versioning.h"
+    ],
+    "body": "char *v1, *v2;\n\tzend_string *op = NULL;\n\tsize_t v1_len, v2_len;\n\tint compare;\n\n\tZEND_PARSE_PARAMETERS_START(2, 3)\n\t\tZ_PARAM_STRING(v1, v1_len)\n\t\tZ_PARAM_STRING(v2, v2_len)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_STR_OR_NULL(op)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tcompare = php_version_compare(v1, v2);\n\tif (!op) {\n\t\tRETURN_LONG(compare);\n\t}\n\tif (zend_string_equals_literal(op, \"<\") || zend_string_equals_literal(op, \"lt\")) {\n\t\tRETURN_BOOL(compare == -1);\n\t}\n\tif (zend_string_equals_literal(op, \"<=\") || zend_string_equals_literal(op, \"le\")) {\n\t\tRETURN_BOOL(compare != 1);\n\t}\n\tif (zend_string_equals_literal(op, \">\") || zend_string_equals_literal(op, \"gt\")) {\n\t\tRETURN_BOOL(compare == 1);\n\t}\n\tif (zend_string_equals_literal(op, \">=\") || zend_string_equals_literal(op, \"ge\")) {\n\t\tRETURN_BOOL(compare != -1);\n\t}\n\tif (zend_string_equals_literal(op, \"==\") || zend_string_equals_literal(op, \"=\") || zend_string_equals_literal(op, \"eq\")) {\n\t\tRETURN_BOOL(compare == 0);\n\t}\n\tif (zend_string_equals_literal(op, \"!=\") || zend_string_equals_literal(op, \"<>\") || zend_string_equals_literal(op, \"ne\")) {\n\t\tRETURN_BOOL(compare != 0);\n\t}\n\n\tzend_argument_value_error(3, \"must be a valid comparison operator\");",
+    "semantic": "Implements the PHP function version_compare in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STRING",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_STR_OR_NULL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_LONG",
+            "RETURN_BOOL"
+        ],
+        "zend_types": [
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "php_version_compare",
+            "zend_string_equals_literal",
+            "zend_argument_value_error"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common version_compare inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "Implements the PHP function version_compare in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": []
+}

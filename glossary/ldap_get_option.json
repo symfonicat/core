@@ -1,0 +1,101 @@
+{
+    "php_function": "ldap_get_option",
+    "zend_function": "ldap_get_option",
+    "source_file": "",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "Zend/zend_attributes.h",
+        "stddef.h",
+        "ext/standard/dl.h",
+        "php_ldap.h",
+        "string.h",
+        "config.w32.h",
+        "ext/standard/info.h",
+        "sasl/sasl.h",
+        "ldap_arginfo.h"
+    ],
+    "body": "zval *link, *retval;\n\tldap_linkdata *ld;\n\tzend_long option;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"Olz\", &link, ldap_link_ce, &option, &retval) != SUCCESS) {\n\t\tRETURN_THROWS();\n\t}\n\n\tld = Z_LDAP_LINK_P(link);\n\tVERIFY_LDAP_LINK_CONNECTED(ld);\n\n\tswitch (option) {\n\t/* options with int value */\n\tcase LDAP_OPT_DEREF:\n\tcase LDAP_OPT_SIZELIMIT:\n\tcase LDAP_OPT_TIMELIMIT:\n\tcase LDAP_OPT_PROTOCOL_VERSION:\n\tcase LDAP_OPT_ERROR_NUMBER:\n\tcase LDAP_OPT_REFERRALS:\n#ifdef LDAP_OPT_RESTART\n\tcase LDAP_OPT_RESTART:\n#endif\n#ifdef LDAP_OPT_X_SASL_NOCANON\n\tcase LDAP_OPT_X_SASL_NOCANON:\n#endif\n#ifdef LDAP_OPT_X_TLS_REQUIRE_CERT\n\tcase LDAP_OPT_X_TLS_REQUIRE_CERT:\n#endif\n#ifdef LDAP_OPT_X_TLS_CRLCHECK\n\tcase LDAP_OPT_X_TLS_CRLCHECK:\n#endif\n#ifdef LDAP_OPT_X_TLS_PROTOCOL_MIN\n\tcase LDAP_OPT_X_TLS_PROTOCOL_MIN:\n#endif\n#ifdef LDAP_OPT_X_TLS_PROTOCOL_MAX\n\tcase LDAP_OPT_X_TLS_PROTOCOL_MAX:\n#endif\n#ifdef LDAP_OPT_X_KEEPALIVE_IDLE\n\tcase LDAP_OPT_X_KEEPALIVE_IDLE:\n\tcase LDAP_OPT_X_KEEPALIVE_PROBES:\n\tcase LDAP_OPT_X_KEEPALIVE_INTERVAL:\n#endif\n\t\t{\n\t\t\tint val;\n\n\t\t\tif (ldap_get_option(ld->link, option, &val)) {\n\t\t\t\tRETURN_FALSE;\n\t\t\t}\n\t\t\tZEND_TRY_ASSIGN_REF_LONG(retval, val);\n\t\t} break;\n#ifdef LDAP_OPT_NETWORK_TIMEOUT\n\tcase LDAP_OPT_NETWORK_TIMEOUT:\n\t\t{\n\t\t\tstruct timeval *timeout = NULL;\n\n\t\t\tif (ldap_get_option(ld->link, LDAP_OPT_NETWORK_TIMEOUT, (void *) &timeout)) {\n\t\t\t\tif (timeout) {\n\t\t\t\t\tldap_memfree(timeout);\n\t\t\t\t}\n\t\t\t\tRETURN_FALSE;\n\t\t\t}\n\t\t\tif (!timeout) {\n\t\t\t\tRETURN_FALSE;\n\t\t\t}\n\t\t\tZEND_TRY_ASSIGN_REF_LONG(retval, timeout->tv_sec);\n\t\t\tldap_memfree(timeout);\n\t\t} break;\n#elif defined(LDAP_X_OPT_CONNECT_TIMEOUT)\n\tcase LDAP_X_OPT_CONNECT_TIMEOUT:\n\t\t{\n\t\t\tint timeout;\n\n\t\t\tif (ldap_get_option(ld->link, LDAP_X_OPT_CONNECT_TIMEOUT, &timeout)) {\n\t\t\t\tRETURN_FALSE;\n\t\t\t}\n\t\t\tZEND_TRY_ASSIGN_REF_LONG(retval, (timeout / 1000));\n\t\t} break;\n#endif\n#ifdef LDAP_OPT_TIMEOUT\n\tcase LDAP_OPT_TIMEOUT:\n\t\t{\n\t\t\tstruct timeval *timeout = NULL;\n\n\t\t\tif (ldap_get_option(ld->link, LDAP_OPT_TIMEOUT, (void *) &timeout)) {\n\t\t\t\tif (timeout) {\n\t\t\t\t\tldap_memfree(timeout);\n\t\t\t\t}\n\t\t\t\tRETURN_FALSE;\n\t\t\t}\n\t\t\tif (!timeout) {\n\t\t\t\tRETURN_FALSE;\n\t\t\t}\n\t\t\tZEND_TRY_ASSIGN_REF_LONG(retval, timeout->tv_sec);\n\t\t\tldap_memfree(timeout);\n\t\t} break;\n#endif\n\t/* options with string value */\n\tcase LDAP_OPT_ERROR_STRING:\n#ifdef LDAP_OPT_HOST_NAME\n\tcase LDAP_OPT_HOST_NAME:\n#endif\n#ifdef HAVE_LDAP_SASL\n\tcase LDAP_OPT_X_SASL_MECH:\n\tcase LDAP_OPT_X_SASL_REALM:\n\tcase LDAP_OPT_X_SASL_AUTHCID:\n\tcase LDAP_OPT_X_SASL_AUTHZID:\n#endif\n#ifdef LDAP_OPT_X_SASL_USERNAME\n\tcase LDAP_OPT_X_SASL_USERNAME:\n#endif\n#if (LDAP_API_VERSION > 2000)\n\tcase LDAP_OPT_X_TLS_CACERTDIR:\n\tcase LDAP_OPT_X_TLS_CACERTFILE:\n\tcase LDAP_OPT_X_TLS_CERTFILE:\n\tcase LDAP_OPT_X_TLS_CIPHER_SUITE:\n\tcase LDAP_OPT_X_TLS_KEYFILE:\n\tcase LDAP_OPT_X_TLS_RANDOM_FILE:\n#endif\n#ifdef LDAP_OPT_X_TLS_PACKAGE\n\tcase LDAP_OPT_X_TLS_PACKAGE:\n#endif\n#ifdef LDAP_OPT_X_TLS_CRLFILE\n\tcase LDAP_OPT_X_TLS_CRLFILE:\n#endif\n#ifdef LDAP_OPT_X_TLS_DHFILE\n\tcase LDAP_OPT_X_TLS_DHFILE:\n#endif\n#ifdef LDAP_OPT_MATCHED_DN\n\tcase LDAP_OPT_MATCHED_DN:\n#endif\n\t\t{\n\t\t\tchar *val = NULL;\n\n\t\t\tif (ldap_get_option(ld->link, option, &val) || val == NULL || *val == '\\0') {\n\t\t\t\tif (val) {\n\t\t\t\t\tldap_memfree(val);\n\t\t\t\t}\n\t\t\t\tRETURN_FALSE;\n\t\t\t}\n\t\t\tZEND_TRY_ASSIGN_REF_STRING(retval, val);\n\t\t\tldap_memfree(val);\n\t\t} break;\n\tcase LDAP_OPT_SERVER_CONTROLS:\n\tcase LDAP_OPT_CLIENT_CONTROLS:\n\t\t{\n\t\t\tLDAPControl **ctrls = NULL;\n\n\t\t\tif (ldap_get_option(ld->link, option, &ctrls) || ctrls == NULL) {\n\t\t\t\tif (ctrls) {\n\t\t\t\t\tldap_memfree(ctrls);\n\t\t\t\t}\n\t\t\t\tRETURN_FALSE;\n\t\t\t}\n\t\t\t_php_ldap_controls_to_array(ld->link, ctrls, retval, 1);\n\t\t} break;\n/* options not implemented\n\tcase LDAP_OPT_API_INFO:\n\tcase LDAP_OPT_API_FEATURE_INFO:\n*/\n\tdefault:\n\t\tRETURN_FALSE;\n\t}\n\tRETURN_TRUE;",
+    "semantic": "options with int value",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_FALSE",
+            "ZEND_TRY_ASSIGN_REF_LONG",
+            "ZEND_TRY_ASSIGN_REF_STRING",
+            "RETURN_TRUE"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common ldap_get_option inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 7,
+    "purpose": "options with int value",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "ldap_connect",
+        "ldap_connect_wallet",
+        "ldap_bind",
+        "ldap_bind_ext",
+        "ldap_sasl_bind",
+        "ldap_unbind",
+        "ldap_read",
+        "ldap_list",
+        "ldap_search",
+        "ldap_free_result",
+        "ldap_count_entries",
+        "ldap_first_entry"
+    ]
+}

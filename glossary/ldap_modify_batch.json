@@ -1,0 +1,120 @@
+{
+    "php_function": "ldap_modify_batch",
+    "zend_function": "ldap_modify_batch",
+    "source_file": "",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_ini.h",
+        "Zend/zend_attributes.h",
+        "stddef.h",
+        "ext/standard/dl.h",
+        "php_ldap.h",
+        "string.h",
+        "config.w32.h",
+        "ext/standard/info.h",
+        "sasl/sasl.h",
+        "ldap_arginfo.h"
+    ],
+    "body": "zval *serverctrls = NULL;\n\tldap_linkdata *ld;\n\tzval *link, *mods, *mod, *modinfo;\n\tzend_string *modval;\n\tzval *attrib, *modtype, *vals;\n\tzval *fetched;\n\tchar *dn;\n\tsize_t dn_len;\n\tint i, j, k;\n\tint num_mods, num_modprops, num_modvals;\n\tLDAPMod **ldap_mods;\n\tLDAPControl **lserverctrls = NULL;\n\tuint32_t oper;\n\n\t/*\n\t$mods = array(\n\t\tarray(\n\t\t\t\"attrib\" => \"unicodePwd\",\n\t\t\t\"modtype\" => LDAP_MODIFY_BATCH_REMOVE,\n\t\t\t\"values\" => array($oldpw)\n\t\t),\n\t\tarray(\n\t\t\t\"attrib\" => \"unicodePwd\",\n\t\t\t\"modtype\" => LDAP_MODIFY_BATCH_ADD,\n\t\t\t\"values\" => array($newpw)\n\t\t),\n\t\tarray(\n\t\t\t\"attrib\" => \"userPrincipalName\",\n\t\t\t\"modtype\" => LDAP_MODIFY_BATCH_REPLACE,\n\t\t\t\"values\" => array(\"janitor@corp.contoso.com\")\n\t\t),\n\t\tarray(\n\t\t\t\"attrib\" => \"userCert\",\n\t\t\t\"modtype\" => LDAP_MODIFY_BATCH_REMOVE_ALL\n\t\t)\n\t);\n\t*/\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"Osa/|a!\", &link, ldap_link_ce, &dn, &dn_len, &mods, &serverctrls) != SUCCESS) {\n\t\tRETURN_THROWS();\n\t}\n\n\tld = Z_LDAP_LINK_P(link);\n\tVERIFY_LDAP_LINK_CONNECTED(ld);\n\n\t/* perform validation */\n\t{\n\t\tzend_string *modkey;\n\t\tzend_long modtype;\n\n\t\t/* to store the wrongly-typed keys */\n\t\tzend_ulong tmpUlong;\n\n\t\t/* make sure the DN contains no NUL bytes */\n\t\tif (_ldap_strlen_max(dn, dn_len) != dn_len) {\n\t\t\tzend_argument_type_error(2, \"must not contain null bytes\");\n\t\t\tRETURN_THROWS();\n\t\t}\n\n\t\t/* make sure the top level is a normal array */\n\t\tzend_hash_internal_pointer_reset(Z_ARRVAL_P(mods));\n\t\tif (zend_hash_get_current_key_type(Z_ARRVAL_P(mods)) != HASH_KEY_IS_LONG) {\n\t\t\tzend_argument_type_error(3, \"must be integer-indexed\");\n\t\t\tRETURN_THROWS();\n\t\t}\n\n\t\tnum_mods = zend_hash_num_elements(Z_ARRVAL_P(mods));\n\n\t\tfor (i = 0; i < num_mods; i++) {\n\t\t\t/* is the numbering consecutive? */\n\t\t\tif ((fetched = zend_hash_index_find(Z_ARRVAL_P(mods), i)) == NULL) {\n\t\t\t\tzend_argument_value_error(3, \"must have consecutive integer indices starting from 0\");\n\t\t\t\tRETURN_THROWS();\n\t\t\t}\n\t\t\tmod = fetched;\n\n\t\t\t/* is it an array? */\n\t\t\tif (Z_TYPE_P(mod) != IS_ARRAY) {\n\t\t\t\tzend_argument_value_error(3, \"must only contain arrays\");\n\t\t\t\tRETURN_THROWS();\n\t\t\t}\n\n\t\t\tSEPARATE_ARRAY(mod);\n\t\t\t/* for the modification hashtable... */\n\t\t\tzend_hash_internal_pointer_reset(Z_ARRVAL_P(mod));\n\t\t\tnum_modprops = zend_hash_num_elements(Z_ARRVAL_P(mod));\n\t\t\tbool has_attrib_key = false;\n\t\t\tbool has_modtype_key = false;\n\n\t\t\tfor (j = 0; j < num_modprops; j++) {\n\n\t\t\t\t/* are the keys strings? */\n\t\t\t\tif (zend_hash_get_current_key(Z_ARRVAL_P(mod), &modkey, &tmpUlong) != HASH_KEY_IS_STRING) {\n\t\t\t\t\tzend_argument_type_error(3, \"must only contain string-indexed arrays\");\n\t\t\t\t\tRETURN_THROWS();\n\t\t\t\t}\n\n\t\t\t\t/* is this a valid entry? */\n\t\t\t\tif (\n\t\t\t\t\t!_ldap_str_equal_to_const(ZSTR_VAL(modkey), ZSTR_LEN(modkey), LDAP_MODIFY_BATCH_ATTRIB) &&\n\t\t\t\t\t!_ldap_str_equal_to_const(ZSTR_VAL(modkey), ZSTR_LEN(modkey), LDAP_MODIFY_BATCH_MODTYPE) &&\n\t\t\t\t\t!_ldap_str_equal_to_const(ZSTR_VAL(modkey), ZSTR_LEN(modkey), LDAP_MODIFY_BATCH_VALUES)\n\t\t\t\t) {\n\t\t\t\t\tzend_argument_value_error(3, \"must contain arrays only containing the \\\"\" LDAP_MODIFY_BATCH_ATTRIB \"\\\", \\\"\" LDAP_MODIFY_BATCH_MODTYPE \"\\\" and \\\"\" LDAP_MODIFY_BATCH_VALUES \"\\\" keys\");\n\t\t\t\t\tRETURN_THROWS();\n\t\t\t\t}\n\n\t\t\t\tfetched = zend_hash_get_current_data(Z_ARRVAL_P(mod));\n\t\t\t\tmodinfo = fetched;\n\n\t\t\t\t/* does the value type match the key? */\n\t\t\t\tif (_ldap_str_equal_to_const(ZSTR_VAL(modkey), ZSTR_LEN(modkey), LDAP_MODIFY_BATCH_ATTRIB)) {\n\t\t\t\t\thas_attrib_key = true;\n\t\t\t\t\tif (Z_TYPE_P(modinfo) != IS_STRING) {\n\t\t\t\t\t\tzend_type_error(\"%s(): Option \\\"\" LDAP_MODIFY_BATCH_ATTRIB \"\\\" must be of type string, %s given\", get_active_function_name(), zend_zval_value_name(modinfo));\n\t\t\t\t\t\tRETURN_THROWS();\n\t\t\t\t\t}\n\n\t\t\t\t\tif (Z_STRLEN_P(modinfo) != _ldap_strlen_max(Z_STRVAL_P(modinfo), Z_STRLEN_P(modinfo))) {\n\t\t\t\t\t\tzend_type_error(\"%s(): Option \\\"\" LDAP_MODIFY_BATCH_ATTRIB \"\\\" cannot contain null-bytes\", get_active_function_name());\n\t\t\t\t\t\tRETURN_THROWS();\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\telse if (_ldap_str_equal_to_const(ZSTR_VAL(modkey), ZSTR_LEN(modkey), LDAP_MODIFY_BATCH_MODTYPE)) {\n\t\t\t\t\thas_modtype_key = true;\n\t\t\t\t\tif (Z_TYPE_P(modinfo) != IS_LONG) {\n\t\t\t\t\t\tzend_type_error(\"%s(): Option \\\"\" LDAP_MODIFY_BATCH_MODTYPE \"\\\" must be of type int, %s given\", get_active_function_name(), zend_zval_value_name(modinfo));\n\t\t\t\t\t\tRETURN_THROWS();\n\t\t\t\t\t}\n\n\t\t\t\t\t/* is the value in range? */\n\t\t\t\t\tmodtype = Z_LVAL_P(modinfo);\n\t\t\t\t\tif (\n\t\t\t\t\t\tmodtype != LDAP_MODIFY_BATCH_ADD &&\n\t\t\t\t\t\tmodtype != LDAP_MODIFY_BATCH_REMOVE &&\n\t\t\t\t\t\tmodtype != LDAP_MODIFY_BATCH_REPLACE &&\n\t\t\t\t\t\tmodtype != LDAP_MODIFY_BATCH_REMOVE_ALL\n\t\t\t\t\t) {\n\t\t\t\t\t\tzend_value_error(\"%s(): Option \\\"\" LDAP_MODIFY_BATCH_MODTYPE \"\\\" must be one of the LDAP_MODIFY_BATCH_* constants\", get_active_function_name());\n\t\t\t\t\t\tRETURN_THROWS();\n\t\t\t\t\t}\n\n\t\t\t\t\t/* if it's REMOVE_ALL, there must not be a values array; otherwise, there must */\n\t\t\t\t\tif (modtype == LDAP_MODIFY_BATCH_REMOVE_ALL) {\n\t\t\t\t\t\tif (zend_hash_str_exists(Z_ARRVAL_P(mod), LDAP_MODIFY_BATCH_VALUES, strlen(LDAP_MODIFY_BATCH_VALUES))) {\n\t\t\t\t\t\t\tzend_value_error(\"%s(): If option \\\"\" LDAP_MODIFY_BATCH_MODTYPE \"\\\" is LDAP_MODIFY_BATCH_REMOVE_ALL, option \\\"\" LDAP_MODIFY_BATCH_VALUES \"\\\" cannot be provided\", get_active_function_name());\n\t\t\t\t\t\t\tRETURN_THROWS();\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t\telse {\n\t\t\t\t\t\tif (!zend_hash_str_exists(Z_ARRVAL_P(mod), LDAP_MODIFY_BATCH_VALUES, strlen(LDAP_MODIFY_BATCH_VALUES))) {\n\t\t\t\t\t\t\tzend_value_error(\"%s(): If option \\\"\" LDAP_MODIFY_BATCH_MODTYPE \"\\\" is not LDAP_MODIFY_BATCH_REMOVE_ALL, option \\\"\" LDAP_MODIFY_BATCH_VALUES \"\\\" must be provided\", get_active_function_name());\n\t\t\t\t\t\t\tRETURN_THROWS();\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t\telse if (_ldap_str_equal_to_const(ZSTR_VAL(modkey), ZSTR_LEN(modkey), LDAP_MODIFY_BATCH_VALUES)) {\n\t\t\t\t\tif (Z_TYPE_P(modinfo) != IS_ARRAY) {\n\t\t\t\t\t\tzend_type_error(\"%s(): Option \\\"\" LDAP_MODIFY_BATCH_VALUES \"\\\" must be of type array, %s given\", get_active_function_name(), zend_zval_value_name(modinfo));\n\t\t\t\t\t\tRETURN_THROWS();\n\t\t\t\t\t}\n\n\t\t\t\t\tSEPARATE_ARRAY(modinfo);\n\t\t\t\t\t/* is the array not empty? */\n\t\t\t\t\tzend_hash_internal_pointer_reset(Z_ARRVAL_P(modinfo));\n\t\t\t\t\tnum_modvals = zend_hash_num_elements(Z_ARRVAL_P(modinfo));\n\t\t\t\t\tif (num_modvals == 0) {\n\t\t\t\t\t\tzend_value_error(\"%s(): Option \\\"\" LDAP_MODIFY_BATCH_VALUES \"\\\" must not be empty\", get_active_function_name());\n\t\t\t\t\t\tRETURN_THROWS();\n\t\t\t\t\t}\n\n\t\t\t\t\t/* are its keys integers? */\n\t\t\t\t\tif (zend_hash_get_current_key_type(Z_ARRVAL_P(modinfo)) != HASH_KEY_IS_LONG) {\n\t\t\t\t\t\tzend_value_error(\"%s(): Option \\\"\" LDAP_MODIFY_BATCH_VALUES \"\\\" must be integer-indexed\", get_active_function_name());\n\t\t\t\t\t\tRETURN_THROWS();\n\t\t\t\t\t}\n\n\t\t\t\t\t/* are the keys consecutive? */\n\t\t\t\t\tfor (k = 0; k < num_modvals; k++) {\n\t\t\t\t\t\tif ((fetched = zend_hash_index_find(Z_ARRVAL_P(modinfo), k)) == NULL) {\n\t\t\t\t\t\t\tzend_value_error(\"%s(): Option \\\"\" LDAP_MODIFY_BATCH_VALUES \"\\\" must have consecutive integer indices starting from 0\", get_active_function_name());\n\t\t\t\t\t\t\tRETURN_THROWS();\n\t\t\t\t\t\t}\n\t\t\t\t\t}\n\t\t\t\t}\n\n\t\t\t\tzend_hash_move_forward(Z_ARRVAL_P(mod));\n\t\t\t}\n\n\t\t\tif (!has_attrib_key) {\n\t\t\t\tzend_value_error(\"%s(): Required option \\\"\" LDAP_MODIFY_BATCH_ATTRIB \"\\\" is missing\", get_active_function_name());\n\t\t\t\tRETURN_THROWS();\n\t\t\t}\n\t\t\tif (!has_modtype_key) {\n\t\t\t\tzend_value_error(\"%s(): Required option \\\"\" LDAP_MODIFY_BATCH_MODTYPE \"\\\" is missing\", get_active_function_name());\n\t\t\t\tRETURN_THROWS();\n\t\t\t}\n\t\t}\n\t}\n\t/* validation was successful */\n\n\t/* allocate array of modifications */\n\tldap_mods = safe_emalloc((num_mods+1), sizeof(LDAPMod *), 0);\n\n\t/* for each modification */\n\tfor (i = 0; i < num_mods; i++) {\n\t\t/* allocate the modification struct */\n\t\tldap_mods[i] = safe_emalloc(1, sizeof(LDAPMod), 0);\n\n\t\t/* fetch the relevant data */\n\t\tfetched = zend_hash_index_find(Z_ARRVAL_P(mods), i);\n\t\tmod = fetched;\n\n\t\t_ldap_hash_fetch(mod, LDAP_MODIFY_BATCH_ATTRIB, &attrib);\n\t\t_ldap_hash_fetch(mod, LDAP_MODIFY_BATCH_MODTYPE, &modtype);\n\t\t_ldap_hash_fetch(mod, LDAP_MODIFY_BATCH_VALUES, &vals);\n\n\t\t/* map the modification type */\n\t\tswitch (Z_LVAL_P(modtype)) {\n\t\t\tcase LDAP_MODIFY_BATCH_ADD:\n\t\t\t\toper = LDAP_MOD_ADD;\n\t\t\t\tbreak;\n\t\t\tcase LDAP_MODIFY_BATCH_REMOVE:\n\t\t\tcase LDAP_MODIFY_BATCH_REMOVE_ALL:\n\t\t\t\toper = LDAP_MOD_DELETE;\n\t\t\t\tbreak;\n\t\t\tcase LDAP_MODIFY_BATCH_REPLACE:\n\t\t\t\toper = LDAP_MOD_REPLACE;\n\t\t\t\tbreak;\n\t\t\tdefault:\n\t\t\t\tzend_throw_error(NULL, \"Unknown and uncaught modification type.\");\n\t\t\t\tRETVAL_FALSE;\n\t\t\t\tefree(ldap_mods[i]);\n\t\t\t\tnum_mods = i;\n\t\t\t\tgoto cleanup;\n\t\t}\n\n\t\t/* fill in the basic info */\n\t\tldap_mods[i]->mod_op = oper | LDAP_MOD_BVALUES;\n\t\tldap_mods[i]->mod_type = estrndup(Z_STRVAL_P(attrib), Z_STRLEN_P(attrib));\n\n\t\tif (Z_LVAL_P(modtype) == LDAP_MODIFY_BATCH_REMOVE_ALL) {\n\t\t\t/* no values */\n\t\t\tldap_mods[i]->mod_bvalues = NULL;\n\t\t}\n\t\telse {\n\t\t\t/* allocate space for the values as part of this modification */\n\t\t\tnum_modvals = zend_hash_num_elements(Z_ARRVAL_P(vals));\n\t\t\tldap_mods[i]->mod_bvalues = safe_emalloc((num_modvals+1), sizeof(struct berval *), 0);\n\n\t\t\t/* for each value */\n\t\t\tfor (j = 0; j < num_modvals; j++) {\n\t\t\t\t/* fetch it */\n\t\t\t\tfetched = zend_hash_index_find(Z_ARRVAL_P(vals), j);\n\t\t\t\tmodval = zval_get_string(fetched);\n\t\t\t\tif (EG(exception)) {\n\t\t\t\t\tRETVAL_FALSE;\n\t\t\t\t\tldap_mods[i]->mod_bvalues[j] = NULL;\n\t\t\t\t\tnum_mods = i + 1;\n\t\t\t\t\tgoto cleanup;\n\t\t\t\t}\n\n\t\t\t\t/* allocate the data struct */\n\t\t\t\tldap_mods[i]->mod_bvalues[j] = safe_emalloc(1, sizeof(struct berval), 0);\n\n\t\t\t\t/* fill it */\n\t\t\t\tldap_mods[i]->mod_bvalues[j]->bv_len = ZSTR_LEN(modval);\n\t\t\t\tldap_mods[i]->mod_bvalues[j]->bv_val = estrndup(ZSTR_VAL(modval), ZSTR_LEN(modval));\n\t\t\t\tzend_string_release(modval);\n\t\t\t}\n\n\t\t\t/* NULL-terminate values */\n\t\t\tldap_mods[i]->mod_bvalues[num_modvals] = NULL;\n\t\t}\n\t}\n\n\t/* NULL-terminate modifications */\n\tldap_mods[num_mods] = NULL;\n\n\tif (serverctrls) {\n\t\tlserverctrls = _php_ldap_controls_from_array(ld->link, serverctrls, 4);\n\t\tif (lserverctrls == NULL) {\n\t\t\tRETVAL_FALSE;\n\t\t\tgoto cleanup;\n\t\t}\n\t}\n\n\t/* perform (finally) */\n\tif ((i = ldap_modify_ext_s(ld->link, dn, ldap_mods, lserverctrls, NULL)) != LDAP_SUCCESS) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Batch Modify: %s\", ldap_err2string(i));\n\t\tRETVAL_FALSE;\n\t} else RETVAL_TRUE;\n\n\t/* clean up */\n\tcleanup: {\n\t\tfor (i = 0; i < num_mods; i++) {\n\t\t\t/* attribute */\n\t\t\tefree(ldap_mods[i]->mod_type);\n\n\t\t\tif (ldap_mods[i]->mod_bvalues != NULL) {\n\t\t\t\t/* each BER value */\n\t\t\t\tfor (j = 0; ldap_mods[i]->mod_bvalues[j] != NULL; j++) {\n\t\t\t\t\t/* free the data bytes */\n\t\t\t\t\tefree(ldap_mods[i]->mod_bvalues[j]->bv_val);\n\n\t\t\t\t\t/* free the bvalue struct */\n\t\t\t\t\tefree(ldap_mods[i]->mod_bvalues[j]);\n\t\t\t\t}\n\n\t\t\t\t/* the BER value array */\n\t\t\t\tefree(ldap_mods[i]->mod_bvalues);\n\t\t\t}\n\n\t\t\t/* the modification */\n\t\t\tefree(ldap_mods[i]);\n\t\t}\n\n\t\t/* the modifications array */\n\t\tefree(ldap_mods);\n\n\t\tif (lserverctrls) {\n\t\t\t_php_ldap_controls_free(&lserverctrls);\n\t\t}\n\t}",
+    "semantic": "$mods = array( array( \"attrib\" => \"unicodePwd\", \"modtype\" => LDAP_MODIFY_BATCH_REMOVE, \"values\" => array($oldpw) ), array( \"attrib\" => \"unicodePwd\", \"modtype\" => LDAP_MODIFY_BATCH_ADD, \"values\" => array($newpw) ), array( \"attrib\" => \"userPrincipalName\", \"modtype\" => LDAP_MODIFY_BATCH_REPLACE, \"values\" => array(\"janitor@corp.contoso.com\") ), array( \"attrib\" => \"userCert\", \"modtype\" => LDAP_MODIFY_BATCH_REMOVE_ALL ) );",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "SEPARATE_ARRAY",
+            "ZSTR_VAL",
+            "ZSTR_LEN"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_string",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "zend_argument_type_error",
+            "zend_hash_internal_pointer_reset",
+            "zend_hash_get_current_key_type",
+            "zend_hash_num_elements",
+            "zend_hash_index_find",
+            "zend_argument_value_error",
+            "zend_hash_get_current_key",
+            "zend_hash_get_current_data",
+            "zend_type_error",
+            "zend_zval_value_name",
+            "zend_value_error",
+            "zend_hash_str_exists",
+            "zend_hash_move_forward",
+            "zend_throw_error",
+            "zval_get_string",
+            "zend_string_release",
+            "php_error_docref"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common ldap_modify_batch inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 10,
+    "purpose": "$mods = array( array( \"attrib\" => \"unicodePwd\", \"modtype\" => LDAP_MODIFY_BATCH_REMOVE, \"values\" => array($oldpw) ), array( \"attrib\" => \"unicodePwd\", \"modtype\" => LDAP_MODIFY_BATCH_ADD, \"values\" => array($newpw) ), array( \"attrib\" => \"userPrincipalName\", \"modtype\" => LDAP_MODIFY_BATCH_REPLACE, \"values\" => array(\"janitor@corp.contoso.com\") ), array( \"attrib\" => \"userCert\", \"modtype\" => LDAP_MODIFY_BATCH_REMOVE_ALL ) );",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "ldap_connect",
+        "ldap_connect_wallet",
+        "ldap_bind",
+        "ldap_bind_ext",
+        "ldap_sasl_bind",
+        "ldap_unbind",
+        "ldap_read",
+        "ldap_list",
+        "ldap_search",
+        "ldap_free_result",
+        "ldap_count_entries",
+        "ldap_first_entry"
+    ]
+}

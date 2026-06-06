@@ -1,0 +1,110 @@
+{
+    "php_function": "odbc_fetch_into",
+    "zend_function": "odbc_fetch_into",
+    "source_file": "bc.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_globals.h",
+        "zend_attributes.h",
+        "ext/standard/info.h",
+        "Zend/zend_interfaces.h",
+        "zend_smart_str.h",
+        "php_odbc.h",
+        "php_odbc_includes.h",
+        "php_odbc_utils.h",
+        "fcntl.h",
+        "php_ini.h",
+        "odbc_arginfo.h"
+    ],
+    "body": "int i;\n\todbc_result *result;\n\tRETCODE rc;\n\tSQLSMALLINT sql_c_type;\n\tchar *buf = NULL;\n\tzval *pv_res, *pv_res_arr, tmp;\n\tzend_long pv_row = 0;\n\tbool pv_row_is_null = true;\n#ifdef HAVE_SQL_EXTENDED_FETCH\n\tSQLULEN crow;\n\tSQLUSMALLINT RowStatus[1];\n#endif /* HAVE_SQL_EXTENDED_FETCH */\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"Oz|l!\", &pv_res, odbc_result_ce, &pv_res_arr, &pv_row, &pv_row_is_null) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tresult = Z_ODBC_RESULT_P(pv_res);\n\tCHECK_ODBC_RESULT(result);\n\n\t/* TODO deprecate $row argument values less than 1 after PHP 8.4 */\n\n#ifndef HAVE_SQL_EXTENDED_FETCH\n\tif (!pv_row_is_null && pv_row > 0) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Extended fetch functionality is not available, argument #3 ($row) is ignored\");\n\t}\n#endif\n\n\tif (result->numcols == 0) {\n\t\tphp_error_docref(NULL, E_WARNING, \"No tuples available at this result index\");\n\t\tRETURN_FALSE;\n\t}\n\n\tpv_res_arr = zend_try_array_init(pv_res_arr);\n\tif (!pv_res_arr) {\n\t\tRETURN_THROWS();\n\t}\n\n#ifdef HAVE_SQL_EXTENDED_FETCH\n\tif (result->fetch_abs) {\n\t\tif (!pv_row_is_null && pv_row > 0) {\n\t\t\trc = SQLExtendedFetch(result->stmt,SQL_FETCH_ABSOLUTE,(SQLLEN)pv_row,&crow,RowStatus);\n\t\t} else {\n\t\t\trc = SQLExtendedFetch(result->stmt,SQL_FETCH_NEXT,1,&crow,RowStatus);\n\t\t}\n\t} else\n#endif\n\t\trc = SQLFetch(result->stmt);\n\n\tif (rc != SQL_SUCCESS && rc != SQL_SUCCESS_WITH_INFO) {\n\t\tif (rc == SQL_ERROR) {\n#ifdef HAVE_SQL_EXTENDED_FETCH\n\t\todbc_sql_error(result->conn_ptr, result->stmt, \"SQLExtendedFetch\");\n#else\n\t\todbc_sql_error(result->conn_ptr, result->stmt, \"SQLFetch\");\n#endif\n\t\t}\n\t\tRETURN_FALSE;\n\t}\n\n#ifdef HAVE_SQL_EXTENDED_FETCH\n\tif (!pv_row_is_null && pv_row > 0 && result->fetch_abs)\n\t\tresult->fetched = (SQLLEN)pv_row;\n\telse\n#endif\n\t\tresult->fetched++;\n\n\tfor(i = 0; i < result->numcols; i++) {\n\t\tsql_c_type = SQL_C_CHAR;\n\n\t\tswitch(result->values[i].coltype) {\n\t\t\tcase SQL_BINARY:\n\t\t\tcase SQL_VARBINARY:\n\t\t\tcase SQL_LONGVARBINARY:\n\t\t\t\tif (result->binmode <= 0) {\n\t\t\t\t\tZVAL_EMPTY_STRING(&tmp);\n\t\t\t\t\tbreak;\n\t\t\t\t}\n\t\t\t\tif (result->binmode == 1) sql_c_type = SQL_C_BINARY;\n\n\t\t\t\t/* TODO: Check this is the intended behaviour */\n\t\t\t\tZEND_FALLTHROUGH;\n\t\t\tcase SQL_LONGVARCHAR:\n#if defined(ODBCVER) && (ODBCVER >= 0x0300)\n\t\t\tcase SQL_WLONGVARCHAR:\n#endif\n\t\t\t\tif (IS_SQL_LONG(result->values[i].coltype) && result->longreadlen <= 0) {\n\t\t\t\t\tZVAL_EMPTY_STRING(&tmp);\n\t\t\t\t\tbreak;\n\t\t\t\t}\n\n\t\t\t\tif (buf == NULL) {\n\t\t\t\t\tbuf = emalloc(result->longreadlen + 1);\n\t\t\t\t}\n\t\t\t\trc = SQLGetData(result->stmt, (SQLUSMALLINT)(i + 1),sql_c_type, buf, result->longreadlen + 1, &result->values[i].vallen);\n\n\t\t\t\tif (rc == SQL_ERROR) {\n\t\t\t\t\todbc_sql_error(result->conn_ptr, result->stmt, \"SQLGetData\");\n\t\t\t\t\tefree(buf);\n\t\t\t\t\tRETURN_FALSE;\n\t\t\t\t}\n\t\t\t\tif (rc == SQL_SUCCESS_WITH_INFO) {\n\t\t\t\t\tZVAL_STRINGL(&tmp, buf, result->longreadlen);\n\t\t\t\t} else if (rc != SQL_SUCCESS) {\n\t\t\t\t\tphp_error_docref(NULL, E_WARNING, \"Cannot get data of column #%d (retcode %u)\", i + 1, rc);\n\t\t\t\t\tZVAL_FALSE(&tmp);\n\t\t\t\t} else if (result->values[i].vallen == SQL_NULL_DATA) {\n\t\t\t\t\tZVAL_NULL(&tmp);\n\t\t\t\t\tbreak;\n\t\t\t\t} else if (result->values[i].vallen == SQL_NO_TOTAL) {\n\t\t\t\t\tphp_error_docref(NULL, E_WARNING, \"Cannot get data of column #%d (driver cannot determine length)\", i + 1);\n\t\t\t\t\tZVAL_FALSE(&tmp);\n\t\t\t\t} else {\n\t\t\t\t\tZVAL_STRINGL(&tmp, buf, result->values[i].vallen);\n\t\t\t\t}\n\t\t\t\tbreak;\n\n\t\t\tdefault:\n\t\t\t\tif (result->values[i].vallen == SQL_NULL_DATA) {\n\t\t\t\t\tZVAL_NULL(&tmp);\n\t\t\t\t\tbreak;\n\t\t\t\t} else if (result->values[i].vallen == SQL_NO_TOTAL) {\n\t\t\t\t\tphp_error_docref(NULL, E_WARNING, \"Cannot get data of column #%d (driver cannot determine length)\", i + 1);\n\t\t\t\t\tZVAL_FALSE(&tmp);\n\t\t\t\t\tbreak;\n\t\t\t\t}\n\t\t\t\tZVAL_STRINGL(&tmp, result->values[i].value, result->values[i].vallen);\n\t\t\t\tbreak;\n\t\t}\n\t\tzend_hash_index_update(Z_ARRVAL_P(pv_res_arr), i, &tmp);\n\t}\n\tif (buf) efree(buf);\n\tRETURN_LONG(result->numcols);",
+    "semantic": "HAVE_SQL_EXTENDED_FETCH",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_FALSE",
+            "ZVAL_EMPTY_STRING",
+            "ZEND_FALLTHROUGH",
+            "ZVAL_STRINGL",
+            "ZVAL_FALSE",
+            "ZVAL_NULL",
+            "RETURN_LONG"
+        ],
+        "zend_types": [
+            "zval",
+            "zend_long"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "php_error_docref",
+            "zend_try_array_init",
+            "odbc_sql_error",
+            "zend_hash_index_update"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common odbc_fetch_into inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 6,
+    "purpose": "HAVE_SQL_EXTENDED_FETCH",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "odbc_close_all",
+        "odbc_binmode",
+        "odbc_longreadlen",
+        "odbc_prepare",
+        "odbc_execute",
+        "odbc_cursor",
+        "odbc_data_source",
+        "odbc_exec",
+        "odbc_fetch_object",
+        "odbc_fetch_array",
+        "odbc_fetch_row",
+        "odbc_result"
+    ]
+}

@@ -1,0 +1,168 @@
+{
+    "php_function": "locale_lookup",
+    "zend_function": "locale_lookup",
+    "source_file": "/locale_methods.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "arr",
+            "macro": "Z_PARAM_ARRAY",
+            "arguments": [
+                "arr"
+            ],
+            "type": "HashTable",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_ARRAY(arr)"
+        },
+        {
+            "name": "loc_range",
+            "macro": "Z_PARAM_STRING",
+            "arguments": [
+                "loc_range",
+                "loc_range_len"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING(loc_range, loc_range_len)"
+        },
+        {
+            "name": "boolCanonical",
+            "macro": "Z_PARAM_BOOL",
+            "arguments": [
+                "boolCanonical"
+            ],
+            "type": "bool",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_BOOL(boolCanonical)"
+        },
+        {
+            "name": "fallback_loc_str",
+            "macro": "Z_PARAM_STR_OR_NULL",
+            "arguments": [
+                "fallback_loc_str"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR_OR_NULL(fallback_loc_str)"
+        }
+    ],
+    "includes": [
+        "config.h",
+        "unicode/ustring.h",
+        "unicode/udata.h",
+        "unicode/putil.h",
+        "unicode/ures.h",
+        "php_intl.h",
+        "locale.h",
+        "locale_class.h",
+        "intl_convert.h",
+        "intl_data.h",
+        "zend_API.h",
+        "zend.h",
+        "php.h",
+        "main/php_ini.h",
+        "zend_smart_str.h"
+    ],
+    "body": "zend_string*   \tfallback_loc_str\t= NULL;\n\tchar*    \tloc_range      \t\t= NULL;\n\tsize_t        \tloc_range_len  \t\t= 0;\n\n\tzval*\t\tarr\t\t\t\t= NULL;\n\tHashTable*\thash_arr\t\t= NULL;\n\tbool\tboolCanonical\t= 0;\n\tzend_string* \tresult_str\t= NULL;\n\n\tintl_error_reset( NULL );\n\n\tZEND_PARSE_PARAMETERS_START(2, 4)\n\t\tZ_PARAM_ARRAY(arr)\n\t\tZ_PARAM_STRING(loc_range, loc_range_len)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_BOOL(boolCanonical)\n\t\tZ_PARAM_STR_OR_NULL(fallback_loc_str)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif(loc_range_len == 0) {\n\t\tif(fallback_loc_str) {\n\t\t\tloc_range = ZSTR_VAL(fallback_loc_str);\n\t\t\tloc_range_len = ZSTR_LEN(fallback_loc_str);\n\t\t} else {\n\t\t\tloc_range = (char *)intl_locale_get_default();\n\t\t\tloc_range_len = strlen(loc_range);\n\t\t}\n\t}\n\n\thash_arr = Z_ARRVAL_P(arr);\n\n\tINTL_CHECK_LOCALE_LEN(loc_range_len);\n\n\tif( !hash_arr || zend_hash_num_elements( hash_arr ) == 0 ) {\n\t\tRETURN_EMPTY_STRING();\n\t}\n\n\tresult_str = lookup_loc_range(loc_range, hash_arr, boolCanonical);\n\tif(result_str == NULL || ZSTR_VAL(result_str)[0] == '\\0') {\n\t\tif( fallback_loc_str ) {\n\t\t\tresult_str = zend_string_copy(fallback_loc_str);\n\t\t} else {\n\t\t\tRETURN_EMPTY_STRING();\n\t\t}\n\t}\n\n\tRETURN_STR(result_str);",
+    "semantic": "Implements the PHP function locale_lookup in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_ARRAY",
+            "Z_PARAM_STRING",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_BOOL",
+            "Z_PARAM_STR_OR_NULL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZSTR_VAL",
+            "ZSTR_LEN",
+            "RETURN_EMPTY_STRING",
+            "RETURN_STR"
+        ],
+        "zend_types": [
+            "zend_string",
+            "zval",
+            "HashTable"
+        ],
+        "internal_helpers": [
+            "zend_hash_num_elements",
+            "zend_string_copy"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common locale_lookup inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 2,
+    "purpose": "Implements the PHP function locale_lookup in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "zif_locale_get_default",
+        "zif_locale_set_default",
+        "locale_get_script",
+        "locale_get_region",
+        "locale_get_primary_language",
+        "locale_get_display_name",
+        "locale_get_display_language",
+        "locale_get_display_script",
+        "locale_get_display_region",
+        "locale_get_display_variant",
+        "locale_get_keywords",
+        "locale_canonicalize"
+    ]
+}

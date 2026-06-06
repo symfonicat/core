@@ -1,0 +1,99 @@
+{
+    "php_function": "sodium_crypto_sign_ed25519_sk_to_curve25519",
+    "zend_function": "sodium_crypto_sign_ed25519_sk_to_curve25519",
+    "source_file": "odium.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "php.h",
+        "ext/standard/info.h",
+        "php_libsodium.h",
+        "zend_attributes.h",
+        "zend_exceptions.h",
+        "sodium.h",
+        "stdint.h",
+        "string.h",
+        "libsodium_arginfo.h"
+    ],
+    "body": "zend_string *ecdhkey;\n\tchar        *eddsakey;\n\tsize_t       eddsakey_len;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"s\",\n\t\t\t\t\t\t\t\t\t&eddsakey, &eddsakey_len) == FAILURE) {\n\t\tsodium_remove_param_values_from_backtrace(EG(exception));\n\t\tRETURN_THROWS();\n\t}\n\tif (eddsakey_len != crypto_sign_SECRETKEYBYTES) {\n\t\tzend_argument_error(sodium_exception_ce, 1, \"must be SODIUM_CRYPTO_SIGN_SECRETKEYBYTES bytes long\");\n\t\tRETURN_THROWS();\n\t}\n\tecdhkey = zend_string_alloc(crypto_box_SECRETKEYBYTES, 0);\n\n\tif (crypto_sign_ed25519_sk_to_curve25519((unsigned char *) ZSTR_VAL(ecdhkey),\n\t\t\t\t\t\t\t\t\t\t\t (const unsigned char *) eddsakey) != 0) {\n\t\tzend_string_efree(ecdhkey);\n\t\tzend_throw_exception(sodium_exception_ce, \"conversion failed\", 0);\n\t\tRETURN_THROWS();\n\t}\n\tZSTR_VAL(ecdhkey)[crypto_box_SECRETKEYBYTES] = 0;\n\n\tRETURN_STR(ecdhkey);",
+    "semantic": "Implements the PHP function sodium_crypto_sign_ed25519_sk_to_curve25519 in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "ZSTR_VAL",
+            "RETURN_STR"
+        ],
+        "zend_types": [
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "zend_argument_error",
+            "zend_string_alloc",
+            "zend_string_efree",
+            "zend_throw_exception"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common sodium_crypto_sign_ed25519_sk_to_curve25519 inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 4,
+    "purpose": "Implements the PHP function sodium_crypto_sign_ed25519_sk_to_curve25519 in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "sodium_memzero",
+        "sodium_increment",
+        "sodium_add",
+        "sodium_memcmp",
+        "sodium_crypto_shorthash",
+        "sodium_crypto_secretbox",
+        "sodium_crypto_secretbox_open",
+        "sodium_crypto_generichash",
+        "sodium_crypto_generichash_init",
+        "sodium_crypto_generichash_update",
+        "sodium_crypto_generichash_final",
+        "sodium_crypto_box_keypair"
+    ]
+}

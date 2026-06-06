@@ -164,7 +164,7 @@ MD;
             throw new \RuntimeException(sprintf('Application "%s" requires a domain.', $application->getId()));
         }
 
-        $host = trim((string) $domain->getId(false));
+        $host = trim((string) $domain->getTld());
         if ($host === '') {
             throw new \RuntimeException(sprintf('Application "%s" requires a valid domain.', $application->getId()));
         }

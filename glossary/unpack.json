@@ -1,0 +1,160 @@
+{
+    "php_function": "unpack",
+    "zend_function": "unpack",
+    "source_file": "ck.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "formatarg",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "formatarg"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(formatarg)"
+        },
+        {
+            "name": "inputarg",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "inputarg"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(inputarg)"
+        },
+        {
+            "name": "offset",
+            "macro": "Z_PARAM_LONG",
+            "arguments": [
+                "offset"
+            ],
+            "type": "zend_long",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_LONG(offset)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "stdio.h",
+        "stdlib.h",
+        "errno.h",
+        "sys/types.h",
+        "sys/stat.h",
+        "fcntl.h",
+        "win32/param.h",
+        "sys/param.h",
+        "pack.h",
+        "win32/pwd.h",
+        "pwd.h",
+        "fsock.h",
+        "netinet/in.h"
+    ],
+    "body": "char *format, *input;\n\tzend_string *formatarg, *inputarg;\n\tzend_long formatlen, inputpos, inputlen;\n\tint i;\n\tzend_long offset = 0;\n\n\tZEND_PARSE_PARAMETERS_START(2, 3)\n\t\tZ_PARAM_STR(formatarg)\n\t\tZ_PARAM_STR(inputarg)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_LONG(offset)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tformat = ZSTR_VAL(formatarg);\n\tformatlen = ZSTR_LEN(formatarg);\n\tinput = ZSTR_VAL(inputarg);\n\tinputlen = ZSTR_LEN(inputarg);\n\tinputpos = 0;\n\n\n\tif (offset < 0 || offset > inputlen) {\n\t\tzend_argument_value_error(3, \"must be contained in argument #2 ($data)\");\n\t\tRETURN_THROWS();\n\t}\n\n\tinput += offset;\n\tinputlen -= offset;\n\n\tarray_init(return_value);\n\n\twhile (formatlen-- > 0) {\n\t\tchar type = *(format++);\n\t\tchar c;\n\t\tint repetitions = 1, argb;\n\t\tchar *name;\n\t\tint namelen;\n\t\tint size = 0;\n\n\t\t/* Handle format arguments if any */\n\t\tif (formatlen > 0) {\n\t\t\tc = *format;\n\n\t\t\tif (c >= '0' && c <= '9') {\n\t\t\t\terrno = 0;\n\t\t\t\tlong tmp = strtol(format, NULL, 10);\n\t\t\t\t/* There is not strtoi. We have to check the range ourselves.\n\t\t\t\t * With 32-bit long the INT_{MIN,MAX} are useless because long == int, but with 64-bit they do limit us to 32-bit. */\n\t\t\t\tif (errno || tmp < INT_MIN || tmp > INT_MAX) {\n\t\t\t\t\tphp_error_docref(NULL, E_WARNING, \"Type %c: integer overflow\", type);\n\t\t\t\t\tzend_array_destroy(Z_ARR_P(return_value));\n\t\t\t\t\tRETURN_FALSE;\n\t\t\t\t}\n\t\t\t\trepetitions = tmp;\n\n\t\t\t\twhile (formatlen > 0 && *format >= '0' && *format <= '9') {\n\t\t\t\t\tformat++;\n\t\t\t\t\tformatlen--;\n\t\t\t\t}\n\t\t\t} else if (c == '*') {\n\t\t\t\trepetitions = -1;\n\t\t\t\tformat++;\n\t\t\t\tformatlen--;\n\t\t\t}\n\t\t}\n\n\t\t/* Get of new value in array */\n\t\tname = format;\n\t\targb = repetitions;\n\n\t\twhile (formatlen > 0 && *format != '/') {\n\t\t\tformatlen--;\n\t\t\tformat++;\n\t\t}\n\n\t\tnamelen = format - name;\n\n\t\tif (namelen > 200)\n\t\t\tnamelen = 200;\n\n\t\tswitch ((int) type) {\n\t\t\t/* Never use any input */\n\t\t\tcase 'X':\n\t\t\t\tsize = -1;\n\t\t\t\tif (repetitions < 0) {\n\t\t\t\t\tphp_error_docref(NULL, E_WARNING, \"Type %c: '*' ignored\", type);\n\t\t\t\t\trepetitions = 1;\n\t\t\t\t}\n\t\t\t\tbreak;\n\n\t\t\tcase '@':\n\t\t\t\tsize = 0;\n\t\t\t\tbreak;\n\n\t\t\tcase 'a':\n\t\t\tcase 'A':\n\t\t\tcase 'Z':\n\t\t\t\tsize = repetitions;\n\t\t\t\trepetitions = 1;\n\t\t\t\tbreak;\n\n\t\t\tcase 'h':\n\t\t\tcase 'H':\n\t\t\t\tsize = (repetitions > 0) ? ((unsigned int) repetitions + 1) / 2 : repetitions;\n\t\t\t\trepetitions = 1;\n\t\t\t\tbreak;\n\n\t\t\t/* Use 1 byte of input */\n\t\t\tcase 'c':\n\t\t\tcase 'C':\n\t\t\tcase 'x':\n\t\t\t\tsize = 1;\n\t\t\t\tbreak;\n\n\t\t\t/* Use 2 bytes of input */\n\t\t\tcase 's':\n\t\t\tcase 'S':\n\t\t\tcase 'n':\n\t\t\tcase 'v':\n\t\t\t\tsize = 2;\n\t\t\t\tbreak;\n\n\t\t\t/* Use sizeof(int) bytes of input */\n\t\t\tcase 'i':\n\t\t\tcase 'I':\n\t\t\t\tsize = sizeof(int);\n\t\t\t\tbreak;\n\n\t\t\t/* Use 4 bytes of input */\n\t\t\tcase 'l':\n\t\t\tcase 'L':\n\t\t\tcase 'N':\n\t\t\tcase 'V':\n\t\t\t\tsize = 4;\n\t\t\t\tbreak;\n\n\t\t\t/* Use 8 bytes of input */\n\t\t\tcase 'q':\n\t\t\tcase 'Q':\n\t\t\tcase 'J':\n\t\t\tcase 'P':\n#if SIZEOF_ZEND_LONG > 4\n\t\t\t\tsize = 8;\n\t\t\t\tbreak;\n#else\n\t\t\t\tzend_value_error(\"64-bit format codes are not available for 32-bit versions of PHP\");\n\t\t\t\tRETURN_THROWS();\n#endif\n\n\t\t\t/* Use sizeof(float) bytes of input */\n\t\t\tcase 'f':\n\t\t\tcase 'g':\n\t\t\tcase 'G':\n\t\t\t\tsize = sizeof(float);\n\t\t\t\tbreak;\n\n\t\t\t/* Use sizeof(double) bytes of input */\n\t\t\tcase 'd':\n\t\t\tcase 'e':\n\t\t\tcase 'E':\n\t\t\t\tsize = sizeof(double);\n\t\t\t\tbreak;\n\n\t\t\tdefault:\n\t\t\t\tzend_value_error(\"Invalid format type %c\", type);\n\t\t\t\tRETURN_THROWS();\n\t\t}\n\n\n\t\t/* Do actual unpacking */\n\t\tfor (i = 0; i != repetitions; i++ ) {\n\n\t\t\tif (size != 0 && size != -1 && INT_MAX - size + 1 < inputpos) {\n\t\t\t\tphp_error_docref(NULL, E_WARNING, \"Type %c: integer overflow\", type);\n\t\t\t\tzend_array_destroy(Z_ARR_P(return_value));\n\t\t\t\tRETURN_FALSE;\n\t\t\t}\n\n\t\t\tif ((inputpos + size) <= inputlen) {\n\n\t\t\t\tzend_string* real_name;\n\t\t\t\tzval val;\n\n\t\t\t\tif (repetitions == 1 && namelen > 0) {\n\t\t\t\t\t/* Use a part of the formatarg argument directly as the name. */\n\t\t\t\t\treal_name = zend_string_init_fast(name, namelen);\n\n\t\t\t\t} else {\n\t\t\t\t\t/* Need to add the 1-based element number to the name */\n\t\t\t\t\tchar buf[MAX_LENGTH_OF_LONG + 1];\n\t\t\t\t\tchar *res = zend_print_ulong_to_buf(buf + sizeof(buf) - 1, i+1);\n\t\t\t\t\tsize_t digits = buf + sizeof(buf) - 1 - res;\n\t\t\t\t\treal_name = zend_string_concat2(name, namelen, res, digits);\n\t\t\t\t}\n\n\t\t\t\tswitch ((int) type) {\n\t\t\t\t\tcase 'a': {\n\t\t\t\t\t\t/* a will not strip any trailing whitespace or null padding */\n\t\t\t\t\t\tzend_long len = inputlen - inputpos;\t/* Remaining string */\n\n\t\t\t\t\t\t/* If size was given take minimum of len and size */\n\t\t\t\t\t\tif ((size >= 0) && (len > size)) {\n\t\t\t\t\t\t\tlen = size;\n\t\t\t\t\t\t}\n\n\t\t\t\t\t\tsize = len;\n\n\t\t\t\t\t\tZVAL_STRINGL(&val, &input[inputpos], len);\n\t\t\t\t\t\tzend_symtable_update(Z_ARRVAL_P(return_value), real_name, &val);\n\t\t\t\t\t\tbreak;\n\t\t\t\t\t}\n\t\t\t\t\tcase 'A': {\n\t\t\t\t\t\t/* A will strip any trailing whitespace */\n\t\t\t\t\t\tchar padn = '\\0'; char pads = ' '; char padt = '\\t'; char padc = '\\r'; char padl = '\\n';\n\t\t\t\t\t\tzend_long len = inputlen - inputpos;\t/* Remaining string */\n\n\t\t\t\t\t\t/* If size was given take minimum of len and size */\n\t\t\t\t\t\tif ((size >= 0) && (len > size)) {\n\t\t\t\t\t\t\tlen = size;\n\t\t\t\t\t\t}\n\n\t\t\t\t\t\tsize = len;\n\n\t\t\t\t\t\t/* Remove trailing white space and nulls chars from unpacked data */\n\t\t\t\t\t\twhile (--len >= 0) {\n\t\t\t\t\t\t\tif (input[inputpos + len] != padn\n\t\t\t\t\t\t\t\t&& input[inputpos + len] != pads\n\t\t\t\t\t\t\t\t&& input[inputpos + len] != padt\n\t\t\t\t\t\t\t\t&& input[inputpos + len] != padc\n\t\t\t\t\t\t\t\t&& input[inputpos + len] != padl\n\t\t\t\t\t\t\t)\n\t\t\t\t\t\t\t\tbreak;\n\t\t\t\t\t\t}\n\n\t\t\t\t\t\tZVAL_STRINGL(&val, &input[inputpos], len + 1);\n\t\t\t\t\t\tzend_symtable_update(Z_ARRVAL_P(return_value), real_name, &val);\n\t\t\t\t\t\tbreak;\n\t\t\t\t\t}\n\t\t\t\t\t/* New option added for Z to remain in-line with the Perl implementation */\n\t\t\t\t\tcase 'Z': {\n\t\t\t\t\t\t/* Z will strip everything after the first null character */\n\t\t\t\t\t\tchar pad = '\\0';\n\t\t\t\t\t\tzend_long s,\n\t\t\t\t\t\t\t len = inputlen - inputpos;\t/* Remaining string */\n\n\t\t\t\t\t\t/* If size was given take minimum of len and size */\n\t\t\t\t\t\tif ((size >= 0) && (len > size)) {\n\t\t\t\t\t\t\tlen = size;\n\t\t\t\t\t\t}\n\n\t\t\t\t\t\tsize = len;\n\n\t\t\t\t\t\t/* Remove everything after the first null */\n\t\t\t\t\t\tfor (s=0 ; s < len ; s++) {\n\t\t\t\t\t\t\tif (input[inputpos + s] == pad)\n\t\t\t\t\t\t\t\tbreak;\n\t\t\t\t\t\t}\n\t\t\t\t\t\tlen = s;\n\n\t\t\t\t\t\tZVAL_STRINGL(&val, &input[inputpos], len);\n\t\t\t\t\t\tzend_symtable_update(Z_ARRVAL_P(return_value), real_name, &val);\n\t\t\t\t\t\tbreak;\n\t\t\t\t\t}\n\n\n\t\t\t\t\tcase 'h':\n\t\t\t\t\tcase 'H': {\n\t\t\t\t\t\tzend_long len = (inputlen - inputpos) * 2;\t/* Remaining */\n\t\t\t\t\t\tint nibbleshift = (type == 'h') ? 0 : 4;\n\t\t\t\t\t\tint first = 1;\n\t\t\t\t\t\tzend_string *buf;\n\t\t\t\t\t\tzend_long ipos, opos;\n\n\n\t\t\t\t\t\tif (size > INT_MAX / 2) {\n\t\t\t\t\t\t\tzend_string_release(real_name);\n\t\t\t\t\t\t\tzend_argument_value_error(1, \"repeater must be less than or equal to %d\", INT_MAX / 2);\n\t\t\t\t\t\t\tRETURN_THROWS();\n\t\t\t\t\t\t}\n\n\t\t\t\t\t\t/* If size was given take minimum of len and size */\n\t\t\t\t\t\tif (size >= 0 && len > (size * 2)) {\n\t\t\t\t\t\t\tlen = size * 2;\n\t\t\t\t\t\t}\n\n\t\t\t\t\t\tif (len > 0 && argb > 0) {\n\t\t\t\t\t\t\tlen -= argb % 2;\n\t\t\t\t\t\t}\n\n\t\t\t\t\t\tbuf = zend_string_alloc(len, 0);\n\n\t\t\t\t\t\tfor (ipos = opos = 0; opos < len; opos++) {\n\t\t\t\t\t\t\tchar cc = (input[inputpos + ipos] >> nibbleshift) & 0xf;\n\n\t\t\t\t\t\t\tif (cc < 10) {\n\t\t\t\t\t\t\t\tcc += '0';\n\t\t\t\t\t\t\t} else {\n\t\t\t\t\t\t\t\tcc += 'a' - 10;\n\t\t\t\t\t\t\t}\n\n\t\t\t\t\t\t\tZSTR_VAL(buf)[opos] = cc;\n\t\t\t\t\t\t\tnibbleshift = (nibbleshift + 4) & 7;\n\n\t\t\t\t\t\t\tif (first-- == 0) {\n\t\t\t\t\t\t\t\tipos++;\n\t\t\t\t\t\t\t\tfirst = 1;\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t}\n\n\t\t\t\t\t\tZSTR_VAL(buf)[len] = '\\0';\n\n\t\t\t\t\t\tZVAL_STR(&val, buf);\n\t\t\t\t\t\tzend_symtable_update(Z_ARRVAL_P(return_value), real_name, &val);\n\t\t\t\t\t\tbreak;\n\t\t\t\t\t}\n\n\t\t\t\t\tcase 'c':   /* signed */\n\t\t\t\t\tcase 'C': { /* unsigned */\n\t\t\t\t\t\tuint8_t x = input[inputpos];\n\t\t\t\t\t\tzend_long v = (type == 'c') ? (int8_t) x : x;\n\n\t\t\t\t\t\tZVAL_LONG(&val, v);\n\t\t\t\t\t\tzend_symtable_update(Z_ARRVAL_P(return_value), real_name, &val);\n\t\t\t\t\t\tbreak;\n\t\t\t\t\t}\n\n\t\t\t\t\tcase 's':   /* signed machine endian   */\n\t\t\t\t\tcase 'S':   /* unsigned machine endian */\n\t\t\t\t\tcase 'n':   /* unsigned big endian     */\n\t\t\t\t\tcase 'v': { /* unsigned little endian  */\n\t\t\t\t\t\tzend_long v = 0;\n\t\t\t\t\t\tuint16_t x = *((unaligned_uint16_t*) &input[inputpos]);\n\n\t\t\t\t\t\tif (type == 's') {\n\t\t\t\t\t\t\tv = (int16_t) x;\n\t\t\t\t\t\t} else if ((type == 'n' && MACHINE_LITTLE_ENDIAN) || (type == 'v' && !MACHINE_LITTLE_ENDIAN)) {\n\t\t\t\t\t\t\tv = php_pack_reverse_int16(x);\n\t\t\t\t\t\t} else {\n\t\t\t\t\t\t\tv = x;\n\t\t\t\t\t\t}\n\n\t\t\t\t\t\tZVAL_LONG(&val, v);\n\t\t\t\t\t\tzend_symtable_update(Z_ARRVAL_P(return_value), real_name, &val);\n\t\t\t\t\t\tbreak;\n\t\t\t\t\t}\n\n\t\t\t\t\tcase 'i':   /* signed integer, machine size, machine endian */\n\t\t\t\t\tcase 'I': { /* unsigned integer, machine size, machine endian */\n\t\t\t\t\t\tzend_long v;\n\t\t\t\t\t\tif (type == 'i') {\n\t\t\t\t\t\t\tint x = *((unaligned_int*) &input[inputpos]);\n\t\t\t\t\t\t\tv = x;\n\t\t\t\t\t\t} else {\n\t\t\t\t\t\t\tunsigned int x = *((unaligned_uint*) &input[inputpos]);\n\t\t\t\t\t\t\tv = x;\n\t\t\t\t\t\t}\n\n\t\t\t\t\t\tZVAL_LONG(&val, v);\n\t\t\t\t\t\tzend_symtable_update(Z_ARRVAL_P(return_value), real_name, &val);\n\t\t\t\t\t\tbreak;\n\t\t\t\t\t}\n\n\t\t\t\t\tcase 'l':   /* signed machine endian   */\n\t\t\t\t\tcase 'L':   /* unsigned machine endian */\n\t\t\t\t\tcase 'N':   /* unsigned big endian     */\n\t\t\t\t\tcase 'V': { /* unsigned little endian  */\n\t\t\t\t\t\tzend_long v = 0;\n\t\t\t\t\t\tuint32_t x = *((unaligned_uint32_t*) &input[inputpos]);\n\n\t\t\t\t\t\tif (type == 'l') {\n\t\t\t\t\t\t\tv = (int32_t) x;\n\t\t\t\t\t\t} else if ((type == 'N' && MACHINE_LITTLE_ENDIAN) || (type == 'V' && !MACHINE_LITTLE_ENDIAN)) {\n\t\t\t\t\t\t\tv = php_pack_reverse_int32(x);\n\t\t\t\t\t\t} else {\n\t\t\t\t\t\t\tv = x;\n\t\t\t\t\t\t}\n\n\t\t\t\t\t\tZVAL_LONG(&val, v);\n\t\t\t\t\t\tzend_symtable_update(Z_ARRVAL_P(return_value), real_name, &val);\n\n\t\t\t\t\t\tbreak;\n\t\t\t\t\t}\n\n#if SIZEOF_ZEND_LONG > 4\n\t\t\t\t\tcase 'q':   /* signed machine endian   */\n\t\t\t\t\tcase 'Q':   /* unsigned machine endian */\n\t\t\t\t\tcase 'J':   /* unsigned big endian     */\n\t\t\t\t\tcase 'P': { /* unsigned little endian  */\n\t\t\t\t\t\tzend_long v = 0;\n\t\t\t\t\t\tuint64_t x = *((unaligned_uint64_t*) &input[inputpos]);\n\n\t\t\t\t\t\tif (type == 'q') {\n\t\t\t\t\t\t\tv = (int64_t) x;\n\t\t\t\t\t\t} else if ((type == 'J' && MACHINE_LITTLE_ENDIAN) || (type == 'P' && !MACHINE_LITTLE_ENDIAN)) {\n\t\t\t\t\t\t\tv = php_pack_reverse_int64(x);\n\t\t\t\t\t\t} else {\n\t\t\t\t\t\t\tv = x;\n\t\t\t\t\t\t}\n\n\t\t\t\t\t\tZVAL_LONG(&val, v);\n\t\t\t\t\t\tzend_symtable_update(Z_ARRVAL_P(return_value), real_name, &val);\n\t\t\t\t\t\tbreak;\n\t\t\t\t\t}\n#endif\n\n\t\t\t\t\tcase 'f': /* float */\n\t\t\t\t\tcase 'g': /* little endian float*/\n\t\t\t\t\tcase 'G': /* big endian float*/\n\t\t\t\t\t{\n\t\t\t\t\t\tfloat v;\n\n\t\t\t\t\t\tif (type == 'g') {\n\t\t\t\t\t\t\tv = php_pack_parse_float(1, &input[inputpos]);\n\t\t\t\t\t\t} else if (type == 'G') {\n\t\t\t\t\t\t\tv = php_pack_parse_float(0, &input[inputpos]);\n\t\t\t\t\t\t} else {\n\t\t\t\t\t\t\tmemcpy(&v, &input[inputpos], sizeof(float));\n\t\t\t\t\t\t}\n\n\t\t\t\t\t\tZVAL_DOUBLE(&val, v);\n\t\t\t\t\t\tzend_symtable_update(Z_ARRVAL_P(return_value), real_name, &val);\n\t\t\t\t\t\tbreak;\n\t\t\t\t\t}\n\n\n\t\t\t\t\tcase 'd': /* double */\n\t\t\t\t\tcase 'e': /* little endian float */\n\t\t\t\t\tcase 'E': /* big endian float */\n\t\t\t\t\t{\n\t\t\t\t\t\tdouble v;\n\t\t\t\t\t\tif (type == 'e') {\n\t\t\t\t\t\t\tv = php_pack_parse_double(1, &input[inputpos]);\n\t\t\t\t\t\t} else if (type == 'E') {\n\t\t\t\t\t\t\tv = php_pack_parse_double(0, &input[inputpos]);\n\t\t\t\t\t\t} else {\n\t\t\t\t\t\t\tmemcpy(&v, &input[inputpos], sizeof(double));\n\t\t\t\t\t\t}\n\n\t\t\t\t\t\tZVAL_DOUBLE(&val, v);\n\t\t\t\t\t\tzend_symtable_update(Z_ARRVAL_P(return_value), real_name, &val);\n\t\t\t\t\t\tbreak;\n\t\t\t\t\t}\n\n\t\t\t\t\tcase 'x':\n\t\t\t\t\t\t/* Do nothing with input, just skip it */\n\t\t\t\t\t\tbreak;\n\n\t\t\t\t\tcase 'X':\n\t\t\t\t\t\tif (inputpos < size) {\n\t\t\t\t\t\t\tinputpos = -size;\n\t\t\t\t\t\t\ti = repetitions - 1;\t\t/* Break out of for loop */\n\n\t\t\t\t\t\t\tif (repetitions >= 0) {\n\t\t\t\t\t\t\t\tphp_error_docref(NULL, E_WARNING, \"Type %c: outside of string\", type);\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t}\n\t\t\t\t\t\tbreak;\n\n\t\t\t\t\tcase '@':\n\t\t\t\t\t\tif (repetitions <= inputlen) {\n\t\t\t\t\t\t\tinputpos = repetitions;\n\t\t\t\t\t\t} else {\n\t\t\t\t\t\t\tphp_error_docref(NULL, E_WARNING, \"Type %c: outside of string\", type);\n\t\t\t\t\t\t}\n\n\t\t\t\t\t\ti = repetitions - 1;\t/* Done, break out of for loop */\n\t\t\t\t\t\tbreak;\n\t\t\t\t}\n\n\t\t\t\tzend_string_release(real_name);\n\n\t\t\t\tinputpos += size;\n\t\t\t\tif (inputpos < 0) {\n\t\t\t\t\tif (size != -1) { /* only print warning if not working with * */\n\t\t\t\t\t\tphp_error_docref(NULL, E_WARNING, \"Type %c: outside of string\", type);\n\t\t\t\t\t}\n\t\t\t\t\tinputpos = 0;\n\t\t\t\t}\n\t\t\t} else if (repetitions < 0) {\n\t\t\t\t/* Reached end of input for '*' repeater */\n\t\t\t\tbreak;\n\t\t\t} else {\n\t\t\t\tphp_error_docref(NULL, E_WARNING, \"Type %c: not enough input values, need %d values but only \" ZEND_LONG_FMT \" %s provided\", type, size, inputlen - inputpos, inputlen - inputpos == 1 ? \"was\" : \"were\");\n\t\t\t\tzend_array_destroy(Z_ARR_P(return_value));\n\t\t\t\tRETURN_FALSE;\n\t\t\t}\n\t\t}\n\n\t\tif (formatlen > 0) {\n\t\t\tformatlen--;\t/* Skip '/' separator, does no harm if inputlen == 0 */\n\t\t\tformat++;\n\t\t}\n\t}",
+    "semantic": "Handle format arguments if any",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STR",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_LONG",
+            "ZEND_PARSE_PARAMETERS_END",
+            "ZSTR_VAL",
+            "ZSTR_LEN",
+            "RETURN_THROWS",
+            "RETURN_FALSE",
+            "ZVAL_STRINGL",
+            "ZVAL_STR",
+            "ZVAL_LONG",
+            "ZVAL_DOUBLE",
+            "ZEND_LONG_FMT"
+        ],
+        "zend_types": [
+            "zend_string",
+            "zend_long",
+            "zval"
+        ],
+        "internal_helpers": [
+            "zend_argument_value_error",
+            "php_error_docref",
+            "zend_array_destroy",
+            "zend_value_error",
+            "zend_string_init_fast",
+            "zend_print_ulong_to_buf",
+            "zend_string_concat2",
+            "zend_symtable_update",
+            "zend_string_release",
+            "zend_string_alloc",
+            "php_pack_reverse_int16",
+            "php_pack_reverse_int32",
+            "php_pack_reverse_int64",
+            "php_pack_parse_float",
+            "php_pack_parse_double"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common unpack inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": true,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": true,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return.",
+        "Avoid forgetting to balance refcounts when handing values to helper APIs."
+    ],
+    "complexity": 10,
+    "purpose": "Handle format arguments if any",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "pack"
+    ]
+}

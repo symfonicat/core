@@ -1,0 +1,174 @@
+{
+    "php_function": "mb_convert_kana",
+    "zend_function": "mb_convert_kana",
+    "source_file": "string.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "str",
+            "macro": "Z_PARAM_STR",
+            "arguments": [
+                "str"
+            ],
+            "type": "zend_string",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR(str)"
+        },
+        {
+            "name": "optstr",
+            "macro": "Z_PARAM_STRING",
+            "arguments": [
+                "optstr",
+                "optstr_len"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STRING(optstr, optstr_len)"
+        },
+        {
+            "name": "encname",
+            "macro": "Z_PARAM_STR_OR_NULL",
+            "arguments": [
+                "encname"
+            ],
+            "type": "zend_string",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_STR_OR_NULL(encname)"
+        }
+    ],
+    "includes": [
+        "limits.h",
+        "libmbfl/config.h",
+        "php.h",
+        "php_ini.h",
+        "php_variables.h",
+        "mbstring.h",
+        "ext/standard/php_string.h",
+        "ext/standard/php_mail.h",
+        "ext/standard/exec.h",
+        "main/php_output.h",
+        "ext/standard/info.h",
+        "ext/pcre/php_pcre.h",
+        "libmbfl/mbfl/mbfilter_8bit.h",
+        "libmbfl/mbfl/mbfilter_pass.h",
+        "libmbfl/mbfl/eaw_table.h",
+        "libmbfl/filters/mbfilter_base64.h",
+        "libmbfl/filters/mbfilter_cjk.h",
+        "libmbfl/filters/mbfilter_qprint.h",
+        "libmbfl/filters/mbfilter_htmlent.h",
+        "libmbfl/filters/mbfilter_uuencode.h",
+        "libmbfl/filters/mbfilter_ucs4.h",
+        "libmbfl/filters/mbfilter_utf16.h",
+        "libmbfl/filters/mbfilter_singlebyte.h",
+        "libmbfl/filters/translit_kana_jisx0201_jisx0208.h",
+        "libmbfl/filters/unicode_prop.h",
+        "php_globals.h",
+        "rfc1867.h",
+        "php_content_types.h",
+        "SAPI.h",
+        "php_unicode.h",
+        "TSRM.h",
+        "mb_gpc.h",
+        "zend_smart_str.h",
+        "zend_multibyte.h",
+        "mbstring_arginfo.h",
+        "rare_cp_bitvec.h",
+        "emmintrin.h",
+        "immintrin.h",
+        "pmmintrin.h"
+    ],
+    "body": "unsigned int opt;\n\tchar *optstr = NULL;\n\tsize_t optstr_len;\n\tzend_string *encname = NULL, *str;\n\n\tZEND_PARSE_PARAMETERS_START(1, 3)\n\t\tZ_PARAM_STR(str)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_STRING(optstr, optstr_len)\n\t\tZ_PARAM_STR_OR_NULL(encname)\n\tZEND_PARSE_PARAMETERS_END();\n\n\tif (optstr != NULL) {\n\t\tchar *p = optstr, *e = p + optstr_len;\n\t\topt = 0;\nnext_option:\n\t\twhile (p < e) {\n\t\t\t/* Walk through option string and convert to bit vector\n\t\t\t * See translit_kana_jisx0201_jisx0208.h for the values used */\n\t\t\tchar c = *p++;\n\t\t\tif (c == 'A') {\n\t\t\t\topt |= MBFL_HAN2ZEN_ALL | MBFL_HAN2ZEN_ALPHA | MBFL_HAN2ZEN_NUMERIC;\n\t\t\t} else if (c == 'a') {\n\t\t\t\topt |= MBFL_ZEN2HAN_ALL | MBFL_ZEN2HAN_ALPHA | MBFL_ZEN2HAN_NUMERIC;\n\t\t\t} else {\n\t\t\t\tfor (size_t i = 0; i < sizeof(mb_convert_kana_flags) / sizeof(char); i++) {\n\t\t\t\t\tif (c == mb_convert_kana_flags[i]) {\n\t\t\t\t\t\topt |= (1 << i);\n\t\t\t\t\t\tgoto next_option;\n\t\t\t\t\t}\n\t\t\t\t}\n\n\t\t\t\tzend_argument_value_error(2, \"contains invalid flag: '%c'\", c);\n\t\t\t\tRETURN_THROWS();\n\t\t\t}\n\t\t}\n\n\t\t/* Check for illegal combinations of options */\n\t\tif (((opt & 0xFF00) >> 8) & opt) {\n\t\t\t/* It doesn't make sense to convert the same type of characters from halfwidth to\n\t\t\t * fullwidth and then back to halfwidth again. Neither does it make sense to convert\n\t\t\t * FW hiragana to FW katakana and then back again. */\n\t\t\tint badflag = ((opt & 0xFF00) >> 8) & opt, i;\n\t\t\tfor (i = 0; (badflag & 1) == 0; badflag >>= 1, i++);\n\t\t\tchar flag1 = mb_convert_kana_flags[i], flag2 = mb_convert_kana_flags[i+8];\n\t\t\tif ((flag1 == 'R' || flag1 == 'N') && (opt & MBFL_HAN2ZEN_ALL))\n\t\t\t\tflag1 = 'A';\n\t\t\tif ((flag2 == 'r' || flag2 == 'n') && (opt & MBFL_ZEN2HAN_ALL))\n\t\t\t\tflag2 = 'a';\n\t\t\tzend_argument_value_error(2, \"must not combine '%c' and '%c' flags\", flag1, flag2);\n\t\t\tRETURN_THROWS();\n\t\t}\n\n\t\tif ((opt & MBFL_HAN2ZEN_HIRAGANA) && (opt & MBFL_HAN2ZEN_KATAKANA)) {\n\t\t\t/* We can either convert all HW kana to FW hiragana, or to FW katakana, but not both */\n\t\t\tzend_argument_value_error(2, \"must not combine 'H' and 'K' flags\");\n\t\t\tRETURN_THROWS();\n\t\t}\n\n\t\t/* We can either convert all FW kana to HW hiragana, or all FW kana to HW katakana,\n\t\t * or all FW hiragana to FW katakana, or all FW katakana to FW hiragana, but not\n\t\t * more than one of these */\n\t\tif (opt & MBFL_ZEN2HAN_HIRAGANA) {\n\t\t\tif (opt & MBFL_ZENKAKU_HIRA2KATA) {\n\t\t\t\tzend_argument_value_error(2, \"must not combine 'h' and 'C' flags\");\n\t\t\t\tRETURN_THROWS();\n\t\t\t} else if (opt & MBFL_ZENKAKU_KATA2HIRA) {\n\t\t\t\tzend_argument_value_error(2, \"must not combine 'h' and 'c' flags\");\n\t\t\t\tRETURN_THROWS();\n\t\t\t}\n\t\t} else if (opt & MBFL_ZEN2HAN_KATAKANA) {\n\t\t\tif (opt & MBFL_ZENKAKU_HIRA2KATA) {\n\t\t\t\tzend_argument_value_error(2, \"must not combine 'k' and 'C' flags\");\n\t\t\t\tRETURN_THROWS();\n\t\t\t} else if (opt & MBFL_ZENKAKU_KATA2HIRA) {\n\t\t\t\tzend_argument_value_error(2, \"must not combine 'k' and 'c' flags\");\n\t\t\t\tRETURN_THROWS();\n\t\t\t}\n\t\t}\n\t} else {\n\t\topt = MBFL_HAN2ZEN_KATAKANA | MBFL_HAN2ZEN_GLUE;\n\t}\n\n\tconst mbfl_encoding *enc = php_mb_get_encoding(encname, 3);\n\tif (!enc) {\n\t\tRETURN_THROWS();\n\t}\n\n\tRETVAL_STR(jp_kana_convert(str, enc, opt));",
+    "semantic": "Walk through option string and convert to bit vector See translit_kana_jisx0201_jisx0208.h for the values used",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Iterate over request data, buffers, or container structures as needed.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_STR",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_STRING",
+            "Z_PARAM_STR_OR_NULL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_THROWS"
+        ],
+        "zend_types": [
+            "zend_string"
+        ],
+        "internal_helpers": [
+            "zend_argument_value_error",
+            "php_mb_get_encoding"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common mb_convert_kana inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": true,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 7,
+    "purpose": "Walk through option string and convert to bit vector See translit_kana_jisx0201_jisx0208.h for the values used",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "mb_language",
+        "mb_internal_encoding",
+        "mb_http_input",
+        "mb_http_output",
+        "mb_detect_order",
+        "mb_substitute_character",
+        "mb_preferred_mime_name",
+        "mb_parse_str",
+        "mb_output_handler",
+        "mb_str_split",
+        "mb_strlen",
+        "mb_strpos"
+    ]
+}

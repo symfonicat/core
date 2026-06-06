@@ -1,0 +1,158 @@
+{
+    "php_function": "rename",
+    "zend_function": "rename",
+    "source_file": "le.c",
+    "extension": null,
+    "parameters": [
+        {
+            "name": "old_name",
+            "macro": "Z_PARAM_PATH",
+            "arguments": [
+                "old_name",
+                "old_name_len"
+            ],
+            "type": "mixed",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_PATH(old_name, old_name_len)"
+        },
+        {
+            "name": "new_name",
+            "macro": "Z_PARAM_PATH",
+            "arguments": [
+                "new_name",
+                "new_name_len"
+            ],
+            "type": "mixed",
+            "required": true,
+            "optional": false,
+            "nullable": false,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_PATH(new_name, new_name_len)"
+        },
+        {
+            "name": "zcontext",
+            "macro": "Z_PARAM_RESOURCE_OR_NULL",
+            "arguments": [
+                "zcontext"
+            ],
+            "type": "zend_resource",
+            "required": false,
+            "optional": true,
+            "nullable": true,
+            "variadic": false,
+            "by_reference": false,
+            "raw": "Z_PARAM_RESOURCE_OR_NULL(zcontext)"
+        }
+    ],
+    "includes": [
+        "php.h",
+        "ext/standard/flock_compat.h",
+        "ext/standard/php_filestat.h",
+        "php_open_temporary_file.h",
+        "ext/standard/basic_functions.h",
+        "php_ini.h",
+        "zend_smart_str.h",
+        "stdio.h",
+        "stdlib.h",
+        "errno.h",
+        "wchar.h",
+        "sys/types.h",
+        "sys/stat.h",
+        "fcntl.h",
+        "php_string.h",
+        "file.h",
+        "fsock.h",
+        "fopen_wrappers.h",
+        "streamsfuncs.h",
+        "scanf.h",
+        "zend_API.h",
+        "file_arginfo.h"
+    ],
+    "body": "char *old_name, *new_name;\n\tsize_t old_name_len, new_name_len;\n\tzval *zcontext = NULL;\n\tphp_stream_wrapper *wrapper;\n\tphp_stream_context *context;\n\n\tZEND_PARSE_PARAMETERS_START(2, 3)\n\t\tZ_PARAM_PATH(old_name, old_name_len)\n\t\tZ_PARAM_PATH(new_name, new_name_len)\n\t\tZ_PARAM_OPTIONAL\n\t\tZ_PARAM_RESOURCE_OR_NULL(zcontext)\n\tZEND_PARSE_PARAMETERS_END();\n\n\twrapper = php_stream_locate_url_wrapper(old_name, NULL, 0);\n\n\tif (!wrapper || !wrapper->wops) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Unable to locate stream wrapper\");\n\t\tRETURN_FALSE;\n\t}\n\n\tif (!wrapper->wops->rename) {\n\t\tphp_error_docref(NULL, E_WARNING, \"%s wrapper does not support renaming\", wrapper->wops->label ? wrapper->wops->label : \"Source\");\n\t\tRETURN_FALSE;\n\t}\n\n\tif (wrapper != php_stream_locate_url_wrapper(new_name, NULL, 0)) {\n\t\tphp_error_docref(NULL, E_WARNING, \"Cannot rename a file across wrapper types\");\n\t\tRETURN_FALSE;\n\t}\n\n\tcontext = php_stream_context_from_zval(zcontext, 0);\n\n\tRETURN_BOOL(wrapper->wops->rename(wrapper, old_name, new_name, 0, context));",
+    "semantic": "Implements the PHP function rename in the Zend core runtime path.",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_PARSE_PARAMETERS_START",
+            "Z_PARAM_PATH",
+            "Z_PARAM_OPTIONAL",
+            "Z_PARAM_RESOURCE_OR_NULL",
+            "ZEND_PARSE_PARAMETERS_END",
+            "RETURN_FALSE",
+            "RETURN_BOOL"
+        ],
+        "zend_types": [
+            "zval"
+        ],
+        "internal_helpers": [
+            "php_stream_locate_url_wrapper",
+            "php_error_docref",
+            "php_stream_context_from_zval"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common rename inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": false,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": false
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 5,
+    "purpose": "Implements the PHP function rename in the Zend core runtime path.",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "flock",
+        "get_meta_tags",
+        "file_get_contents",
+        "file_put_contents",
+        "file",
+        "tempnam",
+        "tmpfile",
+        "fopen",
+        "popen",
+        "pclose",
+        "fscanf",
+        "mkdir"
+    ]
+}

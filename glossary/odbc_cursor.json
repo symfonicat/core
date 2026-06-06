@@ -1,0 +1,101 @@
+{
+    "php_function": "odbc_cursor",
+    "zend_function": "odbc_cursor",
+    "source_file": "bc.c",
+    "extension": null,
+    "parameters": [],
+    "includes": [
+        "config.h",
+        "php.h",
+        "php_globals.h",
+        "zend_attributes.h",
+        "ext/standard/info.h",
+        "Zend/zend_interfaces.h",
+        "zend_smart_str.h",
+        "php_odbc.h",
+        "php_odbc_includes.h",
+        "php_odbc_utils.h",
+        "fcntl.h",
+        "php_ini.h",
+        "odbc_arginfo.h"
+    ],
+    "body": "zval *pv_res;\n\tSQLUSMALLINT max_len;\n\tSQLSMALLINT len;\n\tchar *cursorname;\n\todbc_result *result;\n\tRETCODE rc;\n\n\tif (zend_parse_parameters(ZEND_NUM_ARGS(), \"O\", &pv_res, odbc_result_ce) == FAILURE) {\n\t\tRETURN_THROWS();\n\t}\n\n\tresult = Z_ODBC_RESULT_P(pv_res);\n\tCHECK_ODBC_RESULT(result);\n\n\trc = SQLGetInfo(result->conn_ptr->hdbc,SQL_MAX_CURSOR_NAME_LEN, (void *)&max_len,sizeof(max_len),&len);\n\tif (rc != SQL_SUCCESS && rc != SQL_SUCCESS_WITH_INFO) {\n\t\tRETURN_FALSE;\n\t}\n\n\tif (max_len > 0) {\n\t\tcursorname = emalloc(max_len + 1);\n\t\trc = SQLGetCursorName(result->stmt, (SQLCHAR *) cursorname, (SQLSMALLINT)max_len, &len);\n\t\tif (rc != SQL_SUCCESS && rc != SQL_SUCCESS_WITH_INFO) {\n\t\t\tchar        state[6];     /* Not used */\n\t \t\tSQLINTEGER  error;        /* Not used */\n\t\t\tchar        errormsg[SQL_MAX_MESSAGE_LENGTH];\n\t\t\tSQLSMALLINT errormsgsize; /* Not used */\n\n\t\t\tSQLError( result->conn_ptr->henv, result->conn_ptr->hdbc,\n\t\t\t\t\t\tresult->stmt, (SQLCHAR *) state, &error, (SQLCHAR *) errormsg,\n\t\t\t\t\t\tsizeof(errormsg)-1, &errormsgsize);\n\t\t\tif (!strncmp(state,\"S1015\",5)) {\n\t\t\t\tsnprintf(cursorname, max_len+1, \"php_curs_\" ZEND_ULONG_FMT, (zend_ulong)result->stmt);\n\t\t\t\tif (SQLSetCursorName(result->stmt, (SQLCHAR *) cursorname, SQL_NTS) != SQL_SUCCESS) {\n\t\t\t\t\todbc_sql_error(result->conn_ptr, result->stmt, \"SQLSetCursorName\");\n\t\t\t\t\tRETVAL_FALSE;\n\t\t\t\t} else {\n\t\t\t\t\tRETVAL_STRING(cursorname);\n\t\t\t\t}\n\t\t\t} else {\n\t\t\t\tphp_error_docref(NULL, E_WARNING, \"SQL error: %s, SQL state %s\", errormsg, state);\n\t\t\t\tRETVAL_FALSE;\n\t\t\t}\n\t\t} else {\n\t\t\tRETVAL_STRING(cursorname);\n\t\t}\n\t\tefree(cursorname);\n\t} else {\n\t\tRETVAL_FALSE;\n\t}",
+    "semantic": "Not used",
+    "control_flow": [
+        "Parse and validate the function arguments through Zend parameter handling.",
+        "Branch on the validated inputs and short-circuit invalid or empty cases.",
+        "Delegate work to internal helpers and extension-level primitives.",
+        "Construct the return value or emit the correct failure path."
+    ],
+    "dependencies": {
+        "zend_macros": [
+            "ZEND_NUM_ARGS",
+            "RETURN_THROWS",
+            "RETURN_FALSE",
+            "ZEND_ULONG_FMT"
+        ],
+        "zend_types": [
+            "zval"
+        ],
+        "internal_helpers": [
+            "zend_parse_parameters",
+            "odbc_sql_error",
+            "php_error_docref"
+        ]
+    },
+    "specialization_candidates": [
+        "Create a fast path for the most common odbc_cursor inputs in core.",
+        "Specialize for empty, null, or zero-length inputs to skip general parsing.",
+        "Specialize for small scalar values so the engine can avoid temporary zval churn.",
+        "Specialize repeated lookup keys or symbols into precomputed tables.",
+        "Specialize the success path separately from validation and error construction.",
+        "Specialize short-string handling to avoid repeated heap allocation.",
+        "Specialize array-heavy inputs by caching size and direct bucket access.",
+        "Specialize immutable-return cases to reduce refcount traffic.",
+        "Specialize request-time hot paths to minimize helper dispatch overhead.",
+        "Specialize failure paths behind a cold branch so the common case stays linear."
+    ],
+    "strategies": [
+        "Split validation, hot-path execution, and error reporting into separate branches.",
+        "Keep common scalar and empty-input cases branch-predictable and allocation-free.",
+        "Precompute reusable lookup state outside the call path when the inputs are stable.",
+        "Prefer borrowed references or interned strings over repeated copies where safe.",
+        "Move expensive exception construction to the cold path only.",
+        "Avoid repeated helper dispatch when a direct primitive or cached pointer exists."
+    ],
+    "memory_model": {
+        "allocates_return_value": true,
+        "uses_zend_string": false,
+        "uses_reference_counting": false,
+        "requires_zend_memory_manager": true,
+        "allocates_hash_tables": false,
+        "uses_streams": false,
+        "uses_smart_strings": false,
+        "frees_memory_explicitly": true
+    },
+    "avoid": [
+        "Avoid repeated zval copying on the success path.",
+        "Avoid allocating temporary Zend strings inside tight loops.",
+        "Avoid building detailed error messages until the cold failure path.",
+        "Avoid repeated hash-table scans when a direct lookup or cached handle exists.",
+        "Avoid mixing persistent and request-local allocations without a clear lifetime boundary.",
+        "Avoid leaking reference-counted values on early return."
+    ],
+    "complexity": 4,
+    "purpose": "Not used",
+    "php_version": "8.4.0-dev",
+    "related": [
+        "odbc_close_all",
+        "odbc_binmode",
+        "odbc_longreadlen",
+        "odbc_prepare",
+        "odbc_execute",
+        "odbc_data_source",
+        "odbc_exec",
+        "odbc_fetch_object",
+        "odbc_fetch_array",
+        "odbc_fetch_into",
+        "odbc_fetch_row",
+        "odbc_result"
+    ]
+}
